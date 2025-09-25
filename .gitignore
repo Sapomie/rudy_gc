@@ -1,0 +1,21 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+
+# Dependencies
+vendor/
+
+z_text/*
+

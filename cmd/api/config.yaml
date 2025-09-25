@@ -1,0 +1,11 @@
+DataSource: root:4521822123@tcp(127.0.0.1:3306)/rudy_days?charset=utf8mb4&parseTime=true&loc=Local
+
+Port: ":5010"
+
+Cache:
+  - Host: 127.0.0.1:6379
+    Pass: ""
+    Type: node
+    Weight: 100
+
+
