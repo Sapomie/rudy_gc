@@ -2,7 +2,7 @@
 // versions:
 //  goctl version: 1.9.0
 
-package spider
+package spiderx
 
 import (
 	"context"

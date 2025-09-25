@@ -4,8 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/spider/loop"
-	"rudy_gc/internal/spider/types"
+	"rudy_gc/internal/spider/logic"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/mylog"
 
@@ -28,21 +27,12 @@ func main() {
 	}))
 
 	ctx := context.Background()
-
-	// 创建通道
-	invCh := make(chan *types.Notification, 4)
-	detailCh := make(chan *types.Notification, 4)
-
-	// 准备依赖
-
 	deps := svc.NewDeps(c)
 
-	// 实例化并启动 loop
-	ls := loop.NewLoopServer(ctx, deps, invCh, detailCh /*invConcurrency*/, 1)
-	ls.Start()
+	l := logic.NewCrawlLogic(ctx, deps)
+	err := l.FetchInventoriesBySeedActive()
+	if err != nil {
+		panic(err)
+	}
 
-	// 示例：手动触发（实际应由管理接口写入 invCh）
-	// invCh <- &spiderx.Notification{Info: spiderx.NotifyCrawActiveQueries}
-
-	select {} // 阻塞主协程，或按你的方式优雅退出
 }

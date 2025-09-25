@@ -34,16 +34,3 @@ func batchMigrate(db *gorm.DB, models ...interface{}) error {
 	}
 	return nil
 }
-
-// ----------------- 新增：保障 Unknown & 自增起点 -----------------
-
-func setAutoIncrementMin2(tx *gorm.DB, tables ...string) error {
-	for _, t := range tables {
-		// MySQL 在表已有更大 id 时，不会把自增指针调小，此操作是安全的
-		sql := fmt.Sprintf(`ALTER TABLE %s AUTO_INCREMENT = 2`, t)
-		if err := tx.Exec(sql).Error; err != nil {
-			return fmt.Errorf("set AUTO_INCREMENT for %s failed: %w", t, err)
-		}
-	}
-	return nil
-}

@@ -2,24 +2,25 @@ package infra
 
 import (
 	"context"
-	"rudy_gc/data/modelx/spider"
+	"fmt"
+	"rudy_gc/data/modelx/spiderx"
 
 	"rudy_gc/internal/repo"
 	"rudy_gc/internal/types"
 )
 
-type seedRepoSqlx struct {
-	model spider.DSeedModel
+type SeedRepoSqlx struct {
+	m spiderx.DSeedModel
 }
 
 // 构造函数
-func NewSeedRepoSqlx(m spider.DSeedModel) repo.SeedRepo {
-	return &seedRepoSqlx{model: m}
+func NewSeedRepoSqlx(m spiderx.DSeedModel) repo.SeedRepo {
+	return &SeedRepoSqlx{m: m}
 }
 
 // 实现 repo.SeedRepo 接口
-func (r *seedRepoSqlx) FindActiveByNameType(ctx context.Context, nameType int64) ([]*types.Seed, error) {
-	rows, err := r.model.FindQueriesActive(ctx, nameType)
+func (r *SeedRepoSqlx) FindActiveByNameType(ctx context.Context, nameType int64) ([]*types.Seed, error) {
+	rows, err := r.m.FindQueriesActive(ctx, nameType)
 	if err != nil {
 		return nil, err
 	}
@@ -44,4 +45,20 @@ func (r *seedRepoSqlx) FindActiveByNameType(ctx context.Context, nameType int64)
 		})
 	}
 	return seeds, nil
+}
+
+func (r *SeedRepoSqlx) UpdateProgress(ctx context.Context, id int64, pageNow int64, lastQueryTime int64, lastStatus int64, lastError string) error {
+	// 用 goctl 的 Update 实现更新
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return fmt.Errorf("FindOne(id=%d) error: %w", id, err)
+	}
+
+	row.PageNow = pageNow
+	row.LastQueryTime = lastQueryTime
+	row.LastStatus = lastStatus
+	row.LastError = lastError
+	row.UpdatedOn = lastQueryTime // 或者 time.Now().Unix()
+
+	return r.m.Update(ctx, row)
 }

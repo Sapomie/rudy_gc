@@ -1,4 +1,4 @@
-package spider
+package spiderx
 
 import "github.com/zeromicro/go-zero/core/stores/sqlx"
 

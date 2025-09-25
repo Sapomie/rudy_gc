@@ -3,9 +3,8 @@ package loop
 import (
 	"context"
 	"fmt"
+	"rudy_gc/internal/spider/types"
 	"rudy_gc/internal/svc"
-
-	"rudy_gc/internal/spider"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -14,14 +13,14 @@ type LoopServer struct {
 	ctx  context.Context
 	deps *svc.Deps
 
-	InvCh    <-chan *spider.Notification
-	DetailCh chan<- *spider.Notification
+	InvCh    <-chan *types.Notification
+	DetailCh chan<- *types.Notification
 
 	refInvSemaphore chan struct{} // 并发限制
 	goingOnInv      int32         // 运行中互斥
 }
 
-func NewLoopServer(ctx context.Context, deps *svc.Deps, invCh <-chan *spider.Notification, detailCh chan<- *spider.Notification, invConcurrency int) *LoopServer {
+func NewLoopServer(ctx context.Context, deps *svc.Deps, invCh <-chan *types.Notification, detailCh chan<- *types.Notification, invConcurrency int) *LoopServer {
 	if invConcurrency <= 0 {
 		invConcurrency = 1
 	}

@@ -3,10 +3,9 @@ package loop
 import (
 	"context"
 	"rudy_gc/internal/spider/logic"
+	"rudy_gc/internal/spider/types"
 	"sync/atomic"
 	"time"
-
-	"rudy_gc/internal/spider"
 )
 
 func (m *LoopServer) CrawlJavInvLoop() {
@@ -26,7 +25,7 @@ func (m *LoopServer) CrawlJavInvLoop() {
 	}
 }
 
-func (m *LoopServer) handleCrawlInv(n *spider.Notification) {
+func (m *LoopServer) handleCrawlInv(n *types.Notification) {
 	// 信号量：限制并发
 	select {
 	case m.refInvSemaphore <- struct{}{}:
@@ -56,7 +55,7 @@ func (m *LoopServer) stopInv() {
 	atomic.StoreInt32(&m.goingOnInv, 0)
 }
 
-func (m *LoopServer) executeCrawl(n *spider.Notification) {
+func (m *LoopServer) executeCrawl(n *types.Notification) {
 	// 每次执行都带超时/trace ctx（这里先简化）
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Minute)
 	defer cancel()
@@ -65,11 +64,11 @@ func (m *LoopServer) executeCrawl(n *spider.Notification) {
 
 	var err error
 	switch n.Action {
-	case spider.ActionActiveQueries:
+	case types.ActionActiveQueries:
 		err = l.CrawlActiveQueries()
-	case spider.ActionDailyBestinv:
+	case types.ActionDailyBestinv:
 		err = l.CrawlDailyBestinv()
-	case spider.ActionSyncDailyBestinv:
+	case types.ActionSyncDailyBestinv:
 		err = l.SyncDailyBestinv()
 	default:
 		m.logWarn("inventory: unknown action", "action", n.Action)
@@ -82,7 +81,7 @@ func (m *LoopServer) executeCrawl(n *spider.Notification) {
 	}
 }
 
-func (m *LoopServer) notifyCrawlDetailIfNecessary(n *spider.Notification) {
+func (m *LoopServer) notifyCrawlDetailIfNecessary(n *types.Notification) {
 	select {
 	case m.DetailCh <- n:
 		m.logInfo("detail notified")

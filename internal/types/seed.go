@@ -20,3 +20,10 @@ type Seed struct {
 	CreatedOn     int64
 	UpdatedOn     int64
 }
+
+const (
+	SeedStatusIdle  int64 = 0 // 空闲，尚未执行
+	SeedStatusOK    int64 = 1 // 正常，抓取成功
+	SeedStatusEmpty int64 = 2 // 空页，提前停止
+	SeedStatusError int64 = 3 // 错误
+)

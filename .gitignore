@@ -18,4 +18,5 @@
 vendor/
 
 z_text/*
+cmd/own_tst/*
 
