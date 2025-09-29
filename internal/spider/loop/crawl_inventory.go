@@ -4,7 +4,6 @@ import (
 	"context"
 	"rudy_gc/internal/spider/logic"
 	"rudy_gc/internal/spider/types"
-	"sync/atomic"
 	"time"
 )
 
@@ -47,14 +46,6 @@ func (m *LoopServer) handleCrawlInv(n *types.Notification) {
 	}()
 }
 
-func (m *LoopServer) startInv() bool {
-	return atomic.CompareAndSwapInt32(&m.goingOnInv, 0, 1)
-}
-
-func (m *LoopServer) stopInv() {
-	atomic.StoreInt32(&m.goingOnInv, 0)
-}
-
 func (m *LoopServer) executeCrawl(n *types.Notification) {
 	// 每次执行都带超时/trace ctx（这里先简化）
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Minute)
@@ -65,7 +56,7 @@ func (m *LoopServer) executeCrawl(n *types.Notification) {
 	var err error
 	switch n.Action {
 	case types.ActionActiveQueries:
-		err = l.CrawlActiveQueries()
+		err = l.CrawlActiveSeeds()
 	case types.ActionDailyBestinv:
 		err = l.CrawlDailyBestinv()
 	case types.ActionSyncDailyBestinv:

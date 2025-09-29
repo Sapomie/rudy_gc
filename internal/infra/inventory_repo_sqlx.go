@@ -9,10 +9,8 @@ import (
 	"rudy_gc/internal/types"
 )
 
-// 确保实现接口
 var _ repo.InventoryRepo = (*InventoryRepoSqlx)(nil)
 
-// InventoryRepoSqlx 用 goctl 生成的 DInventoryModel 实现仓储
 type InventoryRepoSqlx struct {
 	m spiderx.DInventoryModel
 }
@@ -22,29 +20,23 @@ func NewInventoryRepoSqlx(m spiderx.DInventoryModel) *InventoryRepoSqlx {
 }
 
 func (r *InventoryRepoSqlx) Upsert(ctx context.Context, inv *types.Inventory) error {
-	// 1) 先按 name 查
-	exist, err := r.m.FindOneByName(ctx, inv.Name)
-	if err == nil && exist != nil {
-		// 2) 存在 -> Update
-		exist.NeedScan = inv.NeedScan
-		exist.Keyword = inv.Keyword
-		exist.Parent = inv.Parent
-		exist.Page = inv.Page
-		exist.Content = inv.Content
-		exist.Category = inv.Category
-		exist.LastQueryTime = inv.LastQueryTime
-		exist.UpdatedOn = inv.UpdatedOn
-		return r.m.Update(ctx, exist)
+	row, err := r.m.FindOneByName(ctx, inv.Name)
+	if err == nil && row != nil {
+		row.NeedScan = inv.NeedScan
+		row.Keyword = inv.Keyword
+		row.Parent = inv.Parent
+		row.Page = inv.Page
+		row.Content = inv.Content
+		row.Category = inv.Category
+		row.LastQueryTime = inv.LastQueryTime
+		row.UpdatedOn = inv.UpdatedOn
+		return r.m.Update(ctx, row)
+	}
+	if err != nil && !errors.Is(err, spiderx.ErrNotFound) {
+		return fmt.Errorf("FindOneByName(%s): %w", inv.Name, err)
 	}
 
-	// 3) 不存在或 ErrNotFound -> Insert
-	if err != nil {
-		if !errors.Is(err, spiderx.ErrNotFound) {
-			return fmt.Errorf("FindOneByName(%s) error: %w", inv.Name, err)
-		}
-	}
-
-	row := &spiderx.DInventory{
+	_, ierr := r.m.Insert(ctx, &spiderx.DInventory{
 		Name:          inv.Name,
 		NeedScan:      inv.NeedScan,
 		Keyword:       inv.Keyword,
@@ -55,8 +47,7 @@ func (r *InventoryRepoSqlx) Upsert(ctx context.Context, inv *types.Inventory) er
 		LastQueryTime: inv.LastQueryTime,
 		CreatedOn:     inv.CreatedOn,
 		UpdatedOn:     inv.UpdatedOn,
-	}
-	_, ierr := r.m.Insert(ctx, row)
+	})
 	return ierr
 }
 
@@ -64,6 +55,35 @@ func (r *InventoryRepoSqlx) FindOneByName(ctx context.Context, name string) (*ty
 	row, err := r.m.FindOneByName(ctx, name)
 	if err != nil {
 		return nil, err
+	}
+	return invRowToType(row), nil
+}
+
+func (r *InventoryRepoSqlx) FindOne(ctx context.Context, id int64) (*types.Inventory, error) {
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return invRowToType(row), nil
+}
+
+func (r *InventoryRepoSqlx) ListNeedScanIDs(ctx context.Context, limit int) ([]int64, error) {
+	return r.m.ListNeedScanIDs(ctx, int64(limit))
+}
+
+func (r *InventoryRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64) error {
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+	row.NeedScan = types.InventoryNoNeedScan
+	row.UpdatedOn = ts
+	return r.m.Update(ctx, row)
+}
+
+func invRowToType(row *spiderx.DInventory) *types.Inventory {
+	if row == nil {
+		return nil
 	}
 	return &types.Inventory{
 		Id:            row.Id,
@@ -77,5 +97,5 @@ func (r *InventoryRepoSqlx) FindOneByName(ctx context.Context, name string) (*ty
 		LastQueryTime: row.LastQueryTime,
 		CreatedOn:     row.CreatedOn,
 		UpdatedOn:     row.UpdatedOn,
-	}, nil
+	}
 }

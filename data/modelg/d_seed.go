@@ -4,7 +4,7 @@ package modelg
 // NameType: 1=Prefix, 2=Label
 // SearchType: 1=Offset, 2=StartEnd
 type Seed struct {
-	Id         int64  `gorm:"primary_key"`
+	Id         int64  `gorm:"primary_key;autoIncrement"`
 	Name       string `gorm:"type:varchar(128);not null;unique;default:'';comment:查询名(前缀/标签具体值)"`
 	Active     int64  `gorm:"not null;type:tinyint;default:1;comment:状态(1=inactive,2=active)"`
 	SearchType int64  `gorm:"not null;type:tinyint;default:1;comment:1=Offset,2=StartEnd"`

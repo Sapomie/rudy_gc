@@ -2,7 +2,7 @@ APP := rudy_gc
 
 # ===== 可覆盖的参数（执行 make 时可用 ENV 覆盖） =====
 DB_URL    ?= "root:4521822123@tcp(127.0.0.1:3306)/rudy_gc"
-MODEL_DIR ?= data/modelx/spider
+MODEL_DIR ?= data/modelx/spiderx
 TABLES    ?= "*"            # 也可以指定 "user,order" 逗号分隔
 GOCTL     ?= goctl
 STYLE     ?= go_zero        # go_zero / snake / go_zero

@@ -19,6 +19,8 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := batchMigrate(db,
 		new(Seed),
 		new(Inventory),
+		new(Item),
+		new(Detail),
 	); err != nil {
 		return err
 	}

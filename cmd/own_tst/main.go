@@ -30,7 +30,8 @@ func main() {
 	deps := svc.NewDeps(c)
 
 	l := logic.NewCrawlLogic(ctx, deps)
-	err := l.FetchInventoriesBySeedActive()
+	//err := l.FetchInventoriesBySeedActive()
+	err := l.ProcessInventory()
 	if err != nil {
 		panic(err)
 	}

@@ -1,15 +1,15 @@
 package types
 
-// NeedScan 常量：是否需要后续解析扫描
+// NeedScan：1=需要扫描, 2=不需要扫描
 const (
-	InventoryNoNeedScan int64 = 0
-	InventoryNeedScan   int64 = 1
+	InventoryNeedScan   int64 = 1 + iota // 1
+	InventoryNoNeedScan                  // 2
 )
 
-// Category 常量：与老项目一致
+// Category：1=Prefix, 2=Label
 const (
-	InventoryCategoryByPrefix int64 = 1
-	InventoryCategoryByLabel  int64 = 2
+	InventoryCategoryByPrefix int64 = 1 + iota // 1
+	InventoryCategoryByLabel                   // 2
 )
 
 // Inventory 供业务层/仓储层使用的领域模型（与 modelx.DInventory 一一对应）
