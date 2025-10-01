@@ -73,6 +73,7 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 			types.ItemDetailStatusNeedScan, // DetailNeedScan
 			birthTime,                      // DetailBirthTime
 			now,                            // DetailUpdateTime
+			types.ItemDetailOK,             // HasDetail
 			now,                            // UpdatedOn
 		); err != nil {
 			return i, fmt.Errorf("更新条目详情元信息失败 %s: %w", it.Name, err)

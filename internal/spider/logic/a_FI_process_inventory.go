@@ -1,4 +1,4 @@
-// internal/spiderx/logic/a_PI__process_inventory.go
+// internal/spiderx/logic/a_FI_process_inventory.go
 package logic
 
 import (

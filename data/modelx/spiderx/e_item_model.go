@@ -16,6 +16,7 @@ type (
 		eItemModel
 		withSession(session sqlx.Session) EItemModel
 		ListByDetailStatus(ctx context.Context, hasDetail int64, limit int64) ([]*EItem, error)
+		ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error)
 	}
 
 	customEItemModel struct {
@@ -56,4 +57,29 @@ func (m *customEItemModel) ListByDetailStatus(ctx context.Context, hasDetail int
 		return nil, err
 	}
 	return items, nil
+}
+
+func (m *customEItemModel) ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error) {
+	if limit <= 0 {
+		limit = 10000
+	}
+	builder := squirrel.
+		Select(eItemRows).
+		From(m.tableName()).
+		Where(squirrel.Eq{"detail_need_scan": needScan}).
+		Limit(uint64(limit))
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*EItem
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return rows, nil
 }

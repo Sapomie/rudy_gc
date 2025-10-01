@@ -31,7 +31,9 @@ func main() {
 
 	l := logic.NewCrawlLogic(ctx, deps)
 	//err := l.FetchInventoriesBySeedActive()
-	err := l.ProcessInventory()
+	//err := l.ProcessInventory()
+	//_, err := l.FetchDetails()
+	err := l.ParseDetails()
 	if err != nil {
 		panic(err)
 	}

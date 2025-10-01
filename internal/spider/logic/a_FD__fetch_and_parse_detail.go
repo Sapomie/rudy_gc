@@ -1,4 +1,4 @@
-// internal/spiderx/logic/a_fetch_and_parse_detail.go
+// internal/spiderx/logic/a_FD__fetch_and_parse_detail.go
 package logic
 
 func (l *CrawlLogic) FetchAndParseDetails() (int, error) {

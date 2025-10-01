@@ -57,33 +57,42 @@ func (r *ItemRepoSqlx) FindByDetailStatus(ctx context.Context, status int64) ([]
 	return out, nil
 }
 
-func (r *ItemRepoSqlx) UpdateDetailMeta(ctx context.Context, id int64,
-	needScan, birthTime, updateTime, updatedOn int64) error {
+func (r *ItemRepoSqlx) FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error) {
+	rows, err := r.m.ListByDetailNeedScan(ctx, needScan, 10000)
+	if err != nil {
+		return nil, fmt.Errorf("ListByDetailNeedScan(%d): %w", needScan, err)
+	}
+	out := make([]*types.Item, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, itemRowToType(row))
+	}
+	return out, nil
+}
 
+func (r *ItemRepoSqlx) UpdateDetailMeta(
+	ctx context.Context,
+	id int64,
+	detailNeedScan int64,
+	birthTime int64,
+	updateTime int64,
+	hasDetail int64,
+	updatedOn int64,
+) error {
 	row, err := r.m.FindOne(ctx, id)
 	if err != nil {
 		return err
 	}
-	row.DetailNeedScan = needScan
 
-	// 只在“未曾赋值”时写入初次时间，避免覆盖首抓时间
+	row.DetailNeedScan = detailNeedScan
 	if row.DetailBirthTime == 0 && birthTime > 0 {
 		row.DetailBirthTime = birthTime
 	}
-	// 每次抓取后都刷新“本次更新时间”
-	row.DetailUpdateTime = updateTime
-
-	row.UpdatedOn = updatedOn
-	return r.m.Update(ctx, row)
-}
-
-func (r *ItemRepoSqlx) MarkHasDetail(ctx context.Context, id int64, newStatus int64, ts int64) error {
-	row, err := r.m.FindOne(ctx, id)
-	if err != nil {
-		return err
+	if updateTime > 0 {
+		row.DetailUpdateTime = updateTime
 	}
-	row.HasDetail = newStatus
-	row.UpdatedOn = ts
+	row.HasDetail = hasDetail
+	row.UpdatedOn = updatedOn
+
 	return r.m.Update(ctx, row)
 }
 
