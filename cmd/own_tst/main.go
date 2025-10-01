@@ -28,12 +28,13 @@ func main() {
 
 	ctx := context.Background()
 	deps := svc.NewDeps(c)
+	var err error
 
 	l := logic.NewCrawlLogic(ctx, deps)
 	//err := l.FetchInventoriesBySeedActive()
 	//err := l.ProcessInventory()
-	//_, err := l.FetchDetails()
-	err := l.ParseDetails()
+	_, err = l.FetchDetails()
+	err = l.ParseDetails()
 	if err != nil {
 		panic(err)
 	}

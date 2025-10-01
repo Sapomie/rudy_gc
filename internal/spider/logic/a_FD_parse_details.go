@@ -29,6 +29,7 @@ func (l *CrawlLogic) ParseDetails() error {
 	logx.WithContext(l.ctx).Infof("共有 %d 个 Item 需要解析 Detail", total)
 
 	var done int
+	//todo 并行插入
 	for _, it := range items {
 		// 解析并入库
 		if _, err := l.parseDetailAndInsertMovie(it); err != nil {
@@ -65,9 +66,9 @@ func (l *CrawlLogic) parseDetailAndInsertMovie(it *types.Item) (interface{}, int
 	}
 
 	//insert raw
-	//_, err = l.insertRaw(rawJavMovie)
-	//if err != nil {
-	//	return "", err
-	//}
+	_, err = l.saveParsedMovie(rawJavMovie)
+	if err != nil {
+		return "", err
+	}
 	return nil, nil
 }

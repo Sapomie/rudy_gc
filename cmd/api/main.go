@@ -5,7 +5,6 @@ import (
 	"flag"
 	"rudy_gc/internal/config"
 	"rudy_gc/internal/spider/loop"
-	"rudy_gc/internal/spider/types"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/mylog"
 
@@ -29,16 +28,10 @@ func main() {
 
 	ctx := context.Background()
 
-	// 创建通道
-	invCh := make(chan *types.Notification, 4)
-	detailCh := make(chan *types.Notification, 4)
-
-	// 准备依赖
-
 	deps := svc.NewDeps(c)
 
 	// 实例化并启动 loop
-	ls := loop.NewLoopServer(ctx, deps, invCh, detailCh /*invConcurrency*/, 1)
+	ls := loop.NewLoopServer(ctx, deps, 1)
 	ls.Start()
 
 	// 示例：手动触发（实际应由管理接口写入 invCh）

@@ -70,11 +70,11 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 		if err := l.deps.ItemRepo.UpdateDetailMeta(
 			l.ctx,
 			it.Id,
-			types.ItemDetailStatusNeedScan, // DetailNeedScan
-			birthTime,                      // DetailBirthTime
-			now,                            // DetailUpdateTime
-			types.ItemDetailOK,             // HasDetail
-			now,                            // UpdatedOn
+			types.ItemDetailStatusNeedScan, // needScan
+			birthTime,                      // birthTime（仅首次写入）
+			now,                            // updateTime（本次抓/解详情时间）
+			now,                            // updatedOn（记录更新时间）
+			types.ItemDetailOK,             // hasDetail（已具备详情）
 		); err != nil {
 			return i, fmt.Errorf("更新条目详情元信息失败 %s: %w", it.Name, err)
 		}

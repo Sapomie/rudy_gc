@@ -21,6 +21,19 @@ func AutoMigrate(db *gorm.DB) error {
 		new(Inventory),
 		new(Item),
 		new(Detail),
+
+		new(Movie),
+		new(Murl),
+		new(Minfo),
+
+		new(Cast),
+		new(Genre),
+		new(Director),
+		new(Maker),
+		new(Label),
+		new(Prefix),
+		new(MovieCast),
+		new(MovieGenre),
 	); err != nil {
 		return err
 	}

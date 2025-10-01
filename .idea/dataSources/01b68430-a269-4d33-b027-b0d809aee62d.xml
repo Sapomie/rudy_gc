@@ -940,7 +940,7 @@
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <Current>1</Current>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2025-09-29.01:02:44</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-10-01.03:34:53</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <user id="299" parent="1" name="mysql.infoschema">
@@ -962,420 +962,1338 @@
       <Host>localhost</Host>
       <Plugin>caching_sha2_password</Plugin>
     </user>
-    <table id="303" parent="298" name="d_detail">
+    <table id="303" parent="298" name="a_movie">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="304" parent="298" name="d_inventory">
+    <table id="304" parent="298" name="am_cast">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="305" parent="298" name="d_seed">
+    <table id="305" parent="298" name="am_director">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="306" parent="298" name="e_item">
+    <table id="306" parent="298" name="am_genre">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <column id="307" parent="303" name="id">
+    <table id="307" parent="298" name="am_label">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="308" parent="298" name="am_maker">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="309" parent="298" name="am_prefix">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="310" parent="298" name="amr_movie_cast">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="311" parent="298" name="amr_movie_genre">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="312" parent="298" name="bm_minfo">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="313" parent="298" name="bm_murl">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="314" parent="298" name="d_detail">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="315" parent="298" name="d_inventory">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="316" parent="298" name="d_seed">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <table id="317" parent="298" name="e_item">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <column id="318" parent="303" name="id">
       <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="308" parent="303" name="name">
+    <column id="319" parent="303" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="320" parent="303" name="name">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="321" parent="303" name="title">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>varchar(500)|0s</StoredType>
+    </column>
+    <column id="322" parent="303" name="length">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>smallint|0s</StoredType>
+    </column>
+    <column id="323" parent="303" name="viewers_number_want">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="324" parent="303" name="viewers_number_owned">
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="325" parent="303" name="viewers_number_watched">
+      <NotNull>1</NotNull>
+      <Position>8</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="326" parent="303" name="detail_update_time">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>9</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="327" parent="303" name="releasing_date">
+      <NotNull>1</NotNull>
+      <Position>10</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="328" parent="303" name="score">
+      <NotNull>1</NotNull>
+      <Position>11</Position>
+      <StoredType>tinyint|0s</StoredType>
+    </column>
+    <column id="329" parent="303" name="prefix_id">
+      <NotNull>1</NotNull>
+      <Position>12</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="330" parent="303" name="maker_id">
+      <NotNull>1</NotNull>
+      <Position>13</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="331" parent="303" name="label_id">
+      <NotNull>1</NotNull>
+      <Position>14</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="332" parent="303" name="director_id">
+      <NotNull>1</NotNull>
+      <Position>15</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="333" parent="303" name="cast_number">
+      <NotNull>1</NotNull>
+      <Position>16</Position>
+      <StoredType>smallint|0s</StoredType>
+    </column>
+    <column id="334" parent="303" name="cast_average_age">
+      <Comment>&apos;平均年龄*10，例如237表示23.7岁&apos;</Comment>
+      <NotNull>1</NotNull>
+      <Position>17</Position>
+      <StoredType>smallint|0s</StoredType>
+    </column>
+    <column id="335" parent="303" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>18</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="336" parent="303" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>19</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="337" parent="303" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="338" parent="303" name="uni_a_movie_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="339" parent="303" name="idx_name_only">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="340" parent="303" name="idx_vnw_name">
+      <ColNames>viewers_number_watched
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="341" parent="303" name="idx_detailupd_name">
+      <ColNames>detail_update_time
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="342" parent="303" name="idx_reldate_name">
+      <ColNames>releasing_date
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="343" parent="303" name="idx_score_name">
+      <ColNames>score
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="344" parent="303" name="idx_a_movie_prefix_id">
+      <ColNames>prefix_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="345" parent="303" name="idx_a_movie_maker_id">
+      <ColNames>maker_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="346" parent="303" name="idx_a_movie_label_id">
+      <ColNames>label_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="347" parent="303" name="idx_a_movie_director_id">
+      <ColNames>director_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="348" parent="303" name="idx_castage_name">
+      <ColNames>cast_average_age
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="349" parent="303" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="350" parent="303" name="uni_a_movie_jav_id">
+      <UnderlyingIndexName>uni_a_movie_jav_id</UnderlyingIndexName>
+    </key>
+    <column id="351" parent="304" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="352" parent="304" name="name">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="353" parent="304" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="354" parent="304" name="movie_number">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="355" parent="304" name="owned_movie_number">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="356" parent="304" name="sc_times">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="357" parent="304" name="come_times">
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="358" parent="304" name="last_sc_time">
+      <NotNull>1</NotNull>
+      <Position>8</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="359" parent="304" name="rank500_movie_number">
+      <NotNull>1</NotNull>
+      <Position>9</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="360" parent="304" name="rank20_movie_number">
+      <NotNull>1</NotNull>
+      <Position>10</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="361" parent="304" name="rank1_movie_number">
+      <NotNull>1</NotNull>
+      <Position>11</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="362" parent="304" name="highest_rank">
+      <NotNull>1</NotNull>
+      <Position>12</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="363" parent="304" name="rank_times">
+      <NotNull>1</NotNull>
+      <Position>13</Position>
+      <StoredType>mediumint|0s</StoredType>
+    </column>
+    <column id="364" parent="304" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>14</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="365" parent="304" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>15</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="366" parent="304" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="367" parent="304" name="uni_am_cast_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="368" parent="304" name="idx_am_cast_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="369" parent="304" name="idx_am_cast_movie_number">
+      <ColNames>movie_number</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="370" parent="304" name="idx_am_cast_owned_movie_number">
+      <ColNames>owned_movie_number</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="371" parent="304" name="idx_am_cast_sc_times">
+      <ColNames>sc_times</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="372" parent="304" name="idx_am_cast_come_times">
+      <ColNames>come_times</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="373" parent="304" name="idx_am_cast_last_sc_time">
+      <ColNames>last_sc_time</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="374" parent="304" name="idx_am_cast_rank500_movie_number">
+      <ColNames>rank500_movie_number</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="375" parent="304" name="idx_am_cast_rank20_movie_number">
+      <ColNames>rank20_movie_number</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="376" parent="304" name="idx_am_cast_rank1_movie_number">
+      <ColNames>rank1_movie_number</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="377" parent="304" name="idx_am_cast_highest_rank">
+      <ColNames>highest_rank</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="378" parent="304" name="idx_am_cast_rank_times">
+      <ColNames>rank_times</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="379" parent="304" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="380" parent="304" name="uni_am_cast_name">
+      <UnderlyingIndexName>uni_am_cast_name</UnderlyingIndexName>
+    </key>
+    <column id="381" parent="305" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="382" parent="305" name="name">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="383" parent="305" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="384" parent="305" name="movie_number">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="385" parent="305" name="owned_movie_number">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="386" parent="305" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="387" parent="305" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="388" parent="305" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="389" parent="305" name="uni_am_director_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="390" parent="305" name="idx_am_director_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="391" parent="305" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="392" parent="305" name="uni_am_director_name">
+      <UnderlyingIndexName>uni_am_director_name</UnderlyingIndexName>
+    </key>
+    <column id="393" parent="306" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="394" parent="306" name="name">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="395" parent="306" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="396" parent="306" name="movie_number">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="397" parent="306" name="owned_movie_number">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="398" parent="306" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="399" parent="306" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="400" parent="306" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="401" parent="306" name="uni_am_genre_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="402" parent="306" name="idx_am_genre_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="403" parent="306" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="404" parent="306" name="uni_am_genre_name">
+      <UnderlyingIndexName>uni_am_genre_name</UnderlyingIndexName>
+    </key>
+    <column id="405" parent="307" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="406" parent="307" name="name">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="407" parent="307" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="408" parent="307" name="movie_number">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="409" parent="307" name="owned_movie_number">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="410" parent="307" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="411" parent="307" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="412" parent="307" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="413" parent="307" name="uni_am_label_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="414" parent="307" name="idx_am_label_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="415" parent="307" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="416" parent="307" name="uni_am_label_name">
+      <UnderlyingIndexName>uni_am_label_name</UnderlyingIndexName>
+    </key>
+    <column id="417" parent="308" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="418" parent="308" name="name">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="419" parent="308" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="420" parent="308" name="movie_number">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="421" parent="308" name="owned_movie_number">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="422" parent="308" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="423" parent="308" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="424" parent="308" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="425" parent="308" name="uni_am_maker_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="426" parent="308" name="idx_am_maker_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="427" parent="308" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="428" parent="308" name="uni_am_maker_name">
+      <UnderlyingIndexName>uni_am_maker_name</UnderlyingIndexName>
+    </key>
+    <column id="429" parent="309" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="430" parent="309" name="name">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="431" parent="309" name="movie_number">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="432" parent="309" name="owned_movie_number">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="433" parent="309" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="434" parent="309" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="435" parent="309" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="436" parent="309" name="uni_am_prefix_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <key id="437" parent="309" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="438" parent="309" name="uni_am_prefix_name">
+      <UnderlyingIndexName>uni_am_prefix_name</UnderlyingIndexName>
+    </key>
+    <column id="439" parent="310" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="440" parent="310" name="movie_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="441" parent="310" name="cast_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="442" parent="310" name="created_on">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="443" parent="310" name="updated_on">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="444" parent="310" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="445" parent="310" name="m_c">
+      <ColNames>movie_id
+cast_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="446" parent="310" name="idx_cid">
+      <ColNames>cast_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="447" parent="310" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="448" parent="310" name="m_c">
+      <UnderlyingIndexName>m_c</UnderlyingIndexName>
+    </key>
+    <column id="449" parent="311" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="450" parent="311" name="movie_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="451" parent="311" name="genre_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="452" parent="311" name="created_on">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="453" parent="311" name="updated_on">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="454" parent="311" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="455" parent="311" name="m_c">
+      <ColNames>movie_id
+genre_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="456" parent="311" name="idx_cid">
+      <ColNames>genre_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="457" parent="311" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="458" parent="311" name="m_c">
+      <UnderlyingIndexName>m_c</UnderlyingIndexName>
+    </key>
+    <column id="459" parent="312" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="460" parent="312" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="461" parent="312" name="name">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="462" parent="312" name="chinese">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>varchar(300)|0s</StoredType>
+    </column>
+    <column id="463" parent="312" name="encode_name">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="464" parent="312" name="first_rank_day_number">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="465" parent="312" name="highest_rank">
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="466" parent="312" name="days_in_rank">
+      <NotNull>1</NotNull>
+      <Position>8</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="467" parent="312" name="need_download">
+      <NotNull>1</NotNull>
+      <Position>9</Position>
+      <StoredType>tinyint|0s</StoredType>
+    </column>
+    <column id="468" parent="312" name="created_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>10</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="469" parent="312" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>11</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="470" parent="312" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="471" parent="312" name="uni_bm_minfo_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="472" parent="312" name="idx_name_only">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="473" parent="312" name="idx_bm_minfo_encode_name">
+      <ColNames>encode_name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="474" parent="312" name="idx_first_rank_name">
+      <ColNames>first_rank_day_number
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="475" parent="312" name="idx_highest_rank_name">
+      <ColNames>highest_rank
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="476" parent="312" name="idx_days_in_rank_name">
+      <ColNames>days_in_rank
+name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <index id="477" parent="312" name="idx_bm_minfo_need_download">
+      <ColNames>need_download</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="478" parent="312" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="479" parent="312" name="uni_bm_minfo_jav_id">
+      <UnderlyingIndexName>uni_bm_minfo_jav_id</UnderlyingIndexName>
+    </key>
+    <column id="480" parent="313" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="481" parent="313" name="jav_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="482" parent="313" name="name">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(191)|0s</StoredType>
+    </column>
+    <column id="483" parent="313" name="jacket_img">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>varchar(300)|0s</StoredType>
+    </column>
+    <column id="484" parent="313" name="jacket_img_local">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>varchar(300)|0s</StoredType>
+    </column>
+    <column id="485" parent="313" name="small_img">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>varchar(300)|0s</StoredType>
+    </column>
+    <column id="486" parent="313" name="small_img_local">
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>varchar(300)|0s</StoredType>
+    </column>
+    <column id="487" parent="313" name="created_on">
+      <NotNull>1</NotNull>
+      <Position>8</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="488" parent="313" name="updated_on">
+      <NotNull>1</NotNull>
+      <Position>9</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <index id="489" parent="313" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="490" parent="313" name="uni_bm_murl_jav_id">
+      <ColNames>jav_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="491" parent="313" name="idx_bm_murl_name">
+      <ColNames>name</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="492" parent="313" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="493" parent="313" name="uni_bm_murl_jav_id">
+      <UnderlyingIndexName>uni_bm_murl_jav_id</UnderlyingIndexName>
+    </key>
+    <column id="494" parent="314" name="id">
+      <AutoIncrement>5</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="495" parent="314" name="name">
       <Comment>影片名称</Comment>
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="309" parent="303" name="jav_id">
+    <column id="496" parent="314" name="jav_id">
       <Comment>JavId唯一标识</Comment>
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="310" parent="303" name="prefix">
+    <column id="497" parent="314" name="prefix">
       <Comment>前缀，如 ABC</Comment>
       <DefaultExpression>&apos;&apos;</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>varchar(64)|0s</StoredType>
     </column>
-    <column id="311" parent="303" name="query_url">
+    <column id="498" parent="314" name="query_url">
       <Comment>来源请求URL</Comment>
       <DefaultExpression>&apos;&apos;</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StoredType>varchar(300)|0s</StoredType>
     </column>
-    <column id="312" parent="303" name="content">
+    <column id="499" parent="314" name="content">
       <Comment>详情页HTML内容</Comment>
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StoredType>longtext|0s</StoredType>
     </column>
-    <column id="313" parent="303" name="last_query_time">
+    <column id="500" parent="314" name="last_query_time">
       <Comment>最后抓取时间(Unix秒)</Comment>
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>7</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="314" parent="303" name="created_on">
+    <column id="501" parent="314" name="created_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>8</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="315" parent="303" name="updated_on">
+    <column id="502" parent="314" name="updated_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>9</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <index id="316" parent="303" name="PRIMARY">
+    <index id="503" parent="314" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="317" parent="303" name="uni_d_detail_jav_id">
+    <index id="504" parent="314" name="uni_d_detail_jav_id">
       <ColNames>jav_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="318" parent="303" name="PRIMARY">
+    <key id="505" parent="314" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="319" parent="303" name="uni_d_detail_jav_id">
+    <key id="506" parent="314" name="uni_d_detail_jav_id">
       <UnderlyingIndexName>uni_d_detail_jav_id</UnderlyingIndexName>
     </key>
-    <column id="320" parent="304" name="id">
+    <column id="507" parent="315" name="id">
       <AutoIncrement>7</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="321" parent="304" name="name">
+    <column id="508" parent="315" name="name">
       <Comment>唯一名(由query+page组合)</Comment>
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="322" parent="304" name="need_scan">
+    <column id="509" parent="315" name="need_scan">
       <Comment>是否需要扫描(0=不需要,1=需要)</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="323" parent="304" name="keyword">
+    <column id="510" parent="315" name="keyword">
       <Comment>来源的关键字(前缀或标签)</Comment>
       <DefaultExpression>&apos;&apos;</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="324" parent="304" name="parent">
+    <column id="511" parent="315" name="parent">
       <Comment>上级queryBy</Comment>
       <DefaultExpression>&apos;&apos;</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="325" parent="304" name="page">
+    <column id="512" parent="315" name="page">
       <Comment>页码</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StoredType>mediumint|0s</StoredType>
     </column>
-    <column id="326" parent="304" name="content">
+    <column id="513" parent="315" name="content">
       <Comment>页面HTML内容</Comment>
       <NotNull>1</NotNull>
       <Position>7</Position>
       <StoredType>longtext|0s</StoredType>
     </column>
-    <column id="327" parent="304" name="category">
+    <column id="514" parent="315" name="category">
       <Comment>类别(1=Prefix,2=Label)</Comment>
       <NotNull>1</NotNull>
       <Position>8</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="328" parent="304" name="last_query_time">
+    <column id="515" parent="315" name="last_query_time">
       <Comment>最后抓取时间(Unix秒)</Comment>
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>9</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="329" parent="304" name="created_on">
+    <column id="516" parent="315" name="created_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>10</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="330" parent="304" name="updated_on">
+    <column id="517" parent="315" name="updated_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>11</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <index id="331" parent="304" name="PRIMARY">
+    <index id="518" parent="315" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="332" parent="304" name="uni_d_inventory_name">
+    <index id="519" parent="315" name="uni_d_inventory_name">
       <ColNames>name</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="333" parent="304" name="idx_d_inventory_need_scan">
+    <index id="520" parent="315" name="idx_d_inventory_need_scan">
       <ColNames>need_scan</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="334" parent="304" name="PRIMARY">
+    <key id="521" parent="315" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="335" parent="304" name="uni_d_inventory_name">
+    <key id="522" parent="315" name="uni_d_inventory_name">
       <UnderlyingIndexName>uni_d_inventory_name</UnderlyingIndexName>
     </key>
-    <column id="336" parent="305" name="id">
+    <column id="523" parent="316" name="id">
       <AutoIncrement>3</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="337" parent="305" name="name">
+    <column id="524" parent="316" name="name">
       <Comment>查询名(前缀/标签具体值)</Comment>
       <DefaultExpression>&apos;&apos;</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>varchar(128)|0s</StoredType>
     </column>
-    <column id="338" parent="305" name="active">
+    <column id="525" parent="316" name="active">
       <Comment>状态(1=inactive,2=active)</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="339" parent="305" name="search_type">
+    <column id="526" parent="316" name="search_type">
       <Comment>1=Offset,2=StartEnd</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="340" parent="305" name="name_type">
+    <column id="527" parent="316" name="name_type">
       <Comment>1=Prefix,2=Label</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="341" parent="305" name="page_now">
+    <column id="528" parent="316" name="page_now">
       <Comment>当前断点页(最近成功处理到的页码)</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StoredType>mediumint|0s</StoredType>
     </column>
-    <column id="342" parent="305" name="offset">
+    <column id="529" parent="316" name="offset">
       <Comment>仅在SearchType=Offset时有效</Comment>
       <DefaultExpression>2</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>7</Position>
       <StoredType>mediumint|0s</StoredType>
     </column>
-    <column id="343" parent="305" name="start_page">
+    <column id="530" parent="316" name="start_page">
       <Comment>仅在SearchType=StartEnd时有效</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>8</Position>
       <StoredType>mediumint|0s</StoredType>
     </column>
-    <column id="344" parent="305" name="end_page">
+    <column id="531" parent="316" name="end_page">
       <Comment>仅在SearchType=StartEnd时有效</Comment>
       <DefaultExpression>1</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>9</Position>
       <StoredType>mediumint|0s</StoredType>
     </column>
-    <column id="345" parent="305" name="last_query_time">
+    <column id="532" parent="316" name="last_query_time">
       <Comment>最后一次开始抓取的Unix时间戳(秒,0=未运行)</Comment>
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>10</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="346" parent="305" name="last_status">
+    <column id="533" parent="316" name="last_status">
       <Comment>0=idle,1=ok,2=empty,3=error</Comment>
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>11</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="347" parent="305" name="last_error">
+    <column id="534" parent="316" name="last_error">
       <Comment>最后一次错误摘要</Comment>
       <DefaultExpression>&apos;&apos;</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>12</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="348" parent="305" name="created_on">
+    <column id="535" parent="316" name="created_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>13</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="349" parent="305" name="updated_on">
+    <column id="536" parent="316" name="updated_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>14</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <index id="350" parent="305" name="PRIMARY">
+    <index id="537" parent="316" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="351" parent="305" name="uni_d_seed_name">
+    <index id="538" parent="316" name="uni_d_seed_name">
       <ColNames>name</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="352" parent="305" name="PRIMARY">
+    <key id="539" parent="316" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="353" parent="305" name="uni_d_seed_name">
+    <key id="540" parent="316" name="uni_d_seed_name">
       <UnderlyingIndexName>uni_d_seed_name</UnderlyingIndexName>
     </key>
-    <column id="354" parent="306" name="id">
-      <AutoIncrement>1</AutoIncrement>
+    <column id="541" parent="317" name="id">
+      <AutoIncrement>108</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="355" parent="306" name="jav_id">
+    <column id="542" parent="317" name="jav_id">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="356" parent="306" name="name">
+    <column id="543" parent="317" name="name">
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="357" parent="306" name="prefix">
+    <column id="544" parent="317" name="prefix">
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>varchar(64)|0s</StoredType>
     </column>
-    <column id="358" parent="306" name="search_type">
+    <column id="545" parent="317" name="search_type">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="359" parent="306" name="cover_url">
+    <column id="546" parent="317" name="cover_url">
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StoredType>varchar(512)|0s</StoredType>
     </column>
-    <column id="360" parent="306" name="search_by">
+    <column id="547" parent="317" name="search_by">
       <NotNull>1</NotNull>
       <Position>7</Position>
       <StoredType>varchar(191)|0s</StoredType>
     </column>
-    <column id="361" parent="306" name="has_detail">
+    <column id="548" parent="317" name="has_detail">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>8</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="362" parent="306" name="has_download_cover">
+    <column id="549" parent="317" name="has_download_cover">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>9</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="363" parent="306" name="has_chinese">
+    <column id="550" parent="317" name="has_chinese">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>10</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="364" parent="306" name="detail_need_scan">
+    <column id="551" parent="317" name="detail_need_scan">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>11</Position>
       <StoredType>tinyint|0s</StoredType>
     </column>
-    <column id="365" parent="306" name="detail_birth_time">
+    <column id="552" parent="317" name="detail_birth_time">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>12</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="366" parent="306" name="detail_update_time">
+    <column id="553" parent="317" name="detail_update_time">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>13</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="367" parent="306" name="created_on">
+    <column id="554" parent="317" name="created_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>14</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="368" parent="306" name="updated_on">
+    <column id="555" parent="317" name="updated_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>15</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <index id="369" parent="306" name="PRIMARY">
+    <index id="556" parent="317" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="370" parent="306" name="uk_item_jav_id">
+    <index id="557" parent="317" name="uk_item_jav_id">
       <ColNames>jav_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="371" parent="306" name="idx_item_name">
+    <index id="558" parent="317" name="idx_item_name">
       <ColNames>name</ColNames>
       <Type>btree</Type>
     </index>
-    <index id="372" parent="306" name="idx_item_prefix">
+    <index id="559" parent="317" name="idx_item_prefix">
       <ColNames>prefix</ColNames>
       <Type>btree</Type>
     </index>
-    <index id="373" parent="306" name="idx_item_searchby">
+    <index id="560" parent="317" name="idx_item_searchby">
       <ColNames>search_by</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="374" parent="306" name="PRIMARY">
+    <key id="561" parent="317" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="375" parent="306" name="uk_item_jav_id">
+    <key id="562" parent="317" name="uk_item_jav_id">
       <UnderlyingIndexName>uk_item_jav_id</UnderlyingIndexName>
     </key>
   </database-model>

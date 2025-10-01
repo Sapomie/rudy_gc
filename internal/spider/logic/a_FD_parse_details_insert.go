@@ -1,72 +1,211 @@
+// internal/spider/logic/a_save_parsed_movie.go
 package logic
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"time"
 
-func (l *CrawlLogic) insertRaw(raw *RawJavMovie) (*insertRawResponse, error) {
-	ctx := l.ctx
-	now := time.Now()
+	"rudy_gc/data/modelx/moviex"
+)
 
-	return l.deps.DB.WithTx(ctx, func(tx Tx) (*insertRawResponse, error) {
-		// 1) 解析/兜底
-		length := parseIntSafe(raw.Length)
-		viewWatched := parseIntSafe(raw.Watched)
-		viewOwned := parseIntSafe(raw.Owned)
-		viewWanted := parseIntSafe(raw.Subscribed)
-		releaseUnix, err := parseDateSafe(raw.Date) // 用 time.Parse
-		if err != nil {
-			return nil, err
+// saveParsedMovieResponse 返回保存后的电影记录与演员 javId 集合（供后续统计/链路使用）
+type saveParsedMovieResponse struct {
+	movie        *moviex.AMovie
+	castJavIdMap map[string]struct{}
+}
+
+// 弱信号：可筛掉的分类（与老项目保持一致）
+var genreUnused = map[string]struct{}{
+	"单体作品":  {},
+	"薄马赛克":  {},
+	"数位马赛克": {},
+}
+
+// saveParsedMovie
+// - 解析 RawJavMovie 基本字段
+// - 逐个 Upsert：导演/厂牌/标签/前缀/类型/演员
+// - Upsert 电影主体（a_movie）
+// - Upsert 海报与小图（bm_murl）
+// - Upsert 影片信息（bm_minfo）（保留旧值的策略由 Repo 层实现）
+// - 建立关系（amr_movie_cast / amr_movie_genre）
+func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse, error) {
+	// ===== 1) 解析原始数值字段 =====
+	length, err := strconv.Atoi(raw.Length)
+	if err != nil {
+		return nil, fmt.Errorf("片长解析失败: %w", err)
+	}
+	viewWatched, err := strconv.Atoi(raw.Watched)
+	if err != nil {
+		return nil, fmt.Errorf("已看人数解析失败: %w", err)
+	}
+	viewOwned, err := strconv.Atoi(raw.Owned)
+	if err != nil {
+		return nil, fmt.Errorf("拥有人数解析失败: %w", err)
+	}
+	viewWanted, err := strconv.Atoi(raw.Subscribed)
+	if err != nil {
+		return nil, fmt.Errorf("想看人数解析失败: %w", err)
+	}
+	releasingDate, err := raw.getReleasingDate()
+	if err != nil {
+		return nil, fmt.Errorf("发行日解析失败: %w", err)
+	}
+	score, err := raw.getScore()
+	if err != nil {
+		return nil, fmt.Errorf("评分解析失败: %w", err)
+	}
+
+	// ===== 2) 字典实体 Upsert =====
+	dirID, err := l.deps.DirectorRepo.GetOrCreateByName(l.ctx, raw.Director.Name, raw.Director.JavId)
+	if err != nil {
+		return nil, fmt.Errorf("导演 Upsert 失败: %w", err)
+	}
+	mkrID, err := l.deps.MakerRepo.GetOrCreateByName(l.ctx, raw.Maker.Name, raw.Maker.JavId)
+	if err != nil {
+		return nil, fmt.Errorf("厂牌 Upsert 失败: %w", err)
+	}
+	labID, err := l.deps.LabelRepo.GetOrCreateByName(l.ctx, raw.Label.Name, raw.Label.JavId)
+	if err != nil {
+		return nil, fmt.Errorf("标签 Upsert 失败: %w", err)
+	}
+	pfxID, err := l.deps.PrefixRepo.GetOrCreateByName(l.ctx, raw.Prefix)
+	if err != nil {
+		return nil, fmt.Errorf("前缀 Upsert 失败: %w", err)
+	}
+
+	genreIDs := make([]int64, 0, len(raw.Genres))
+	for _, g := range raw.Genres {
+		if _, drop := genreUnused[g.Name]; drop {
+			continue
 		}
-		score := parseScoreSafe(raw.Score) // 正则提取
-
-		// 2) 批量 upsert 基础字典（导演/厂商/标签/前缀/题材/演员）
-		directorID, makerID, labelID, prefixID, err := upsertBasics(tx, raw)
-		if err != nil {
-			return nil, err
+		gid, gerr := l.deps.GenreRepo.GetOrCreateByName(l.ctx, g.Name, g.JavId)
+		if gerr != nil {
+			return nil, fmt.Errorf("类型 Upsert 失败(%s): %w", g.Name, gerr)
 		}
+		genreIDs = append(genreIDs, gid)
+	}
 
-		genreIDs, err := upsertGenres(tx, raw.Genres, cons.GenreUnused)
-		if err != nil {
-			return nil, err
+	castIDs := make([]int64, 0, len(raw.Casts))
+	castJavIdMap := make(map[string]struct{}, len(raw.Casts))
+	for _, c := range raw.Casts {
+		cid, cerr := l.deps.CastRepo.GetOrCreateByName(l.ctx, c.Name, c.JavId)
+		if cerr != nil {
+			return nil, fmt.Errorf("演员 Upsert 失败(%s): %w", c.Name, cerr)
 		}
+		castIDs = append(castIDs, cid)
+		castJavIdMap[c.JavId] = struct{}{}
+	}
 
-		castIDs, avgAge, err := upsertCastsAndComputeAvgAge(tx, raw.Casts, releaseUnix)
-		if err != nil {
-			return nil, err
+	// ===== 3) Upsert 电影主体（a_movie）=====
+	now := time.Now().Unix()
+	mv := &moviex.AMovie{
+		Name:                 raw.Designation,
+		JavId:                raw.JavId,
+		Title:                raw.Title,
+		ReleasingDate:        releasingDate,
+		Length:               int64(length),
+		Score:                score,
+		ViewersNumberWant:    int64(viewWanted),
+		ViewersNumberOwned:   int64(viewOwned),
+		ViewersNumberWatched: int64(viewWatched),
+		PrefixId:             pfxID,
+		MakerId:              mkrID,
+		LabelId:              labID,
+		DirectorId:           dirID,
+		CastNumber:           int64(len(castIDs)),
+		//todo: 按“*10 的整数”策略存演员平均年龄（若将来有生日数据再计算）
+		CastAverageAge:   0,
+		DetailUpdateTime: raw.LastQueryTime,
+		CreatedOn:        now,
+		UpdatedOn:        now,
+	}
+
+	// 由 Repo 处理：按 jav_id 幂等保存；存在则更新并保留 CreatedOn
+	mvSaved, err := l.deps.MovieRepo.UpsertByJavId(l.ctx, mv)
+	if err != nil {
+		return nil, fmt.Errorf("保存电影失败: %w", err)
+	}
+
+	// ===== 4) Upsert bm_murl（海报/小图）=====
+	murl := &moviex.BmMurl{
+		Name:           raw.Designation,
+		JavId:          raw.JavId,
+		JacketImg:      raw.ImgUrl,
+		SmallImg:       raw.SmallImgUrl,
+		JacketImgLocal: "", // 由下载流程后续写入
+		SmallImgLocal:  "",
+		CreatedOn:      now,
+		UpdatedOn:      now,
+	}
+	if err := l.deps.MurlRepo.UpsertByJavIdPreserveLocal(l.ctx, murl); err != nil {
+		return nil, fmt.Errorf("保存 MURL 失败: %w", err)
+	}
+
+	// ===== 5) Upsert bm_minfo（编码名/中文/下载需求/排行信息）=====
+	encode := fmt.Sprintf("%04d-%s", pfxID, raw.Number)
+	minfo := &moviex.BmMinfo{
+		Name:       raw.Designation,
+		JavId:      raw.JavId,
+		EncodeName: encode,
+		// Chinese / FirstRankDayNumber / HighestRank / DaysInRank / NeedDownload
+		// 这些由 Repo 内部“保留旧值”策略处理
+		CreatedOn: now,
+		UpdatedOn: now,
+	}
+	if err := l.deps.MinfoRepo.UpsertPreserve(l.ctx, minfo); err != nil {
+		return nil, fmt.Errorf("保存 MINFO 失败: %w", err)
+	}
+
+	// ===== 6) 关系表（amr_movie_cast / amr_movie_genre）=====
+	for _, cid := range castIDs {
+		if err := l.deps.MovieCastRepo.TryLink(l.ctx, mvSaved.Id, cid, now); err != nil {
+			return nil, fmt.Errorf("建立关系 movie_cast 失败: %w", err)
 		}
-
-		// 3) 电影 upsert（带 encodeName）
-		encode := buildEncodeName(prefixID, raw.Number)
-		movie, err := upsertMovie(tx, &MovieInput{
-			JavId: raw.JavId, Title: raw.Title, Designation: raw.Designation,
-			Release: releaseUnix, Length: int64(length), Score: score,
-			DirectorID: directorID, MakerID: makerID, LabelID: labelID, PrefixID: prefixID,
-			ViewWanted: int64(viewWanted), ViewOwned: int64(viewOwned), ViewWatched: int64(viewWatched),
-			AvgAge: avgAge, Encode: encode, Birth: raw.BirthTime, LastQuery: raw.LastQueryTime,
-		}, now)
-		if err != nil {
-			return nil, err
+	}
+	for _, gid := range genreIDs {
+		if err := l.deps.MovieGenreRepo.TryLink(l.ctx, mvSaved.Id, gid, now); err != nil {
+			return nil, fmt.Errorf("建立关系 movie_genre 失败: %w", err)
 		}
+	}
 
-		// 4) murl upsert（保留旧的本地路径）
-		if err := upsertMurlPreserveLocal(tx, raw, encode); err != nil {
-			return nil, err
-		}
+	return &saveParsedMovieResponse{
+		movie:        mvSaved,
+		castJavIdMap: castJavIdMap,
+	}, nil
+}
 
-		// 5) 关系表批量 upsert（movie_cast, movie_genre）
-		if err := upsertMovieCasts(tx, movie.Id, castIDs); err != nil {
-			return nil, err
-		}
-		if err := upsertMovieGenres(tx, movie.Id, genreIDs); err != nil {
-			return nil, err
-		}
+/************** RawJavMovie 的解析工具（延用旧项目逻辑） **************/
 
-		// 6) 回写 detail 状态（NoNeedScan）
-		if err := markDetailScanned(tx, raw.JavId, now.Unix()); err != nil {
-			return nil, err
-		}
+func (r *RawJavMovie) getScore() (score int64, err error) {
+	if len(r.Score) == 0 {
+		return 0, nil
+	}
+	scoreStr := r.Score[1 : len(r.Score)-1]
+	scoreFloat, err := strconv.ParseFloat(scoreStr, 64)
+	if err != nil {
+		return -1, err
+	}
+	return int64(scoreFloat * 10), nil
+}
 
-		// 7) 返回
-		return &insertRawResponse{movie: movie}, nil
-	})
+func (r *RawJavMovie) getReleasingDate() (dateUnix int64, err error) {
+	yearStr := r.Date[:4]
+	monthStr := r.Date[5:7]
+	dayStr := r.Date[8:10]
 
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		return -1, err
+	}
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		return -1, err
+	}
+	day, err := strconv.Atoi(dayStr)
+	if err != nil {
+		return -1, err
+	}
+
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local).Unix(), nil
 }

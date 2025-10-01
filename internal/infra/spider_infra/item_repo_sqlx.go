@@ -1,22 +1,21 @@
-// internal/infra/item_repo_sqlx.go
-package infra
+package spider_infra
 
 import (
 	"context"
 	"fmt"
+	"rudy_gc/internal/repo/spider_repo"
 
 	"rudy_gc/data/modelx/spiderx"
-	"rudy_gc/internal/repo"
 	"rudy_gc/internal/types"
 )
 
-var _ repo.ItemRepo = (*ItemRepoSqlx)(nil)
+var _ spider_repo.ItemRepo = (*ItemRepoSqlx)(nil)
 
 type ItemRepoSqlx struct {
 	m spiderx.EItemModel
 }
 
-func NewItemRepoSqlx(m spiderx.EItemModel) repo.ItemRepo {
+func NewItemRepoSqlx(m spiderx.EItemModel) spider_repo.ItemRepo {
 	return &ItemRepoSqlx{m: m}
 }
 
@@ -72,24 +71,31 @@ func (r *ItemRepoSqlx) FindByDetailNeedScan(ctx context.Context, needScan int64)
 func (r *ItemRepoSqlx) UpdateDetailMeta(
 	ctx context.Context,
 	id int64,
-	detailNeedScan int64,
+	needScan int64,
 	birthTime int64,
 	updateTime int64,
-	hasDetail int64,
 	updatedOn int64,
+	hasDetail int64,
 ) error {
 	row, err := r.m.FindOne(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	row.DetailNeedScan = detailNeedScan
+	// DetailNeedScan 直接覆盖为最新
+	row.DetailNeedScan = needScan
+
+	// 首次写入 DetailBirthTime（仅当原值为 0 且传入大于 0 才设置）
 	if row.DetailBirthTime == 0 && birthTime > 0 {
 		row.DetailBirthTime = birthTime
 	}
+
+	// 本次抓取/解析对应的更新时间（>0 才更新）
 	if updateTime > 0 {
 		row.DetailUpdateTime = updateTime
 	}
+
+	// 同步 HasDetail 与 UpdatedOn
 	row.HasDetail = hasDetail
 	row.UpdatedOn = updatedOn
 

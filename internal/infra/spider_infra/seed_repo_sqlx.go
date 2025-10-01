@@ -1,11 +1,11 @@
-package infra
+package spider_infra
 
 import (
 	"context"
 	"fmt"
 	"rudy_gc/data/modelx/spiderx"
+	"rudy_gc/internal/repo/spider_repo"
 
-	"rudy_gc/internal/repo"
 	"rudy_gc/internal/types"
 )
 
@@ -14,7 +14,7 @@ type SeedRepoSqlx struct {
 }
 
 // 构造函数
-func NewSeedRepoSqlx(m spiderx.DSeedModel) repo.SeedRepo {
+func NewSeedRepoSqlx(m spiderx.DSeedModel) spider_repo.SeedRepo {
 	return &SeedRepoSqlx{m: m}
 }
 

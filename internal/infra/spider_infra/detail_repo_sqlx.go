@@ -1,15 +1,15 @@
-package infra
+package spider_infra
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"rudy_gc/data/modelx/spiderx"
-	"rudy_gc/internal/repo"
+	"rudy_gc/internal/repo/spider_repo"
 	"rudy_gc/internal/types"
 )
 
-var _ repo.DetailRepo = (*DetailRepoSqlx)(nil)
+var _ spider_repo.DetailRepo = (*DetailRepoSqlx)(nil)
 
 type DetailRepoSqlx struct {
 	m spiderx.DDetailModel

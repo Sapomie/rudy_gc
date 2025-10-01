@@ -2,12 +2,12 @@ APP := rudy_gc
 
 # ===== 可覆盖的参数（执行 make 时可用 ENV 覆盖） =====
 DB_URL    ?= "root:4521822123@tcp(127.0.0.1:3306)/rudy_gc"
-MODEL_DIR ?= data/modelx/spiderx
-TABLES    ?= "*"            # 也可以指定 "user,order" 逗号分隔
+MODEL_DIR ?= data/modelx/moviex
+TABLES    ?= "a*,b*"            # 也可以指定 "user,order" 逗号分隔
 GOCTL     ?= goctl
 STYLE     ?= go_zero        # go_zero / snake / go_zero
 
-.PHONY: run lint gen-model clean-model migrate docker-build
+.PHONY: run lint gen-model clean-model migrate auto-migrate docker-build
 
 run:
 	go run ./cmd/api
@@ -22,7 +22,12 @@ gen-model:
 		-table=$(TABLES) \
 		-dir=$(MODEL_DIR) \
 		--style=$(STYLE) \
-#		-c
+		-c
+
+# 执行 gorm AutoMigrate（调用 cmd/db_migrate/main.go）
+auto-migrate:
+	go run ./cmd/db_migrate
+
 
 # 清理再生成（可选）
 clean-model:
@@ -30,6 +35,7 @@ clean-model:
 
 migrate:
 	bash ./scripts/migrate.sh
+
 
 docker-build:
 	docker build -f deploy/docker/api.Dockerfile -t $(APP)/api:dev .

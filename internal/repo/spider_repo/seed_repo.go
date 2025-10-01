@@ -1,4 +1,4 @@
-package repo
+package spider_repo
 
 import (
 	"context"

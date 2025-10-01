@@ -1,4 +1,4 @@
-// auto_migrate
+// cmd/db_migrate
 package main
 
 import (
