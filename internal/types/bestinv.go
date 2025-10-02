@@ -7,12 +7,6 @@ const (
 	BestCategoryAllTime            // 2
 )
 
-const (
-	MarkBlueRay              = "（ブルーレイディスク）"
-	SearchByBestRatedMonth   = "vl_bestrated.php?&mode="
-	SearchByBestRatedAllTIme = "vl_bestrated.php?&mode=2"
-)
-
 // 是否需要排名检查
 const (
 	BestinvNeedRankCheck   = 1 + iota // 1

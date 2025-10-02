@@ -36,13 +36,6 @@ func (l *CrawlLogic) CrawlActiveSeeds() error {
 	return nil
 }
 
-func (l *CrawlLogic) CrawlDailyBestinv() error {
-	logx.WithContext(l.ctx).Info("CrawlDailyBestinv: begin")
-	// TODO: 拉取每日排行原文 -> raw_bestinv；解析 -> c_rank / 其它结构化表；设置保留周期/清理策略
-	logx.WithContext(l.ctx).Info("CrawlDailyBestinv: done")
-	return nil
-}
-
 func (l *CrawlLogic) SyncDailyBestinv() error {
 	logx.WithContext(l.ctx).Info("SyncDailyBestinv: begin")
 	// TODO: 同步远端/历史榜单；幂等合并；必要时触发详情补抓

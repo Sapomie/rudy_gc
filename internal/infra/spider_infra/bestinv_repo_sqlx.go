@@ -20,12 +20,12 @@ func NewBestinvRepoSqlx(m spiderx.DBestinvModel) spider_repo.BestinvRepo {
 	return &BestinvRepoSqlx{m: m}
 }
 
+// ===== 已有：Upsert（保持不变）=====
 func (r *BestinvRepoSqlx) Upsert(ctx context.Context, b *types.Bestinv) error {
-	// 先按 Name（唯一键）查询
 	row, err := r.m.FindOneByName(ctx, b.Name)
 	switch {
 	case err == nil && row != nil:
-		// 更新：保留原 CreatedOn，只刷新其它字段
+		// 更新：保留 CreatedOn
 		row.NeedScan = b.NeedScan
 		row.NeedRankCheck = b.NeedRankCheck
 		row.Category = b.Category
@@ -34,20 +34,16 @@ func (r *BestinvRepoSqlx) Upsert(ctx context.Context, b *types.Bestinv) error {
 		row.Content = b.Content
 		row.LastQueryTime = b.LastQueryTime
 		row.Date = b.Date
-		// row.CreatedOn 保留旧值
 		row.UpdatedOn = b.UpdatedOn
-
 		if uerr := r.m.Update(ctx, row); uerr != nil {
 			return fmt.Errorf("update d_bestinv(%s) failed: %w", b.Name, uerr)
 		}
 		return nil
 
 	case err != nil && !errors.Is(err, spiderx.ErrNotFound):
-		// 真实错误
 		return fmt.Errorf("find d_bestinv by name failed: %w", err)
 
 	default:
-		// 不存在则插入
 		toIns := &spiderx.DBestinv{
 			Name:          b.Name,
 			NeedScan:      b.NeedScan,
@@ -66,4 +62,45 @@ func (r *BestinvRepoSqlx) Upsert(ctx context.Context, b *types.Bestinv) error {
 		}
 		return nil
 	}
+}
+
+func (r *BestinvRepoSqlx) ListNeedScanIDs(ctx context.Context, limit int) ([]int64, error) {
+	ids, err := r.m.ListNeedScanIDs(ctx, int64(limit))
+	if err != nil {
+		return nil, fmt.Errorf("d_bestinv ListNeedScanIDs: %w", err)
+	}
+	return ids, nil
+}
+
+func (r *BestinvRepoSqlx) FindOne(ctx context.Context, id int64) (*types.Bestinv, error) {
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &types.Bestinv{
+		Id:            row.Id,
+		Name:          row.Name,
+		NeedScan:      row.NeedScan,
+		NeedRankCheck: row.NeedRankCheck,
+		Category:      row.Category,
+		Page:          row.Page,
+		DayNumber:     row.DayNumber,
+		Content:       row.Content,
+		LastQueryTime: row.LastQueryTime,
+		Date:          row.Date,
+		CreatedOn:     row.CreatedOn,
+		UpdatedOn:     row.UpdatedOn,
+	}, nil
+}
+
+// ===== 新增：标记已扫描 =====
+// 说明：只把 NeedScan 改为“已扫描”的值（沿用你 types 常量），并更新 UpdatedOn。
+func (r *BestinvRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64) error {
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+	row.NeedScan = types.BestinvNoNeedScan // 使用你在 internal/types 里定义的常量
+	row.UpdatedOn = ts
+	return r.m.Update(ctx, row)
 }

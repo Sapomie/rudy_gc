@@ -6,7 +6,6 @@ import (
 	"rudy_gc/internal/config"
 	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
-	"rudy_gc/internal/types"
 	"rudy_gc/pkg/mylog"
 
 	"github.com/sirupsen/logrus"
@@ -32,11 +31,13 @@ func main() {
 	var err error
 
 	l := logic.NewCrawlLogic(ctx, deps)
-	//err := l.FetchInventoriesBySeedActive()
-	//err := l.ProcessInventory()
+	//err = l.FetchInventoriesBySeedActive()
+	//err = l.ProcessInventory()
 	//_, err = l.FetchDetails()
 	//err = l.ParseDetails()
-	err = l.FetchBestinv(types.BestCategoryMonth, 25)
+	//err = l.FetchBestinv(types.BestCategoryMonth, 25)
+	err = l.ProcessBestinv()
+
 	if err != nil {
 		panic(err)
 	}

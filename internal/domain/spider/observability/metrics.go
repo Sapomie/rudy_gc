@@ -1,1 +1,1 @@
-// placeholder metrics.go
+package observability
