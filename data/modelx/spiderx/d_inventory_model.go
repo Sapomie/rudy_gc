@@ -15,7 +15,7 @@ type (
 	DInventoryModel interface {
 		dInventoryModel
 		withSession(session sqlx.Session) DInventoryModel
-		ListNeedScanIDs(ctx context.Context, limit int64) ([]int64, error)
+		ListNeedScanIDs(ctx context.Context, flag int64, limit int64) ([]int64, error)
 	}
 
 	customDInventoryModel struct {
@@ -46,8 +46,8 @@ func (m *customDInventoryModel) withSession(session sqlx.Session) DInventoryMode
 	return NewDInventoryModel(sqlx.NewSqlConnFromSession(session))
 }
 
-// ListNeedScanIDs 查询 need_scan=1 的若干 id（默认上限 100000）
-func (m *customDInventoryModel) ListNeedScanIDs(ctx context.Context, limit int64) ([]int64, error) {
+// ListNeedScanIDs 查询 need_scan=flag 的若干 id
+func (m *customDInventoryModel) ListNeedScanIDs(ctx context.Context, flag int64, limit int64) ([]int64, error) {
 	if limit <= 0 {
 		limit = 100000
 	}
@@ -55,7 +55,7 @@ func (m *customDInventoryModel) ListNeedScanIDs(ctx context.Context, limit int64
 	query, args, err := squirrel.
 		Select("`id`").
 		From(m.tableName()).
-		Where("`need_scan` = ?", InventoryNeedScan).
+		Where("`need_scan` = ?", flag).
 		OrderBy("`id` ASC").
 		Limit(uint64(limit)).
 		ToSql()

@@ -65,7 +65,9 @@ func (m *LoopServer) logErr(err error, kv ...any) {
 }
 
 // 互斥位辅助（供各自 loop 使用）
-func (m *LoopServer) startInv() bool    { return atomic.CompareAndSwapInt32(&m.goingOnInv, 0, 1) }
+func (m *LoopServer) startInv() bool {
+	return atomic.CompareAndSwapInt32(&m.goingOnInv, 0, 1)
+}
 func (m *LoopServer) stopInv()          { atomic.StoreInt32(&m.goingOnInv, 0) }
 func (m *LoopServer) startDetail() bool { return atomic.CompareAndSwapInt32(&m.goingOnDetail, 0, 1) }
 func (m *LoopServer) stopDetail()       { atomic.StoreInt32(&m.goingOnDetail, 0) }

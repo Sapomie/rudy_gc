@@ -1,4 +1,3 @@
-// data/modelx/spiderx/d_bestinv_model.go
 package spiderx
 
 import (
@@ -11,12 +10,14 @@ import (
 var _ DBestinvModel = (*customDBestinvModel)(nil)
 
 type (
-	// DBestinvModel 是可扩展接口，新增方法写这里，并在 customDBestinvModel 中实现
+	// DBestinvModel is an interface to be customized, add more methods here,
+	// and implement the added methods in customDBestinvModel.
 	DBestinvModel interface {
 		dBestinvModel
 		withSession(session sqlx.Session) DBestinvModel
-		// ListNeedScanIDs 查询 need_scan=1 的若干 id（按 id 升序，limit 上限可控）
-		ListNeedScanIDs(ctx context.Context, limit int64) ([]int64, error)
+
+		ListNeedScanIDs(ctx context.Context, flag int64, limit int64) ([]int64, error)
+		ListIDsByRankCheck(ctx context.Context, flag int64, limit int64) ([]int64, error)
 	}
 
 	customDBestinvModel struct {
@@ -24,7 +25,7 @@ type (
 	}
 )
 
-// NewDBestinvModel 返回定制后的 model
+// NewDBestinvModel returns a model for the database table.
 func NewDBestinvModel(conn sqlx.SqlConn) DBestinvModel {
 	return &customDBestinvModel{
 		defaultDBestinvModel: newDBestinvModel(conn),
@@ -35,9 +36,7 @@ func (m *customDBestinvModel) withSession(session sqlx.Session) DBestinvModel {
 	return NewDBestinvModel(sqlx.NewSqlConnFromSession(session))
 }
 
-const bestinvNeedScan int64 = 1
-
-func (m *customDBestinvModel) ListNeedScanIDs(ctx context.Context, limit int64) ([]int64, error) {
+func (m *customDBestinvModel) ListNeedScanIDs(ctx context.Context, flag int64, limit int64) ([]int64, error) {
 	if limit <= 0 {
 		limit = 100000
 	}
@@ -45,7 +44,30 @@ func (m *customDBestinvModel) ListNeedScanIDs(ctx context.Context, limit int64) 
 	query, args, err := squirrel.
 		Select("`id`").
 		From(m.tableName()).
-		Where("`need_scan` = ?", bestinvNeedScan).
+		Where("`need_scan` = ?", flag).
+		OrderBy("`id` ASC").
+		Limit(uint64(limit)).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []int64
+	if err := m.conn.QueryRowsCtx(ctx, &ids, query, args...); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+func (m *customDBestinvModel) ListIDsByRankCheck(ctx context.Context, flag int64, limit int64) ([]int64, error) {
+	if limit <= 0 {
+		limit = 100000
+	}
+
+	query, args, err := squirrel.
+		Select("`id`").
+		From(m.tableName()).
+		Where("`need_rank_check` = ?", flag).
 		OrderBy("`id` ASC").
 		Limit(uint64(limit)).
 		ToSql()

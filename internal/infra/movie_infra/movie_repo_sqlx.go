@@ -3,10 +3,10 @@ package movie_infra
 import (
 	"context"
 	"errors"
-	"time"
-
+	"fmt"
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/movie_repo"
+	"rudy_gc/internal/types"
 )
 
 var _ movie_repo.MovieRepo = (*MovieRepoSqlx)(nil)
@@ -19,41 +19,102 @@ func NewMovieRepoSqlx(m moviex.AMovieModel) movie_repo.MovieRepo {
 	return &MovieRepoSqlx{m: m}
 }
 
-func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *moviex.AMovie) (*moviex.AMovie, error) {
-	// 1) 先按 jav_id 查是否已存在
-	old, err := r.m.FindOneByJavId(ctx, mv.JavId)
+// FindByJavId 查找电影
+func (r *MovieRepoSqlx) FindByJavId(ctx context.Context, javId string) (*types.Movie, error) {
+	row, err := r.m.FindOneByJavId(ctx, javId)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find movie by javId failed: %w", err)
+	}
+	return toTypesMovie(row), nil
+}
+
+// UpsertByJavId 按 JavId 保存（幂等）
+func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*types.Movie, error) {
+	// 先查
+	exist, err := r.m.FindOneByJavId(ctx, mv.JavId)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
 		return nil, err
 	}
 
-	now := time.Now().Unix()
+	if exist != nil {
+		// 更新：保留 CreatedOn
+		exist.Name = mv.Name
+		exist.Title = mv.Title
+		exist.ReleasingDate = mv.ReleasingDate
+		exist.Length = mv.Length
+		exist.Score = mv.Score
+		exist.ViewersNumberWant = mv.ViewersNumberWant
+		exist.ViewersNumberOwned = mv.ViewersNumberOwned
+		exist.ViewersNumberWatched = mv.ViewersNumberWatched
+		exist.PrefixId = mv.PrefixId
+		exist.MakerId = mv.MakerId
+		exist.LabelId = mv.LabelId
+		exist.DirectorId = mv.DirectorId
+		exist.CastNumber = mv.CastNumber
+		exist.CastAverageAge = mv.CastAverageAge
+		exist.DetailUpdateTime = mv.DetailUpdateTime
+		exist.UpdatedOn = mv.UpdatedOn
 
-	// 2) 不存在 -> Insert
-	if old == nil {
-		if mv.CreatedOn == 0 {
-			mv.CreatedOn = now
+		if err := r.m.Update(ctx, exist); err != nil {
+			return nil, fmt.Errorf("update movie(%s) failed: %w", mv.JavId, err)
 		}
-		if mv.UpdatedOn == 0 {
-			mv.UpdatedOn = now
-		}
-		if _, err := r.m.Insert(ctx, mv); err != nil {
-			return nil, err
-		}
-		// 回查以获得自增 id 等字段
-		return r.m.FindOneByJavId(ctx, mv.JavId)
+		return toTypesMovie(exist), nil
 	}
 
-	// 3) 已存在 -> Update（保留旧 CreatedOn）
-	toUpdate := *mv
-	toUpdate.Id = old.Id
-	if toUpdate.CreatedOn == 0 {
-		toUpdate.CreatedOn = old.CreatedOn
+	// 插入
+	row := &moviex.AMovie{
+		Name:                 mv.Name,
+		JavId:                mv.JavId,
+		Title:                mv.Title,
+		ReleasingDate:        mv.ReleasingDate,
+		Length:               mv.Length,
+		Score:                mv.Score,
+		ViewersNumberWant:    mv.ViewersNumberWant,
+		ViewersNumberOwned:   mv.ViewersNumberOwned,
+		ViewersNumberWatched: mv.ViewersNumberWatched,
+		PrefixId:             mv.PrefixId,
+		MakerId:              mv.MakerId,
+		LabelId:              mv.LabelId,
+		DirectorId:           mv.DirectorId,
+		CastNumber:           mv.CastNumber,
+		CastAverageAge:       mv.CastAverageAge,
+		DetailUpdateTime:     mv.DetailUpdateTime,
+		CreatedOn:            mv.CreatedOn,
+		UpdatedOn:            mv.UpdatedOn,
 	}
-	if toUpdate.UpdatedOn == 0 {
-		toUpdate.UpdatedOn = now
+	if _, err := r.m.Insert(ctx, row); err != nil {
+		return nil, fmt.Errorf("insert movie(%s) failed: %w", mv.JavId, err)
 	}
-	if err := r.m.Update(ctx, &toUpdate); err != nil {
-		return nil, err
+	return toTypesMovie(row), nil
+}
+
+// 内部转换函数
+func toTypesMovie(mv *moviex.AMovie) *types.Movie {
+	if mv == nil {
+		return nil
 	}
-	return r.m.FindOne(ctx, old.Id)
+	return &types.Movie{
+		Id:                   mv.Id,
+		Name:                 mv.Name,
+		JavId:                mv.JavId,
+		Title:                mv.Title,
+		ReleasingDate:        mv.ReleasingDate,
+		Length:               mv.Length,
+		Score:                mv.Score,
+		ViewersNumberWant:    mv.ViewersNumberWant,
+		ViewersNumberOwned:   mv.ViewersNumberOwned,
+		ViewersNumberWatched: mv.ViewersNumberWatched,
+		PrefixId:             mv.PrefixId,
+		MakerId:              mv.MakerId,
+		LabelId:              mv.LabelId,
+		DirectorId:           mv.DirectorId,
+		CastNumber:           mv.CastNumber,
+		CastAverageAge:       mv.CastAverageAge,
+		DetailUpdateTime:     mv.DetailUpdateTime,
+		CreatedOn:            mv.CreatedOn,
+		UpdatedOn:            mv.UpdatedOn,
+	}
 }

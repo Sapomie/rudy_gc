@@ -35,11 +35,18 @@ func main() {
 	//err = l.ProcessInventory()
 	//_, err = l.FetchDetails()
 	//err = l.ParseDetails()
-	//err = l.FetchBestinv(types.BestCategoryMonth, 25)
-	err = l.ProcessBestinv()
+	//err = l.CrawlDailyBestinv()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//_, err = l.FetchAndParseDetails()
+	//if err != nil {
+	//	panic(err)
+	//}
 
+	err = l.ProcessBestinvRank()
 	if err != nil {
 		panic(err)
 	}
-
 }

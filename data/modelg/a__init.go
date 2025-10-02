@@ -22,6 +22,7 @@ func AutoMigrate(db *gorm.DB) error {
 		new(Bestinv),
 		new(Item),
 		new(Detail),
+		new(Rank),
 
 		new(Movie),
 		new(Murl),

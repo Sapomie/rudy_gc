@@ -9,7 +9,7 @@ MOVIE_MODEL_DIR  := data/modelx/moviex
 SPIDER_MODEL_DIR := data/modelx/spiderx
 
 # 分类规则
-MOVIE_TABLES := "a*,am*,bm*,e*"
+MOVIE_TABLES := "a*,am*,bm*,c*,e*"
 SPIDER_TABLES := "d*"
 
 .PHONY: run lint gen-model-movie gen-model-spider gen-model clean-model migrate auto-migrate docker-build

@@ -1,4 +1,4 @@
-// data/modelx/spiderx/e_item_model.go
+// data/modelx/moviex/e_item_model_ext.go
 package moviex
 
 import (
@@ -6,42 +6,35 @@ import (
 	"errors"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-var _ EItemModel = (*customEItemModel)(nil)
-
-type (
-	EItemModel interface {
-		eItemModel
-		withSession(session sqlx.Session) EItemModel
-		ListByDetailStatus(ctx context.Context, hasDetail int64, limit int64) ([]*EItem, error)
-		ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error)
-	}
-
-	customEItemModel struct {
-		*defaultEItemModel
-	}
-)
-
-func NewEItemModel(conn sqlx.SqlConn) EItemModel {
-	return &customEItemModel{defaultEItemModel: newEItemModel(conn)}
+type EItemModel interface {
+	eItemModel
+	ListByDetailStatus(ctx context.Context, hasDetail int64, limit int64) ([]*EItem, error)
+	ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error)
 }
 
-func (m *customEItemModel) withSession(session sqlx.Session) EItemModel {
-	return NewEItemModel(sqlx.NewSqlConnFromSession(session))
+type customEItemModel struct {
+	*defaultEItemModel
+}
+
+func NewEItemModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) EItemModel {
+	return &customEItemModel{
+		defaultEItemModel: newEItemModel(conn, c, opts...),
+	}
 }
 
 func (m *customEItemModel) ListByDetailStatus(ctx context.Context, hasDetail int64, limit int64) ([]*EItem, error) {
 	if limit <= 0 {
 		limit = 10000
 	}
-
-	// 用 goctl 生成的 eItemRows + m.tableName()
 	builder := squirrel.
 		Select(eItemRows).
 		From(m.tableName()).
 		Where(squirrel.Eq{"has_detail": hasDetail}).
+		OrderBy("`id` ASC").
 		Limit(uint64(limit))
 
 	query, args, err := builder.ToSql()
@@ -49,14 +42,14 @@ func (m *customEItemModel) ListByDetailStatus(ctx context.Context, hasDetail int
 		return nil, err
 	}
 
-	var items []*EItem
-	if err := m.conn.QueryRowsCtx(ctx, &items, query, args...); err != nil {
+	var rows []*EItem
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return items, nil
+	return rows, nil
 }
 
 func (m *customEItemModel) ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error) {
@@ -67,6 +60,7 @@ func (m *customEItemModel) ListByDetailNeedScan(ctx context.Context, needScan in
 		Select(eItemRows).
 		From(m.tableName()).
 		Where(squirrel.Eq{"detail_need_scan": needScan}).
+		OrderBy("`id` ASC").
 		Limit(uint64(limit))
 
 	query, args, err := builder.ToSql()
@@ -75,7 +69,7 @@ func (m *customEItemModel) ListByDetailNeedScan(ctx context.Context, needScan in
 	}
 
 	var rows []*EItem
-	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, nil
 		}

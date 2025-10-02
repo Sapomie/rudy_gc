@@ -38,6 +38,7 @@ type Deps struct {
 	MovieGenreRepo movie_repo.MovieGenreRepo
 	MinfoRepo      movie_repo.MinfoRepo
 	MurlRepo       movie_repo.MurlRepo
+	RankRepo       movie_repo.RankRepo
 
 	Fetcher *fetcher.Fetcher
 }
@@ -50,7 +51,6 @@ func NewDeps(cfg config.Config) *Deps {
 	seedRepo := spider_infra.NewSeedRepoSqlx(spiderx.NewDSeedModel(conn))
 	inventoryRepo := spider_infra.NewInventoryRepoSqlx(spiderx.NewDInventoryModel(conn))
 	bestRepo := spider_infra.NewBestinvRepoSqlx(spiderx.NewDBestinvModel(conn))
-	itemRepo := spider_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn))
 	detailRepo := spider_infra.NewDetailRepoSqlx(spiderx.NewDDetailModel(conn))
 
 	// ========== movie (有缓存) ==========
@@ -65,6 +65,8 @@ func NewDeps(cfg config.Config) *Deps {
 	movieGenreRepo := movie_infra.NewMovieGenreRepoSqlx(moviex.NewAmrMovieGenreModel(conn, c))
 	minfoRepo := movie_infra.NewMinfoRepoSqlx(moviex.NewBmMinfoModel(conn, c))
 	murlRepo := movie_infra.NewMurlRepoSqlx(moviex.NewBmMurlModel(conn, c))
+	itemRepo := spider_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
+	rankRepo := movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
 
 	// ========== fetcher ==========
 	f := fetcher.NewFetcher(fetcher.Config{
@@ -94,6 +96,7 @@ func NewDeps(cfg config.Config) *Deps {
 		MovieGenreRepo: movieGenreRepo,
 		MinfoRepo:      minfoRepo,
 		MurlRepo:       murlRepo,
+		RankRepo:       rankRepo,
 
 		Fetcher: f,
 	}

@@ -34,32 +34,31 @@ func (m *LoopServer) processDetailNotification(n *spider.Notification) {
 	num, err := l.FetchAndParseDetails()
 	if err != nil {
 		logx.WithContext(ctx).Errorf("detail: CrawlDetailAll error: %v", err)
-	} else {
-		// 记录数量（如果你的 Notification 没有字段承载，就仅日志记录）
-		logx.WithContext(ctx).Infow("detail: done count", logx.Field("count", num))
+	}
+	// 记录数量（如果你的 Notification 没有字段承载，就仅日志记录）
+	logx.WithContext(ctx).Infow("detail: done count", logx.Field("count", num))
 
-		// 2) 可选：写入一次记录（占位）
-		if recErr := l.AddRecord(n, int64(num)); recErr != nil {
-			logx.WithContext(ctx).Errorf("detail: AddRecord error: %v", recErr)
-		}
+	// 2) 可选：写入一次记录（占位）todo:record 细化
+	//if recErr := l.AddRecord(n, int64(num)); recErr != nil {
+	//	logx.WithContext(ctx).Errorf("detail: AddRecord error: %v", recErr)
+	//}
 
-		// 3) 通知后续环节（翻译 / 下载封面）
-		m.notifyTranslationIfNecessary()
-		m.notifyDownloadCoverIfNecessary()
+	// 3) 通知后续环节（翻译 / 下载封面）
+	m.notifyTranslationIfNecessary()
+	m.notifyDownloadCoverIfNecessary()
 
-		// 4) 如果是 Bestinv 场景，处理 Rank（保持老项目逻辑）
-		if n.Action == spider.ActionDailyBestinv || n.Action == spider.ActionSyncDailyBestinv {
-			logx.WithContext(ctx).Info("detail: ProcessBestinvRank begin")
-			if rerr := l.ProcessBestinvRank(); rerr != nil {
-				logx.WithContext(ctx).Errorf("detail: ProcessBestinvRank error: %v", rerr)
-			}
-		}
-
-		// 5) 更新演员统计（按老项目）
-		if uerr := l.UpdateCastsMovieNumberInfo(); uerr != nil {
-			logx.WithContext(ctx).Errorf("detail: UpdateCastsMovieNumberInfo error: %v", uerr)
+	// 4) 如果是 Bestinv 场景，处理 Rank（保持老项目逻辑）
+	if n.Action == spider.ActionDailyBestinv || n.Action == spider.ActionSyncDailyBestinv {
+		logx.WithContext(ctx).Info("detail: ProcessBestinvRank begin")
+		if rerr := l.ProcessBestinvRank(); rerr != nil {
+			logx.WithContext(ctx).Errorf("detail: ProcessBestinvRank error: %v", rerr)
 		}
 	}
+
+	// 5) 更新演员统计（按老项目）
+	//if uerr := l.UpdateCastsMovieNumberInfo(); uerr != nil {
+	//	logx.WithContext(ctx).Errorf("detail: UpdateCastsMovieNumberInfo error: %v", uerr)
+	//}
 
 	logx.WithContext(ctx).Info("detail: end")
 }

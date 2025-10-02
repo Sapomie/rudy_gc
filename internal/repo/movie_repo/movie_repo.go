@@ -2,10 +2,11 @@ package movie_repo
 
 import (
 	"context"
-
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/types"
 )
 
 type MovieRepo interface {
-	UpsertByJavId(ctx context.Context, mv *moviex.AMovie) (*moviex.AMovie, error)
+	UpsertByJavId(ctx context.Context, mv *types.Movie) (*types.Movie, error)
+
+	FindByJavId(ctx context.Context, javId string) (*types.Movie, error)
 }

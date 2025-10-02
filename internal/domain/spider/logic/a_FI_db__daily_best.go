@@ -9,7 +9,7 @@ import (
 
 func (l *CrawlLogic) CrawlDailyBestinv() error {
 	logx.WithContext(l.ctx).Info("CrawlDailyBestinv: begin")
-	if err := l.FetchBestinv(types.BestCategoryMonth, 25); err != nil {
+	if err := l.FetchBestinv(types.BestCategoryMonth, 2); err != nil {
 		logx.WithContext(l.ctx).Errorf("FetchBestinv: %v", err)
 		return err
 	}

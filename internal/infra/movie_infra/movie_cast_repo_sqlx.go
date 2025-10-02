@@ -36,3 +36,7 @@ func (r *MovieCastRepoSqlx) TryLink(ctx context.Context, movieId, castId, ts int
 	_, err = r.m.Insert(ctx, row)
 	return err
 }
+
+func (r *MovieCastRepoSqlx) ListCastIDsByMovie(ctx context.Context, movieId int64) ([]int64, error) {
+	return r.m.ListCastIDsByMovie(ctx, movieId)
+}

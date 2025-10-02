@@ -6,4 +6,6 @@ import "context"
 type MovieCastRepo interface {
 	// TryLink: 以 (movie_id, cast_id) 为幂等键创建关系；若已存在则不报错。
 	TryLink(ctx context.Context, movieId, castId, ts int64) error
+
+	ListCastIDsByMovie(ctx context.Context, movieId int64) ([]int64, error)
 }

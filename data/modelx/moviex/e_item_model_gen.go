@@ -8,10 +8,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"rudy_gc/data/modelx/spiderx"
 	"strings"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
+	"github.com/zeromicro/go-zero/core/stores/cache"
+	"github.com/zeromicro/go-zero/core/stores/sqlc"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/core/stringx"
 )
@@ -21,6 +22,9 @@ var (
 	eItemRows                = strings.Join(eItemFieldNames, ",")
 	eItemRowsExpectAutoSet   = strings.Join(stringx.Remove(eItemFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	eItemRowsWithPlaceHolder = strings.Join(stringx.Remove(eItemFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
+
+	cacheRudyGcEItemIdPrefix    = "cache:rudyGc:eItem:id:"
+	cacheRudyGcEItemJavIdPrefix = "cache:rudyGc:eItem:javId:"
 )
 
 type (
@@ -33,7 +37,7 @@ type (
 	}
 
 	defaultEItemModel struct {
-		conn  sqlx.SqlConn
+		sqlc.CachedConn
 		table string
 	}
 
@@ -56,57 +60,97 @@ type (
 	}
 )
 
-func newEItemModel(conn sqlx.SqlConn) *defaultEItemModel {
+func newEItemModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) *defaultEItemModel {
 	return &defaultEItemModel{
-		conn:  conn,
-		table: "`e_item`",
+		CachedConn: sqlc.NewConn(conn, c, opts...),
+		table:      "`e_item`",
 	}
 }
 
 func (m *defaultEItemModel) Delete(ctx context.Context, id int64) error {
-	query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
-	_, err := m.conn.ExecCtx(ctx, query, id)
+	data, err := m.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	rudyGcEItemIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemIdPrefix, id)
+	rudyGcEItemJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemJavIdPrefix, data.JavId)
+	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
+		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
+		return conn.ExecCtx(ctx, query, id)
+	}, rudyGcEItemIdKey, rudyGcEItemJavIdKey)
 	return err
 }
 
 func (m *defaultEItemModel) FindOne(ctx context.Context, id int64) (*EItem, error) {
-	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", eItemRows, m.table)
+	rudyGcEItemIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemIdPrefix, id)
 	var resp EItem
-	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
+	err := m.QueryRowCtx(ctx, &resp, rudyGcEItemIdKey, func(ctx context.Context, conn sqlx.SqlConn, v any) error {
+		query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", eItemRows, m.table)
+		return conn.QueryRowCtx(ctx, v, query, id)
+	})
 	switch err {
 	case nil:
 		return &resp, nil
-	case sqlx.ErrNotFound:
-		return nil, spiderx.ErrNotFound
+	case sqlc.ErrNotFound:
+		return nil, ErrNotFound
 	default:
 		return nil, err
 	}
 }
 
 func (m *defaultEItemModel) FindOneByJavId(ctx context.Context, javId string) (*EItem, error) {
+	rudyGcEItemJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemJavIdPrefix, javId)
 	var resp EItem
-	query := fmt.Sprintf("select %s from %s where `jav_id` = ? limit 1", eItemRows, m.table)
-	err := m.conn.QueryRowCtx(ctx, &resp, query, javId)
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcEItemJavIdKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `jav_id` = ? limit 1", eItemRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, javId); err != nil {
+			return nil, err
+		}
+		return resp.Id, nil
+	}, m.queryPrimary)
 	switch err {
 	case nil:
 		return &resp, nil
-	case sqlx.ErrNotFound:
-		return nil, spiderx.ErrNotFound
+	case sqlc.ErrNotFound:
+		return nil, ErrNotFound
 	default:
 		return nil, err
 	}
 }
 
 func (m *defaultEItemModel) Insert(ctx context.Context, data *EItem) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, eItemRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Prefix, data.SearchType, data.CoverUrl, data.SearchBy, data.HasDetail, data.HasDownloadCover, data.HasChinese, data.DetailNeedScan, data.DetailBirthTime, data.DetailUpdateTime, data.CreatedOn, data.UpdatedOn)
+	rudyGcEItemIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemIdPrefix, data.Id)
+	rudyGcEItemJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemJavIdPrefix, data.JavId)
+	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, eItemRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Prefix, data.SearchType, data.CoverUrl, data.SearchBy, data.HasDetail, data.HasDownloadCover, data.HasChinese, data.DetailNeedScan, data.DetailBirthTime, data.DetailUpdateTime, data.CreatedOn, data.UpdatedOn)
+	}, rudyGcEItemIdKey, rudyGcEItemJavIdKey)
 	return ret, err
 }
 
 func (m *defaultEItemModel) Update(ctx context.Context, newData *EItem) error {
-	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, eItemRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Prefix, newData.SearchType, newData.CoverUrl, newData.SearchBy, newData.HasDetail, newData.HasDownloadCover, newData.HasChinese, newData.DetailNeedScan, newData.DetailBirthTime, newData.DetailUpdateTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	data, err := m.FindOne(ctx, newData.Id)
+	if err != nil {
+		return err
+	}
+
+	rudyGcEItemIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemIdPrefix, data.Id)
+	rudyGcEItemJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemJavIdPrefix, data.JavId)
+	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
+		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, eItemRowsWithPlaceHolder)
+		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Prefix, newData.SearchType, newData.CoverUrl, newData.SearchBy, newData.HasDetail, newData.HasDownloadCover, newData.HasChinese, newData.DetailNeedScan, newData.DetailBirthTime, newData.DetailUpdateTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, rudyGcEItemIdKey, rudyGcEItemJavIdKey)
 	return err
+}
+
+func (m *defaultEItemModel) formatPrimary(primary any) string {
+	return fmt.Sprintf("%s%v", cacheRudyGcEItemIdPrefix, primary)
+}
+
+func (m *defaultEItemModel) queryPrimary(ctx context.Context, conn sqlx.SqlConn, v, primary any) error {
+	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", eItemRows, m.table)
+	return conn.QueryRowCtx(ctx, v, query, primary)
 }
 
 func (m *defaultEItemModel) tableName() string {

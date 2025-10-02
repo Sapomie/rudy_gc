@@ -68,7 +68,7 @@ func (r *InventoryRepoSqlx) FindOne(ctx context.Context, id int64) (*types.Inven
 }
 
 func (r *InventoryRepoSqlx) ListNeedScanIDs(ctx context.Context, limit int) ([]int64, error) {
-	return r.m.ListNeedScanIDs(ctx, int64(limit))
+	return r.m.ListNeedScanIDs(ctx, types.InventoryNeedScan, int64(limit))
 }
 
 func (r *InventoryRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64) error {

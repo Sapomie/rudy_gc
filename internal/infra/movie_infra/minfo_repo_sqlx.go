@@ -4,6 +4,7 @@ package movie_infra
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -59,4 +60,21 @@ func (r *MinfoRepoSqlx) UpsertPreserve(ctx context.Context, in *moviex.BmMinfo) 
 	up.UpdatedOn = now
 
 	return r.m.Update(ctx, &up)
+}
+
+func (r *MinfoRepoSqlx) UpdateRankStatsByJavId(ctx context.Context, javId string, firstDay, highestRank, daysInRank, updatedOn int64) error {
+	row, err := r.m.FindOneByJavId(ctx, javId)
+	if err != nil {
+		return fmt.Errorf("查询 minfo 失败(javId=%s): %w", javId, err)
+	}
+	// 更新排行相关字段
+	row.FirstRankDayNumber = firstDay
+	row.HighestRank = highestRank
+	row.DaysInRank = daysInRank
+	row.UpdatedOn = updatedOn
+
+	if err := r.m.Update(ctx, row); err != nil {
+		return fmt.Errorf("更新 minfo 失败(javId=%s): %w", javId, err)
+	}
+	return nil
 }

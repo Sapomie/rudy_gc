@@ -3,6 +3,7 @@ package logic
 
 import (
 	"fmt"
+	"rudy_gc/internal/types"
 	"strconv"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 
 // saveParsedMovieResponse 返回保存后的电影记录与演员 javId 集合（供后续统计/链路使用）
 type saveParsedMovieResponse struct {
-	movie        *moviex.AMovie
+	movie        *types.Movie
 	castJavIdMap map[string]struct{}
 }
 
@@ -92,7 +93,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 
 	// ===== 3) Upsert 电影主体（a_movie）=====
 	now := time.Now().Unix()
-	mv := &moviex.AMovie{
+	mv := &types.Movie{
 		Name:                 raw.Designation,
 		JavId:                raw.JavId,
 		Title:                raw.Title,

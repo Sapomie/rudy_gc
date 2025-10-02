@@ -65,7 +65,7 @@ func (r *BestinvRepoSqlx) Upsert(ctx context.Context, b *types.Bestinv) error {
 }
 
 func (r *BestinvRepoSqlx) ListNeedScanIDs(ctx context.Context, limit int) ([]int64, error) {
-	ids, err := r.m.ListNeedScanIDs(ctx, int64(limit))
+	ids, err := r.m.ListNeedScanIDs(ctx, types.BestinvNeedScan, int64(limit))
 	if err != nil {
 		return nil, fmt.Errorf("d_bestinv ListNeedScanIDs: %w", err)
 	}
@@ -103,4 +103,28 @@ func (r *BestinvRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64) e
 	row.NeedScan = types.BestinvNoNeedScan // 使用你在 internal/types 里定义的常量
 	row.UpdatedOn = ts
 	return r.m.Update(ctx, row)
+}
+
+func (r *BestinvRepoSqlx) ListIDsByRankCheck(ctx context.Context, flag int64, limit int64) ([]int64, error) {
+	ids, err := r.m.ListIDsByRankCheck(ctx, flag, limit)
+	if err != nil {
+		return nil, fmt.Errorf("查询 need_rank_check=%d 的 bestinv 失败: %w", flag, err)
+	}
+	return ids, nil
+}
+
+func (r *BestinvRepoSqlx) MarkRankChecked(ctx context.Context, id int64, ts int64) error {
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return fmt.Errorf("查询 d_bestinv id=%d 失败: %w", id, err)
+	}
+
+	// 更新字段
+	row.NeedRankCheck = types.BestinvNoNeedRankCheck
+	row.UpdatedOn = ts
+
+	if uerr := r.m.Update(ctx, row); uerr != nil {
+		return fmt.Errorf("更新 d_bestinv id=%d rank_check 状态失败: %w", id, uerr)
+	}
+	return nil
 }
