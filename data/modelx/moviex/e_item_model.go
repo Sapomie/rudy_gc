@@ -1,5 +1,5 @@
 // data/modelx/spiderx/e_item_model.go
-package spiderx
+package moviex
 
 import (
 	"context"

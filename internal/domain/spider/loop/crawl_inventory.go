@@ -2,8 +2,8 @@ package loop
 
 import (
 	"context"
-	"rudy_gc/internal/spider/logic"
-	"rudy_gc/internal/spider/types"
+	"rudy_gc/internal/domain/spider/logic"
+	"rudy_gc/internal/domain/spider/types"
 	"time"
 )
 

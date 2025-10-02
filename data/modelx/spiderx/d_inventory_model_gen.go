@@ -38,14 +38,14 @@ type (
 
 	DInventory struct {
 		Id            int64  `db:"id"`
-		Name          string `db:"name"`            // 唯一名(由query+page组合)
-		NeedScan      int64  `db:"need_scan"`       // 是否需要扫描(0=不需要,1=需要)
-		Keyword       string `db:"keyword"`         // 来源的关键字(前缀或标签)
-		Parent        string `db:"parent"`          // 上级queryBy
-		Page          int64  `db:"page"`            // 页码
-		Content       string `db:"content"`         // 页面HTML内容
-		Category      int64  `db:"category"`        // 类别(1=Prefix,2=Label)
-		LastQueryTime int64  `db:"last_query_time"` // 最后抓取时间(Unix秒)
+		Name          string `db:"name"`            // '唯一名'
+		NeedScan      int64  `db:"need_scan"`       // '是否需要扫描'
+		Keyword       string `db:"keyword"`         // '来源关键字'
+		Parent        string `db:"parent"`          // '上级查询名'
+		Page          int64  `db:"page"`            // '页码'
+		Content       string `db:"content"`         // '页面HTML内容'
+		Category      int64  `db:"category"`        // '类别'
+		LastQueryTime int64  `db:"last_query_time"` // '最后抓取时间'
 		CreatedOn     int64  `db:"created_on"`
 		UpdatedOn     int64  `db:"updated_on"`
 	}

@@ -7,9 +7,9 @@ func (l *CrawlLogic) FetchAndParseDetails() (int, error) {
 		return 0, err
 	}
 
-	//err = l.ParseDetails()
-	//if err != nil {
-	//	return 0, err
-	//}
+	err = l.ParseDetails()
+	if err != nil {
+		return 0, err
+	}
 	return detailNum, nil
 }

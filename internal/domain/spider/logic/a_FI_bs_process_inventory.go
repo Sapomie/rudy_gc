@@ -1,4 +1,4 @@
-// internal/spiderx/logic/a_FI_process_inventory.go
+// internal/spiderx/logic/a_FI_bs_process_inventory.go
 package logic
 
 import (
@@ -13,18 +13,6 @@ import (
 	"rudy_gc/internal/types"
 )
 
-// ProcessInventory
-// 1) 查询 NeedScan=YES 的 inventory 列表（只拿 id，逐个处理）
-// 2) 解析 HTML（goquery）抽取条目：name/javId/cover/prefix/searchType/searchBy
-// 3) 过滤冗余前缀、蓝光条目
-// 4) 幂等写入 item（基于 JavId 唯一）
-// 5) 成功后将该 inventory 标记为已扫描（NeedScan=NO）
-//
-// 依赖的仓储接口：
-// - InventoryRepo.ListNeedScanIDs(ctx, limit) ([]int64, error)
-// - InventoryRepo.FindOne(ctx, id) (*types.Inventory, error)
-// - InventoryRepo.MarkScanned(ctx, id, ts int64) error
-// - ItemRepo.TryInsert(ctx, *types.Item) (inserted bool, err error)
 func (l *CrawlLogic) ProcessInventory() error {
 	log := logx.WithContext(l.ctx)
 
@@ -68,7 +56,6 @@ func (l *CrawlLogic) makeAndInsertItemsByInventory(inv *types.Inventory) error {
 	return nil
 }
 
-// makeAndInsertItems 从 HTML 文本解析条目并 TryInsert
 func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64) error {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {

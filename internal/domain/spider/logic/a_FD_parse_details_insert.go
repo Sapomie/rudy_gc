@@ -22,13 +22,6 @@ var genreUnused = map[string]struct{}{
 	"数位马赛克": {},
 }
 
-// saveParsedMovie
-// - 解析 RawJavMovie 基本字段
-// - 逐个 Upsert：导演/厂牌/标签/前缀/类型/演员
-// - Upsert 电影主体（a_movie）
-// - Upsert 海报与小图（bm_murl）
-// - Upsert 影片信息（bm_minfo）（保留旧值的策略由 Repo 层实现）
-// - 建立关系（amr_movie_cast / amr_movie_genre）
 func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse, error) {
 	// ===== 1) 解析原始数值字段 =====
 	length, err := strconv.Atoi(raw.Length)
@@ -121,6 +114,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		UpdatedOn:        now,
 	}
 
+	//todo:1.事物        2.BatchTryLink(movieId, ids []int64)
 	// 由 Repo 处理：按 jav_id 幂等保存；存在则更新并保留 CreatedOn
 	mvSaved, err := l.deps.MovieRepo.UpsertByJavId(l.ctx, mv)
 	if err != nil {

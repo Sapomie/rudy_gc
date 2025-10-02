@@ -38,17 +38,17 @@ type (
 
 	DSeed struct {
 		Id            int64  `db:"id"`
-		Name          string `db:"name"`            // 查询名(前缀/标签具体值)
-		Active        int64  `db:"active"`          // 状态(1=inactive,2=active)
-		SearchType    int64  `db:"search_type"`     // 1=Offset,2=StartEnd
-		NameType      int64  `db:"name_type"`       // 1=Prefix,2=Label
-		PageNow       int64  `db:"page_now"`        // 当前断点页(最近成功处理到的页码)
-		Offset        int64  `db:"offset"`          // 仅在SearchType=Offset时有效
-		StartPage     int64  `db:"start_page"`      // 仅在SearchType=StartEnd时有效
-		EndPage       int64  `db:"end_page"`        // 仅在SearchType=StartEnd时有效
-		LastQueryTime int64  `db:"last_query_time"` // 最后一次开始抓取的Unix时间戳(秒,0=未运行)
-		LastStatus    int64  `db:"last_status"`     // 0=idle,1=ok,2=empty,3=error
-		LastError     string `db:"last_error"`      // 最后一次错误摘要
+		Name          string `db:"name"`            // '查询名'
+		Active        int64  `db:"active"`          // '状态'
+		SearchType    int64  `db:"search_type"`     // '查询类型'
+		NameType      int64  `db:"name_type"`       // '名称类型'
+		PageNow       int64  `db:"page_now"`        // '当前页'
+		Offset        int64  `db:"offset"`          // '偏移量'
+		StartPage     int64  `db:"start_page"`      // '起始页'
+		EndPage       int64  `db:"end_page"`        // '结束页'
+		LastQueryTime int64  `db:"last_query_time"` // '最后一次抓取时间'
+		LastStatus    int64  `db:"last_status"`     // '最后状态'
+		LastError     string `db:"last_error"`      // '最后错误摘要'
 		CreatedOn     int64  `db:"created_on"`
 		UpdatedOn     int64  `db:"updated_on"`
 	}

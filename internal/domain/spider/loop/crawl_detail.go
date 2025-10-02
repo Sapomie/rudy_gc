@@ -3,10 +3,9 @@ package loop
 
 import (
 	"context"
+	"rudy_gc/internal/domain/spider/logic"
+	spider "rudy_gc/internal/domain/spider/types"
 	"time"
-
-	"rudy_gc/internal/spider/logic"
-	spider "rudy_gc/internal/spider/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

@@ -1,1 +1,1 @@
-// placeholder service.go
+package movie

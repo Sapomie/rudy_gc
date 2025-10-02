@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/spider/loop"
+	"rudy_gc/internal/domain/spider/loop"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/mylog"
 

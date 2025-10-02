@@ -2,11 +2,13 @@
 package logic
 
 import (
+	"bytes"
 	"fmt"
 	"rudy_gc/pkg/mylog"
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -87,6 +89,14 @@ func buildInventoryName(queryWithPage string, nameType int64, t time.Time) strin
 
 // filterContent：留接口位置，你要处理编码/去广告可写在这里。
 // 现在直接将字节转字符串。
-func filterContent(b []byte) (string, error) {
-	return string(b), nil
+func filterContent(byts []byte) (string, error) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(byts))
+	if err != nil {
+		return "", err
+	}
+	content, err := doc.Find("div[id=rightcolumn]").Html()
+	if err != nil {
+		return "", err
+	}
+	return content, nil
 }

@@ -10,10 +10,6 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-// ParseDetails
-// 1) 找到 DetailNeedScan=YES 的 item 列表
-// 2) 逐条抓取并解析 -> 生成/更新电影相关数据
-// 3) 成功后更新 item.DetailNeedScan
 func (l *CrawlLogic) ParseDetails() error {
 	// 查找需要解析的 Item
 	items, err := l.deps.ItemRepo.FindByDetailNeedScan(l.ctx, types.ItemDetailStatusNeedScan)

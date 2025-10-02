@@ -3,9 +3,9 @@ package loop
 import (
 	"context"
 	"fmt"
+	"rudy_gc/internal/domain/spider/types"
 	"sync/atomic"
 
-	"rudy_gc/internal/spider/types"
 	"rudy_gc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/logx"

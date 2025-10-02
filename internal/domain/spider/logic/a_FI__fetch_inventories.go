@@ -1,4 +1,4 @@
-// internal/spiderx/logic/a__crawl.go
+// internal/spiderx/logic/a_FI__fetch_inventories.go
 package logic
 
 import (

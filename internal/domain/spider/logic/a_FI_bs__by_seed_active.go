@@ -1,4 +1,4 @@
-// internal/spiderx/logic/a_FI__fetch_inventories_by_seed_active.go
+// internal/spiderx/logic/a_FI_bs__by_seed_active.go
 package logic
 
 import (

@@ -3,19 +3,19 @@ package spider_infra
 import (
 	"context"
 	"fmt"
+	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/spider_repo"
 
-	"rudy_gc/data/modelx/spiderx"
 	"rudy_gc/internal/types"
 )
 
 var _ spider_repo.ItemRepo = (*ItemRepoSqlx)(nil)
 
 type ItemRepoSqlx struct {
-	m spiderx.EItemModel
+	m moviex.EItemModel
 }
 
-func NewItemRepoSqlx(m spiderx.EItemModel) spider_repo.ItemRepo {
+func NewItemRepoSqlx(m moviex.EItemModel) spider_repo.ItemRepo {
 	return &ItemRepoSqlx{m: m}
 }
 
@@ -24,7 +24,7 @@ func (r *ItemRepoSqlx) TryInsert(ctx context.Context, it *types.Item) (bool, err
 	if err == nil && old != nil {
 		return false, nil
 	}
-	_, ierr := r.m.Insert(ctx, &spiderx.EItem{
+	_, ierr := r.m.Insert(ctx, &moviex.EItem{
 		Id:               it.Id,
 		Name:             it.Name,
 		JavId:            it.JavId,
@@ -102,7 +102,7 @@ func (r *ItemRepoSqlx) UpdateDetailMeta(
 	return r.m.Update(ctx, row)
 }
 
-func itemRowToType(row *spiderx.EItem) *types.Item {
+func itemRowToType(row *moviex.EItem) *types.Item {
 	if row == nil {
 		return nil
 	}

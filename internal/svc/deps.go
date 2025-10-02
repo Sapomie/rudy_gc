@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"rudy_gc/internal/domain/spider/fetcher"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -11,7 +12,6 @@ import (
 	"rudy_gc/internal/infra/spider_infra"
 	"rudy_gc/internal/repo/movie_repo"
 	"rudy_gc/internal/repo/spider_repo"
-	"rudy_gc/internal/spider/fetcher"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -24,6 +24,7 @@ type Deps struct {
 	InventoryRepo spider_repo.InventoryRepo
 	ItemRepo      spider_repo.ItemRepo
 	DetailRepo    spider_repo.DetailRepo
+	BestinvRepo   spider_repo.BestinvRepo
 
 	// movie repos (带缓存)
 	MovieRepo      movie_repo.MovieRepo
@@ -46,16 +47,13 @@ func NewDeps(cfg config.Config) *Deps {
 	c := cfg.Cache
 
 	// ========== spider (无缓存) ==========
-	seedModel := spiderx.NewDSeedModel(conn)
-	invModel := spiderx.NewDInventoryModel(conn)
-	itemModel := spiderx.NewEItemModel(conn)
-	detailModel := spiderx.NewDDetailModel(conn)
+	seedRepo := spider_infra.NewSeedRepoSqlx(spiderx.NewDSeedModel(conn))
+	inventoryRepo := spider_infra.NewInventoryRepoSqlx(spiderx.NewDInventoryModel(conn))
+	bestRepo := spider_infra.NewBestinvRepoSqlx(spiderx.NewDBestinvModel(conn))
+	itemRepo := spider_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn))
+	detailRepo := spider_infra.NewDetailRepoSqlx(spiderx.NewDDetailModel(conn))
 
-	seedRepo := spider_infra.NewSeedRepoSqlx(seedModel)
-	inventoryRepo := spider_infra.NewInventoryRepoSqlx(invModel)
-	itemRepo := spider_infra.NewItemRepoSqlx(itemModel)
-	detailRepo := spider_infra.NewDetailRepoSqlx(detailModel)
-
+	// ========== movie (有缓存) ==========
 	movieRepo := movie_infra.NewMovieRepoSqlx(moviex.NewAMovieModel(conn, c))
 	castRepo := movie_infra.NewCastRepoSqlx(moviex.NewAmCastModel(conn, c))
 	genreRepo := movie_infra.NewGenreRepoSqlx(moviex.NewAmGenreModel(conn, c))
@@ -77,12 +75,14 @@ func NewDeps(cfg config.Config) *Deps {
 	})
 
 	return &Deps{
-		Config:        cfg,
+		Config: cfg,
+
 		SeedRepo:      seedRepo,
 		InventoryRepo: inventoryRepo,
-		ItemRepo:      itemRepo,
 		DetailRepo:    detailRepo,
+		BestinvRepo:   bestRepo,
 
+		ItemRepo:       itemRepo,
 		MovieRepo:      movieRepo,
 		CastRepo:       castRepo,
 		GenreRepo:      genreRepo,

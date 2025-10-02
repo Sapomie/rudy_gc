@@ -2,12 +2,13 @@
 // versions:
 //  goctl version: 1.9.0
 
-package spiderx
+package moviex
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"rudy_gc/data/modelx/spiderx"
 	"strings"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
@@ -76,7 +77,7 @@ func (m *defaultEItemModel) FindOne(ctx context.Context, id int64) (*EItem, erro
 	case nil:
 		return &resp, nil
 	case sqlx.ErrNotFound:
-		return nil, ErrNotFound
+		return nil, spiderx.ErrNotFound
 	default:
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func (m *defaultEItemModel) FindOneByJavId(ctx context.Context, javId string) (*
 	case nil:
 		return &resp, nil
 	case sqlx.ErrNotFound:
-		return nil, ErrNotFound
+		return nil, spiderx.ErrNotFound
 	default:
 		return nil, err
 	}
