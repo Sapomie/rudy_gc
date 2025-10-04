@@ -85,8 +85,19 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 		CreatedOn:            mv.CreatedOn,
 		UpdatedOn:            mv.UpdatedOn,
 	}
-	if _, err := r.m.Insert(ctx, row); err != nil {
+	ret, err := r.m.Insert(ctx, row)
+	if err != nil {
 		return nil, fmt.Errorf("insert movie(%s) failed: %w", mv.JavId, err)
+	}
+	if id, e := ret.LastInsertId(); e == nil {
+		row.Id = id // 关键：填回自增ID
+	} else {
+		// 少数驱动拿不到 last insert id 时，兜底回查
+		got, fe := r.m.FindOneByJavId(ctx, mv.JavId)
+		if fe != nil {
+			return nil, fmt.Errorf("insert ok but re-fetch movie(%s) failed: %w", mv.JavId, fe)
+		}
+		row = got
 	}
 	return toTypesMovie(row), nil
 }
@@ -117,4 +128,20 @@ func toTypesMovie(mv *moviex.AMovie) *types.Movie {
 		CreatedOn:            mv.CreatedOn,
 		UpdatedOn:            mv.UpdatedOn,
 	}
+}
+func (r *MovieRepoSqlx) CountAll(ctx context.Context) (int64, error) {
+	return r.m.CountAll(ctx)
+}
+
+func (r *MovieRepoSqlx) ListMovies(ctx context.Context, offset, limit int64) ([]*types.Movie, error) {
+	rows, err := r.m.ListPage(ctx, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list movies failed: %w", err)
+	}
+
+	result := make([]*types.Movie, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, toTypesMovie(row))
+	}
+	return result, nil
 }

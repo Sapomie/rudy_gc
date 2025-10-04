@@ -1,1 +1,1 @@
-// placeholder spider_admin.go
+package admin

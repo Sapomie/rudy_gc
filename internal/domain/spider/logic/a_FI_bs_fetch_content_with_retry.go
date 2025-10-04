@@ -14,9 +14,9 @@ import (
 
 const maxRetries = 45
 
-// fetchContentWithRetry 复刻老项目策略：成功200且正文有效才返回；否则重试。
+// fetchInventoryContentWithRetry 复刻老项目策略：成功200且正文有效才返回；否则重试。
 // 碰到“有效请求但页面无结果”时，返回 ErrBlankPage。
-func (l *CrawlLogic) fetchContentWithRetry(fullURL string) (string, error) {
+func (l *CrawlLogic) fetchInventoryContentWithRetry(fullURL string) (string, error) {
 	tryAttempts := 0
 
 	for {
@@ -33,7 +33,7 @@ func (l *CrawlLogic) fetchContentWithRetry(fullURL string) (string, error) {
 		}
 
 		if err == nil && statusCode == 200 {
-			content, ferr := filterContent(body) // 可在此做解码/清洗；当前直接转字符串
+			content, ferr := filterInventoryContent(body) // 可在此做解码/清洗；当前直接转字符串
 			if ferr == nil {
 				if isValidContent(content) {
 					return content, nil
@@ -87,9 +87,9 @@ func buildInventoryName(queryWithPage string, nameType int64, t time.Time) strin
 	return queryWithPage
 }
 
-// filterContent：留接口位置，你要处理编码/去广告可写在这里。
+// filterInventoryContent：留接口位置，你要处理编码/去广告可写在这里。
 // 现在直接将字节转字符串。
-func filterContent(byts []byte) (string, error) {
+func filterInventoryContent(byts []byte) (string, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(byts))
 	if err != nil {
 		return "", err

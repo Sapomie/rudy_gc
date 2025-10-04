@@ -164,7 +164,7 @@ func (l *CrawlLogic) fetchAndSaveInventory(nameType int64, keyword, queryBy stri
 	fullURL := base + queryWithPage
 
 	// 抓取（带重试、空页判定；内部已走 l.deps.Fetcher.Get）
-	content, err := l.fetchContentWithRetry(fullURL)
+	content, err := l.fetchInventoryContentWithRetry(fullURL)
 	if err != nil {
 		return err
 	}

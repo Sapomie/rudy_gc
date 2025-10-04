@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"rudy_gc/internal/types"
 	"rudy_gc/pkg/mylog"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -104,7 +106,17 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 		resp, ferr := l.deps.Fetcher.Get(l.ctx, url)
 		if ferr == nil {
 			body = resp.Body
-			// 详情页只要拿到响应就尝试返回（是否有效由 isValidDetail 再判断）
+
+			// 调用过滤函数，裁剪掉无用的部分
+			content, ferr := filterDetailContent(body)
+			if ferr == nil {
+				if isValidDetail(content) {
+					return content, nil
+				}
+				// 请求成功但页面无效/空白
+				return "", ErrBlankPage
+			}
+			// 如果过滤失败，仍然返回原始 HTML 作为兜底
 			return string(body), nil
 		}
 		err = ferr
@@ -112,10 +124,12 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 		logx.WithContext(l.ctx).Infof("%s 第%d次尝试: %s", name, attempts, url)
 
 		if attempts%20 == 0 {
-			mylog.Warn(l.ctx, "多次重试失败，10分钟后重试", "name", name, "attempts", attempts, "url", url)
+			mylog.Warn(l.ctx, "多次重试失败，10分钟后重试",
+				"name", name, "attempts", attempts, "url", url)
 			time.Sleep(10 * time.Minute)
 		} else {
-			mylog.Warn(l.ctx, "请求错误，3秒后重试", "name", name, "attempts", attempts, "url", url, "err", err.Error())
+			mylog.Warn(l.ctx, "请求错误，3秒后重试",
+				"name", name, "attempts", attempts, "url", url, "err", err.Error())
 			time.Sleep(3 * time.Second)
 		}
 	}
@@ -128,4 +142,42 @@ func logItemProgress(done, total int, name string, start time.Time) {
 	remain := etaTotal - elapsed
 	logx.Infof("已完成 %d/%d: %s，用时 %.1f 分钟，预计剩余 %.1f 分钟",
 		done, total, name, elapsed, remain)
+}
+
+// filterDetailContent 过滤掉 HTML 中无关部分，只保留电影详情相关节点
+func filterDetailContent(body []byte) (string, error) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("解析 HTML 出错: %w", err)
+	}
+
+	// 新建一个干净的 DOM 作为输出
+	out := &strings.Builder{}
+	out.WriteString("<html><body>\n")
+
+	// 只挑选需要的节点复制出来
+	keepIDs := []string{
+		"video_title",
+		"video_id",
+		"video_date",
+		"video_length",
+		"video_director",
+		"video_maker",
+		"video_label",
+		"video_review",
+		"video_genres",
+		"video_cast",
+		"video_favorite_edit",
+		"video_jacket",
+	}
+
+	for _, id := range keepIDs {
+		if sel := doc.Find(fmt.Sprintf("#%s", id)); sel.Length() > 0 {
+			html, _ := sel.Html()
+			out.WriteString(fmt.Sprintf("<div id=\"%s\">%s</div>\n", id, html))
+		}
+	}
+
+	out.WriteString("</body></html>")
+	return out.String(), nil
 }

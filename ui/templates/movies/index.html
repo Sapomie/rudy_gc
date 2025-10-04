@@ -1,0 +1,32 @@
+<!-- ui/templates/movies/index.html -->
+<div class="container mt-4">
+    <h3 class="mb-3">Movies ({{.total}})</h3>
+
+    <div class="row">
+        {{range .movies}}
+        <div class="col-md-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title" title="{{.Title}}">{{.Title}}</h6>
+                    <p class="card-text mb-1">JavId: {{.JavId}}</p>
+                    <p class="card-text">Score: {{.Score}}</p>
+                </div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <nav aria-label="pager">
+        <ul class="pagination">
+            <li class="page-item {{if not .hasPrev}}disabled{{end}}">
+                <a class="page-link" href="/movies?page={{.prevPage}}&size={{.size}}">Prev</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">{{.page}} / {{.pages}}</span>
+            </li>
+            <li class="page-item {{if not .hasNext}}disabled{{end}}">
+                <a class="page-link" href="/movies?page={{.nextPage}}&size={{.size}}">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>

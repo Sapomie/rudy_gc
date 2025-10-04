@@ -23,8 +23,8 @@ var (
 	bmMinfoRowsExpectAutoSet   = strings.Join(stringx.Remove(bmMinfoFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	bmMinfoRowsWithPlaceHolder = strings.Join(stringx.Remove(bmMinfoFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcBmMinfoIdPrefix    = "cache:rudyGc:bmMinfo:id:"
-	cacheRudyGcBmMinfoJavIdPrefix = "cache:rudyGc:bmMinfo:javId:"
+	cacheRudyGcBmMinfoIdPrefix    = "bizcache:rudyGc:bmMinfo:id:"
+	cacheRudyGcBmMinfoJavIdPrefix = "bizcache:rudyGc:bmMinfo:javId:"
 )
 
 type (

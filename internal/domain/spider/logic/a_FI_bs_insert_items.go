@@ -2,7 +2,7 @@ package logic
 
 import (
 	"fmt"
-	consts "rudy_gc/internal/cnonsts"
+	consts "rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"strings"
 	"time"

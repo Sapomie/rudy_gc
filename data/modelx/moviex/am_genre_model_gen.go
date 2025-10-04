@@ -23,8 +23,8 @@ var (
 	amGenreRowsExpectAutoSet   = strings.Join(stringx.Remove(amGenreFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amGenreRowsWithPlaceHolder = strings.Join(stringx.Remove(amGenreFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmGenreIdPrefix   = "cache:rudyGc:amGenre:id:"
-	cacheRudyGcAmGenreNamePrefix = "cache:rudyGc:amGenre:name:"
+	cacheRudyGcAmGenreIdPrefix   = "bizcache:rudyGc:amGenre:id:"
+	cacheRudyGcAmGenreNamePrefix = "bizcache:rudyGc:amGenre:name:"
 )
 
 type (

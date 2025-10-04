@@ -3,7 +3,7 @@ package logic
 import (
 	"errors"
 	"fmt"
-	consts "rudy_gc/internal/cnonsts"
+	consts "rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
 
@@ -38,7 +38,7 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 	queryWithPage := fmt.Sprintf("/%s&page=%d", queryBy, page)
 	fullURL := fmt.Sprintf("https://%s/cn%s", l.deps.Config.Spider.JavAddress, queryWithPage)
 
-	content, err := l.fetchContentWithRetry(fullURL)
+	content, err := l.fetchInventoryContentWithRetry(fullURL)
 	if err != nil {
 		return err // 这里包含 ErrBlankPage；上层会识别并提前停止
 	}

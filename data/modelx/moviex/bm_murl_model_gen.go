@@ -23,8 +23,8 @@ var (
 	bmMurlRowsExpectAutoSet   = strings.Join(stringx.Remove(bmMurlFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	bmMurlRowsWithPlaceHolder = strings.Join(stringx.Remove(bmMurlFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcBmMurlIdPrefix    = "cache:rudyGc:bmMurl:id:"
-	cacheRudyGcBmMurlJavIdPrefix = "cache:rudyGc:bmMurl:javId:"
+	cacheRudyGcBmMurlIdPrefix    = "bizcache:rudyGc:bmMurl:id:"
+	cacheRudyGcBmMurlJavIdPrefix = "bizcache:rudyGc:bmMurl:javId:"
 )
 
 type (

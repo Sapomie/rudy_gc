@@ -55,7 +55,7 @@ func (m *LoopServer) processDetailNotification(n *spider.Notification) {
 		}
 	}
 
-	// 5) 更新演员统计（按老项目）
+	// 5) 更新演员统计（按老项目）todo
 	//if uerr := l.UpdateCastsMovieNumberInfo(); uerr != nil {
 	//	logx.WithContext(ctx).Errorf("detail: UpdateCastsMovieNumberInfo error: %v", uerr)
 	//}

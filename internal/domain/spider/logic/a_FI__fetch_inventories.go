@@ -8,20 +8,6 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type CrawlLogic struct {
-	ctx       context.Context
-	deps      *svc.Deps
-	castIdMap map[int64]struct{}
-}
-
-func NewCrawlLogic(ctx context.Context, deps *svc.Deps) *CrawlLogic {
-	return &CrawlLogic{
-		ctx:       ctx,
-		deps:      deps,
-		castIdMap: map[int64]struct{}{},
-	}
-}
-
 // ------------------------ 对外暴露的方法（与旧项目保持一致命名） ------------------------
 
 func (l *CrawlLogic) CrawlActiveSeeds() error {

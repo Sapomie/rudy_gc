@@ -23,8 +23,8 @@ var (
 	amrMovieGenreRowsExpectAutoSet   = strings.Join(stringx.Remove(amrMovieGenreFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amrMovieGenreRowsWithPlaceHolder = strings.Join(stringx.Remove(amrMovieGenreFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmrMovieGenreIdPrefix             = "cache:rudyGc:amrMovieGenre:id:"
-	cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix = "cache:rudyGc:amrMovieGenre:movieId:genreId:"
+	cacheRudyGcAmrMovieGenreIdPrefix             = "bizcache:rudyGc:amrMovieGenre:id:"
+	cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix = "bizcache:rudyGc:amrMovieGenre:movieId:genreId:"
 )
 
 type (

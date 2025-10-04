@@ -23,8 +23,8 @@ var (
 	amLabelRowsExpectAutoSet   = strings.Join(stringx.Remove(amLabelFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amLabelRowsWithPlaceHolder = strings.Join(stringx.Remove(amLabelFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmLabelIdPrefix   = "cache:rudyGc:amLabel:id:"
-	cacheRudyGcAmLabelNamePrefix = "cache:rudyGc:amLabel:name:"
+	cacheRudyGcAmLabelIdPrefix   = "bizcache:rudyGc:amLabel:id:"
+	cacheRudyGcAmLabelNamePrefix = "bizcache:rudyGc:amLabel:name:"
 )
 
 type (

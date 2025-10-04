@@ -3,6 +3,7 @@ package logic
 
 import (
 	"fmt"
+	"math"
 	"rudy_gc/internal/types"
 	"strconv"
 	"time"
@@ -91,6 +92,32 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		castJavIdMap[c.JavId] = struct{}{}
 	}
 
+	//cast_age
+	castAvgAgeTenth := int64(0)
+	{
+		var (
+			sumYears float64
+			cnt      int
+		)
+		for _, c := range raw.Casts {
+			// 使用 Repo 查询生日
+			birth, found, err := l.deps.CafoRepo.FindBirthByName(l.ctx, c.Name)
+			if err != nil {
+				return nil, fmt.Errorf("查询 Cafo 失败(%s): %w", c.Name, err)
+			}
+			if found && birth > 0 {
+				years := float64(releasingDate-birth) / (3600.0 * 24.0 * 365.0)
+				sumYears += years
+				cnt++
+			}
+		}
+		if cnt > 0 {
+			avg := sumYears / float64(cnt)  // 平均岁数
+			avg10 := math.Round(avg * 10.0) // 保留 1 位小数 → ×10 四舍五入
+			castAvgAgeTenth = int64(avg10)  // 23.7 → 237
+		}
+	}
+
 	// ===== 3) Upsert 电影主体（a_movie）=====
 	now := time.Now().Unix()
 	mv := &types.Movie{
@@ -108,15 +135,14 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		LabelId:              labID,
 		DirectorId:           dirID,
 		CastNumber:           int64(len(castIDs)),
-		//todo: 按“*10 的整数”策略存演员平均年龄（若将来有生日数据再计算）
-		CastAverageAge:   0,
+		//按“*10 的整数”策略存演员平均年龄（若将来有生日数据再计算）
+		CastAverageAge:   castAvgAgeTenth,
 		DetailUpdateTime: raw.LastQueryTime,
 		CreatedOn:        now,
 		UpdatedOn:        now,
 	}
 
 	//todo:1.事物        2.BatchTryLink(movieId, ids []int64)
-	// 由 Repo 处理：按 jav_id 幂等保存；存在则更新并保留 CreatedOn
 	mvSaved, err := l.deps.MovieRepo.UpsertByJavId(l.ctx, mv)
 	if err != nil {
 		return nil, fmt.Errorf("保存电影失败: %w", err)
@@ -163,6 +189,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 			return nil, fmt.Errorf("建立关系 movie_genre 失败: %w", err)
 		}
 	}
+	l.movieSvc.InvalidateMovieType(l.ctx, raw.JavId)
 
 	return &saveParsedMovieResponse{
 		movie:        mvSaved,

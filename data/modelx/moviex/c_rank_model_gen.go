@@ -23,8 +23,8 @@ var (
 	cRankRowsExpectAutoSet   = strings.Join(stringx.Remove(cRankFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	cRankRowsWithPlaceHolder = strings.Join(stringx.Remove(cRankFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcCRankIdPrefix      = "cache:rudyGc:cRank:id:"
-	cacheRudyGcCRankRankKeyPrefix = "cache:rudyGc:cRank:rankKey:"
+	cacheRudyGcCRankIdPrefix      = "bizcache:rudyGc:cRank:id:"
+	cacheRudyGcCRankRankKeyPrefix = "bizcache:rudyGc:cRank:rankKey:"
 )
 
 type (

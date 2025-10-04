@@ -31,22 +31,27 @@ func main() {
 	var err error
 
 	l := logic.NewCrawlLogic(ctx, deps)
-	//err = l.FetchInventoriesBySeedActive()
-	//err = l.ProcessInventory()
-	//_, err = l.FetchDetails()
-	//err = l.ParseDetails()
+
+	//err = l.CrawlActiveSeeds()
+	//if err != nil {
+	//	panic(err)
+	//}
+	_, err = l.FetchAndParseDetails()
+	if err != nil {
+		panic(err)
+	}
+	//
 	//err = l.CrawlDailyBestinv()
 	//if err != nil {
 	//	panic(err)
 	//}
-	//
 	//_, err = l.FetchAndParseDetails()
 	//if err != nil {
 	//	panic(err)
 	//}
+	//err = l.ProcessBestinvRank()
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	err = l.ProcessBestinvRank()
-	if err != nil {
-		panic(err)
-	}
 }

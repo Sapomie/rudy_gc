@@ -2,11 +2,22 @@ DataSource: root:4521822123@tcp(127.0.0.1:3306)/rudy_gc?charset=utf8mb4&parseTim
 
 Port: ":5010"
 
+
 Cache:
   - Host: 127.0.0.1:6379
     Pass: ""
     Type: node
     Weight: 100
+
+BizRedis:
+  Host: 127.0.0.1:6378
+  Pass:
+  Type: node
+
+MovieTypeCache:
+  Prefix: "rudy:mt"
+  Version: "v1"
+  TTL: "24h"
 
 Fetcher:
   UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"

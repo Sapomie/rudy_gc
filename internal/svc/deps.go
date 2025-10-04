@@ -2,6 +2,7 @@ package svc
 
 import (
 	"rudy_gc/internal/domain/spider/fetcher"
+	"rudy_gc/internal/infra/bizcache"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -13,6 +14,7 @@ import (
 	"rudy_gc/internal/repo/movie_repo"
 	"rudy_gc/internal/repo/spider_repo"
 
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -39,11 +41,14 @@ type Deps struct {
 	MinfoRepo      movie_repo.MinfoRepo
 	MurlRepo       movie_repo.MurlRepo
 	RankRepo       movie_repo.RankRepo
+	CafoRepo       movie_repo.CafoRepo
+
+	MovieTypeCache movie_repo.MovieTypeCache
 
 	Fetcher *fetcher.Fetcher
 }
 
-func NewDeps(cfg config.Config) *Deps {
+func NewDeps(cfg config.Config) (*Deps, error) {
 	conn := sqlx.NewMysql(cfg.DataSource)
 	c := cfg.Cache
 
@@ -60,6 +65,7 @@ func NewDeps(cfg config.Config) *Deps {
 	directorRepo := movie_infra.NewDirectorRepoSqlx(moviex.NewAmDirectorModel(conn, c))
 	labelRepo := movie_infra.NewLabelRepoSqlx(moviex.NewAmLabelModel(conn, c))
 	makerRepo := movie_infra.NewMakerRepoSqlx(moviex.NewAmMakerModel(conn, c))
+
 	prefixRepo := movie_infra.NewPrefixRepoSqlx(moviex.NewAmPrefixModel(conn, c))
 	movieCastRepo := movie_infra.NewMovieCastRepoSqlx(moviex.NewAmrMovieCastModel(conn, c))
 	movieGenreRepo := movie_infra.NewMovieGenreRepoSqlx(moviex.NewAmrMovieGenreModel(conn, c))
@@ -67,6 +73,18 @@ func NewDeps(cfg config.Config) *Deps {
 	murlRepo := movie_infra.NewMurlRepoSqlx(moviex.NewBmMurlModel(conn, c))
 	itemRepo := spider_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
 	rankRepo := movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
+	cafoRepo := movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
+
+	bizRedis, err := redis.NewRedis(redis.RedisConf{
+		Host: cfg.BizRedis.Host,
+		Pass: cfg.BizRedis.Pass,
+		Type: cfg.BizRedis.Type,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	movieTypeCache := bizcache.NewMovieTypeBizCache(bizRedis, cfg.MovieTypeCache.Prefix, cfg.MovieTypeCache.Version, cfg.MovieTypeCache.TTL)
 
 	// ========== fetcher ==========
 	f := fetcher.NewFetcher(fetcher.Config{
@@ -97,7 +115,9 @@ func NewDeps(cfg config.Config) *Deps {
 		MinfoRepo:      minfoRepo,
 		MurlRepo:       murlRepo,
 		RankRepo:       rankRepo,
+		CafoRepo:       cafoRepo,
+		MovieTypeCache: movieTypeCache,
 
 		Fetcher: f,
-	}
+	}, nil
 }
