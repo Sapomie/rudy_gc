@@ -3,6 +3,8 @@ package svc
 import (
 	"rudy_gc/internal/domain/spider/fetcher"
 	"rudy_gc/internal/infra/bizcache"
+	film_infra "rudy_gc/internal/infra/film_repo"
+	"rudy_gc/internal/repo/film_repo"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -14,12 +16,15 @@ import (
 	"rudy_gc/internal/repo/movie_repo"
 	"rudy_gc/internal/repo/spider_repo"
 
+	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type Deps struct {
-	Config config.Config
+	Config  config.Config
+	SqlConn sqlx.SqlConn
+	Cache   cache.CacheConf
 
 	// spider repos (无缓存)
 	SeedRepo      spider_repo.SeedRepo
@@ -42,6 +47,8 @@ type Deps struct {
 	MurlRepo       movie_repo.MurlRepo
 	RankRepo       movie_repo.RankRepo
 	CafoRepo       movie_repo.CafoRepo
+	DirectoryRepo  film_repo.DirectoryRepo
+	FilmRepo       film_repo.FilmRepo
 
 	MovieTypeCache movie_repo.MovieTypeCache
 
@@ -71,9 +78,11 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	movieGenreRepo := movie_infra.NewMovieGenreRepoSqlx(moviex.NewAmrMovieGenreModel(conn, c))
 	minfoRepo := movie_infra.NewMinfoRepoSqlx(moviex.NewBmMinfoModel(conn, c))
 	murlRepo := movie_infra.NewMurlRepoSqlx(moviex.NewBmMurlModel(conn, c))
-	itemRepo := spider_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
+	itemRepo := movie_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
 	rankRepo := movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
 	cafoRepo := movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
+	directoryRepo := film_infra.NewDirectoryRepoSqlx(moviex.NewVDirectoryModel(conn, c))
+	filmRepo := film_infra.NewFilmRepoSqlx(moviex.NewVFilmModel(conn, c))
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
 		Host: cfg.BizRedis.Host,
@@ -97,6 +106,9 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	return &Deps{
 		Config: cfg,
 
+		SqlConn: conn,
+		Cache:   c,
+
 		SeedRepo:      seedRepo,
 		InventoryRepo: inventoryRepo,
 		DetailRepo:    detailRepo,
@@ -117,6 +129,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		RankRepo:       rankRepo,
 		CafoRepo:       cafoRepo,
 		MovieTypeCache: movieTypeCache,
+		DirectoryRepo:  directoryRepo,
+		FilmRepo:       filmRepo,
 
 		Fetcher: f,
 	}, nil

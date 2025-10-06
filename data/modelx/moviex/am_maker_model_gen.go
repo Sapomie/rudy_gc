@@ -23,8 +23,8 @@ var (
 	amMakerRowsExpectAutoSet   = strings.Join(stringx.Remove(amMakerFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amMakerRowsWithPlaceHolder = strings.Join(stringx.Remove(amMakerFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmMakerIdPrefix   = "bizcache:rudyGc:amMaker:id:"
-	cacheRudyGcAmMakerNamePrefix = "bizcache:rudyGc:amMaker:name:"
+	cacheRudyGcAmMakerIdPrefix   = "cache:rudyGc:amMaker:id:"
+	cacheRudyGcAmMakerNamePrefix = "cache:rudyGc:amMaker:name:"
 )
 
 type (

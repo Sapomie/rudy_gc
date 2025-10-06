@@ -1,4 +1,4 @@
-package spider_infra
+package movie_infra
 
 import (
 	"context"
@@ -123,4 +123,9 @@ func itemRowToType(row *moviex.EItem) *types.Item {
 		CreatedOn:        row.CreatedOn,
 		UpdatedOn:        row.UpdatedOn,
 	}
+}
+
+// ✅ 新增：直接透传 modelx 的方法
+func (r *ItemRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*moviex.EItem, error) {
+	return r.m.FindOneByJavId(ctx, javId)
 }

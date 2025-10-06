@@ -1,9 +1,7 @@
-// internal/infra/movie_infra/movie_genre_repo_sqlx.go
 package movie_infra
 
 import (
 	"context"
-	"errors"
 
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/movie_repo"
@@ -19,22 +17,23 @@ func NewMovieGenreRepoSqlx(m moviex.AmrMovieGenreModel) movie_repo.MovieGenreRep
 	return &MovieGenreRepoSqlx{m: m}
 }
 
+// 已有的 TryLink：建立 movie-genre 关系
 func (r *MovieGenreRepoSqlx) TryLink(ctx context.Context, movieId, genreId, ts int64) error {
-	// 先查（FindOneByMovieIdGenreId 走缓存，命中则不会打 DB）
-	row, err := r.m.FindOneByMovieIdGenreId(ctx, movieId, genreId)
-	if err == nil && row != nil {
-		return nil // 已存在关系，幂等返回
+	exist, err := r.m.FindOneByMovieIdGenreId(ctx, movieId, genreId)
+	if err == nil && exist != nil {
+		return nil
 	}
-	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return err // 真正异常
-	}
-
-	// 不存在才插入
-	_, ierr := r.m.Insert(ctx, &moviex.AmrMovieGenre{
+	row := &moviex.AmrMovieGenre{
 		MovieId:   movieId,
 		GenreId:   genreId,
 		CreatedOn: ts,
 		UpdatedOn: ts,
-	})
-	return ierr
+	}
+	_, err = r.m.Insert(ctx, row)
+	return err
+}
+
+// ✅ 新增：列出该电影的所有 genreId
+func (r *MovieGenreRepoSqlx) ListGenreIDsByMovie(ctx context.Context, movieId int64) ([]int64, error) {
+	return r.m.ListGenreIDsByMovie(ctx, movieId)
 }

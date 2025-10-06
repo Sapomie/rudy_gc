@@ -78,3 +78,8 @@ func (r *MinfoRepoSqlx) UpdateRankStatsByJavId(ctx context.Context, javId string
 	}
 	return nil
 }
+
+// ✅ 新增：按 jav_id 查询
+func (r *MinfoRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*moviex.BmMinfo, error) {
+	return r.m.FindOneByJavId(ctx, javId)
+}

@@ -23,8 +23,8 @@ var (
 	amrMovieCastRowsExpectAutoSet   = strings.Join(stringx.Remove(amrMovieCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amrMovieCastRowsWithPlaceHolder = strings.Join(stringx.Remove(amrMovieCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmrMovieCastIdPrefix            = "bizcache:rudyGc:amrMovieCast:id:"
-	cacheRudyGcAmrMovieCastMovieIdCastIdPrefix = "bizcache:rudyGc:amrMovieCast:movieId:castId:"
+	cacheRudyGcAmrMovieCastIdPrefix            = "cache:rudyGc:amrMovieCast:id:"
+	cacheRudyGcAmrMovieCastMovieIdCastIdPrefix = "cache:rudyGc:amrMovieCast:movieId:castId:"
 )
 
 type (

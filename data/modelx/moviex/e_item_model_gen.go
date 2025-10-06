@@ -23,8 +23,8 @@ var (
 	eItemRowsExpectAutoSet   = strings.Join(stringx.Remove(eItemFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	eItemRowsWithPlaceHolder = strings.Join(stringx.Remove(eItemFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcEItemIdPrefix    = "bizcache:rudyGc:eItem:id:"
-	cacheRudyGcEItemJavIdPrefix = "bizcache:rudyGc:eItem:javId:"
+	cacheRudyGcEItemIdPrefix    = "cache:rudyGc:eItem:id:"
+	cacheRudyGcEItemJavIdPrefix = "cache:rudyGc:eItem:javId:"
 )
 
 type (

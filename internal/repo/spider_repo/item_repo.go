@@ -3,18 +3,16 @@ package spider_repo
 
 import (
 	"context"
+	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/types"
 )
 
 type ItemRepo interface {
 	TryInsert(ctx context.Context, it *types.Item) (bool, error)
-
-	// 如果还在用，保留；否则可以删掉
 	FindByDetailStatus(ctx context.Context, status int64) ([]*types.Item, error)
-
-	// 现在以 DetailNeedScan 为准的查询
 	FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error)
-
-	// 统一后的签名：… needScan, birthTime, updateTime, updatedOn, hasDetail
 	UpdateDetailMeta(ctx context.Context, id int64, needScan, birthTime, updateTime, updatedOn, hasDetail int64) error
+
+	// ✅ 新增：按 jav_id 查 EItem 记录（透传 modelx 的 FindOneByJavId）
+	FindOneByJavId(ctx context.Context, javId string) (*moviex.EItem, error)
 }

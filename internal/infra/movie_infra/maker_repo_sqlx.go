@@ -43,3 +43,7 @@ func (r *MakerRepoSqlx) GetOrCreateByName(ctx context.Context, name, javId strin
 	id, _ := res.LastInsertId()
 	return id, nil
 }
+
+func (r *MakerRepoSqlx) FindOne(ctx context.Context, id int64) (*moviex.AmMaker, error) {
+	return r.m.FindOne(ctx, id)
+}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/spider/logic"
+	"rudy_gc/internal/domain/film"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/mylog"
 
@@ -26,20 +26,27 @@ func main() {
 		Level:           logrus.InfoLevel,
 	}))
 
-	ctx := context.Background()
-	deps := svc.NewDeps(c)
 	var err error
+	ctx := context.Background()
+	deps, err := svc.NewDeps(c)
+	if err != nil {
+		panic(err)
+	}
 
-	l := logic.NewCrawlLogic(ctx, deps)
+	_, err = film.New(deps).ProcessFilm(ctx)
+	if err != nil {
+		panic(err)
+	}
 
+	//l := logic.NewCrawlLogic(ctx, deps)
 	//err = l.CrawlActiveSeeds()
 	//if err != nil {
 	//	panic(err)
 	//}
-	_, err = l.FetchAndParseDetails()
-	if err != nil {
-		panic(err)
-	}
+	//_, err = l.FetchAndParseDetails()
+	//if err != nil {
+	//	panic(err)
+	//}
 	//
 	//err = l.CrawlDailyBestinv()
 	//if err != nil {

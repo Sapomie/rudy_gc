@@ -2,9 +2,6 @@
 package logic
 
 import (
-	"context"
-	"rudy_gc/internal/svc"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 

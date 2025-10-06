@@ -23,8 +23,8 @@ var (
 	aMovieRowsExpectAutoSet   = strings.Join(stringx.Remove(aMovieFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	aMovieRowsWithPlaceHolder = strings.Join(stringx.Remove(aMovieFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAMovieIdPrefix    = "bizcache:rudyGc:aMovie:id:"
-	cacheRudyGcAMovieJavIdPrefix = "bizcache:rudyGc:aMovie:javId:"
+	cacheRudyGcAMovieIdPrefix    = "cache:rudyGc:aMovie:id:"
+	cacheRudyGcAMovieJavIdPrefix = "cache:rudyGc:aMovie:javId:"
 )
 
 type (

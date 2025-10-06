@@ -43,3 +43,8 @@ func (r *CastRepoSqlx) GetOrCreateByName(ctx context.Context, name, javId string
 	id, _ := res.LastInsertId()
 	return id, nil
 }
+
+// 新增：按 ID 查，直接透传 modelx
+func (r *CastRepoSqlx) FindOne(ctx context.Context, id int64) (*moviex.AmCast, error) {
+	return r.m.FindOne(ctx, id)
+}

@@ -36,7 +36,7 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 	}
 
 	queryWithPage := fmt.Sprintf("/%s&page=%d", queryBy, page)
-	fullURL := fmt.Sprintf("https://%s/cn%s", l.deps.Config.Spider.JavAddress, queryWithPage)
+	fullURL := fmt.Sprintf("https://%s/cn%s", l.deps.Config.Fetcher.JavAddress, queryWithPage)
 
 	content, err := l.fetchInventoryContentWithRetry(fullURL)
 	if err != nil {

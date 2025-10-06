@@ -23,8 +23,8 @@ var (
 	amPrefixRowsExpectAutoSet   = strings.Join(stringx.Remove(amPrefixFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amPrefixRowsWithPlaceHolder = strings.Join(stringx.Remove(amPrefixFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmPrefixIdPrefix   = "bizcache:rudyGc:amPrefix:id:"
-	cacheRudyGcAmPrefixNamePrefix = "bizcache:rudyGc:amPrefix:name:"
+	cacheRudyGcAmPrefixIdPrefix   = "cache:rudyGc:amPrefix:id:"
+	cacheRudyGcAmPrefixNamePrefix = "cache:rudyGc:amPrefix:name:"
 )
 
 type (

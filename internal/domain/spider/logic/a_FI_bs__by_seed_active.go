@@ -160,7 +160,7 @@ func determinePageRange(s *types.Seed) (start int64, end int64) {
 func (l *CrawlLogic) fetchAndSaveInventory(nameType int64, keyword, queryBy string, page int64) error {
 	// 构造 URL（与老项目一致）：https://{JavAddress}/cn + /{queryBy}&page={page}
 	queryWithPage := fmt.Sprintf("/%s&page=%d", queryBy, page)
-	base := fmt.Sprintf("https://%s/cn", l.deps.Config.Spider.JavAddress)
+	base := fmt.Sprintf("https://%s/cn", l.deps.Config.Fetcher.JavAddress)
 	fullURL := base + queryWithPage
 
 	// 抓取（带重试、空页判定；内部已走 l.deps.Fetcher.Get）

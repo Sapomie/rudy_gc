@@ -20,7 +20,7 @@ func NewMovieRepoSqlx(m moviex.AMovieModel) movie_repo.MovieRepo {
 }
 
 // FindByJavId 查找电影
-func (r *MovieRepoSqlx) FindByJavId(ctx context.Context, javId string) (*types.Movie, error) {
+func (r *MovieRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*types.Movie, error) {
 	row, err := r.m.FindOneByJavId(ctx, javId)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {

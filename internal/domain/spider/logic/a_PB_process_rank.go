@@ -144,7 +144,7 @@ func (l *CrawlLogic) addRankInfo(javId string) error {
 	}
 
 	// 2) 取得 movie.id（用于回刷关联演员缓存 / 侧写）
-	mv, err := l.deps.MovieRepo.FindByJavId(l.ctx, javId)
+	mv, err := l.deps.MovieRepo.FindOneByJavId(l.ctx, javId)
 	if err != nil {
 		return fmt.Errorf("查询电影失败(javId=%s): %w", javId, err)
 	}

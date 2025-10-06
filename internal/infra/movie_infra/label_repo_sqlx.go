@@ -43,3 +43,7 @@ func (r *LabelRepoSqlx) GetOrCreateByName(ctx context.Context, name, javId strin
 	id, _ := res.LastInsertId()
 	return id, nil
 }
+
+func (r *LabelRepoSqlx) FindOne(ctx context.Context, id int64) (*moviex.AmLabel, error) {
+	return r.m.FindOne(ctx, id)
+}

@@ -23,8 +23,8 @@ var (
 	amCastRowsExpectAutoSet   = strings.Join(stringx.Remove(amCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amCastRowsWithPlaceHolder = strings.Join(stringx.Remove(amCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmCastIdPrefix   = "bizcache:rudyGc:amCast:id:"
-	cacheRudyGcAmCastNamePrefix = "bizcache:rudyGc:amCast:name:"
+	cacheRudyGcAmCastIdPrefix   = "cache:rudyGc:amCast:id:"
+	cacheRudyGcAmCastNamePrefix = "cache:rudyGc:amCast:name:"
 )
 
 type (

@@ -23,8 +23,8 @@ var (
 	amDirectorRowsExpectAutoSet   = strings.Join(stringx.Remove(amDirectorFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amDirectorRowsWithPlaceHolder = strings.Join(stringx.Remove(amDirectorFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmDirectorIdPrefix   = "bizcache:rudyGc:amDirector:id:"
-	cacheRudyGcAmDirectorNamePrefix = "bizcache:rudyGc:amDirector:name:"
+	cacheRudyGcAmDirectorIdPrefix   = "cache:rudyGc:amDirector:id:"
+	cacheRudyGcAmDirectorNamePrefix = "cache:rudyGc:amDirector:name:"
 )
 
 type (

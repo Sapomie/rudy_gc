@@ -30,7 +30,7 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 
 	for i, it := range items {
 		// 2) 拼 URL（与老项目一致）
-		url := fmt.Sprintf("https://%s/cn/?v=%s", l.deps.Config.Spider.JavAddress, it.JavId)
+		url := fmt.Sprintf("https://%s/cn/?v=%s", l.deps.Config.Fetcher.JavAddress, it.JavId)
 
 		// 3) 用“详情专用”的重试策略抓取
 		respBody, ferr := l.fetchDetailWithRetry(it.Name, url)

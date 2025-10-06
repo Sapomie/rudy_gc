@@ -43,3 +43,11 @@ func (r *PrefixRepoSqlx) GetOrCreateByName(ctx context.Context, name string) (in
 	id, _ := res.LastInsertId()
 	return id, nil
 }
+
+var _ movie_repo.PrefixRepo = (*PrefixRepoSqlx)(nil)
+
+// 已有的 GetOrCreateByName 省略
+
+func (r *PrefixRepoSqlx) FindOne(ctx context.Context, id int64) (*moviex.AmPrefix, error) {
+	return r.m.FindOne(ctx, id)
+}

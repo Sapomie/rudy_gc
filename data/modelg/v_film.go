@@ -1,47 +1,36 @@
 package modelg
 
+// v_film
 type Film struct {
-	Id         int64  `gorm:"not null"`
-	MovieJavId string `gorm:"not null;unique"`
-	Name       string `gorm:"not null;unique"`
-	FileName   string `gorm:"not null;unique;type:varchar(500)"`
-	FilePath   string `gorm:"not null;type:varchar(191)"`
+	ID          int64  `gorm:"primaryKey;autoIncrement;column:id"`
+	MovieJavID  string `gorm:"column:movie_jav_id;type:varchar(191);not null;uniqueIndex"`
+	MovieName   string `gorm:"column:movie_name;type:varchar(191);not null;uniqueIndex"`
+	FileName    string `gorm:"column:file_name;type:varchar(500);not null;uniqueIndex"`
+	DirectoryID int64  `gorm:"column:directory_id;not null;index"`
+	FilePath    string `gorm:"column:file_path;type:varchar(1024);not null"`
 
-	Dir1 string `gorm:"not null;type:varchar(191)"`
-	Dir2 string `gorm:"not null;type:varchar(191)"`
-	Dir3 string `gorm:"not null;type:varchar(191)"`
-	Dir4 string `gorm:"not null;type:varchar(191)"`
+	Alias        string  `gorm:"column:alias;type:varchar(191);not null"`
+	Size         int64   `gorm:"column:size;not null"`
+	Width        int16   `gorm:"column:width;type:smallint;not null"`
+	Height       int16   `gorm:"column:height;type:smallint;not null"`
+	BitRate      int32   `gorm:"column:bit_rate;type:int;not null"`
+	Duration     int32   `gorm:"column:duration;type:int;not null"`
+	FrameAverage float64 `gorm:"column:frame_average;type:double;not null"`
 
-	Size   int64  `gorm:"not null"`
-	Prefix string `gorm:"not null;type:varchar(191)"`
-	Alias  string `gorm:"not null;type:varchar(191)"`
+	HasSub       int8  `gorm:"column:has_sub;type:tinyint;not null"`
+	SelfMake     int8  `gorm:"column:self_make;type:tinyint;not null"`
+	HasMask      int8  `gorm:"column:has_mask;type:tinyint;not null"`
+	NeedScanMeta int8  `gorm:"column:need_scan_meta;type:tinyint;not null"`
+	IsRemoved    int8  `gorm:"column:is_removed;type:tinyint;not null"`
+	RemoveTime   int64 `gorm:"column:remove_time;not null"`
 
-	Width        int64   `gorm:"not null;type:smallint"`
-	Height       int64   `gorm:"not null;type:smallint"`
-	BitRate      int64   `gorm:"not null;type:int"`
-	Duration     int64   `gorm:"not null;type:int"`
-	FrameAverage float64 `gorm:"not null"`
+	ScTimes    int32 `gorm:"column:sc_times;type:mediumint;not null;index"`
+	ComeTimes  int32 `gorm:"column:come_times;type:mediumint;not null;index"`
+	LastScTime int64 `gorm:"column:last_sc_time;not null;index"`
+	BirthTime  int64 `gorm:"column:birth_time;not null;index"`
 
-	HasSub   int64 `gorm:"not null;type:tinyint"`
-	SelfMake int64 `gorm:"not null;type:tinyint"`
-	HasMask  int64 `gorm:"not null;type:tinyint"`
-
-	NeedScanBase int64 `gorm:"not null;type:tinyint"`
-	NeedScanMeta int64 `gorm:"not null;type:tinyint"`
-	IsRemoved    int64 `gorm:"not null;type:tinyint"`
-	RemoveTime   int64 `gorm:"not null"`
-
-	ScTimes    int64 `gorm:"not null;type:MEDIUMINT;index"`
-	ComeTimes  int64 `gorm:"not null;type:MEDIUMINT;index"`
-	LastScTime int64 `gorm:"not null;index"`
-	BirthTime  int64 `gorm:"not null;index"`
-
-	CreatedOn int64 `gorm:"not null"`
-	UpdatedOn int64 `gorm:"not null"`
+	CreatedOn int64 `gorm:"column:created_on;not null;default:0"`
+	UpdatedOn int64 `gorm:"column:updated_on;not null;default:0"`
 }
 
-const filmTableName = "v_film"
-
-func (i *Film) TableName() string {
-	return filmTableName
-}
+func (Film) TableName() string { return "v_film" }

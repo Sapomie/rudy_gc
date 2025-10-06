@@ -1,4 +1,4 @@
-package movie
+package film
 
 import (
 	"rudy_gc/internal/svc"
