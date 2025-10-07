@@ -102,6 +102,18 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 	return toTypesMovie(row), nil
 }
 
+func (r *MovieRepoSqlx) FindMoviesByName(ctx context.Context, name string) ([]*types.Movie, error) {
+	rows, err := r.m.FindMoviesByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*types.Movie, 0, len(rows))
+	for _, x := range rows {
+		list = append(list, toTypesMovie(x))
+	}
+	return list, nil
+}
+
 // 内部转换函数
 func toTypesMovie(mv *moviex.AMovie) *types.Movie {
 	if mv == nil {
@@ -131,17 +143,4 @@ func toTypesMovie(mv *moviex.AMovie) *types.Movie {
 }
 func (r *MovieRepoSqlx) CountAll(ctx context.Context) (int64, error) {
 	return r.m.CountAll(ctx)
-}
-
-func (r *MovieRepoSqlx) ListMovies(ctx context.Context, offset, limit int64) ([]*types.Movie, error) {
-	rows, err := r.m.ListPage(ctx, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("list movies failed: %w", err)
-	}
-
-	result := make([]*types.Movie, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, toTypesMovie(row))
-	}
-	return result, nil
 }

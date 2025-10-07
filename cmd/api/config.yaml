@@ -27,6 +27,8 @@ Fetcher:
   LocalImageDir: "/Volumes/T7/data/jacket_cover/"
 
 Film:
-  FilmPath:
+  RootDirs:
     - "/Volumes/Expansion/v3_watched/"
     - "/Volumes/Getea/vx/"
+
+LogursLevel: "info"

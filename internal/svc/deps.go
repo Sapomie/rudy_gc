@@ -5,6 +5,7 @@ import (
 	"rudy_gc/internal/infra/bizcache"
 	film_infra "rudy_gc/internal/infra/film_repo"
 	"rudy_gc/internal/repo/film_repo"
+	log "rudy_gc/pkg/loga"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -16,6 +17,7 @@ import (
 	"rudy_gc/internal/repo/movie_repo"
 	"rudy_gc/internal/repo/spider_repo"
 
+	"github.com/sirupsen/logrus"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -25,6 +27,7 @@ type Deps struct {
 	Config  config.Config
 	SqlConn sqlx.SqlConn
 	Cache   cache.CacheConf
+	Log     *logrus.Logger
 
 	// spider repos (无缓存)
 	SeedRepo      spider_repo.SeedRepo
@@ -105,6 +108,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 
 	return &Deps{
 		Config: cfg,
+		Log:    log.NewLogrusLogger(cfg.LogursLevel),
 
 		SqlConn: conn,
 		Cache:   c,

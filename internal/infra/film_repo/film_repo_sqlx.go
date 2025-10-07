@@ -21,6 +21,29 @@ func NewFilmRepoSqlx(m moviex.VFilmModel) *FilmRepoSqlx {
 	return &FilmRepoSqlx{m: m}
 }
 
+func (r *FilmRepoSqlx) FindOne(ctx context.Context, id int64) (*types.Film, error) {
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return mapModelxToTypes(row), nil
+}
+
+func (r *FilmRepoSqlx) FindOneByMovieJavId(ctx context.Context, javId string) (*types.Film, error) {
+	row, err := r.m.FindOneByMovieJavId(ctx, javId)
+	if err != nil {
+		return nil, err
+	}
+	return mapModelxToTypes(row), nil
+}
+
+func (r *FilmRepoSqlx) FindOneByMovieName(ctx context.Context, name string) (*types.Film, error) {
+	row, err := r.m.FindOneByMovieName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return mapModelxToTypes(row), nil
+}
 func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.Film, error) {
 	if in == nil {
 		return nil, errors.New("nil input")
@@ -31,7 +54,7 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 		changed := false
 
 		// ===== 原有三项：保留原样 =====
-		if row.DirectoryId != in.DirectoryId {
+		if row.RootDir != in.RootDir {
 			row.DirectoryId = in.DirectoryId
 			changed = true
 		}
@@ -44,6 +67,7 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 			changed = true
 		}
 
+		// ===== 既有七项：保留 =====
 		if row.NeedScanMeta != in.NeedScanMeta {
 			row.NeedScanMeta = in.NeedScanMeta
 			changed = true
@@ -104,16 +128,36 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 	return mapModelxToTypes(row3), nil
 }
 
+func (r *FilmRepoSqlx) FindAll(ctx context.Context) ([]*types.Film, error) {
+	rows, err := r.m.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]*types.Film, 0, len(rows))
+	for _, mv := range rows {
+		list = append(list, mapModelxToTypes(mv))
+	}
+	return list, nil
+}
+
 /* ---------------- helpers ---------------- */
 
 func mapTypesToModelx(in *types.Film) *moviex.VFilm {
 	return &moviex.VFilm{
-		Id:           in.Id,
-		MovieJavId:   in.MovieJavId,
-		MovieName:    in.MovieName,
-		FileName:     in.FileName,
-		DirectoryId:  in.DirectoryId,
-		FilePath:     in.FilePath,
+		Id:          in.Id,
+		MovieJavId:  in.MovieJavId,
+		MovieName:   in.MovieName,
+		FileName:    in.FileName,
+		DirectoryId: in.DirectoryId,
+		RootDir:     in.RootDir,
+
+		// 新增映射
+		Dir1Id: in.Dir1Id,
+		Dir2Id: in.Dir2Id,
+		Dir3Id: in.Dir3Id,
+		Dir4Id: in.Dir4Id,
+
 		Alias:        in.Alias,
 		Size:         in.Size,
 		Width:        in.Width,
@@ -121,9 +165,11 @@ func mapTypesToModelx(in *types.Film) *moviex.VFilm {
 		BitRate:      in.BitRate,
 		Duration:     in.Duration,
 		FrameAverage: in.FrameAverage,
-		HasSub:       in.HasSub,
-		SelfMake:     in.SelfMake,
-		HasMask:      in.HasMask,
+
+		HasSub:   in.HasSub,
+		SelfMake: in.SelfMake,
+		HasMask:  in.HasMask,
+
 		NeedScanMeta: in.NeedScanMeta,
 		IsRemoved:    in.IsRemoved,
 		RemoveTime:   in.RemoveTime,
@@ -131,19 +177,27 @@ func mapTypesToModelx(in *types.Film) *moviex.VFilm {
 		ComeTimes:    in.ComeTimes,
 		LastScTime:   in.LastScTime,
 		BirthTime:    in.BirthTime,
-		CreatedOn:    in.CreatedOn,
-		UpdatedOn:    in.UpdatedOn,
+
+		CreatedOn: in.CreatedOn,
+		UpdatedOn: in.UpdatedOn,
 	}
 }
 
 func mapModelxToTypes(mv *moviex.VFilm) *types.Film {
 	return &types.Film{
-		Id:           mv.Id,
-		MovieJavId:   mv.MovieJavId,
-		MovieName:    mv.MovieName,
-		FileName:     mv.FileName,
-		DirectoryId:  mv.DirectoryId,
-		FilePath:     mv.FilePath,
+		Id:          mv.Id,
+		MovieJavId:  mv.MovieJavId,
+		MovieName:   mv.MovieName,
+		FileName:    mv.FileName,
+		DirectoryId: mv.DirectoryId,
+		RootDir:     mv.RootDir,
+
+		// 新增映射
+		Dir1Id: mv.Dir1Id,
+		Dir2Id: mv.Dir2Id,
+		Dir3Id: mv.Dir3Id,
+		Dir4Id: mv.Dir4Id,
+
 		Alias:        mv.Alias,
 		Size:         mv.Size,
 		Width:        mv.Width,
@@ -151,9 +205,11 @@ func mapModelxToTypes(mv *moviex.VFilm) *types.Film {
 		BitRate:      mv.BitRate,
 		Duration:     mv.Duration,
 		FrameAverage: mv.FrameAverage,
-		HasSub:       mv.HasSub,
-		SelfMake:     mv.SelfMake,
-		HasMask:      mv.HasMask,
+
+		HasSub:   mv.HasSub,
+		SelfMake: mv.SelfMake,
+		HasMask:  mv.HasMask,
+
 		NeedScanMeta: mv.NeedScanMeta,
 		IsRemoved:    mv.IsRemoved,
 		RemoveTime:   mv.RemoveTime,
@@ -161,7 +217,8 @@ func mapModelxToTypes(mv *moviex.VFilm) *types.Film {
 		ComeTimes:    mv.ComeTimes,
 		LastScTime:   mv.LastScTime,
 		BirthTime:    mv.BirthTime,
-		CreatedOn:    mv.CreatedOn,
-		UpdatedOn:    mv.UpdatedOn,
+
+		CreatedOn: mv.CreatedOn,
+		UpdatedOn: mv.UpdatedOn,
 	}
 }

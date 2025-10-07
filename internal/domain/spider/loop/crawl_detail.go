@@ -27,7 +27,7 @@ func (m *LoopServer) processDetailNotification(n *spider.Notification) {
 	ctx, cancel := context.WithTimeout(m.ctx, 45*time.Minute)
 	defer cancel()
 
-	logx.WithContext(ctx).Info("detail: begin")
+	m.deps.Log.Info("detail: begin")
 	l := logic.NewCrawlLogic(ctx, m.deps)
 
 	// 1) 抓取/刷新详情（按你的实现命名来，下面先占位 CrawDetailAll）

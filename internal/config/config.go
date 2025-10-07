@@ -16,10 +16,11 @@ type Config struct {
 	Fetcher        FetcherConf
 	MovieTypeCache MovieTypeCacheConf
 	Film           Film
+	LogursLevel    string
 }
 
 type Film struct {
-	FilmPath []string
+	RootDirs []string
 }
 
 type FetcherConf struct {

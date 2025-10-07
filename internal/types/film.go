@@ -8,7 +8,13 @@ type Film struct {
 	MovieName   string
 	FileName    string
 	DirectoryId int64
-	FilePath    string
+	RootDir     string
+
+	// 新增的多层目录 ID（不足层为 0）
+	Dir1Id int64
+	Dir2Id int64
+	Dir3Id int64
+	Dir4Id int64
 
 	Alias        string
 	Size         int64

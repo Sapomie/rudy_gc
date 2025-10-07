@@ -11,15 +11,39 @@ type processFilmDirectorResponse struct {
 	DirectoryID int64  // 叶子目录ID
 	FileName    string // 仅文件名
 	FilePath    string // 绝对全路径
+	Dir1Id      int64
+	Dir2Id      int64
+	Dir3Id      int64
+	Dir4Id      int64
 }
 
 func (s *Service) processFilmDirectory(ctx context.Context, fullPath string) (*processFilmDirectorResponse, error) {
-	parts, fileName := extractParts(fullPath)
-	dirID, err := s.deps.DirectoryRepo.GetOrCreateChain(ctx, parts)
+	parts, file := extractParts(fullPath)
+
+	// 逐级创建/获取目录链（只拿前4层ID）
+	levels, err := s.deps.DirectoryRepo.GetOrCreateChainWithLevels(ctx, parts)
 	if err != nil {
 		return nil, err
 	}
-	return &processFilmDirectorResponse{DirectoryID: dirID, FilePath: fullPath, FileName: fileName}, nil
+
+	// 叶子目录ID：levels 中最后一个非 0
+	var leafID int64
+	for i := len(levels) - 1; i >= 0; i-- {
+		if levels[i] != 0 {
+			leafID = levels[i]
+			break
+		}
+	}
+
+	return &processFilmDirectorResponse{
+		DirectoryID: leafID,
+		FileName:    file,
+		FilePath:    fullPath,
+		Dir1Id:      levels[0],
+		Dir2Id:      levels[1],
+		Dir3Id:      levels[2],
+		Dir4Id:      levels[3],
+	}, nil
 }
 
 // extractParts 拆分完整路径为目录层级 parts 和文件名。

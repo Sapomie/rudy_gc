@@ -5,5 +5,5 @@ import "context"
 
 type DirectoryRepo interface {
 	// 逐级 GetOrCreate，返回叶子目录ID
-	GetOrCreateChain(ctx context.Context, parts []string) (int64, error)
+	GetOrCreateChainWithLevels(ctx context.Context, parts []string) ([4]int64, error)
 }

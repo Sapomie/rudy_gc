@@ -1,6 +1,10 @@
 package moviex
 
 import (
+	"context"
+	"errors"
+
+	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -8,10 +12,10 @@ import (
 var _ VFilmModel = (*customVFilmModel)(nil)
 
 type (
-	// VFilmModel is an interface to be customized, add more methods here,
-	// and implement the added methods in customVFilmModel.
 	VFilmModel interface {
 		vFilmModel
+
+		FindAll(ctx context.Context) ([]*VFilm, error)
 	}
 
 	customVFilmModel struct {
@@ -19,9 +23,25 @@ type (
 	}
 )
 
-// NewVFilmModel returns a model for the database table.
 func NewVFilmModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) VFilmModel {
 	return &customVFilmModel{
 		defaultVFilmModel: newVFilmModel(conn, c, opts...),
 	}
+}
+
+// FindAll 返回所有 v_film 记录（不走缓存）
+func (m *customVFilmModel) FindAll(ctx context.Context) ([]*VFilm, error) {
+	q, args, err := squirrel.Select(vFilmRows).From(m.table).ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var list []*VFilm
+	if err := m.QueryRowsNoCacheCtx(ctx, &list, q, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*VFilm{}, nil
+		}
+		return nil, err
+	}
+	return list, nil
 }

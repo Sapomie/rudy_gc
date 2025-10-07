@@ -33,7 +33,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = film.New(deps).ProcessFilm(ctx)
+	err = film.New(deps).ProcessFilm(ctx)
 	if err != nil {
 		panic(err)
 	}

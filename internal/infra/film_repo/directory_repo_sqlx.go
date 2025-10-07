@@ -21,7 +21,7 @@ func NewDirectoryRepoSqlx(m moviex.VDirectoryModel) *DirectoryRepoSqlx {
 	return &DirectoryRepoSqlx{m: m}
 }
 
-func (r *DirectoryRepoSqlx) GetOrCreateChain(ctx context.Context, parts []string) (int64, error) {
+func (r *DirectoryRepoSqlx) GetOrCreateChainWithLevels(ctx context.Context, parts []string) ([4]int64, error) {
 	// 规范化 parts
 	clean := make([]string, 0, len(parts))
 	for _, p := range parts {
@@ -29,25 +29,29 @@ func (r *DirectoryRepoSqlx) GetOrCreateChain(ctx context.Context, parts []string
 			clean = append(clean, s)
 		}
 	}
+
+	var levels [4]int64
 	if len(clean) == 0 {
-		return 0, nil
+		return levels, nil
 	}
 
 	now := time.Now().Unix()
-	var parentID int64 = 0 // 根=0（not null 约定）
+	var parentID int64 = 0 // 根=0（NOT NULL 约定）
 
 	for i, name := range clean {
 		// 1) 先查 (parent_id, name)
 		if row, err := r.m.FindOneByParentIdName(ctx, parentID, name); err == nil && row != nil {
 			parentID = row.Id
+			if i < 4 {
+				levels[i] = parentID
+			}
 			continue
 		}
 
 		// 2) 不存在则插入
 		depth := int64(i + 1)
 		path := "/" + strings.Join(clean[:i+1], "/")
-		sum := md5.Sum([]byte(path))
-		//pathHashHex := hex.EncodeToString(sum[:]) // 你的 PathHash 是 string
+		sum := md5.Sum([]byte(path)) // BINARY(16)：存原始 16 字节
 
 		vd := &moviex.VDirectory{
 			ParentId:  parentID,
@@ -63,18 +67,24 @@ func (r *DirectoryRepoSqlx) GetOrCreateChain(ctx context.Context, parts []string
 			// 并发兜底：再查一次
 			if row2, err2 := r.m.FindOneByParentIdName(ctx, parentID, name); err2 == nil && row2 != nil {
 				parentID = row2.Id
+				if i < 4 {
+					levels[i] = parentID
+				}
 				continue
 			}
-			return 0, err
+			return levels, err
 		}
 
-		// 取回新ID（通过唯一键再查一次，避免依赖 LastInsertId）
+		// 3) 回读拿到 id（避免依赖 LastInsertId）
 		row3, err := r.m.FindOneByParentIdName(ctx, parentID, name)
 		if err != nil || row3 == nil {
-			return 0, err
+			return levels, err
 		}
 		parentID = row3.Id
+		if i < 4 {
+			levels[i] = parentID
+		}
 	}
 
-	return parentID, nil
+	return levels, nil
 }
