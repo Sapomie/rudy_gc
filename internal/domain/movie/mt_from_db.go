@@ -3,10 +3,13 @@ package movie
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math"
 	"net/url"
+	"path/filepath"
+	"rudy_gc/internal/consts"
 	"strings"
 	"time"
 
@@ -94,30 +97,30 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 		JacketImg:            murl.JacketImg,
 		SmallImg:             murl.SmallImg,
 		Prefix:               prefix.Name,
-		VideoUrl:             murl.FilmUrl, // TODO: 若字段名不同请替换
+		Owned:                consts.MovieTypeNotOwned,
 		NeedDownload:         minfo.NeedDownload,
 		EncodeName:           minfo.EncodeName,
-		ScTimes:              mv.ScTimes,
-		ComeTimes:            mv.ComeTimes,
+	}
+
+	film, err := s.deps.FilmRepo.FindOneByMovieJavId(ctx, mv.JavId)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("FilmRepo.FindOneByMovieJavId failed: %w", err)
+	}
+
+	if film != nil {
+		out.FilmBirthDate = tsToDate(film.BirthTime)
+		out.VideoUrl = film.FullDir + string(filepath.Separator) + film.FileName
+		out.ScTimes = film.ScTimes
+		out.ComeTimes = film.ComeTimes
+		out.Owned = determineOwnership(film)
 	}
 
 	if minfo.HighestRank < 1000 {
 		out.HighestRank = minfo.HighestRank
 	}
 	if minfo.DaysInRank > 0 {
-		// TODO: 将 cons.GetDateStringByRankDayNumber 替换为你当前项目里的等价函数
-		out.FirstRankingDay = fmt.Sprintf("%s(%v)", getDateStringByRankDayNumber(mv.FirstRankDayNumber), mv.DaysInRank)
+		out.FirstRankingDay = fmt.Sprintf("%s(%v)", consts.GetDateStringByRankDayNumber(minfo.FirstRankDayNumber), minfo.DaysInRank)
 	}
-	if mv.FilmBirthTime > 0 {
-		out.FilmBirthDate = tsToDate(mv.FilmBirthTime)
-	}
-
-	// 5) Owned 状态
-	own, err := s.determineOwnership(ctx, mv)
-	if err != nil {
-		return nil, fmt.Errorf("determineOwnership failed: %w", err)
-	}
-	out.Owned = own
 
 	// 6) 覆盖本地封面路径
 	if item.HasDownloadCover == types.ItemCoverOK {
@@ -196,32 +199,14 @@ func (s *Service) getGenreNames(ctx context.Context, movieId int64) ([]string, e
 	return names, nil
 }
 
-// determineOwnership 复刻老项目的判断：
-// - 若 FilmBirthTime > 0，则尝试在“影片库存/本地影片表”中查该名称；
-// - 没有 FilmRepo 的情况下，返回“未拥有”。
-func (s *Service) determineOwnership(ctx context.Context, mv *types.Movie) (int64, error) {
-	if mv.FilmBirthTime <= 0 {
-		return MovieTypeNotOwned, nil // TODO: 替换为你的常量
+func determineOwnership(film *types.Film) int64 {
+	if film.IsRemoved == consts.FilmIsRemoved {
+		return consts.MovieTypeIsRemoved
 	}
-
-	// 优先：有 Film/VFilm 仓库就查询
-	// film, err := s.deps.FilmRepo.FindOneByName(ctx, mv.Name) // TODO: 如你添加了 FilmRepo，请启用并按你的模型判定
-	// if err != nil && !errors.Is(err, ErrNotFound()) {
-	// 	return 0, err
-	// }
-	// if errors.Is(err, ErrNotFound()) {
-	// 	return MovieTypeNotOwned, nil
-	// }
-	// if film.IsRemoved == FilmIsRemoved { // TODO: 替换枚举
-	// 	return MovieTypeIsRemoved, nil
-	// }
-	// if film.HasSub == FilmHasSub { // TODO
-	// 	return MovieTypeOwnedAndHasSub, nil
-	// }
-	// return MovieTypeOwned, nil
-
-	// 兜底：当前工程若没有 FilmRepo，则视为未拥有
-	return MovieTypeNotOwned, nil
+	if film.HasSub == consts.FilmHasSub {
+		return consts.MovieTypeOwnedAndHasSub
+	}
+	return consts.MovieTypeOwned
 }
 
 // ====== 工具 ======
@@ -259,6 +244,3 @@ func chooseTitle(title, chinese string, hasChinese int64) string {
 	}
 	return title
 }
-
-// ErrNotFound 占位，替换为你项目里实际的“记录不存在”判断
-func ErrNotFound() error { return errors.New("not found") }

@@ -151,6 +151,7 @@ func mapTypesToModelx(in *types.Film) *moviex.VFilm {
 		FileName:    in.FileName,
 		DirectoryId: in.DirectoryId,
 		RootDir:     in.RootDir,
+		FullDir:     in.FullDir,
 
 		// 新增映射
 		Dir1Id: in.Dir1Id,
@@ -191,6 +192,7 @@ func mapModelxToTypes(mv *moviex.VFilm) *types.Film {
 		FileName:    mv.FileName,
 		DirectoryId: mv.DirectoryId,
 		RootDir:     mv.RootDir,
+		FullDir:     mv.FullDir,
 
 		// 新增映射
 		Dir1Id: mv.Dir1Id,

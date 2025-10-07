@@ -75,6 +75,7 @@ type (
 		BirthTime    int64   `db:"birth_time"`
 		CreatedOn    int64   `db:"created_on"`
 		UpdatedOn    int64   `db:"updated_on"`
+		FullDir      string  `db:"full_dir"`
 	}
 )
 
@@ -185,8 +186,8 @@ func (m *defaultVFilmModel) Insert(ctx context.Context, data *VFilm) (sql.Result
 	rudyGcVFilmMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcVFilmMovieJavIdPrefix, data.MovieJavId)
 	rudyGcVFilmMovieNameKey := fmt.Sprintf("%s%v", cacheRudyGcVFilmMovieNamePrefix, data.MovieName)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, vFilmRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FileName, data.DirectoryId, data.RootDir, data.Dir1Id, data.Dir2Id, data.Dir3Id, data.Dir4Id, data.Alias, data.Size, data.Width, data.Height, data.BitRate, data.Duration, data.FrameAverage, data.HasSub, data.SelfMake, data.HasMask, data.NeedScanMeta, data.IsRemoved, data.RemoveTime, data.ScTimes, data.ComeTimes, data.LastScTime, data.BirthTime, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, vFilmRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FileName, data.DirectoryId, data.RootDir, data.Dir1Id, data.Dir2Id, data.Dir3Id, data.Dir4Id, data.Alias, data.Size, data.Width, data.Height, data.BitRate, data.Duration, data.FrameAverage, data.HasSub, data.SelfMake, data.HasMask, data.NeedScanMeta, data.IsRemoved, data.RemoveTime, data.ScTimes, data.ComeTimes, data.LastScTime, data.BirthTime, data.CreatedOn, data.UpdatedOn, data.FullDir)
 	}, rudyGcVFilmFileNameKey, rudyGcVFilmIdKey, rudyGcVFilmMovieJavIdKey, rudyGcVFilmMovieNameKey)
 	return ret, err
 }
@@ -203,7 +204,7 @@ func (m *defaultVFilmModel) Update(ctx context.Context, newData *VFilm) error {
 	rudyGcVFilmMovieNameKey := fmt.Sprintf("%s%v", cacheRudyGcVFilmMovieNamePrefix, data.MovieName)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, vFilmRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FileName, newData.DirectoryId, newData.RootDir, newData.Dir1Id, newData.Dir2Id, newData.Dir3Id, newData.Dir4Id, newData.Alias, newData.Size, newData.Width, newData.Height, newData.BitRate, newData.Duration, newData.FrameAverage, newData.HasSub, newData.SelfMake, newData.HasMask, newData.NeedScanMeta, newData.IsRemoved, newData.RemoveTime, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.BirthTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FileName, newData.DirectoryId, newData.RootDir, newData.Dir1Id, newData.Dir2Id, newData.Dir3Id, newData.Dir4Id, newData.Alias, newData.Size, newData.Width, newData.Height, newData.BitRate, newData.Duration, newData.FrameAverage, newData.HasSub, newData.SelfMake, newData.HasMask, newData.NeedScanMeta, newData.IsRemoved, newData.RemoveTime, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.BirthTime, newData.CreatedOn, newData.UpdatedOn, newData.FullDir, newData.Id)
 	}, rudyGcVFilmFileNameKey, rudyGcVFilmIdKey, rudyGcVFilmMovieJavIdKey, rudyGcVFilmMovieNameKey)
 	return err
 }

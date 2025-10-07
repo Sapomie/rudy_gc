@@ -9,6 +9,7 @@ type Film struct {
 	FileName    string
 	DirectoryId int64
 	RootDir     string
+	FullDir     string
 
 	// 新增的多层目录 ID（不足层为 0）
 	Dir1Id int64

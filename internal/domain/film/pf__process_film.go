@@ -236,6 +236,7 @@ func (s *Service) makeAndInsertFilm(ctx context.Context, e os.DirEntry, rootDir,
 	}
 
 	filmBirthTime := getFileBirthTime(fullPath)
+	fullDir := strings.TrimSuffix(fullPath, string(filepath.Separator)+fileName)
 
 	film := &types.Film{
 		MovieJavId:   movie.JavId,
@@ -243,6 +244,7 @@ func (s *Service) makeAndInsertFilm(ctx context.Context, e os.DirEntry, rootDir,
 		FileName:     fileName,
 		DirectoryId:  resp.DirectoryID,
 		RootDir:      rootDir,
+		FullDir:      fullDir,
 		Dir1Id:       resp.Dir1Id,
 		Dir2Id:       resp.Dir2Id,
 		Dir3Id:       resp.Dir3Id,

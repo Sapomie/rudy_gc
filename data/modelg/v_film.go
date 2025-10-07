@@ -7,6 +7,7 @@ type Film struct {
 	FileName    string `gorm:"column:file_name;type:varchar(500);not null;uniqueIndex"`
 	DirectoryID int64  `gorm:"column:directory_id;not null;index"`
 	RootDir     string `gorm:"type:varchar(191);not null"`
+	FullDir     string `gorm:"type:varchar(191);not null"`
 
 	// 新增的多层目录 ID（全部非空，默认 0）
 	Dir1ID int64 `gorm:"column:dir1_id;not null;default:0;index"`
