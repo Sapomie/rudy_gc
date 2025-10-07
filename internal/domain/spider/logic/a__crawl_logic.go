@@ -18,5 +18,6 @@ func NewCrawlLogic(ctx context.Context, deps *svc.Deps) *CrawlLogic {
 		ctx:       ctx,
 		deps:      deps,
 		castIdMap: map[int64]struct{}{},
+		movieSvc:  movie.New(deps),
 	}
 }

@@ -19,12 +19,12 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	logx.DisableStat()
 	logx.SetWriter(mylog.NewLogrusWriter(mylog.Options{
 		JSON:            false,
 		TimestampFormat: "2006-01-02 15:04:05",
 		Level:           logrus.InfoLevel,
 	}))
+	logx.Disable()
 
 	var err error
 	ctx := context.Background()
@@ -33,12 +33,17 @@ func main() {
 		panic(err)
 	}
 
+	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
+	//if err != nil {
+	//	panic(err)
+	//}
+
 	err = film.New(deps).ProcessFilm(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	//l := logic.NewCrawlLogic(ctx, deps)
+	//l :=
 	//err = l.CrawlActiveSeeds()
 	//if err != nil {
 	//	panic(err)
@@ -47,7 +52,7 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
-	//
+
 	//err = l.CrawlDailyBestinv()
 	//if err != nil {
 	//	panic(err)

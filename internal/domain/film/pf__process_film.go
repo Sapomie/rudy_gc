@@ -254,7 +254,7 @@ func (s *Service) makeAndInsertFilm(ctx context.Context, e os.DirEntry, rootDir,
 		HasSub:       determineFilmSubStatus(fullPath),
 		SelfMake:     determineFilmSelfMakeStatus(fullPath),
 		HasMask:      determineFilmEraseStatus(fullPath),
-		NeedScanMeta: consts.FilmMetaDataNeedScan,
+		NeedScanMeta: consts.FilmMetaDataNoNeedScan,
 		IsRemoved:    consts.FilmIsNotRemoved,
 		RemoveTime:   0,
 		BirthTime:    filmBirthTime,
@@ -265,9 +265,12 @@ func (s *Service) makeAndInsertFilm(ctx context.Context, e os.DirEntry, rootDir,
 		return nil, err
 	}
 
-	_, err = s.deps.FilmRepo.UpsertFilm(ctx, film)
+	_, upserted, err := s.deps.FilmRepo.UpsertFilm(ctx, film)
 	if err != nil {
 		return nil, err
+	}
+	if upserted == types.UpsertInserted {
+		s.deps.Log.Info("Added Film:", film.MovieName)
 	}
 
 	s.movieSvc.InvalidateMovieType(ctx, film.MovieJavId)
@@ -289,7 +292,7 @@ func (s *Service) removeMissingFilmFiles(ctx context.Context, fCtx *filmContext)
 
 		film.IsRemoved = consts.FilmIsRemoved
 		film.RemoveTime = time.Now().Unix()
-		_, err = s.deps.FilmRepo.UpsertFilm(ctx, film)
+		_, _, err = s.deps.FilmRepo.UpsertFilm(ctx, film)
 		if err != nil {
 			return fmt.Errorf("更新 Film 条目失败: %w", err)
 		}
@@ -386,7 +389,7 @@ func (s *Service) scanAndAttachMetadata(film *types.Film, filmPath string) error
 
 func (s *Service) processFilmMetadata(film *types.Film, filmPath string, fCtx *filmContext) error {
 	filmOld, exists := fCtx.FilmExistMap[film.MovieName]
-	if !exists {
+	if exists {
 		film.ScTimes = filmOld.Film.ScTimes
 		film.LastScTime = filmOld.Film.LastScTime
 		film.ComeTimes = filmOld.Film.ComeTimes

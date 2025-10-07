@@ -45,7 +45,7 @@ func (r *ItemRepoSqlx) TryInsert(ctx context.Context, it *types.Item) (bool, err
 }
 
 func (r *ItemRepoSqlx) FindByDetailStatus(ctx context.Context, status int64) ([]*types.Item, error) {
-	rows, err := r.m.ListByDetailStatus(ctx, status, 10000)
+	rows, err := r.m.ListByDetailStatus(ctx, status, 1000000)
 	if err != nil {
 		return nil, fmt.Errorf("ListByDetailStatus(%d): %w", status, err)
 	}
@@ -57,7 +57,7 @@ func (r *ItemRepoSqlx) FindByDetailStatus(ctx context.Context, status int64) ([]
 }
 
 func (r *ItemRepoSqlx) FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error) {
-	rows, err := r.m.ListByDetailNeedScan(ctx, needScan, 10000)
+	rows, err := r.m.ListByDetailNeedScan(ctx, needScan, 1000000)
 	if err != nil {
 		return nil, fmt.Errorf("ListByDetailNeedScan(%d): %w", needScan, err)
 	}

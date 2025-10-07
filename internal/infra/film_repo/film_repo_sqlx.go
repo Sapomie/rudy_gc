@@ -44,16 +44,16 @@ func (r *FilmRepoSqlx) FindOneByMovieName(ctx context.Context, name string) (*ty
 	}
 	return mapModelxToTypes(row), nil
 }
-func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.Film, error) {
+
+func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.Film, types.UpsertStatus, error) {
 	if in == nil {
-		return nil, errors.New("nil input")
+		return nil, 0, errors.New("nil input")
 	}
 
 	// 以 movie_jav_id 幂等
 	if row, err := r.m.FindOneByMovieJavId(ctx, in.MovieJavId); err == nil && row != nil {
 		changed := false
 
-		// ===== 原有三项：保留原样 =====
 		if row.RootDir != in.RootDir {
 			row.DirectoryId = in.DirectoryId
 			changed = true
@@ -66,8 +66,6 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 			row.Size = in.Size
 			changed = true
 		}
-
-		// ===== 既有七项：保留 =====
 		if row.NeedScanMeta != in.NeedScanMeta {
 			row.NeedScanMeta = in.NeedScanMeta
 			changed = true
@@ -100,10 +98,12 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 		if changed {
 			row.UpdatedOn = time.Now().Unix()
 			if err := r.m.Update(ctx, row); err != nil {
-				return nil, err
+				return nil, 0, err
 			}
+			return mapModelxToTypes(row), types.UpsertUpdated, nil
 		}
-		return mapModelxToTypes(row), nil
+
+		return mapModelxToTypes(row), types.UpsertUnchanged, nil
 	}
 
 	// 不存在：插入
@@ -113,19 +113,18 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 	mv.UpdatedOn = now
 
 	if _, err := r.m.Insert(ctx, mv); err != nil {
-		// 并发兜底
 		if row2, err2 := r.m.FindOneByMovieJavId(ctx, in.MovieJavId); err2 == nil && row2 != nil {
-			return mapModelxToTypes(row2), nil
+			return mapModelxToTypes(row2), types.UpsertUpdated, nil // 并发插入时算更新
 		}
-		return nil, err
+		return nil, 0, err
 	}
 
-	// 读回确认（用 MovieJavId）
 	row3, err := r.m.FindOneByMovieJavId(ctx, in.MovieJavId)
 	if err != nil || row3 == nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return mapModelxToTypes(row3), nil
+
+	return mapModelxToTypes(row3), types.UpsertInserted, nil
 }
 
 func (r *FilmRepoSqlx) FindAll(ctx context.Context) ([]*types.Film, error) {
