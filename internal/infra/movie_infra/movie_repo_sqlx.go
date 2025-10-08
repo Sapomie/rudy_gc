@@ -31,6 +31,18 @@ func (r *MovieRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*type
 	return toTypesMovie(row), nil
 }
 
+func (r *MovieRepoSqlx) ListPage(ctx context.Context, offset, limit int64, orderKey string) ([]*types.Movie, int64, error) {
+	rows, total, err := r.m.ListPageWithTotal(ctx, offset, limit, orderKey)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]*types.Movie, 0, len(rows))
+	for _, mv := range rows {
+		out = append(out, toTypesMovie(mv))
+	}
+	return out, total, nil
+}
+
 // UpsertByJavId 按 JavId 保存（幂等）
 func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*types.Movie, error) {
 	// 先查

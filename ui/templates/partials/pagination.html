@@ -1,0 +1,44 @@
+{{ define "pagination" }}
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            {{ range .PageInfo.Links }}
+                {{ if .Ellipsis }}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {{ else }}
+                    <li class="page-item {{ if .Active }}active{{ end }} {{ if .Disabled }}disabled{{ end }}">
+                        <a class="page-link" href="{{ .Href }}" {{ if .Disabled }}tabindex="-1"
+                           aria-disabled="true"{{ end }}>
+                            {{ .Label }}
+                        </a>
+                    </li>
+                {{ end }}
+            {{ end }}
+        </ul>
+    </nav>
+{{ end }}
+
+{{ define "owned_filter" }}
+    <span class="card-title d-inline-flex gap-2 align-items-center">
+
+  <a href="{{ .ownedQuery.All.Href }}"
+     class="btn btn-primary waves-effect waves-light {{ if .ownedQuery.All.Active }}active disabled{{ end }}"
+     aria-current="{{ if .ownedQuery.All.Active }}true{{ else }}false{{ end }}">
+     AllMovie
+  </a>
+
+  <a href="{{ .ownedQuery.Owned.Href }}"
+     class="btn btn-danger waves-effect waves-light {{ if .ownedQuery.Owned.Active }}active disabled{{ end }}"
+     aria-current="{{ if .ownedQuery.Owned.Active }}true{{ else }}false{{ end }}">
+     Owned
+  </a>
+
+  <a href="{{ .ownedQuery.NotOwned.Href }}"
+     class="btn btn-secondary waves-effect {{ if .ownedQuery.NotOwned.Active }}active disabled{{ end }}"
+     aria-current="{{ if .ownedQuery.NotOwned.Active }}true{{ else }}false{{ end }}">
+     NotOwned
+  </a>
+
+  <span class="bg-badge rounded-pill bg-gao1">Total: {{ .total }}</span>
+  <span class="bg-badge rounded-pill bg-gao3">{{ .fieldName }}</span>
+</span>
+{{ end }}

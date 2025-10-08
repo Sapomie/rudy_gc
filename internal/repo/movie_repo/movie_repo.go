@@ -11,4 +11,6 @@ type MovieRepo interface {
 
 	FindMoviesByName(ctx context.Context, name string) ([]*types.Movie, error)
 	CountAll(ctx context.Context) (int64, error)
+
+	ListPage(ctx context.Context, offset, limit int64, orderKey string) ([]*types.Movie, int64, error)
 }

@@ -32,13 +32,14 @@ func (s *Service) Migrate() error {
 
 		now := time.Now().Unix()
 		detail := types.Detail{
-			Name:      xDetail.Name,
-			JavId:     xDetail.JavId,
-			Prefix:    xDetail.Prefix,
-			QueryUrl:  xDetail.QueryUrl,
-			Content:   content,
-			CreatedOn: now,
-			UpdatedOn: now,
+			Name:          xDetail.Name,
+			JavId:         xDetail.JavId,
+			Prefix:        xDetail.Prefix,
+			QueryUrl:      xDetail.QueryUrl,
+			Content:       content,
+			LastQueryTime: xDetail.LastQueryTime,
+			CreatedOn:     now,
+			UpdatedOn:     now,
 		}
 
 		err = s.deps.DetailRepo.Upsert(ctx, &detail)

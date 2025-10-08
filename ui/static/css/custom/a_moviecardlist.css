@@ -1,0 +1,170 @@
+/* ===== 基础效果 ===== */
+.card-lift {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 .5rem 1.25rem rgba(0, 0, 0, .15);
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 骨架屏（按需给元素加 .skeleton） */
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #e9ecef;
+    color: transparent;
+}
+
+.skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .35), transparent);
+    transform: translateX(-100%);
+    animation: ske 1.2s infinite;
+}
+
+@keyframes ske {
+    to {
+        transform: translateX(100%);
+    }
+}
+
+/* ===== 封面：2:3 固定比例容器 ===== */
+.thumb-2x3 {
+    position: relative;
+    width: 100%;
+    padding-top: 150%;
+    overflow: hidden;
+}
+
+.thumb-2x3 > img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center; /* 👈 把焦点移到图片右侧 */
+    display: block;
+    z-index: 1;
+}
+
+/* ===== 评分角标（显示在海报右上） ===== */
+.badge-score {
+    position: absolute;
+    bottom: .5rem;
+    right: .5rem;
+    z-index: 3;
+    background-color: #343a40;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: .35em .65em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25);
+}
+
+.badge-bottom-right{
+    position: absolute;
+    right: .5rem;
+    bottom: .5rem;
+    z-index: 4;              /* 比原 3 稍高，确保整组在最上层 */
+    display: flex;
+    flex-direction: column;  /* 竖排：先 Rank 再 Score */
+    align-items: flex-end;   /* 内容贴右，视觉与右下角一致 */
+    gap: .3rem;
+}
+
+/* 在该容器内，让原本绝对定位的 .badge-score 回归普通流 */
+.badge-bottom-right .badge-score{
+    position: static;   /* 关键：取消 absolute */
+    right: auto;
+    bottom: auto;
+    margin: 0;
+}
+
+/* Rank 的样式（如果你已定义可忽略这条） */
+.badge-bottom-right .badge-rank{
+    background: #DA70D6;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 600;
+    padding: .3em .55em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0,0,0,.25);
+}
+
+/* ===== 字号层级统一 ===== */
+.card .card-title,
+.card h6 {
+    font-size: 0.95rem; /* 标题稍大 */
+    font-weight: 600;
+    margin-bottom: .25rem;
+}
+
+.card .card-text,
+.card .list-group-item {
+    font-size: 0.85rem; /* 正文/列表基准 */
+}
+
+/* ===== 标签：genre / cast / director 统一风格 ===== */
+.badge-genre,
+.person-tag {
+    font-size: 0.75rem; /* 与正文保持一致 */
+    padding: 0.35em 0.6em;
+    background-color: #f8f9fa;
+    color: #444;
+    border-radius: .25rem;
+    display: inline-block;
+    text-decoration: none;
+}
+
+.badge-genre:hover,
+.person-tag:hover {
+    background-color: #e2e6ea; /* hover 提示 */
+    color: #000;
+    text-decoration: none;
+}
+
+/* 左上角容器，竖直排列 */
+.badge-top-left {
+    position: absolute;
+    left: .5rem;
+    top: .5rem;
+    z-index: 3;
+    display: flex;
+    flex-direction: column; /* 竖排 */
+    gap: .3rem; /* 上下间距 */
+}
+
+/* 粉红底：ComeTimes */
+.badge-come {
+    background-color: #e91e63;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: .25em .5em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25);
+}
+
+/* 黄色底：ScTimes */
+.badge-times {
+    background-color: #ffc107;
+    color: #212529;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: .25em .5em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25);
+}
+

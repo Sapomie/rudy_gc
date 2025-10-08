@@ -1,0 +1,159 @@
+
+.thumb-2x3 {
+    position: relative;
+    width: 100%;
+    padding-top: 150%;
+    overflow: hidden;
+    border-radius: .5rem
+}
+
+.thumb-2x3 > img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block
+}
+
+
+.badge-stack {
+    position: absolute;
+    left: .5rem;
+    top: .5rem;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem
+}
+
+.badge-come, .badge-times {
+    display: inline-block;
+    font-size: .85rem;
+    font-weight: 600;
+    padding: .3em .55em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25)
+}
+
+.badge-come {
+    background: #e91e63;
+    color: #fff
+}
+
+.badge-times {
+    background: #ffc107;
+    color: #212529
+}
+
+/* 文字与标签 */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden
+}
+
+.tag {
+    display: inline-block;
+    font-size: .85rem;
+    padding: .35em .6em;
+    background: #f8f9fa;
+    color: #444;
+    border-radius: .25rem;
+    margin: .15rem .35rem .15rem 0
+}
+
+.tag:hover {
+    text-decoration: none;
+    background: #e2e6ea;
+    color: #000
+}
+
+/* 表格更紧凑 */
+.table td, .table th {
+    vertical-align: middle
+}
+
+.table th {
+    width: 8rem;
+    white-space: nowrap
+}
+
+.btn-sm {
+    border-radius: .35rem
+}
+
+
+.thumb-2x2 {
+    position: relative; /* 关键：开启绝对定位基准 */
+    overflow: hidden; /* 可选：防止徽章溢出 */
+}
+
+/* 图片保持完整显示（你已用 contain） */
+.thumb-2x2 > img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain; /* 显示完整图片 */
+    object-position: center; /* 居中 */
+    z-index: 1;
+}
+
+/* 左上角叠放 ComeTimes / ScTimes */
+.badge-stack {
+    position: absolute;
+    left: .5rem;
+    top: .5rem;
+    z-index: 3;
+    display: flex;
+    flex-direction: column; /* 竖排：一列 */
+    gap: .3rem;
+}
+
+/* 单个徽章（左上两枚） */
+.badge-come,
+.badge-times {
+    display: inline-block;
+    font-size: .85rem;
+    font-weight: 600;
+    padding: .3em .55em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25);
+}
+
+/* 粉红：ComeTimes；黄色：ScTimes */
+.badge-come {
+    background: #e91e63;
+    color: #fff;
+}
+
+.badge-times {
+    background: #ffc107;
+    color: #212529;
+}
+
+/* 评分放右下角（灰底） */
+.badge-score {
+    position: absolute;
+    right: .5rem;
+    bottom: .5rem;
+    z-index: 3;
+    background: #6c757d; /* 灰色底 */
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: .35em .65em;
+    border-radius: .4rem;
+    box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25);
+}
+
+/* 小屏时左上两枚可改为横排，更紧凑（可选） */
+@media (max-width: 576px) {
+    .badge-stack {
+        flex-direction: row;
+        gap: .4rem;
+    }
+}
