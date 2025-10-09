@@ -19,6 +19,9 @@ type (
 		ListPageWithTotal(ctx context.Context, offset, limit int64, orderKey string) ([]*AMovie, int64, error)
 		CountAll(ctx context.Context) (int64, error)
 		FindMoviesByName(ctx context.Context, name string) ([]*AMovie, error)
+
+		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
+		TableName() string
 	}
 
 	customAMovieModel struct {
@@ -30,6 +33,10 @@ func NewAMovieModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) 
 	return &customAMovieModel{
 		defaultAMovieModel: newAMovieModel(conn, c, opts...),
 	}
+}
+
+func (m *customAMovieModel) TableName() string {
+	return m.table
 }
 
 func (m *customAMovieModel) CountAll(ctx context.Context) (int64, error) {
@@ -62,4 +69,8 @@ func (m *customAMovieModel) FindMoviesByName(ctx context.Context, name string) (
 		return nil, err
 	}
 	return list, nil
+}
+
+func (m *customAMovieModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
+	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
 }

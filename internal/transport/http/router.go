@@ -27,6 +27,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })
 	r.GET("/cards", movieHTML.ListMovieCardLite)
+	r.GET("/cardsfull", movieHTML.ListMovieCardFull)
 
 	return r
 }

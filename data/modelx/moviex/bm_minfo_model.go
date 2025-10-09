@@ -1,6 +1,8 @@
 package moviex
 
 import (
+	"context"
+
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -12,6 +14,8 @@ type (
 	// and implement the added methods in customBmMinfoModel.
 	BmMinfoModel interface {
 		bmMinfoModel
+		TableName() string
+		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 	}
 
 	customBmMinfoModel struct {
@@ -24,4 +28,14 @@ func NewBmMinfoModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option)
 	return &customBmMinfoModel{
 		defaultBmMinfoModel: newBmMinfoModel(conn, c, opts...),
 	}
+}
+
+// TableName 返回 bm_minfo 表名（供外部构建 SQL）
+func (m *customBmMinfoModel) TableName() string {
+	return m.table
+}
+
+// QueryRowsNoCacheCtx 直接执行无缓存的多行查询
+func (m *customBmMinfoModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
+	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
 }

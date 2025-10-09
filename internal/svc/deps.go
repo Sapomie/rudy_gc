@@ -38,6 +38,7 @@ type Deps struct {
 
 	// movie repos (带缓存)
 	MovieRepo      movie_repo.MovieRepo
+	MovieListRepo  movie_repo.MovieListRepo
 	CastRepo       movie_repo.CastRepo
 	GenreRepo      movie_repo.GenreRepo
 	DirectorRepo   movie_repo.DirectorRepo
@@ -62,30 +63,39 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	conn := sqlx.NewMysql(cfg.DataSource)
 	c := cfg.Cache
 
+	var (
+		movieModel = moviex.NewAMovieModel(conn, c)
+		minfoModel = moviex.NewBmMinfoModel(conn, c)
+		filmModel  = moviex.NewVFilmModel(conn, c)
+	)
+
 	// ========== spider (无缓存) ==========
-	seedRepo := spider_infra.NewSeedRepoSqlx(spiderx.NewDSeedModel(conn))
-	inventoryRepo := spider_infra.NewInventoryRepoSqlx(spiderx.NewDInventoryModel(conn))
-	bestRepo := spider_infra.NewBestinvRepoSqlx(spiderx.NewDBestinvModel(conn))
-	detailRepo := spider_infra.NewDetailRepoSqlx(spiderx.NewDDetailModel(conn))
-
+	var (
+		seedRepo      = spider_infra.NewSeedRepoSqlx(spiderx.NewDSeedModel(conn))
+		inventoryRepo = spider_infra.NewInventoryRepoSqlx(spiderx.NewDInventoryModel(conn))
+		bestRepo      = spider_infra.NewBestinvRepoSqlx(spiderx.NewDBestinvModel(conn))
+		detailRepo    = spider_infra.NewDetailRepoSqlx(spiderx.NewDDetailModel(conn))
+	)
 	// ========== movie (有缓存) ==========
-	movieRepo := movie_infra.NewMovieRepoSqlx(moviex.NewAMovieModel(conn, c))
-	castRepo := movie_infra.NewCastRepoSqlx(moviex.NewAmCastModel(conn, c))
-	genreRepo := movie_infra.NewGenreRepoSqlx(moviex.NewAmGenreModel(conn, c))
-	directorRepo := movie_infra.NewDirectorRepoSqlx(moviex.NewAmDirectorModel(conn, c))
-	labelRepo := movie_infra.NewLabelRepoSqlx(moviex.NewAmLabelModel(conn, c))
-	makerRepo := movie_infra.NewMakerRepoSqlx(moviex.NewAmMakerModel(conn, c))
-
-	prefixRepo := movie_infra.NewPrefixRepoSqlx(moviex.NewAmPrefixModel(conn, c))
-	movieCastRepo := movie_infra.NewMovieCastRepoSqlx(moviex.NewAmrMovieCastModel(conn, c))
-	movieGenreRepo := movie_infra.NewMovieGenreRepoSqlx(moviex.NewAmrMovieGenreModel(conn, c))
-	minfoRepo := movie_infra.NewMinfoRepoSqlx(moviex.NewBmMinfoModel(conn, c))
-	murlRepo := movie_infra.NewMurlRepoSqlx(moviex.NewBmMurlModel(conn, c))
-	itemRepo := movie_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
-	rankRepo := movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
-	cafoRepo := movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
-	directoryRepo := film_infra.NewDirectoryRepoSqlx(moviex.NewVDirectoryModel(conn, c))
-	filmRepo := film_infra.NewFilmRepoSqlx(moviex.NewVFilmModel(conn, c))
+	var (
+		movieRepo      = movie_infra.NewMovieRepoSqlx(movieModel)
+		castRepo       = movie_infra.NewCastRepoSqlx(moviex.NewAmCastModel(conn, c))
+		genreRepo      = movie_infra.NewGenreRepoSqlx(moviex.NewAmGenreModel(conn, c))
+		directorRepo   = movie_infra.NewDirectorRepoSqlx(moviex.NewAmDirectorModel(conn, c))
+		labelRepo      = movie_infra.NewLabelRepoSqlx(moviex.NewAmLabelModel(conn, c))
+		makerRepo      = movie_infra.NewMakerRepoSqlx(moviex.NewAmMakerModel(conn, c))
+		prefixRepo     = movie_infra.NewPrefixRepoSqlx(moviex.NewAmPrefixModel(conn, c))
+		movieCastRepo  = movie_infra.NewMovieCastRepoSqlx(moviex.NewAmrMovieCastModel(conn, c))
+		movieGenreRepo = movie_infra.NewMovieGenreRepoSqlx(moviex.NewAmrMovieGenreModel(conn, c))
+		minfoRepo      = movie_infra.NewMinfoRepoSqlx(minfoModel)
+		murlRepo       = movie_infra.NewMurlRepoSqlx(moviex.NewBmMurlModel(conn, c))
+		itemRepo       = movie_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
+		rankRepo       = movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
+		cafoRepo       = movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
+		directoryRepo  = film_infra.NewDirectoryRepoSqlx(moviex.NewVDirectoryModel(conn, c))
+		filmRepo       = film_infra.NewFilmRepoSqlx(filmModel)
+		movieListRepo  = movie_infra.NewMovieListRepoSqlx(movieModel, minfoModel, filmModel)
+	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
 		Host: cfg.BizRedis.Host,
@@ -120,6 +130,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 
 		ItemRepo:       itemRepo,
 		MovieRepo:      movieRepo,
+		MovieListRepo:  movieListRepo,
 		CastRepo:       castRepo,
 		GenreRepo:      genreRepo,
 		DirectorRepo:   directorRepo,

@@ -33,7 +33,7 @@ type ListMovieFullRequest struct {
 	ComeTimesMin       int64  `form:"comin"`
 	LastScTimeMin      string `form:"lsct"`
 	ScTimesMin         int64  `form:"scmin"`
-	ScTimesMax         int64  `form:"scmax,default=1000"`
+	ScTimesMax         *int64 `form:"scmax"`
 	FilmBirthTimeStart string `form:"bs"`
 	FilmBirthTimeEnd   string `form:"be"`
 	Dir1               string `form:"d1"`
@@ -42,6 +42,6 @@ type ListMovieFullRequest struct {
 	Dir4               string `form:"d4"`
 
 	OrderBy  string `form:"od"`
-	Page     int64  `form:"page"`
+	Page     int64  `form:"p"`
 	PageSize int64  `form:"ps"`
 }

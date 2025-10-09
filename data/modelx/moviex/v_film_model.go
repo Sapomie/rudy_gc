@@ -16,6 +16,8 @@ type (
 		vFilmModel
 
 		FindAll(ctx context.Context) ([]*VFilm, error)
+		TableName() string
+		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 	}
 
 	customVFilmModel struct {
@@ -44,4 +46,14 @@ func (m *customVFilmModel) FindAll(ctx context.Context) ([]*VFilm, error) {
 		return nil, err
 	}
 	return list, nil
+}
+
+// TableName 返回 v_film 表名（供外部构建 SQL）
+func (m *customVFilmModel) TableName() string {
+	return m.table
+}
+
+// QueryRowsNoCacheCtx 执行无缓存的多行查询
+func (m *customVFilmModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
+	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
 }
