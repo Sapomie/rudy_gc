@@ -6,7 +6,7 @@ import (
 	"rudy_gc/internal/types"
 )
 
-func (s *Service) ListMovieLite(ctx context.Context, r *types.ListMovieLiteRequest) (*types.ListMovieLiteResponse, error) {
+func (s *Service) ListMovieLite(ctx context.Context, r *types.ListMovieLiteRequest) (*types.ListMovieResponse, error) {
 	if r == nil {
 		return nil, errors.New("nil ListMovieLiteRequest")
 	}
@@ -22,7 +22,7 @@ func (s *Service) ListMovieLite(ctx context.Context, r *types.ListMovieLiteReque
 		return nil, err
 	}
 
-	// 组装 MovieType（需要完整聚合就用现有的 buildMovieTypeFromRepos）
+	// 组装 MovieType（需要完整聚合就用现有的 GetMovieType）
 	out := make([]*types.MovieType, 0, len(rows))
 	for _, mv := range rows {
 		mt, err := s.GetMovieType(ctx, mv.JavId)
@@ -32,7 +32,7 @@ func (s *Service) ListMovieLite(ctx context.Context, r *types.ListMovieLiteReque
 		out = append(out, mt)
 	}
 
-	return &types.ListMovieLiteResponse{
+	return &types.ListMovieResponse{
 		List:  out,
 		Total: total,
 	}, nil

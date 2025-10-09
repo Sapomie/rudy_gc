@@ -18,9 +18,10 @@ func NewMovieCastRepoSqlx(m moviex.AmrMovieCastModel) movie_repo.MovieCastRepo {
 	return &MovieCastRepoSqlx{m: m}
 }
 
-func (r *MovieCastRepoSqlx) TryLink(ctx context.Context, movieId, castId, ts int64) error {
+// TryLink 基于 movie_jav_id + cast_id 去重
+func (r *MovieCastRepoSqlx) TryLink(ctx context.Context, movieJavId string, castId, ts int64) error {
 	// 先查是否已有关系
-	exist, err := r.m.FindOneByMovieIdCastId(ctx, movieId, castId)
+	exist, err := r.m.FindOneByMovieJavIdCastId(ctx, movieJavId, castId)
 	if err == nil && exist != nil {
 		// 已存在，直接返回
 		return nil
@@ -28,15 +29,16 @@ func (r *MovieCastRepoSqlx) TryLink(ctx context.Context, movieId, castId, ts int
 
 	// 插入新关系
 	row := &moviex.AmrMovieCast{
-		MovieId:   movieId,
-		CastId:    castId,
-		CreatedOn: ts,
-		UpdatedOn: ts,
+		MovieJavId: movieJavId,
+		CastId:     castId,
+		CreatedOn:  ts,
+		UpdatedOn:  ts,
 	}
 	_, err = r.m.Insert(ctx, row)
 	return err
 }
 
-func (r *MovieCastRepoSqlx) ListCastIDsByMovie(ctx context.Context, movieId int64) ([]int64, error) {
-	return r.m.ListCastIDsByMovie(ctx, movieId)
+// ListCastIDsByMovieJavId 返回该影片关联的所有演员ID
+func (r *MovieCastRepoSqlx) ListCastIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error) {
+	return r.m.ListCastIDsByMovieJavId(ctx, movieJavId)
 }

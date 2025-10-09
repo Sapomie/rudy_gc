@@ -1,15 +1,13 @@
 package modelg
 
 type MovieGenre struct {
-	Id        int64 `gorm:"primary_key"`
-	MovieId   int64 `gorm:"not null;uniqueIndex:m_c"`
-	GenreId   int64 `gorm:"not null;index:idx_cid;uniqueIndex:m_c"`
-	CreatedOn int64 `gorm:"not null"`
-	UpdatedOn int64 `gorm:"not null"`
+	ID         int64  `gorm:"primaryKey;autoIncrement;column:id"`
+	MovieJavID string `gorm:"column:movie_jav_id;type:varchar(191);not null;index:idx_mjav;uniqueIndex:m_g"`
+	GenreID    int64  `gorm:"column:genre_id;not null;index:idx_gid;uniqueIndex:m_g"`
+	CreatedOn  int64  `gorm:"column:created_on;not null;default:0"`
+	UpdatedOn  int64  `gorm:"column:updated_on;not null;default:0"`
 }
 
 const movieGenreTableName = "amr_movie_genre"
 
-func (i *MovieGenre) TableName() string {
-	return movieGenreTableName
-}
+func (MovieGenre) TableName() string { return movieGenreTableName }

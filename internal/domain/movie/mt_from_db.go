@@ -31,11 +31,11 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 	}
 
 	// 2) 关联信息：演员 & 类型
-	castInfos, err := s.getCastInfos(ctx, mv.Id, mv.ReleasingDate)
+	castInfos, err := s.getCastInfos(ctx, mv.JavId, mv.ReleasingDate)
 	if err != nil {
 		return nil, fmt.Errorf("getCastInfos failed: %w", err)
 	}
-	genreNames, err := s.getGenreNames(ctx, mv.Id)
+	genreNames, err := s.getGenreNames(ctx, mv.JavId)
 	if err != nil {
 		return nil, fmt.Errorf("getGenreNames failed: %w", err)
 	}
@@ -137,9 +137,9 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 }
 
 // ===== 辅助函数 =====
-func (s *Service) getCastInfos(ctx context.Context, movieId int64, releasingTs int64) ([]*types.CastInfo, error) {
+func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasingTs int64) ([]*types.CastInfo, error) {
 	// ✅ 使用你已有的方法：ListCastIDsByMovie
-	castIDs, err := s.deps.MovieCastRepo.ListCastIDsByMovie(ctx, movieId)
+	castIDs, err := s.deps.MovieCastRepo.ListCastIDsByMovieJavId(ctx, movieJavId)
 	if err != nil {
 		return nil, err
 	}
@@ -180,9 +180,9 @@ func (s *Service) getCastInfos(ctx context.Context, movieId int64, releasingTs i
 	return infos, nil
 }
 
-func (s *Service) getGenreNames(ctx context.Context, movieId int64) ([]string, error) {
+func (s *Service) getGenreNames(ctx context.Context, movieJavId string) ([]string, error) {
 	// ✅ 使用你已有的方法：ListGenreIDsByMovie
-	genreIDs, err := s.deps.MovieGenreRepo.ListGenreIDsByMovie(ctx, movieId)
+	genreIDs, err := s.deps.MovieGenreRepo.ListGenreIDsByMovieJavId(ctx, movieJavId)
 	if err != nil {
 		return nil, err
 	}

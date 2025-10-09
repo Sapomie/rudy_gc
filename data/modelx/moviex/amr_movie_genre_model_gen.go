@@ -23,15 +23,15 @@ var (
 	amrMovieGenreRowsExpectAutoSet   = strings.Join(stringx.Remove(amrMovieGenreFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amrMovieGenreRowsWithPlaceHolder = strings.Join(stringx.Remove(amrMovieGenreFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmrMovieGenreIdPrefix             = "cache:rudyGc:amrMovieGenre:id:"
-	cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix = "cache:rudyGc:amrMovieGenre:movieId:genreId:"
+	cacheRudyGcAmrMovieGenreIdPrefix                = "cache:rudyGc:amrMovieGenre:id:"
+	cacheRudyGcAmrMovieGenreMovieJavIdGenreIdPrefix = "cache:rudyGc:amrMovieGenre:movieJavId:genreId:"
 )
 
 type (
 	amrMovieGenreModel interface {
 		Insert(ctx context.Context, data *AmrMovieGenre) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*AmrMovieGenre, error)
-		FindOneByMovieIdGenreId(ctx context.Context, movieId int64, genreId int64) (*AmrMovieGenre, error)
+		FindOneByMovieJavIdGenreId(ctx context.Context, movieJavId string, genreId int64) (*AmrMovieGenre, error)
 		Update(ctx context.Context, data *AmrMovieGenre) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -42,11 +42,11 @@ type (
 	}
 
 	AmrMovieGenre struct {
-		Id        int64 `db:"id"`
-		MovieId   int64 `db:"movie_id"`
-		GenreId   int64 `db:"genre_id"`
-		CreatedOn int64 `db:"created_on"`
-		UpdatedOn int64 `db:"updated_on"`
+		Id         int64  `db:"id"`
+		MovieJavId string `db:"movie_jav_id"`
+		GenreId    int64  `db:"genre_id"`
+		CreatedOn  int64  `db:"created_on"`
+		UpdatedOn  int64  `db:"updated_on"`
 	}
 )
 
@@ -64,11 +64,11 @@ func (m *defaultAmrMovieGenreModel) Delete(ctx context.Context, id int64) error 
 	}
 
 	rudyGcAmrMovieGenreIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmrMovieGenreIdPrefix, id)
-	rudyGcAmrMovieGenreMovieIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix, data.MovieId, data.GenreId)
+	rudyGcAmrMovieGenreMovieJavIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieJavIdGenreIdPrefix, data.MovieJavId, data.GenreId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
-	}, rudyGcAmrMovieGenreIdKey, rudyGcAmrMovieGenreMovieIdGenreIdKey)
+	}, rudyGcAmrMovieGenreIdKey, rudyGcAmrMovieGenreMovieJavIdGenreIdKey)
 	return err
 }
 
@@ -89,12 +89,12 @@ func (m *defaultAmrMovieGenreModel) FindOne(ctx context.Context, id int64) (*Amr
 	}
 }
 
-func (m *defaultAmrMovieGenreModel) FindOneByMovieIdGenreId(ctx context.Context, movieId int64, genreId int64) (*AmrMovieGenre, error) {
-	rudyGcAmrMovieGenreMovieIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix, movieId, genreId)
+func (m *defaultAmrMovieGenreModel) FindOneByMovieJavIdGenreId(ctx context.Context, movieJavId string, genreId int64) (*AmrMovieGenre, error) {
+	rudyGcAmrMovieGenreMovieJavIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieJavIdGenreIdPrefix, movieJavId, genreId)
 	var resp AmrMovieGenre
-	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcAmrMovieGenreMovieIdGenreIdKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
-		query := fmt.Sprintf("select %s from %s where `movie_id` = ? and `genre_id` = ? limit 1", amrMovieGenreRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, movieId, genreId); err != nil {
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcAmrMovieGenreMovieJavIdGenreIdKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `movie_jav_id` = ? and `genre_id` = ? limit 1", amrMovieGenreRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, movieJavId, genreId); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -111,11 +111,11 @@ func (m *defaultAmrMovieGenreModel) FindOneByMovieIdGenreId(ctx context.Context,
 
 func (m *defaultAmrMovieGenreModel) Insert(ctx context.Context, data *AmrMovieGenre) (sql.Result, error) {
 	rudyGcAmrMovieGenreIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmrMovieGenreIdPrefix, data.Id)
-	rudyGcAmrMovieGenreMovieIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix, data.MovieId, data.GenreId)
+	rudyGcAmrMovieGenreMovieJavIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieJavIdGenreIdPrefix, data.MovieJavId, data.GenreId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?)", m.table, amrMovieGenreRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieId, data.GenreId, data.CreatedOn, data.UpdatedOn)
-	}, rudyGcAmrMovieGenreIdKey, rudyGcAmrMovieGenreMovieIdGenreIdKey)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.GenreId, data.CreatedOn, data.UpdatedOn)
+	}, rudyGcAmrMovieGenreIdKey, rudyGcAmrMovieGenreMovieJavIdGenreIdKey)
 	return ret, err
 }
 
@@ -126,11 +126,11 @@ func (m *defaultAmrMovieGenreModel) Update(ctx context.Context, newData *AmrMovi
 	}
 
 	rudyGcAmrMovieGenreIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmrMovieGenreIdPrefix, data.Id)
-	rudyGcAmrMovieGenreMovieIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieIdGenreIdPrefix, data.MovieId, data.GenreId)
+	rudyGcAmrMovieGenreMovieJavIdGenreIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieGenreMovieJavIdGenreIdPrefix, data.MovieJavId, data.GenreId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, amrMovieGenreRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieId, newData.GenreId, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, rudyGcAmrMovieGenreIdKey, rudyGcAmrMovieGenreMovieIdGenreIdKey)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.GenreId, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, rudyGcAmrMovieGenreIdKey, rudyGcAmrMovieGenreMovieJavIdGenreIdKey)
 	return err
 }
 

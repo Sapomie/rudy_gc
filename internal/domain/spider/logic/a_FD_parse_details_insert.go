@@ -180,12 +180,12 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 
 	// ===== 6) 关系表（amr_movie_cast / amr_movie_genre）=====
 	for _, cid := range castIDs {
-		if err := l.deps.MovieCastRepo.TryLink(l.ctx, mvSaved.Id, cid, now); err != nil {
+		if err := l.deps.MovieCastRepo.TryLink(l.ctx, mvSaved.JavId, cid, now); err != nil {
 			return nil, fmt.Errorf("建立关系 movie_cast 失败: %w", err)
 		}
 	}
 	for _, gid := range genreIDs {
-		if err := l.deps.MovieGenreRepo.TryLink(l.ctx, mvSaved.Id, gid, now); err != nil {
+		if err := l.deps.MovieGenreRepo.TryLink(l.ctx, mvSaved.JavId, gid, now); err != nil {
 			return nil, fmt.Errorf("建立关系 movie_genre 失败: %w", err)
 		}
 	}

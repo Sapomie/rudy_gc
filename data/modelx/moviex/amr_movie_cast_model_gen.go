@@ -23,15 +23,15 @@ var (
 	amrMovieCastRowsExpectAutoSet   = strings.Join(stringx.Remove(amrMovieCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amrMovieCastRowsWithPlaceHolder = strings.Join(stringx.Remove(amrMovieCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmrMovieCastIdPrefix            = "cache:rudyGc:amrMovieCast:id:"
-	cacheRudyGcAmrMovieCastMovieIdCastIdPrefix = "cache:rudyGc:amrMovieCast:movieId:castId:"
+	cacheRudyGcAmrMovieCastIdPrefix               = "cache:rudyGc:amrMovieCast:id:"
+	cacheRudyGcAmrMovieCastMovieJavIdCastIdPrefix = "cache:rudyGc:amrMovieCast:movieJavId:castId:"
 )
 
 type (
 	amrMovieCastModel interface {
 		Insert(ctx context.Context, data *AmrMovieCast) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*AmrMovieCast, error)
-		FindOneByMovieIdCastId(ctx context.Context, movieId int64, castId int64) (*AmrMovieCast, error)
+		FindOneByMovieJavIdCastId(ctx context.Context, movieJavId string, castId int64) (*AmrMovieCast, error)
 		Update(ctx context.Context, data *AmrMovieCast) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -42,11 +42,11 @@ type (
 	}
 
 	AmrMovieCast struct {
-		Id        int64 `db:"id"`
-		MovieId   int64 `db:"movie_id"`
-		CastId    int64 `db:"cast_id"`
-		CreatedOn int64 `db:"created_on"`
-		UpdatedOn int64 `db:"updated_on"`
+		Id         int64  `db:"id"`
+		MovieJavId string `db:"movie_jav_id"`
+		CastId     int64  `db:"cast_id"`
+		CreatedOn  int64  `db:"created_on"`
+		UpdatedOn  int64  `db:"updated_on"`
 	}
 )
 
@@ -64,11 +64,11 @@ func (m *defaultAmrMovieCastModel) Delete(ctx context.Context, id int64) error {
 	}
 
 	rudyGcAmrMovieCastIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmrMovieCastIdPrefix, id)
-	rudyGcAmrMovieCastMovieIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieIdCastIdPrefix, data.MovieId, data.CastId)
+	rudyGcAmrMovieCastMovieJavIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieJavIdCastIdPrefix, data.MovieJavId, data.CastId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
-	}, rudyGcAmrMovieCastIdKey, rudyGcAmrMovieCastMovieIdCastIdKey)
+	}, rudyGcAmrMovieCastIdKey, rudyGcAmrMovieCastMovieJavIdCastIdKey)
 	return err
 }
 
@@ -89,12 +89,12 @@ func (m *defaultAmrMovieCastModel) FindOne(ctx context.Context, id int64) (*AmrM
 	}
 }
 
-func (m *defaultAmrMovieCastModel) FindOneByMovieIdCastId(ctx context.Context, movieId int64, castId int64) (*AmrMovieCast, error) {
-	rudyGcAmrMovieCastMovieIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieIdCastIdPrefix, movieId, castId)
+func (m *defaultAmrMovieCastModel) FindOneByMovieJavIdCastId(ctx context.Context, movieJavId string, castId int64) (*AmrMovieCast, error) {
+	rudyGcAmrMovieCastMovieJavIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieJavIdCastIdPrefix, movieJavId, castId)
 	var resp AmrMovieCast
-	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcAmrMovieCastMovieIdCastIdKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
-		query := fmt.Sprintf("select %s from %s where `movie_id` = ? and `cast_id` = ? limit 1", amrMovieCastRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, movieId, castId); err != nil {
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcAmrMovieCastMovieJavIdCastIdKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `movie_jav_id` = ? and `cast_id` = ? limit 1", amrMovieCastRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, movieJavId, castId); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -111,11 +111,11 @@ func (m *defaultAmrMovieCastModel) FindOneByMovieIdCastId(ctx context.Context, m
 
 func (m *defaultAmrMovieCastModel) Insert(ctx context.Context, data *AmrMovieCast) (sql.Result, error) {
 	rudyGcAmrMovieCastIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmrMovieCastIdPrefix, data.Id)
-	rudyGcAmrMovieCastMovieIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieIdCastIdPrefix, data.MovieId, data.CastId)
+	rudyGcAmrMovieCastMovieJavIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieJavIdCastIdPrefix, data.MovieJavId, data.CastId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?)", m.table, amrMovieCastRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieId, data.CastId, data.CreatedOn, data.UpdatedOn)
-	}, rudyGcAmrMovieCastIdKey, rudyGcAmrMovieCastMovieIdCastIdKey)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.CastId, data.CreatedOn, data.UpdatedOn)
+	}, rudyGcAmrMovieCastIdKey, rudyGcAmrMovieCastMovieJavIdCastIdKey)
 	return ret, err
 }
 
@@ -126,11 +126,11 @@ func (m *defaultAmrMovieCastModel) Update(ctx context.Context, newData *AmrMovie
 	}
 
 	rudyGcAmrMovieCastIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmrMovieCastIdPrefix, data.Id)
-	rudyGcAmrMovieCastMovieIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieIdCastIdPrefix, data.MovieId, data.CastId)
+	rudyGcAmrMovieCastMovieJavIdCastIdKey := fmt.Sprintf("%s%v:%v", cacheRudyGcAmrMovieCastMovieJavIdCastIdPrefix, data.MovieJavId, data.CastId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, amrMovieCastRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieId, newData.CastId, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, rudyGcAmrMovieCastIdKey, rudyGcAmrMovieCastMovieIdCastIdKey)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.CastId, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, rudyGcAmrMovieCastIdKey, rudyGcAmrMovieCastMovieJavIdCastIdKey)
 	return err
 }
 

@@ -15,7 +15,7 @@ type (
 	AmrMovieGenreModel interface {
 		amrMovieGenreModel
 
-		ListGenreIDsByMovie(ctx context.Context, movieId int64) ([]int64, error)
+		ListGenreIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error)
 	}
 
 	customAmrMovieGenreModel struct {
@@ -30,11 +30,12 @@ func NewAmrMovieGenreModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.O
 	}
 }
 
-func (m *customAmrMovieGenreModel) ListGenreIDsByMovie(ctx context.Context, movieId int64) ([]int64, error) {
+// ListGenreIDsByMovieJavId 查询某个 movie_jav_id 下的所有 genre_id（不走缓存）
+func (m *customAmrMovieGenreModel) ListGenreIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error) {
 	q, args, err := squirrel.
 		Select("`genre_id`").
 		From(m.tableName()).
-		Where("`movie_id` = ?", movieId).
+		Where(squirrel.Eq{"movie_jav_id": movieJavId}).
 		OrderBy("`genre_id` ASC").
 		ToSql()
 	if err != nil {
@@ -42,7 +43,6 @@ func (m *customAmrMovieGenreModel) ListGenreIDsByMovie(ctx context.Context, movi
 	}
 
 	var ids []int64
-	// 列表查询不走缓存，风格与 movie_cast 保持一致
 	if err := m.QueryRowsNoCacheCtx(ctx, &ids, q, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, nil

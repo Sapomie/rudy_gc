@@ -12,12 +12,11 @@ import (
 var _ AmrMovieCastModel = (*customAmrMovieCastModel)(nil)
 
 type (
-	// AmrMovieCastModel is an interface to be customized, add more methods here,
-	// and implement the added methods in customAmrMovieCastModel.
+	// AmrMovieCastModel 可扩展的接口
 	AmrMovieCastModel interface {
 		amrMovieCastModel
 
-		ListCastIDsByMovie(ctx context.Context, movieId int64) ([]int64, error)
+		ListCastIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error)
 	}
 
 	customAmrMovieCastModel struct {
@@ -32,19 +31,20 @@ func NewAmrMovieCastModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Op
 	}
 }
 
-func (m *customAmrMovieCastModel) ListCastIDsByMovie(ctx context.Context, movieId int64) ([]int64, error) {
-	q, args, err := squirrel.
-		Select("`cast_id`").
+// ListCastIDsByMovieJavId 查询某个 movie_jav_id 下的所有 cast_id
+func (m *customAmrMovieCastModel) ListCastIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error) {
+	query, args, err := squirrel.
+		Select("cast_id").
 		From(m.tableName()).
-		Where("`movie_id` = ?", movieId).
-		OrderBy("`cast_id` ASC").
+		Where(squirrel.Eq{"movie_jav_id": movieJavId}).
+		OrderBy("cast_id ASC").
 		ToSql()
 	if err != nil {
 		return nil, err
 	}
+
 	var ids []int64
-	// 列表查询不走缓存
-	if err := m.QueryRowsNoCacheCtx(ctx, &ids, q, args...); err != nil {
+	if err := m.QueryRowsNoCacheCtx(ctx, &ids, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, nil
 		}

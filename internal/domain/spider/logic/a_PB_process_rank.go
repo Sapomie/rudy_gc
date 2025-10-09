@@ -149,7 +149,7 @@ func (l *CrawlLogic) addRankInfo(javId string) error {
 		return fmt.Errorf("查询电影失败(javId=%s): %w", javId, err)
 	}
 	// 3) 取演员 ids（保持与老项目等价的副作用：填充内存 Map）
-	castIDs, err := l.deps.MovieCastRepo.ListCastIDsByMovie(l.ctx, mv.Id)
+	castIDs, err := l.deps.MovieCastRepo.ListCastIDsByMovieJavId(l.ctx, mv.JavId)
 	if err != nil {
 		return fmt.Errorf("查询电影演员关系失败(movieId=%d): %w", mv.Id, err)
 	}
