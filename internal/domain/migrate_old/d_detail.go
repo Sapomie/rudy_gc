@@ -12,16 +12,44 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func (s *Service) Migrate() error {
+func (s *Service) MigrateDetail() error {
 	ctx := context.Background()
-	allIds, err := s.xModel.DetailModel.AllIds(ctx)
+
+	allJavIds, err := s.xModel.DetailModel.AllJavIds(ctx)
+	if err != nil {
+		return err
+	}
+	javIdsNew, err := s.deps.DetailRepo.AllJavIds(ctx)
 	if err != nil {
 		return err
 	}
 
+	// 1) 去重 + 差集：从 allJavIds 中剔除已在新库中的 javId
+	newSet := make(map[string]struct{}, len(javIdsNew))
+	for _, id := range javIdsNew {
+		if id == "" {
+			continue
+		}
+		newSet[id] = struct{}{}
+	}
+
+	seen := make(map[string]struct{}, len(allJavIds))
+	javIdsNeedUpsert := make([]string, 0, len(allJavIds))
+	for _, id := range allJavIds {
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		if _, exists := newSet[id]; !exists {
+			javIdsNeedUpsert = append(javIdsNeedUpsert, id)
+		}
+	}
 	var count int
-	for _, id := range allIds {
-		xDetail, err := s.xModel.DetailModel.FindOne(ctx, id)
+	for _, javId := range javIdsNeedUpsert {
+		xDetail, err := s.xModel.DetailModel.FindOneByJavId(ctx, javId)
 		if err != nil {
 			return err
 		}
@@ -70,7 +98,7 @@ func (s *Service) Migrate() error {
 		}
 
 		count++
-		s.deps.Log.Infof("完成%v/%v", count, len(allIds))
+		s.deps.Log.Infof("完成%v/%v", count, len(javIdsNeedUpsert))
 
 	}
 

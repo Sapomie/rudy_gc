@@ -126,7 +126,7 @@ func (l *CrawlLogic) UpdateMovieRankInfo(javIdSet map[string]struct{}) error {
 
 	updated := 0
 	for javId := range javIdSet {
-		if err := l.addRankInfo(javId); err != nil {
+		if err := l.AddRankInfo(javId); err != nil {
 			return fmt.Errorf("更新 javId=%s 的排行信息失败: %w", javId, err)
 		}
 		updated++
@@ -135,8 +135,8 @@ func (l *CrawlLogic) UpdateMovieRankInfo(javIdSet map[string]struct{}) error {
 	return nil
 }
 
-// addRankInfo 计算单个影片的：首次上榜日、最佳名次、上榜天数，并写回 bm_minfo
-func (l *CrawlLogic) addRankInfo(javId string) error {
+// AddRankInfo 计算单个影片的：首次上榜日、最佳名次、上榜天数，并写回 bm_minfo
+func (l *CrawlLogic) AddRankInfo(javId string) error {
 	// 1) 统计聚合（SQL 聚合更快；没有就先在 Repo 做一层）
 	firstDay, bestRank, daysInRank, err := l.deps.RankRepo.AggregateByJavId(l.ctx, javId)
 	if err != nil {
@@ -164,6 +164,7 @@ func (l *CrawlLogic) addRankInfo(javId string) error {
 	); err != nil {
 		return fmt.Errorf("写回 bm_minfo 排行信息失败(javId=%s): %w", javId, err)
 	}
+	l.movieSvc.InvalidateMovieType(l.ctx, javId)
 
 	return nil
 }

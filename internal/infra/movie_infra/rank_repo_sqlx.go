@@ -5,10 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/movie_repo"
 	"rudy_gc/internal/types"
-	"time"
 )
 
 var _ movie_repo.RankRepo = (*RankRepoSqlx)(nil)
@@ -25,14 +26,13 @@ func NewRankRepoSqlx(m moviex.CRankModel) movie_repo.RankRepo {
 func (r *RankRepoSqlx) Upsert(ctx context.Context, rk *types.Rank) error {
 	now := time.Now().Unix()
 
-	// 查找是否存在
 	row, err := r.m.FindOneByRankKey(ctx, rk.RankKey)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
 		return fmt.Errorf("find c_rank(%s) failed: %w", rk.RankKey, err)
 	}
 
 	if row != nil {
-		// 存在 → 更新字段
+		// 已存在 -> 更新必要字段
 		row.MovieJavId = rk.MovieJavId
 		row.DayNumber = rk.DayNumber
 		row.RankPos = rk.RankPos
@@ -45,7 +45,7 @@ func (r *RankRepoSqlx) Upsert(ctx context.Context, rk *types.Rank) error {
 		return nil
 	}
 
-	// 不存在 → 插入
+	// 不存在 -> 插入
 	toIns := &moviex.CRank{
 		RankKey:    rk.RankKey,
 		MovieJavId: rk.MovieJavId,
@@ -60,10 +60,43 @@ func (r *RankRepoSqlx) Upsert(ctx context.Context, rk *types.Rank) error {
 	}
 	return nil
 }
+
 func (r *RankRepoSqlx) AggregateByJavId(ctx context.Context, javId string) (int64, int64, int64, error) {
 	firstDay, bestRank, daysInRank, err := r.m.AggregateByJavId(ctx, javId)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("聚合排行失败(javId=%s): %w", javId, err)
 	}
 	return firstDay, bestRank, daysInRank, nil
+}
+
+func (r *RankRepoSqlx) FindOneByRankKey(ctx context.Context, rankKey string) (*types.Rank, error) {
+	row, err := r.m.FindOneByRankKey(ctx, rankKey)
+	if err != nil {
+		return nil, err
+	}
+	return mapCRankToTypes(row), nil
+}
+
+func (r *RankRepoSqlx) All(ctx context.Context) ([]*types.Rank, error) {
+	rows, err := r.m.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.Rank, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, mapCRankToTypes(v))
+	}
+	return out, nil
+}
+
+/******** helpers ********/
+
+func mapCRankToTypes(v *moviex.CRank) *types.Rank {
+	return &types.Rank{
+		RankKey:    v.RankKey,
+		MovieJavId: v.MovieJavId,
+		DayNumber:  v.DayNumber,
+		RankPos:    v.RankPos,
+		Category:   v.Category,
+	}
 }

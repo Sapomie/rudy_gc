@@ -16,11 +16,7 @@ type (
 	// and implement the added methods in customCRankModel.
 	CRankModel interface {
 		cRankModel
-
-		// AggregateByJavId 统计某影片的排行聚合：
-		// - firstDay:   首次上榜日(MIN(day_number))
-		// - bestRank:   最佳名次(MIN(rank_pos))
-		// - daysInRank: 上榜天数(COUNT(*))
+		All(ctx context.Context) ([]*CRank, error)
 		AggregateByJavId(ctx context.Context, javId string) (firstDay int64, bestRank int64, daysInRank int64, err error)
 	}
 
@@ -58,4 +54,14 @@ func (m *customCRankModel) AggregateByJavId(ctx context.Context, javId string) (
 		return 0, 0, 0, err
 	}
 	return dst.FirstDay, dst.BestRank, dst.DaysInRank, nil
+}
+
+func (m *customCRankModel) All(ctx context.Context) ([]*CRank, error) {
+	query := fmt.Sprintf(`SELECT * FROM %s`, m.tableName())
+
+	var rows []*CRank
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query); err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

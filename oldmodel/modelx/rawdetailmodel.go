@@ -29,6 +29,7 @@ type (
 
 		NamesByNeedScanStatus(ctx context.Context, status int64) ([]int64, error)
 
+		AllJavIds(ctx context.Context) ([]string, error)
 		AllIds(ctx context.Context) ([]int64, error)
 	}
 
@@ -135,4 +136,22 @@ func (m *customRawDetailModel) AllIds(ctx context.Context) ([]int64, error) {
 		return nil, err
 	}
 	return ids, nil
+}
+
+func (m *customRawDetailModel) AllJavIds(ctx context.Context) ([]string, error) {
+	// 构建 SQL 查询语句
+	query, args, err := squirrel.Select("`jav_id`").
+		From(m.tableName()).
+		Limit(1000000).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	var jIds []string
+	// 执行查询
+	if err := m.conn.QueryRowsCtx(ctx, &jIds, query, args...); err != nil {
+		return nil, err
+	}
+	return jIds, nil
 }

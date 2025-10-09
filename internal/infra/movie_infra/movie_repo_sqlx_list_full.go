@@ -26,8 +26,30 @@ func NewMovieListRepoSqlx(am moviex.AMovieModel, mi moviex.BmMinfoModel, vf movi
 	return &MovieListRepoSqlx{am: am, mi: mi, vf: vf}
 }
 
+// internal/infra/movie_infra/movie_repo_sqlx_list_full.go
+
 func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
-	// 1) 分表各取 jav_id（无 JOIN）
+	// 1) 先判定这次请求“命中”了哪些表（条件 or 排序）
+	needA := needAMovie(req)
+	needM := needMinfo(req)
+	needF := needVFilm(req)
+
+	onlyA := needA && !needM && !needF
+	onlyM := needM && !needA && !needF
+	onlyF := needF && !needA && !needM
+
+	// 2) 单表直取（最快路径）
+	if onlyA {
+		return r.listFromAMovieOnly(ctx, req)
+	}
+	if onlyM {
+		return r.listFromMinfoOnly(ctx, req)
+	}
+	if onlyF {
+		return r.listFromVFilmOnly(ctx, req)
+	}
+
+	// 3) 命中多表：用你现有的交集逻辑
 	setA, err := r.pickFromAMovie(ctx, req)
 	if err != nil {
 		return nil, 0, err
@@ -40,15 +62,13 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	if err != nil {
 		return nil, 0, err
 	}
-
-	// 2) 交集：只保留三者（或存在者）共有的 jav_id
 	finalIDs := intersectNonEmpty(setA, setM, setF)
 	total := int64(len(finalIDs))
 	if total == 0 {
 		return nil, 0, nil
 	}
 
-	// 3) 排序与分页：依据 OrderBy 所属表，**只在那一张表**里做 ORDER BY + LIMIT/OFFSET
+	// 4) 仍沿用“在排序所属表分页”的现有实现
 	page := req.Page
 	size := req.PageSize
 	if page <= 0 {
@@ -66,19 +86,309 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	case consts.OrderByRankDate, consts.OrderByHighestRank:
 		ordered, err = r.pageOnMinfo(ctx, finalIDs, req.OrderBy, offset, size)
 	default:
-		// 默认按 a_movie（发行日/名称/观看人数/演员年龄等）
 		ordered, err = r.pageOnAMovie(ctx, finalIDs, req.OrderBy, offset, size)
 	}
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 4) 返回 []*types.Movie（仅填 JavId，供上层聚合 MovieType）
 	out := make([]*types.Movie, 0, len(ordered))
 	for _, id := range ordered {
 		out = append(out, &types.Movie{JavId: id})
 	}
 	return out, total, nil
+}
+
+/* ---------------- 单表直取：COUNT + ORDER/LIMIT（不做交集） ---------------- */
+
+func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
+	// WHERE
+	w := whereAMovie(req)
+
+	// COUNT(*)
+	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.am.TableName()).Where(w).ToSql()
+	var total int64
+	if err := r.am.QueryRowNoCacheCtx(ctx, &total, cntSql, cntArgs...); err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	// ORDER + PAGE
+	order := "releasing_date DESC"
+	switch req.OrderBy {
+	case consts.OrderByReleasingDate:
+		order = "releasing_date DESC"
+	case consts.OrderByName:
+		order = "name ASC"
+	case consts.OrderByViewerWatched:
+		order = "viewers_number_watched DESC"
+	case consts.OrderByCastAgeAsc:
+		order = "cast_average_age ASC"
+	case consts.OrderByCastAgeDesc:
+		order = "cast_average_age DESC"
+	}
+	page, size := normalizePage(req.Page, req.PageSize)
+	sqlStr, args, _ := squirrel.
+		Select("jav_id").
+		From(r.am.TableName()).
+		Where(w).
+		OrderBy(order).
+		Offset(uint64((page - 1) * size)).
+		Limit(uint64(size)).
+		ToSql()
+
+	var ids []string
+	if err := r.am.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
+	out := make([]*types.Movie, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, &types.Movie{JavId: id})
+	}
+	return out, total, nil
+}
+
+func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
+	w := whereMinfo(req)
+
+	// 当按最高排名排序时，排除最高排名为 0 的记录
+	if req.OrderBy == consts.OrderByHighestRank {
+		w = append(w, squirrel.NotEq{"highest_rank": 0})
+	}
+
+	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.mi.TableName()).Where(w).ToSql()
+	var total int64
+	if err := r.mi.QueryRowNoCacheCtx(ctx, &total, cntSql, cntArgs...); err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	order := "first_rank_day_number DESC"
+	if req.OrderBy == consts.OrderByHighestRank {
+		order = "highest_rank ASC"
+	}
+
+	page, size := normalizePage(req.Page, req.PageSize)
+	sqlStr, args, _ := squirrel.
+		Select("jav_id").
+		From(r.mi.TableName()).
+		Where(w).
+		OrderBy(order).
+		Offset(uint64((page - 1) * size)).
+		Limit(uint64(size)).
+		ToSql()
+
+	var ids []string
+	if err := r.mi.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
+	out := make([]*types.Movie, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, &types.Movie{JavId: id})
+	}
+	return out, total, nil
+}
+
+func (r *MovieListRepoSqlx) listFromVFilmOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
+	w := whereVFilm(req)
+
+	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.vf.TableName()).Where(w).ToSql()
+	var total int64
+	if err := r.vf.QueryRowNoCacheCtx(ctx, &total, cntSql, cntArgs...); err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	order := "birth_time DESC"
+	switch req.OrderBy {
+	case consts.OrderByBirthTime:
+		order = "birth_time DESC"
+	case consts.OrderByScTimes:
+		order = "sc_times DESC"
+	case consts.OrderByComeTimes:
+		order = "come_times DESC"
+	case consts.OrderByLastScTime:
+		order = "last_sc_time DESC"
+	}
+	page, size := normalizePage(req.Page, req.PageSize)
+	sqlStr, args, _ := squirrel.
+		Select("movie_jav_id").
+		From(r.vf.TableName()).
+		Where(w).
+		OrderBy(order).
+		Offset(uint64((page - 1) * size)).
+		Limit(uint64(size)).
+		ToSql()
+
+	var ids []string
+	if err := r.vf.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
+	out := make([]*types.Movie, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, &types.Movie{JavId: id})
+	}
+	return out, total, nil
+}
+
+/* ---------------- 命中判断 & WHERE 复用 ---------------- */
+
+func needAMovie(req *types.ListMovieFullRequest) bool {
+	// 命中 a_movie 的“过滤”或“排序”
+	if req.ReleasingDateStart != "" || req.ReleasingDateEnd != "" || req.CastAgeMin > 0 || req.CastAgeMax > 0 {
+		return true
+	}
+	switch req.OrderBy {
+	case consts.OrderByReleasingDate, consts.OrderByName, consts.OrderByViewerWatched,
+		consts.OrderByCastAgeAsc, consts.OrderByCastAgeDesc:
+		return true
+	}
+	return false
+}
+
+func needMinfo(req *types.ListMovieFullRequest) bool {
+	if req.StartRankingDate != "" || req.NeedDownload > 0 || req.Word != "" {
+		return true
+	}
+	switch req.OrderBy {
+	case consts.OrderByRankDate, consts.OrderByHighestRank:
+		return true
+	}
+	return false
+}
+
+func needVFilm(req *types.ListMovieFullRequest) bool {
+	if req.Owned == 1 || req.HasSub > 0 || req.ComeTimesMin > 0 ||
+		req.LastScTimeMin != "" || req.ScTimesMin > 0 || req.ScTimesMax != nil ||
+		req.FilmBirthTimeStart != "" || req.FilmBirthTimeEnd != "" ||
+		req.Dir1 != "" || req.Dir2 != "" || req.Dir3 != "" || req.Dir4 != "" {
+		return true
+	}
+	switch req.OrderBy {
+	case consts.OrderByBirthTime, consts.OrderByScTimes, consts.OrderByComeTimes, consts.OrderByLastScTime:
+		return true
+	}
+	return false
+}
+
+func whereAMovie(req *types.ListMovieFullRequest) squirrel.And {
+	w := squirrel.And{}
+	if req.ReleasingDateStart != "" {
+		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
+			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
+		}
+	}
+	if req.ReleasingDateEnd != "" {
+		if ts, ok := parseYMD(req.ReleasingDateEnd); ok {
+			w = append(w, squirrel.LtOrEq{"releasing_date": ts})
+		}
+	}
+	if req.CastAgeMin > 0 {
+		w = append(w,
+			squirrel.And{
+				squirrel.GtOrEq{"cast_average_age": int64(req.CastAgeMin*10.0 + 0.5)},
+				squirrel.NotEq{"cast_average_age": 0},
+			},
+		)
+	}
+	if req.CastAgeMax > 0 {
+		w = append(w,
+			squirrel.And{
+				squirrel.LtOrEq{"cast_average_age": int64(req.CastAgeMax*10.0 + 0.5)},
+				squirrel.NotEq{"cast_average_age": 0},
+			},
+		)
+	}
+	return w
+}
+
+func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
+	w := squirrel.And{}
+	if req.StartRankingDate != "" {
+		if ts, ok := parseYMD(req.StartRankingDate); ok {
+			w = append(w, squirrel.GtOrEq{"first_rank_day_number": ts})
+		}
+	}
+	if req.NeedDownload > 0 {
+		w = append(w, squirrel.Eq{"need_download": req.NeedDownload})
+	}
+	if req.Word != "" {
+		w = append(w, squirrel.Like{"chinese": "%" + req.Word + "%"})
+	}
+	return w
+}
+
+func whereVFilm(req *types.ListMovieFullRequest) squirrel.And {
+	w := squirrel.And{}
+	if req.Owned == 1 {
+		// 你的常量里 FilmIsNotRemoved=1，按你的语义：拥有=存在且未删除
+		w = append(w, squirrel.Eq{"is_removed": 1})
+	}
+	if req.HasSub > 0 {
+		w = append(w, squirrel.Eq{"has_sub": req.HasSub})
+	}
+	if req.ComeTimesMin > 0 {
+		w = append(w, squirrel.GtOrEq{"come_times": req.ComeTimesMin})
+	}
+	if req.LastScTimeMin != "" {
+		if ts, ok := parseYMD(req.LastScTimeMin); ok {
+			w = append(w, squirrel.GtOrEq{"last_sc_time": ts})
+		}
+	}
+	if req.ScTimesMin > 0 {
+		w = append(w, squirrel.GtOrEq{"sc_times": req.ScTimesMin})
+	}
+	if req.ScTimesMax != nil {
+		w = append(w, squirrel.LtOrEq{"sc_times": *req.ScTimesMax})
+	}
+	if req.FilmBirthTimeStart != "" {
+		if ts, ok := parseYMD(req.FilmBirthTimeStart); ok {
+			w = append(w, squirrel.GtOrEq{"birth_time": ts})
+		}
+	}
+	if req.FilmBirthTimeEnd != "" {
+		if ts, ok := parseYMD(req.FilmBirthTimeEnd); ok {
+			w = append(w, squirrel.LtOrEq{"birth_time": ts})
+		}
+	}
+	if req.Dir1 != "" {
+		w = append(w, squirrel.Like{"full_dir": "%/" + req.Dir1 + "/%"})
+	}
+	if req.Dir2 != "" {
+		w = append(w, squirrel.Like{"full_dir": "%/" + req.Dir2 + "/%"})
+	}
+	if req.Dir3 != "" {
+		w = append(w, squirrel.Like{"full_dir": "%/" + req.Dir3 + "/%"})
+	}
+	if req.Dir4 != "" {
+		w = append(w, squirrel.Like{"full_dir": "%/" + req.Dir4 + "/%"})
+	}
+	return w
+}
+
+func normalizePage(page, size int64) (int64, int64) {
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 || size > 200 {
+		size = 18
+	}
+	return page, size
 }
 
 /* ------------------- A. 各表筛选（只查需要的表，无 JOIN） ------------------- */
@@ -99,14 +409,7 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 			w = append(w, squirrel.LtOrEq{"releasing_date": ts})
 		}
 	}
-	// 关键词：a.name / a.title
-	if req.Word != "" {
-		like := "%" + req.Word + "%"
-		w = append(w, squirrel.Or{
-			squirrel.Like{"name": like},
-			squirrel.Like{"title": like},
-		})
-	}
+
 	// 演员平均年龄（*10 存储）
 	if req.CastAgeMin > 0 {
 		w = append(w, squirrel.GtOrEq{"cast_average_age": int64(req.CastAgeMin*10.0 + 0.5)})
@@ -152,6 +455,10 @@ func (r *MovieListRepoSqlx) pickFromMinfo(ctx context.Context, req *types.ListMo
 	// 关键词额外在 m.chinese 命中
 	if req.Word != "" {
 		w = append(w, squirrel.Like{"chinese": "%" + req.Word + "%"})
+	}
+
+	if req.OrderBy == consts.OrderByHighestRank {
+		w = append(w, squirrel.Expr("highest_rank <> 0"))
 	}
 
 	// 如果该表没有被任何条件/排序命中，可以返回 nil 表示“不限制”

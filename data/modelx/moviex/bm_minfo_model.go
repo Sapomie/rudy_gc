@@ -16,6 +16,7 @@ type (
 		bmMinfoModel
 		TableName() string
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
+		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 	}
 
 	customBmMinfoModel struct {
@@ -38,4 +39,8 @@ func (m *customBmMinfoModel) TableName() string {
 // QueryRowsNoCacheCtx 直接执行无缓存的多行查询
 func (m *customBmMinfoModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
 	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
+}
+
+func (m *customBmMinfoModel) QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
+	return m.CachedConn.QueryRowNoCacheCtx(ctx, dest, query, args...)
 }

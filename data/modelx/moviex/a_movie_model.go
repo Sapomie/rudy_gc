@@ -21,6 +21,7 @@ type (
 		FindMoviesByName(ctx context.Context, name string) ([]*AMovie, error)
 
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
+		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		TableName() string
 	}
 
@@ -73,4 +74,8 @@ func (m *customAMovieModel) FindMoviesByName(ctx context.Context, name string) (
 
 func (m *customAMovieModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
 	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
+}
+
+func (m *customAMovieModel) QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
+	return m.CachedConn.QueryRowNoCacheCtx(ctx, dest, query, args...)
 }

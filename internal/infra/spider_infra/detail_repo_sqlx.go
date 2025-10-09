@@ -73,3 +73,7 @@ func detailRowToType(row *spiderx.DDetail) *types.Detail {
 		UpdatedOn:     row.UpdatedOn,
 	}
 }
+
+func (r *DetailRepoSqlx) AllJavIds(ctx context.Context) ([]string, error) {
+	return r.m.ListAllJavIds(ctx)
+}

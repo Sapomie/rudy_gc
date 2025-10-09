@@ -35,7 +35,7 @@ type (
 		FindLatest(ctx context.Context) (*CRank, error)
 		FindJavIdsByDayNumber(ctx context.Context, dayNumber int64) ([]string, error)
 
-		During(ctx context.Context, start, end int64) ([]*CRank, error)
+		All(ctx context.Context) ([]*CRank, error)
 	}
 
 	// customCRankModel 包含默认模型的实现
@@ -234,11 +234,10 @@ func (m *defaultCRankModel) FindJavIdsByDayNumber(ctx context.Context, dayNumber
 	return result, nil
 }
 
-func (m *defaultCRankModel) During(ctx context.Context, start, end int64) ([]*CRank, error) {
+func (m *defaultCRankModel) All(ctx context.Context) ([]*CRank, error) {
 	var ranks []*CRank
 	query, args, err := squirrel.Select("*").
 		From(m.tableName()).
-		Where("`day_number` >= ? and `day_number` <= ?", start, end).
 		ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build SQL query: %w", err)

@@ -15,14 +15,15 @@ type ListMovieFullRequest struct {
 	CastNames  string `form:"cn"`
 	GenreNames string `form:"gn"`
 
-	DirectorName       string  `form:"dn"`
-	PrefixName         string  `form:"pn"`
-	MakerName          string  `form:"mn"`
-	LabelName          string  `form:"ln"`
-	ReleasingDateStart string  `form:"rs"`
-	ReleasingDateEnd   string  `form:"re"`
-	CastAgeMin         float64 `form:"cay"`
-	CastAgeMax         float64 `form:"cao"`
+	DirectorName string `form:"dn"`
+	PrefixName   string `form:"pn"`
+	MakerName    string `form:"mn"`
+	LabelName    string `form:"ln"`
+
+	ReleasingDateStart string  `form:"rs"`  //ok
+	ReleasingDateEnd   string  `form:"re"`  //ok
+	CastAgeMin         float64 `form:"cay"` //ok
+	CastAgeMax         float64 `form:"cao"` //ok
 
 	StartRankingDate string `form:"srd"`
 	NeedDownload     int64  `form:"nd"`
