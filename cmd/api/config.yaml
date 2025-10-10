@@ -24,7 +24,7 @@ Fetcher:
   Timeout: 15
   JavAddress: "www.y94i.com"
   BusAddress: "www.javbus.com"
-  LocalImageDir: "/Volumes/T7/data/jacket_cover/"
+  LocalImageDir: "/Volumes/T7/data/jacket_cover_rudy_gc/"
 
 Film:
   RootDirs:

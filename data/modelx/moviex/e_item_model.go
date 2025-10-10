@@ -3,6 +3,7 @@ package moviex
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/Masterminds/squirrel"
@@ -14,6 +15,10 @@ type EItemModel interface {
 	eItemModel
 	ListByDetailStatus(ctx context.Context, hasDetail int64, limit int64) ([]*EItem, error)
 	ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error)
+	ListByDownloadCoverStatus(ctx context.Context, hasDownloadCover int64, limit int64) ([]*EItem, error)
+
+	TableName() string
+	ExecNoCacheCtx(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
 type customEItemModel struct {
@@ -76,4 +81,34 @@ func (m *customEItemModel) ListByDetailNeedScan(ctx context.Context, needScan in
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (m *customEItemModel) ListByDownloadCoverStatus(ctx context.Context, hasDownloadCover int64, limit int64) ([]*EItem, error) {
+	if limit <= 0 {
+		limit = 10000
+	}
+	builder := squirrel.
+		Select(eItemRows).
+		From(m.tableName()).
+		Where(squirrel.Eq{"has_download_cover": hasDownloadCover}).
+		OrderBy("`id` ASC").
+		Limit(uint64(limit))
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*EItem
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customEItemModel) TableName() string {
+	return m.table
 }

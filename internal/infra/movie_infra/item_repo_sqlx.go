@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/spider_repo"
+	"time"
 
 	"rudy_gc/internal/types"
 )
@@ -68,12 +69,24 @@ func (r *ItemRepoSqlx) FindByDetailNeedScan(ctx context.Context, needScan int64)
 	return out, nil
 }
 
+func (r *ItemRepoSqlx) FindByDownloadCoverStatus(ctx context.Context, downloadCoverStatus int64) ([]*types.Item, error) {
+	rows, err := r.m.ListByDownloadCoverStatus(ctx, downloadCoverStatus, 1000000)
+	if err != nil {
+		return nil, fmt.Errorf("ListByDownloadCoverStatus(%d): %w", downloadCoverStatus, err)
+	}
+	out := make([]*types.Item, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, itemRowToType(row))
+	}
+	return out, nil
+}
+
 func (r *ItemRepoSqlx) UpdateDetailMeta(
 	ctx context.Context,
 	id int64,
 	needScan int64,
 	birthTime int64,
-	updateTime int64,
+	detailUpdateTime int64,
 	updatedOn int64,
 	hasDetail int64,
 ) error {
@@ -91,8 +104,8 @@ func (r *ItemRepoSqlx) UpdateDetailMeta(
 	}
 
 	// 本次抓取/解析对应的更新时间（>0 才更新）
-	if updateTime > 0 {
-		row.DetailUpdateTime = updateTime
+	if detailUpdateTime > 0 {
+		row.DetailUpdateTime = detailUpdateTime
 	}
 
 	// 同步 HasDetail 与 UpdatedOn
@@ -128,4 +141,49 @@ func itemRowToType(row *moviex.EItem) *types.Item {
 // ✅ 新增：直接透传 modelx 的方法
 func (r *ItemRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*moviex.EItem, error) {
 	return r.m.FindOneByJavId(ctx, javId)
+}
+
+// internal/infra/spider_infra/item_repo_sqlx.go
+func (r *ItemRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, patch types.ItemPatch) error {
+	row, err := r.m.FindOneByJavId(ctx, javId)
+	if err != nil {
+		return err // 保留 go-zero 的 ErrNotFound 语义
+	}
+
+	changed := false
+	if patch.HasDownloadCover != nil && row.HasDownloadCover != *patch.HasDownloadCover {
+		row.HasDownloadCover = *patch.HasDownloadCover
+		changed = true
+	}
+	if patch.HasChinese != nil && row.HasChinese != *patch.HasChinese {
+		row.HasChinese = *patch.HasChinese
+		changed = true
+	}
+	if patch.HasDetail != nil && row.HasDetail != *patch.HasDetail {
+		row.HasDetail = *patch.HasDetail
+		changed = true
+	}
+	if patch.DetailNeedScan != nil && row.DetailNeedScan != *patch.DetailNeedScan {
+		row.DetailNeedScan = *patch.DetailNeedScan
+		changed = true
+	}
+	if patch.DetailBirthTime != nil && row.DetailBirthTime != *patch.DetailBirthTime {
+		row.DetailBirthTime = *patch.DetailBirthTime
+		changed = true
+	}
+	if patch.DetailUpdateTime != nil && row.DetailUpdateTime != *patch.DetailUpdateTime {
+		row.DetailUpdateTime = *patch.DetailUpdateTime
+		changed = true
+	}
+
+	// UpdatedOn：不传则自动填 now（只有在确实有变更时才更新）
+	if changed {
+		if patch.UpdatedOn != nil {
+			row.UpdatedOn = *patch.UpdatedOn
+		} else {
+			row.UpdatedOn = time.Now().Unix()
+		}
+		return r.m.Update(ctx, row) // go-zero 自动清缓存
+	}
+	return nil
 }

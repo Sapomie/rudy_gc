@@ -121,8 +121,7 @@ func makeRanksFromBestinv(best *types.Bestinv) ([]*types.Rank, error) {
 
 // UpdateMovieRankInfo 批量按 javId 聚合更新排行信息
 func (l *CrawlLogic) UpdateMovieRankInfo(javIdSet map[string]struct{}) error {
-	log := logx.WithContext(l.ctx)
-	log.Infof("开始汇总并更新排行信息，待处理 %d 个 javId", len(javIdSet))
+	l.deps.Log.Infof("开始汇总并更新排行信息，待处理 %d 个 javId", len(javIdSet))
 
 	updated := 0
 	for javId := range javIdSet {
@@ -131,7 +130,7 @@ func (l *CrawlLogic) UpdateMovieRankInfo(javIdSet map[string]struct{}) error {
 		}
 		updated++
 	}
-	log.Infof("排行信息更新完成，共处理 %d 个", updated)
+	l.deps.Log.Infof("排行信息更新完成，共处理 %d 个", updated)
 	return nil
 }
 

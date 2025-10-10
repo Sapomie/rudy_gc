@@ -45,6 +45,7 @@ func (s *Service) MigrateRank() error {
 	s.deps.Log.Infof("共 %d 条 Rank 需要 Upsert", len(ranksNeedUpsert))
 
 	var count int
+	javIdMap := make(map[string]struct{})
 	for _, r := range ranksNeedUpsert {
 
 		rankNew := types.Rank{
@@ -59,15 +60,20 @@ func (s *Service) MigrateRank() error {
 		if err != nil {
 			return err
 		}
-
+		javIdMap[r.MovieJavId] = struct{}{}
 		count++
 		s.deps.Log.Infof("已完成%v/%v", count, len(ranksNeedUpsert))
+	}
+
+	err = s.crawlLogic.UpdateMovieRankInfo(javIdMap)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (s *Service) UpDateRankInfo() error {
+func (s *Service) UpDateAllRankInfo() error {
 	ctx := context.Background()
 	javIds, err := s.xModel.RankModel.DistinctJavId(ctx)
 	if err != nil {

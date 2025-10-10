@@ -33,7 +33,11 @@ func main() {
 		panic(err)
 	}
 
-	err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
+	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
+	//if err != nil {
+	//	panic(err)
+	//}
+	err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
 	if err != nil {
 		panic(err)
 	}

@@ -26,8 +26,8 @@ func main() {
 	}
 
 	//err = migrate.New(deps).MigrateDetail()
-	//err = migrate.New(deps).MigrateRank()
-	err = migrate.New(deps).UpDateRankInfo()
+	err = migrate.New(deps).MigrateRank()
+	//err = migrate.New(deps).UpDateAllRankInfo()
 	if err != nil {
 		panic(err)
 	}

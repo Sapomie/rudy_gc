@@ -10,7 +10,6 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-// CrawlDetailLoop 消费 DetailCh，按老项目模式并发处理
 func (m *LoopServer) CrawlDetailLoop() {
 	for n := range m.DetailCh {
 		m.refDetailSemaphore <- struct{}{}
@@ -22,7 +21,6 @@ func (m *LoopServer) CrawlDetailLoop() {
 	}
 }
 
-// 处理单次 Detail 通知
 func (m *LoopServer) processDetailNotification(n *spider.Notification) {
 	ctx, cancel := context.WithTimeout(m.ctx, 45*time.Minute)
 	defer cancel()

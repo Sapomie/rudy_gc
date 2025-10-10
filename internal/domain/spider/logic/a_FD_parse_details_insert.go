@@ -149,7 +149,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 	}
 
 	// ===== 4) Upsert bm_murl（海报/小图）=====
-	murl := &moviex.BmMurl{
+	murl := &types.Murl{
 		Name:           raw.Designation,
 		JavId:          raw.JavId,
 		JacketImg:      raw.ImgUrl,
