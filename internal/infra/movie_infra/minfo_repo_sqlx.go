@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"rudy_gc/internal/types"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -82,4 +83,50 @@ func (r *MinfoRepoSqlx) UpdateRankStatsByJavId(ctx context.Context, javId string
 // ✅ 新增：按 jav_id 查询
 func (r *MinfoRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*moviex.BmMinfo, error) {
 	return r.m.FindOneByJavId(ctx, javId)
+}
+
+func (r *MinfoRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, patch types.MinfoPatch) error {
+	row, err := r.m.FindOneByJavId(ctx, javId)
+	if err != nil {
+		return err
+	}
+	changed := false
+
+	if patch.Chinese != nil && row.Chinese != *patch.Chinese {
+		row.Chinese = *patch.Chinese
+		changed = true
+	}
+	if patch.EncodeName != nil && row.EncodeName != *patch.EncodeName {
+		row.EncodeName = *patch.EncodeName
+		changed = true
+	}
+	if patch.FirstRankDayNumber != nil && row.FirstRankDayNumber != *patch.FirstRankDayNumber {
+		row.FirstRankDayNumber = *patch.FirstRankDayNumber
+		changed = true
+	}
+	if patch.HighestRank != nil && row.HighestRank != *patch.HighestRank {
+		row.HighestRank = *patch.HighestRank
+		changed = true
+	}
+	if patch.DaysInRank != nil && row.DaysInRank != *patch.DaysInRank {
+		row.DaysInRank = *patch.DaysInRank
+		changed = true
+	}
+	if patch.NeedDownload != nil && row.NeedDownload != *patch.NeedDownload {
+		row.NeedDownload = *patch.NeedDownload
+		changed = true
+	}
+
+	if !changed && patch.UpdatedOn == nil {
+		// 没任何业务字段变化且未强制更新时间 → 直接返回
+		return nil
+	}
+
+	if patch.UpdatedOn != nil {
+		row.UpdatedOn = *patch.UpdatedOn
+	} else {
+		row.UpdatedOn = time.Now().Unix()
+	}
+
+	return r.m.Update(ctx, row) // 用 go-zero 生成的 Update，自动清缓存
 }

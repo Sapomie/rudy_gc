@@ -81,6 +81,18 @@ func (r *ItemRepoSqlx) FindByDownloadCoverStatus(ctx context.Context, downloadCo
 	return out, nil
 }
 
+func (r *ItemRepoSqlx) FindByTranslateStatus(ctx context.Context, translateStatus int64) ([]*types.Item, error) {
+	rows, err := r.m.ListByTranslateStatus(ctx, translateStatus, 1000000)
+	if err != nil {
+		return nil, fmt.Errorf("ListByTranslateStatus(%d): %w", translateStatus, err)
+	}
+	out := make([]*types.Item, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, itemRowToType(row))
+	}
+	return out, nil
+}
+
 func (r *ItemRepoSqlx) UpdateDetailMeta(
 	ctx context.Context,
 	id int64,

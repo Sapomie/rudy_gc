@@ -23,9 +23,6 @@ func NewMovieRepoSqlx(m moviex.AMovieModel) movie_repo.MovieRepo {
 func (r *MovieRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*types.Movie, error) {
 	row, err := r.m.FindOneByJavId(ctx, javId)
 	if err != nil {
-		if errors.Is(err, moviex.ErrNotFound) {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("find movie by javId failed: %w", err)
 	}
 	return toTypesMovie(row), nil

@@ -104,3 +104,40 @@ func typesToModelx(t *types.Murl) *moviex.BmMurl {
 		UpdatedOn:      t.UpdatedOn,
 	}
 }
+
+func (r *MurlRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, patch types.MurlPatch) error {
+	row, err := r.m.FindOneByJavId(ctx, javId)
+	if err != nil {
+		return err
+	}
+
+	changed := false
+	if patch.JacketImgLocal != nil && row.JacketImgLocal != *patch.JacketImgLocal {
+		row.JacketImgLocal = *patch.JacketImgLocal
+		changed = true
+	}
+	if patch.SmallImgLocal != nil && row.SmallImgLocal != *patch.SmallImgLocal {
+		row.SmallImgLocal = *patch.SmallImgLocal
+		changed = true
+	}
+	if patch.JacketImg != nil && row.JacketImg != *patch.JacketImg {
+		row.JacketImg = *patch.JacketImg
+		changed = true
+	}
+	if patch.SmallImg != nil && row.SmallImg != *patch.SmallImg {
+		row.SmallImg = *patch.SmallImg
+		changed = true
+	}
+
+	if !changed && patch.UpdatedOn == nil {
+		return nil
+	}
+
+	if patch.UpdatedOn != nil {
+		row.UpdatedOn = *patch.UpdatedOn
+	} else {
+		row.UpdatedOn = time.Now().Unix()
+	}
+
+	return r.m.Update(ctx, row) // 用 go-zero 自动生成的 Update
+}

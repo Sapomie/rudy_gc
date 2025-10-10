@@ -54,12 +54,34 @@ func (l *CrawlLogic) DownloadPictureOfMovie(item *types.Item) error {
 		return fmt.Errorf("FindOneByJavId err: %w", err)
 	}
 
-	err = l.downloadAndSaveImages(murl, imagePath)
-	if err != nil {
-		return errors.New("downloadAndSaveImages err: " + err.Error())
+	jacketNameFull := getFullPath(l.deps.Config.Fetcher.LocalImageDir, imagePath, murl.Name, "Jacket.jpg")
+	if err := l.downloadPicture(murl.JacketImg, jacketNameFull); err != nil {
+		l.deps.Log.Error(murl.Name, err)
+		return errors.New("downloadPicture err:" + err.Error())
 	}
 
-	err = l.updateMovieAndMurlInfo(murl, imagePath)
+	murl.JacketImgLocal = filepath.Join(imagePath, fmt.Sprintf("%s_Jacket.jpg", murl.Name))
+	now := time.Now().Unix()
+
+	patch := types.MurlPatch{
+		JacketImgLocal: &murl.JacketImgLocal,
+		UpdatedOn:      &now,
+	}
+
+	if err := l.deps.MurlRepo.UpdatePartialByJavId(l.ctx, movie.JavId, patch); err != nil {
+		return fmt.Errorf("update murl err: %w", err)
+	}
+
+	l.movieSvc.InvalidateMovieType(l.ctx, murl.JavId)
+
+	err = l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, murl.JavId, types.ItemPatch{
+		HasDownloadCover: ptr.Int64(types.ItemCoverOK),
+		UpdatedOn:        &now,
+	})
+	if err != nil {
+		return errors.New("UpdatePartialByJavId err:" + err.Error())
+	}
+
 	return err
 }
 
@@ -76,24 +98,6 @@ func (l *CrawlLogic) createDirectoriesForMovie(m *types.Movie) (string, error) {
 		}
 	}
 	return imagePath, nil
-}
-
-func (l *CrawlLogic) downloadAndSaveImages(murl *types.Murl, imagePath string) error {
-	jacketNameFull := getFullPath(l.deps.Config.Fetcher.LocalImageDir, imagePath, murl.Name, "Jacket.jpg")
-
-	if err := l.downloadPicture(murl.JacketImg, jacketNameFull); err != nil {
-		l.deps.Log.Error(murl.Name, err)
-		return errors.New("downloadPicture err:" + err.Error())
-	}
-
-	murl.JacketImgLocal = jacketNameFull
-	err := l.deps.MurlRepo.UpsertByJavIdPreserveLocal(l.ctx, murl)
-	if err != nil {
-		return errors.New("murlRepo.UpsertByJavIdPreserveLocal err:" + err.Error())
-	}
-	l.movieSvc.InvalidateMovieType(l.ctx, murl.JavId)
-
-	return nil
 }
 
 func getFullPath(basePath, imagePath, title, suffix string) string {
@@ -115,20 +119,5 @@ func (l *CrawlLogic) downloadPicture(url, filepath string) error {
 	if _, err := file.Write(resp.Body); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (l *CrawlLogic) updateMovieAndMurlInfo(murl *types.Murl, imagePath string) error {
-	murl.JacketImgLocal = filepath.Join(imagePath, fmt.Sprintf("%s_Jacket.jpg", murl.Name))
-
-	now := time.Now().Unix()
-	err := l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, murl.JavId, types.ItemPatch{
-		HasDownloadCover: ptr.Int64(types.ItemCoverOK),
-		UpdatedOn:        &now,
-	})
-	if err != nil {
-		return errors.New("UpdatePartialByJavId err:" + err.Error())
-	}
-
 	return nil
 }

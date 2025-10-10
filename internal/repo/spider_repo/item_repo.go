@@ -13,11 +13,12 @@ type ItemRepo interface {
 	FindByDetailStatus(ctx context.Context, status int64) ([]*types.Item, error)
 	FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error)
 	FindByDownloadCoverStatus(ctx context.Context, downloadCoverStatus int64) ([]*types.Item, error)
-	UpdateDetailMeta(ctx context.Context, id int64, needScan, birthTime, updateTime, updatedOn, hasDetail int64) error
+	FindByTranslateStatus(ctx context.Context, translateStatus int64) ([]*types.Item, error)
 
 	// 现有：按 javId 查 todo:types.Item
 	FindOneByJavId(ctx context.Context, javId string) (*moviex.EItem, error)
 
 	// 新增：按 id 进行“可选字段”局部更新（仅更新 patch 中非 nil 的列）
 	UpdatePartialByJavId(ctx context.Context, javId string, patch types.ItemPatch) error
+	UpdateDetailMeta(ctx context.Context, id int64, needScan, birthTime, updateTime, updatedOn, hasDetail int64) error
 }

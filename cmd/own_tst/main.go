@@ -37,7 +37,8 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
-	err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
+	//err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
+	err = logic.NewCrawlLogic(ctx, deps).TranslateTitle()
 	if err != nil {
 		panic(err)
 	}
