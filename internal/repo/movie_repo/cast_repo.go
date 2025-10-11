@@ -2,12 +2,17 @@ package movie_repo
 
 import (
 	"context"
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/types"
 )
 
 type CastRepo interface {
+	// 已有
 	GetOrCreateByName(ctx context.Context, name, javId string) (int64, error)
 
-	// 新增：按主键查
-	FindOne(ctx context.Context, id int64) (*moviex.AmCast, error)
+	// 新增：对外都返回 types.Cast
+	FindOne(ctx context.Context, id int64) (*types.Cast, error)
+	FindOneByName(ctx context.Context, name string) (*types.Cast, error)
+
+	// 新增：Upsert（以 name 作为幂等键；存在则更新，不存在则插入）
+	Upsert(ctx context.Context, in *types.Cast) (*types.Cast, error)
 }

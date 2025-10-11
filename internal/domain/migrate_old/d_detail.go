@@ -60,14 +60,13 @@ func (s *Service) MigrateDetail() error {
 
 		now := time.Now().Unix()
 		detail := types.Detail{
-			Name:          xDetail.Name,
-			JavId:         xDetail.JavId,
-			Prefix:        xDetail.Prefix,
-			QueryUrl:      xDetail.QueryUrl,
-			Content:       content,
-			LastQueryTime: xDetail.LastQueryTime,
-			CreatedOn:     now,
-			UpdatedOn:     now,
+			Name:      xDetail.Name,
+			JavId:     xDetail.JavId,
+			Prefix:    xDetail.Prefix,
+			QueryUrl:  xDetail.QueryUrl,
+			Content:   content,
+			CreatedOn: now,
+			UpdatedOn: now,
 		}
 
 		err = s.deps.DetailRepo.Upsert(ctx, &detail)
@@ -76,20 +75,20 @@ func (s *Service) MigrateDetail() error {
 		}
 
 		item := &types.Item{
-			Name:             xDetail.Name,
-			JavId:            xDetail.JavId,
-			Prefix:           xDetail.Prefix,
-			SearchType:       types.ItemSearchByOld,
-			CoverUrl:         "migrate",
-			SearchBy:         "migrate",
-			HasDetail:        types.ItemDetailOK,
-			HasDownloadCover: types.ItemCoverNone,
-			HasChinese:       types.ItemChineseNone,
-			DetailNeedScan:   modelx.DetailStatusNeedScan,
-			DetailBirthTime:  now,
-			DetailUpdateTime: now,
-			CreatedOn:        now,
-			UpdatedOn:        now,
+			Name:                xDetail.Name,
+			JavId:               xDetail.JavId,
+			Prefix:              xDetail.Prefix,
+			SearchType:          types.ItemSearchByOld,
+			CoverUrl:            "migrate",
+			SearchBy:            "migrate",
+			HasDetail:           types.ItemDetailOK,
+			HasDownloadCover:    types.ItemCoverNone,
+			HasChinese:          types.ItemChineseNone,
+			DetailNeedScan:      modelx.DetailStatusNeedScan,
+			DetailBirthTime:     now,
+			LastQueryDetailTime: xDetail.LastQueryTime,
+			CreatedOn:           now,
+			UpdatedOn:           now,
 		}
 
 		_, err = s.deps.ItemRepo.TryInsert(ctx, item)

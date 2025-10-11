@@ -37,15 +37,14 @@ type (
 	}
 
 	DDetail struct {
-		Id            int64  `db:"id"`
-		Name          string `db:"name"`            // 影片名称
-		JavId         string `db:"jav_id"`          // JavId唯一标识
-		Prefix        string `db:"prefix"`          // 前缀，如 ABC
-		QueryUrl      string `db:"query_url"`       // 来源请求URL
-		Content       string `db:"content"`         // 详情页HTML内容
-		LastQueryTime int64  `db:"last_query_time"` // 最后抓取时间(Unix秒)
-		CreatedOn     int64  `db:"created_on"`
-		UpdatedOn     int64  `db:"updated_on"`
+		Id        int64  `db:"id"`
+		Name      string `db:"name"`      // 影片名称
+		JavId     string `db:"jav_id"`    // JavId唯一标识
+		Prefix    string `db:"prefix"`    // 前缀，如 ABC
+		QueryUrl  string `db:"query_url"` // 来源请求URL
+		Content   string `db:"content"`   // 详情页HTML内容
+		CreatedOn int64  `db:"created_on"`
+		UpdatedOn int64  `db:"updated_on"`
 	}
 )
 
@@ -91,14 +90,14 @@ func (m *defaultDDetailModel) FindOneByJavId(ctx context.Context, javId string) 
 }
 
 func (m *defaultDDetailModel) Insert(ctx context.Context, data *DDetail) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table, dDetailRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Name, data.JavId, data.Prefix, data.QueryUrl, data.Content, data.LastQueryTime, data.CreatedOn, data.UpdatedOn)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, dDetailRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Name, data.JavId, data.Prefix, data.QueryUrl, data.Content, data.CreatedOn, data.UpdatedOn)
 	return ret, err
 }
 
 func (m *defaultDDetailModel) Update(ctx context.Context, newData *DDetail) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, dDetailRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Name, newData.JavId, newData.Prefix, newData.QueryUrl, newData.Content, newData.LastQueryTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Name, newData.JavId, newData.Prefix, newData.QueryUrl, newData.Content, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	return err
 }
 

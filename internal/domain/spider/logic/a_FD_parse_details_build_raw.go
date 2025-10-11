@@ -30,7 +30,6 @@ type RawJavMovie struct {
 	Genres        []*RawItem
 	Casts         []*RawItem
 	ImgUrl        string
-	SmallImgUrl   string
 	BirthTime     int64
 	LastQueryTime int64
 }
@@ -73,9 +72,8 @@ func (l *CrawlLogic) buildRawMovieByDetail(it *types.Item) (*RawJavMovie, error)
 		Maker:         extractSingleItem(doc, "div[id=video_maker]", 15, "プレステージ"),
 		Label:         extractSingleItem(doc, "div[id=video_label]", 15, "nil"),
 		ImgUrl:        parseImageURL(doc),
-		SmallImgUrl:   it.CoverUrl, // 小图直接用 item 表里的
 		BirthTime:     detail.CreatedOn,
-		LastQueryTime: detail.LastQueryTime,
+		LastQueryTime: it.LastQueryDetailTime,
 	}
 
 	// 4. 拆 prefix-number

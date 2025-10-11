@@ -27,7 +27,6 @@ func (r *DetailRepoSqlx) Upsert(ctx context.Context, d *types.Detail) error {
 		row.Prefix = d.Prefix
 		row.QueryUrl = d.QueryUrl
 		row.Content = d.Content
-		row.LastQueryTime = d.LastQueryTime
 		row.UpdatedOn = d.UpdatedOn
 		return r.m.Update(ctx, row)
 	}
@@ -37,14 +36,13 @@ func (r *DetailRepoSqlx) Upsert(ctx context.Context, d *types.Detail) error {
 
 	// insert
 	_, ierr := r.m.Insert(ctx, &spiderx.DDetail{
-		Name:          d.Name,
-		JavId:         d.JavId,
-		Prefix:        d.Prefix,
-		QueryUrl:      d.QueryUrl,
-		Content:       d.Content,
-		LastQueryTime: d.LastQueryTime,
-		CreatedOn:     d.CreatedOn,
-		UpdatedOn:     d.UpdatedOn,
+		Name:      d.Name,
+		JavId:     d.JavId,
+		Prefix:    d.Prefix,
+		QueryUrl:  d.QueryUrl,
+		Content:   d.Content,
+		CreatedOn: d.CreatedOn,
+		UpdatedOn: d.UpdatedOn,
 	})
 	return ierr
 }
@@ -62,15 +60,14 @@ func detailRowToType(row *spiderx.DDetail) *types.Detail {
 		return nil
 	}
 	return &types.Detail{
-		Id:            row.Id,
-		Name:          row.Name,
-		JavId:         row.JavId,
-		Prefix:        row.Prefix,
-		QueryUrl:      row.QueryUrl,
-		Content:       row.Content,
-		LastQueryTime: row.LastQueryTime,
-		CreatedOn:     row.CreatedOn,
-		UpdatedOn:     row.UpdatedOn,
+		Id:        row.Id,
+		Name:      row.Name,
+		JavId:     row.JavId,
+		Prefix:    row.Prefix,
+		QueryUrl:  row.QueryUrl,
+		Content:   row.Content,
+		CreatedOn: row.CreatedOn,
+		UpdatedOn: row.UpdatedOn,
 	}
 }
 

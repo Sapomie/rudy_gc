@@ -53,6 +53,8 @@ type Deps struct {
 	CafoRepo       movie_repo.CafoRepo
 	DirectoryRepo  film_repo.DirectoryRepo
 	FilmRepo       film_repo.FilmRepo
+	GListRepo      film_repo.GListRepo
+	ScRepo         film_repo.ScRepo
 
 	MovieTypeCache movie_repo.MovieTypeCache
 
@@ -95,6 +97,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		directoryRepo  = film_infra.NewDirectoryRepoSqlx(moviex.NewVDirectoryModel(conn, c))
 		filmRepo       = film_infra.NewFilmRepoSqlx(filmModel)
 		movieListRepo  = movie_infra.NewMovieListRepoSqlx(movieModel, minfoModel, filmModel)
+		glistRepo      = film_infra.NewGListRepoSqlx(moviex.NewGListModel(conn, c))
+		scRepo         = film_infra.NewScRepoSqlx(moviex.NewGScModel(conn, c))
 	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
@@ -146,6 +150,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		MovieTypeCache: movieTypeCache,
 		DirectoryRepo:  directoryRepo,
 		FilmRepo:       filmRepo,
+		GListRepo:      glistRepo,
+		ScRepo:         scRepo,
 
 		Fetcher: f,
 	}, nil

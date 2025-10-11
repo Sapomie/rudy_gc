@@ -33,15 +33,16 @@ func main() {
 		panic(err)
 	}
 
-	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
-	err = logic.NewCrawlLogic(ctx, deps).TranslateTitle()
+	err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
 	if err != nil {
 		panic(err)
 	}
+
+	//err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
+	//err = logic.NewCrawlLogic(ctx, deps).TranslateTitle()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = film.New(deps).ProcessFilm(ctx)
 	//if err != nil {

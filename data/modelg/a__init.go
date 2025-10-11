@@ -38,6 +38,10 @@ func AutoMigrate(db *gorm.DB) error {
 		new(MovieCast),
 		new(MovieGenre),
 
+		new(List),
+		new(Sc),
+		new(Record),
+
 		new(Directory),
 		new(Film),
 	); err != nil {

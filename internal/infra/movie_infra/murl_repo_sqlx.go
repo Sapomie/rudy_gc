@@ -58,9 +58,6 @@ func (r *MurlRepoSqlx) UpsertByJavIdPreserveLocal(ctx context.Context, in *types
 	if old.JacketImgLocal != "" {
 		toUpdate.JacketImgLocal = old.JacketImgLocal
 	}
-	if old.SmallImgLocal != "" {
-		toUpdate.SmallImgLocal = old.SmallImgLocal
-	}
 	if toUpdate.CreatedOn == 0 {
 		toUpdate.CreatedOn = old.CreatedOn
 	}
@@ -81,8 +78,6 @@ func modelxToTypes(m *moviex.BmMurl) *types.Murl {
 		Name:           m.Name,
 		JacketImg:      m.JacketImg,
 		JacketImgLocal: m.JacketImgLocal,
-		SmallImg:       m.SmallImg,
-		SmallImgLocal:  m.SmallImgLocal,
 		CreatedOn:      m.CreatedOn,
 		UpdatedOn:      m.UpdatedOn,
 	}
@@ -98,8 +93,6 @@ func typesToModelx(t *types.Murl) *moviex.BmMurl {
 		Name:           t.Name,
 		JacketImg:      t.JacketImg,
 		JacketImgLocal: t.JacketImgLocal,
-		SmallImg:       t.SmallImg,
-		SmallImgLocal:  t.SmallImgLocal,
 		CreatedOn:      t.CreatedOn,
 		UpdatedOn:      t.UpdatedOn,
 	}
@@ -116,16 +109,8 @@ func (r *MurlRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, p
 		row.JacketImgLocal = *patch.JacketImgLocal
 		changed = true
 	}
-	if patch.SmallImgLocal != nil && row.SmallImgLocal != *patch.SmallImgLocal {
-		row.SmallImgLocal = *patch.SmallImgLocal
-		changed = true
-	}
 	if patch.JacketImg != nil && row.JacketImg != *patch.JacketImg {
 		row.JacketImg = *patch.JacketImg
-		changed = true
-	}
-	if patch.SmallImg != nil && row.SmallImg != *patch.SmallImg {
-		row.SmallImg = *patch.SmallImg
 		changed = true
 	}
 

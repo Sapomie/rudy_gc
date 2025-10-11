@@ -11,7 +11,7 @@ REDIS_DB   ?= 0
 
 MOVIE_MODEL_DIR  ?= data/modelx/moviex
 SPIDER_MODEL_DIR ?= data/modelx/spiderx
-MOVIE_TABLES     ?= "a*,am*,bm*,c*,e*,v*"
+MOVIE_TABLES     ?= "a*,am*,bm*,c*,e*,v*,g*"
 SPIDER_TABLES    ?= "d*"
 
 .PHONY: help

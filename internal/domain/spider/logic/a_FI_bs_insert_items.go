@@ -49,20 +49,20 @@ func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64
 
 		now := time.Now().Unix()
 		it := &types.Item{
-			Name:             name,
-			JavId:            javID,
-			Prefix:           prefix,
-			SearchType:       searchType,
-			CoverUrl:         coverURL,
-			SearchBy:         searchBy,
-			CreatedOn:        now,
-			UpdatedOn:        now,
-			HasDetail:        types.ItemDetailNone,
-			HasDownloadCover: types.ItemCoverNone,
-			HasChinese:       types.ItemChineseNone,
-			DetailBirthTime:  0,
-			DetailUpdateTime: 0,
-			DetailNeedScan:   types.ItemDetailStatusNeedScan,
+			Name:                name,
+			JavId:               javID,
+			Prefix:              prefix,
+			SearchType:          searchType,
+			CoverUrl:            coverURL,
+			SearchBy:            searchBy,
+			CreatedOn:           now,
+			UpdatedOn:           now,
+			HasDetail:           types.ItemDetailNone,
+			HasDownloadCover:    types.ItemCoverNone,
+			HasChinese:          types.ItemChineseNone,
+			DetailBirthTime:     0,
+			LastQueryDetailTime: 0,
+			DetailNeedScan:      types.ItemDetailStatusNeedScan,
 		}
 		toInsert = append(toInsert, it)
 	})

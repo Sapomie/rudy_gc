@@ -11,8 +11,6 @@ type Detail struct {
 	QueryUrl string `gorm:"type:varchar(300);not null;default:'';comment:来源请求URL"`
 	Content  string `gorm:"type:longtext;not null;comment:详情页HTML内容"`
 
-	LastQueryTime int64 `gorm:"not null;default:0;comment:最后抓取时间(Unix秒)"`
-
 	CreatedOn int64 `gorm:"not null;default:0"`
 	UpdatedOn int64 `gorm:"not null;default:0"`
 }

@@ -16,7 +16,7 @@ GOCTL  ?= goctl
 STYLE  ?= go_zero
 MOVIE_MODEL_DIR  ?= data/modelx/moviex
 SPIDER_MODEL_DIR ?= data/modelx/spiderx
-MOVIE_TABLES  ?= a*,am*,bm*,c*,e*,v*
+MOVIE_TABLES  ?= a*,am*,bm*,c*,e*,v*,g*
 SPIDER_TABLES ?= d*
 
 # ---- 将可能的相对路径归一化为绝对路径（相对项目根）----

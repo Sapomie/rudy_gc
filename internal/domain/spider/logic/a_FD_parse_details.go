@@ -3,6 +3,7 @@ package logic
 
 import (
 	"fmt"
+	"rudy_gc/pkg/ptr"
 	"time"
 
 	"rudy_gc/internal/types"
@@ -34,15 +35,12 @@ func (l *CrawlLogic) ParseDetails() error {
 
 		// 更新 item.DetailNeedScan -> 已解析
 		now := time.Now().Unix()
-		if err := l.deps.ItemRepo.UpdateDetailMeta(
-			l.ctx,
-			it.Id,
-			types.ItemDetailStatusNoNeedScan, // 已完成解析
-			it.DetailBirthTime,               // 保留原值
-			now,                              // DetailUpdateTime
-			now,                              // UpdatedOn
-			types.ItemDetailOK,               // HasDetail
-		); err != nil {
+		patch := types.ItemPatch{
+			DetailNeedScan: ptr.Int64(types.ItemDetailStatusNoNeedScan),
+			UpdatedOn:      &now,
+		}
+		err := l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, it.JavId, patch)
+		if err != nil {
 			return fmt.Errorf("更新 Item 详情状态失败 %s: %w", it.Name, err)
 		}
 

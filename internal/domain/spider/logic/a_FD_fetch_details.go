@@ -55,14 +55,13 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 
 		// 5) 保存 raw_detail（幂等：按 JavId Upsert）
 		detail := &types.Detail{
-			Name:          it.Name,
-			JavId:         it.JavId,
-			Prefix:        it.Prefix,
-			QueryUrl:      url,
-			Content:       respBody,
-			LastQueryTime: now,
-			CreatedOn:     birthTime, // 首次创建时间；若已存在保持旧值
-			UpdatedOn:     now,
+			Name:      it.Name,
+			JavId:     it.JavId,
+			Prefix:    it.Prefix,
+			QueryUrl:  url,
+			Content:   respBody,
+			CreatedOn: birthTime, // 首次创建时间；若已存在保持旧值
+			UpdatedOn: now,
 		}
 		if err := l.deps.DetailRepo.Upsert(l.ctx, detail); err != nil {
 			return i, fmt.Errorf("保存详情失败 %s(%s): %w", it.Name, it.JavId, err)

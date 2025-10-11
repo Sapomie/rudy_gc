@@ -7,8 +7,6 @@ type Murl struct {
 	Name           string
 	JacketImg      string
 	JacketImgLocal string
-	SmallImg       string
-	SmallImgLocal  string
 	CreatedOn      int64
 	UpdatedOn      int64
 }

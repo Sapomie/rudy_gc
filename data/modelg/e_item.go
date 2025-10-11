@@ -12,12 +12,12 @@ type Item struct {
 	CoverUrl   string `gorm:"type:varchar(512);not null"`
 	SearchBy   string `gorm:"type:varchar(191);not null;index:idx_item_searchby"`
 
-	HasDetail        int64 `gorm:"type:tinyint;not null;default:0"` // 明细状态
-	HasDownloadCover int64 `gorm:"type:tinyint;not null;default:0"` // 封面下载状态
-	HasChinese       int64 `gorm:"type:tinyint;not null;default:0"` // 中文字幕状态
-	DetailNeedScan   int64 `gorm:"type:tinyint;not null;default:0"`
-	DetailBirthTime  int64 `gorm:"not null;default:0"`
-	DetailUpdateTime int64 `gorm:"not null;default:0"`
+	HasDetail           int64 `gorm:"type:tinyint;not null;default:0"` // 明细状态
+	HasDownloadCover    int64 `gorm:"type:tinyint;not null;default:0"` // 封面下载状态
+	HasChinese          int64 `gorm:"type:tinyint;not null;default:0"` // 中文字幕状态
+	DetailNeedScan      int64 `gorm:"type:tinyint;not null;default:0"`
+	DetailBirthTime     int64 `gorm:"not null;default:0"`
+	LastQueryDetailTime int64 `gorm:"not null;default:0"`
 
 	CreatedOn int64 `gorm:"not null;default:0"`
 	UpdatedOn int64 `gorm:"not null;default:0"`

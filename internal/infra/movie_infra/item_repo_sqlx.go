@@ -26,21 +26,21 @@ func (r *ItemRepoSqlx) TryInsert(ctx context.Context, it *types.Item) (bool, err
 		return false, nil
 	}
 	_, ierr := r.m.Insert(ctx, &moviex.EItem{
-		Id:               it.Id,
-		Name:             it.Name,
-		JavId:            it.JavId,
-		Prefix:           it.Prefix,
-		SearchType:       it.SearchType,
-		CoverUrl:         it.CoverUrl,
-		SearchBy:         it.SearchBy,
-		HasDetail:        it.HasDetail,
-		HasDownloadCover: it.HasDownloadCover,
-		HasChinese:       it.HasChinese,
-		DetailNeedScan:   it.DetailNeedScan,
-		DetailBirthTime:  it.DetailBirthTime,
-		DetailUpdateTime: it.DetailUpdateTime,
-		CreatedOn:        it.CreatedOn,
-		UpdatedOn:        it.UpdatedOn,
+		Id:                  it.Id,
+		Name:                it.Name,
+		JavId:               it.JavId,
+		Prefix:              it.Prefix,
+		SearchType:          it.SearchType,
+		CoverUrl:            it.CoverUrl,
+		SearchBy:            it.SearchBy,
+		HasDetail:           it.HasDetail,
+		HasDownloadCover:    it.HasDownloadCover,
+		HasChinese:          it.HasChinese,
+		DetailNeedScan:      it.DetailNeedScan,
+		DetailBirthTime:     it.DetailBirthTime,
+		LastQueryDetailTime: it.LastQueryDetailTime,
+		CreatedOn:           it.CreatedOn,
+		UpdatedOn:           it.UpdatedOn,
 	})
 	return ierr == nil, ierr
 }
@@ -117,7 +117,7 @@ func (r *ItemRepoSqlx) UpdateDetailMeta(
 
 	// 本次抓取/解析对应的更新时间（>0 才更新）
 	if detailUpdateTime > 0 {
-		row.DetailUpdateTime = detailUpdateTime
+		row.LastQueryDetailTime = detailUpdateTime
 	}
 
 	// 同步 HasDetail 与 UpdatedOn
@@ -132,21 +132,21 @@ func itemRowToType(row *moviex.EItem) *types.Item {
 		return nil
 	}
 	return &types.Item{
-		Id:               row.Id,
-		Name:             row.Name,
-		JavId:            row.JavId,
-		Prefix:           row.Prefix,
-		SearchType:       row.SearchType,
-		CoverUrl:         row.CoverUrl,
-		SearchBy:         row.SearchBy,
-		HasDetail:        row.HasDetail,
-		HasDownloadCover: row.HasDownloadCover,
-		HasChinese:       row.HasChinese,
-		DetailNeedScan:   row.DetailNeedScan,
-		DetailBirthTime:  row.DetailBirthTime,
-		DetailUpdateTime: row.DetailUpdateTime,
-		CreatedOn:        row.CreatedOn,
-		UpdatedOn:        row.UpdatedOn,
+		Id:                  row.Id,
+		Name:                row.Name,
+		JavId:               row.JavId,
+		Prefix:              row.Prefix,
+		SearchType:          row.SearchType,
+		CoverUrl:            row.CoverUrl,
+		SearchBy:            row.SearchBy,
+		HasDetail:           row.HasDetail,
+		HasDownloadCover:    row.HasDownloadCover,
+		HasChinese:          row.HasChinese,
+		DetailNeedScan:      row.DetailNeedScan,
+		DetailBirthTime:     row.DetailBirthTime,
+		LastQueryDetailTime: row.LastQueryDetailTime,
+		CreatedOn:           row.CreatedOn,
+		UpdatedOn:           row.UpdatedOn,
 	}
 }
 
@@ -183,8 +183,8 @@ func (r *ItemRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, p
 		row.DetailBirthTime = *patch.DetailBirthTime
 		changed = true
 	}
-	if patch.DetailUpdateTime != nil && row.DetailUpdateTime != *patch.DetailUpdateTime {
-		row.DetailUpdateTime = *patch.DetailUpdateTime
+	if patch.LastQueryDetailTime != nil && row.LastQueryDetailTime != *patch.LastQueryDetailTime {
+		row.LastQueryDetailTime = *patch.LastQueryDetailTime
 		changed = true
 	}
 

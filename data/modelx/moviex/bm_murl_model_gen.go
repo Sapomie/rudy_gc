@@ -47,8 +47,6 @@ type (
 		Name           string `db:"name"`
 		JacketImg      string `db:"jacket_img"`
 		JacketImgLocal string `db:"jacket_img_local"`
-		SmallImg       string `db:"small_img"`
-		SmallImgLocal  string `db:"small_img_local"`
 		CreatedOn      int64  `db:"created_on"`
 		UpdatedOn      int64  `db:"updated_on"`
 	}
@@ -117,8 +115,8 @@ func (m *defaultBmMurlModel) Insert(ctx context.Context, data *BmMurl) (sql.Resu
 	rudyGcBmMurlIdKey := fmt.Sprintf("%s%v", cacheRudyGcBmMurlIdPrefix, data.Id)
 	rudyGcBmMurlJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcBmMurlJavIdPrefix, data.JavId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table, bmMurlRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.JacketImg, data.JacketImgLocal, data.SmallImg, data.SmallImgLocal, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?)", m.table, bmMurlRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.JacketImg, data.JacketImgLocal, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcBmMurlIdKey, rudyGcBmMurlJavIdKey)
 	return ret, err
 }
@@ -133,7 +131,7 @@ func (m *defaultBmMurlModel) Update(ctx context.Context, newData *BmMurl) error 
 	rudyGcBmMurlJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcBmMurlJavIdPrefix, data.JavId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, bmMurlRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.JacketImg, newData.JacketImgLocal, newData.SmallImg, newData.SmallImgLocal, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.JacketImg, newData.JacketImgLocal, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcBmMurlIdKey, rudyGcBmMurlJavIdKey)
 	return err
 }

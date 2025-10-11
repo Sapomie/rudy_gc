@@ -153,9 +153,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		Name:           raw.Designation,
 		JavId:          raw.JavId,
 		JacketImg:      raw.ImgUrl,
-		SmallImg:       raw.SmallImgUrl,
 		JacketImgLocal: "", // 由下载流程后续写入
-		SmallImgLocal:  "",
 		CreatedOn:      now,
 		UpdatedOn:      now,
 	}

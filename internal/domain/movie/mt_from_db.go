@@ -95,7 +95,6 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 		SearchUrl:            getMovieSearchUrl(mv.Name),
 		BusUrl:               s.getBusUrl(mv.Name),
 		JacketImg:            murl.JacketImg,
-		SmallImg:             murl.SmallImg,
 		Prefix:               prefix.Name,
 		Owned:                consts.MovieTypeNotOwned,
 		NeedDownload:         minfo.NeedDownload,
@@ -127,9 +126,6 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 		imgBase := s.deps.Config.Fetcher.LocalImageDir
 		if murl.JacketImgLocal != "" {
 			out.JacketImg = imgBase + murl.JacketImgLocal
-		}
-		if murl.SmallImgLocal != "" {
-			out.SmallImg = imgBase + murl.SmallImgLocal
 		}
 	}
 

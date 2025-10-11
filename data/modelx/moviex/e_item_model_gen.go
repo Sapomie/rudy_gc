@@ -42,21 +42,22 @@ type (
 	}
 
 	EItem struct {
-		Id               int64  `db:"id"`
-		JavId            string `db:"jav_id"`
-		Name             string `db:"name"`
-		Prefix           string `db:"prefix"`
-		SearchType       int64  `db:"search_type"`
-		CoverUrl         string `db:"cover_url"`
-		SearchBy         string `db:"search_by"`
-		HasDetail        int64  `db:"has_detail"`
-		HasDownloadCover int64  `db:"has_download_cover"`
-		HasChinese       int64  `db:"has_chinese"`
-		DetailNeedScan   int64  `db:"detail_need_scan"`
-		DetailBirthTime  int64  `db:"detail_birth_time"`
-		DetailUpdateTime int64  `db:"detail_update_time"`
-		CreatedOn        int64  `db:"created_on"`
-		UpdatedOn        int64  `db:"updated_on"`
+		Id                  int64  `db:"id"`
+		JavId               string `db:"jav_id"`
+		Name                string `db:"name"`
+		Prefix              string `db:"prefix"`
+		SearchType          int64  `db:"search_type"`
+		CoverUrl            string `db:"cover_url"`
+		SearchBy            string `db:"search_by"`
+		HasDetail           int64  `db:"has_detail"`
+		HasDownloadCover    int64  `db:"has_download_cover"`
+		HasChinese          int64  `db:"has_chinese"`
+		DetailNeedScan      int64  `db:"detail_need_scan"`
+		DetailBirthTime     int64  `db:"detail_birth_time"`
+		LastQueryDetailTime int64  `db:"last_query_detail_time"`
+		CreatedOn           int64  `db:"created_on"`
+		UpdatedOn           int64  `db:"updated_on"`
+		DetailUpdateTime    int64  `db:"detail_update_time"`
 	}
 )
 
@@ -123,8 +124,8 @@ func (m *defaultEItemModel) Insert(ctx context.Context, data *EItem) (sql.Result
 	rudyGcEItemIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemIdPrefix, data.Id)
 	rudyGcEItemJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemJavIdPrefix, data.JavId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, eItemRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Prefix, data.SearchType, data.CoverUrl, data.SearchBy, data.HasDetail, data.HasDownloadCover, data.HasChinese, data.DetailNeedScan, data.DetailBirthTime, data.DetailUpdateTime, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, eItemRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Prefix, data.SearchType, data.CoverUrl, data.SearchBy, data.HasDetail, data.HasDownloadCover, data.HasChinese, data.DetailNeedScan, data.DetailBirthTime, data.LastQueryDetailTime, data.CreatedOn, data.UpdatedOn, data.DetailUpdateTime)
 	}, rudyGcEItemIdKey, rudyGcEItemJavIdKey)
 	return ret, err
 }
@@ -139,7 +140,7 @@ func (m *defaultEItemModel) Update(ctx context.Context, newData *EItem) error {
 	rudyGcEItemJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcEItemJavIdPrefix, data.JavId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, eItemRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Prefix, newData.SearchType, newData.CoverUrl, newData.SearchBy, newData.HasDetail, newData.HasDownloadCover, newData.HasChinese, newData.DetailNeedScan, newData.DetailBirthTime, newData.DetailUpdateTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Prefix, newData.SearchType, newData.CoverUrl, newData.SearchBy, newData.HasDetail, newData.HasDownloadCover, newData.HasChinese, newData.DetailNeedScan, newData.DetailBirthTime, newData.LastQueryDetailTime, newData.CreatedOn, newData.UpdatedOn, newData.DetailUpdateTime, newData.Id)
 	}, rudyGcEItemIdKey, rudyGcEItemJavIdKey)
 	return err
 }

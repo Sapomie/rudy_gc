@@ -25,7 +25,6 @@ type MovieType struct {
 	SearchUrl            string      `json:"search_url"`
 	BusUrl               string      `json:"bus_url"`
 	JacketImg            string      `json:"jacket_img"`
-	SmallImg             string      `json:"small_img"`
 	Owned                int64       `json:"owned"`
 	NeedDownload         int64       `json:"need_download"`
 	Prefix               string      `json:"prefix"`
