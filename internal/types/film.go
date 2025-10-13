@@ -29,14 +29,14 @@ type Film struct {
 	SelfMake int64
 	HasMask  int64
 
-	NeedScanMeta int64
-	IsRemoved    int64
-	RemoveTime   int64
-	ScTimes      int64
-	ComeTimes    int64
-	LastScTime   int64
-	BirthTime    int64
-
-	CreatedOn int64
-	UpdatedOn int64
+	NeedScanMeta  int64
+	IsRemoved     int64
+	RemoveTime    int64
+	ScTimes       int64
+	ComeTimes     int64
+	LastScTime    int64
+	BirthTime     int64
+	ReleasingDate int64
+	CreatedOn     int64
+	UpdatedOn     int64
 }

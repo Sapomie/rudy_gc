@@ -5,6 +5,7 @@ type Movie struct {
 	Name                 string
 	JavId                string
 	Title                string
+	EncodeName           string
 	ReleasingDate        int64
 	Length               int64
 	Score                int64

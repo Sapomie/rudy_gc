@@ -15,7 +15,6 @@ type (
 	// 继承 goctl 生成接口 + 扩展方法
 	AMovieModel interface {
 		aMovieModel
-
 		ListPageWithTotal(ctx context.Context, offset, limit int64, orderKey string) ([]*AMovie, int64, error)
 		CountAll(ctx context.Context) (int64, error)
 		FindMoviesByName(ctx context.Context, name string) ([]*AMovie, error)

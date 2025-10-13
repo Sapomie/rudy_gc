@@ -94,7 +94,7 @@ func (m *customGScModel) UpdateDataByDescription(ctx context.Context, data orm.D
 func (m *customGScModel) FindAll(ctx context.Context) ([]*GSc, error) {
 	query, values, err := squirrel.Select("*").
 		From(m.tableName()).
-		//Where("`film_number` > 0").
+		OrderBy("`sc_time` ASC").
 		Limit(100000).
 		ToSql()
 

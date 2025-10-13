@@ -98,7 +98,7 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 		Prefix:               prefix.Name,
 		Owned:                consts.MovieTypeNotOwned,
 		NeedDownload:         minfo.NeedDownload,
-		EncodeName:           minfo.EncodeName,
+		EncodeName:           mv.EncodeName,
 	}
 
 	film, err := s.deps.FilmRepo.FindOneByMovieJavId(ctx, mv.JavId)

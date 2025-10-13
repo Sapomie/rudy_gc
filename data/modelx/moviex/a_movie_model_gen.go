@@ -46,6 +46,7 @@ type (
 		JavId                string `db:"jav_id"`
 		Name                 string `db:"name"`
 		Title                string `db:"title"`
+		EncodeName           string `db:"encode_name"`
 		Length               int64  `db:"length"`
 		ViewersNumberWant    int64  `db:"viewers_number_want"`
 		ViewersNumberOwned   int64  `db:"viewers_number_owned"`
@@ -127,8 +128,8 @@ func (m *defaultAMovieModel) Insert(ctx context.Context, data *AMovie) (sql.Resu
 	rudyGcAMovieIdKey := fmt.Sprintf("%s%v", cacheRudyGcAMovieIdPrefix, data.Id)
 	rudyGcAMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcAMovieJavIdPrefix, data.JavId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, aMovieRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Title, data.Length, data.ViewersNumberWant, data.ViewersNumberOwned, data.ViewersNumberWatched, data.DetailUpdateTime, data.ReleasingDate, data.Score, data.PrefixId, data.MakerId, data.LabelId, data.DirectorId, data.CastNumber, data.CastAverageAge, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, aMovieRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Title, data.EncodeName, data.Length, data.ViewersNumberWant, data.ViewersNumberOwned, data.ViewersNumberWatched, data.DetailUpdateTime, data.ReleasingDate, data.Score, data.PrefixId, data.MakerId, data.LabelId, data.DirectorId, data.CastNumber, data.CastAverageAge, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcAMovieIdKey, rudyGcAMovieJavIdKey)
 	return ret, err
 }
@@ -143,7 +144,7 @@ func (m *defaultAMovieModel) Update(ctx context.Context, newData *AMovie) error 
 	rudyGcAMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcAMovieJavIdPrefix, data.JavId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, aMovieRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Title, newData.Length, newData.ViewersNumberWant, newData.ViewersNumberOwned, newData.ViewersNumberWatched, newData.DetailUpdateTime, newData.ReleasingDate, newData.Score, newData.PrefixId, newData.MakerId, newData.LabelId, newData.DirectorId, newData.CastNumber, newData.CastAverageAge, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Title, newData.EncodeName, newData.Length, newData.ViewersNumberWant, newData.ViewersNumberOwned, newData.ViewersNumberWatched, newData.DetailUpdateTime, newData.ReleasingDate, newData.Score, newData.PrefixId, newData.MakerId, newData.LabelId, newData.DirectorId, newData.CastNumber, newData.CastAverageAge, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcAMovieIdKey, rudyGcAMovieJavIdKey)
 	return err
 }

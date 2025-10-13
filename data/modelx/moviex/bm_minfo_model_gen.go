@@ -46,13 +46,13 @@ type (
 		JavId              string `db:"jav_id"`
 		Name               string `db:"name"`
 		Chinese            string `db:"chinese"`
-		EncodeName         string `db:"encode_name"`
 		FirstRankDayNumber int64  `db:"first_rank_day_number"`
 		HighestRank        int64  `db:"highest_rank"`
 		DaysInRank         int64  `db:"days_in_rank"`
 		NeedDownload       int64  `db:"need_download"`
 		CreatedOn          int64  `db:"created_on"`
 		UpdatedOn          int64  `db:"updated_on"`
+		ReleasingDate      int64  `db:"releasing_date"`
 	}
 )
 
@@ -120,7 +120,7 @@ func (m *defaultBmMinfoModel) Insert(ctx context.Context, data *BmMinfo) (sql.Re
 	rudyGcBmMinfoJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcBmMinfoJavIdPrefix, data.JavId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, bmMinfoRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Chinese, data.EncodeName, data.FirstRankDayNumber, data.HighestRank, data.DaysInRank, data.NeedDownload, data.CreatedOn, data.UpdatedOn)
+		return conn.ExecCtx(ctx, query, data.JavId, data.Name, data.Chinese, data.FirstRankDayNumber, data.HighestRank, data.DaysInRank, data.NeedDownload, data.CreatedOn, data.UpdatedOn, data.ReleasingDate)
 	}, rudyGcBmMinfoIdKey, rudyGcBmMinfoJavIdKey)
 	return ret, err
 }
@@ -135,7 +135,7 @@ func (m *defaultBmMinfoModel) Update(ctx context.Context, newData *BmMinfo) erro
 	rudyGcBmMinfoJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcBmMinfoJavIdPrefix, data.JavId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, bmMinfoRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Chinese, newData.EncodeName, newData.FirstRankDayNumber, newData.HighestRank, newData.DaysInRank, newData.NeedDownload, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.JavId, newData.Name, newData.Chinese, newData.FirstRankDayNumber, newData.HighestRank, newData.DaysInRank, newData.NeedDownload, newData.CreatedOn, newData.UpdatedOn, newData.ReleasingDate, newData.Id)
 	}, rudyGcBmMinfoIdKey, rudyGcBmMinfoJavIdKey)
 	return err
 }

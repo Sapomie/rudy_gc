@@ -53,6 +53,7 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 		exist.Name = mv.Name
 		exist.Title = mv.Title
 		exist.ReleasingDate = mv.ReleasingDate
+		exist.EncodeName = mv.EncodeName
 		exist.Length = mv.Length
 		exist.Score = mv.Score
 		exist.ViewersNumberWant = mv.ViewersNumberWant
@@ -85,6 +86,7 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 		ViewersNumberOwned:   mv.ViewersNumberOwned,
 		ViewersNumberWatched: mv.ViewersNumberWatched,
 		PrefixId:             mv.PrefixId,
+		EncodeName:           mv.EncodeName,
 		MakerId:              mv.MakerId,
 		LabelId:              mv.LabelId,
 		DirectorId:           mv.DirectorId,
@@ -132,6 +134,7 @@ func toTypesMovie(mv *moviex.AMovie) *types.Movie {
 		Id:                   mv.Id,
 		Name:                 mv.Name,
 		JavId:                mv.JavId,
+		EncodeName:           mv.EncodeName,
 		Title:                mv.Title,
 		ReleasingDate:        mv.ReleasingDate,
 		Length:               mv.Length,

@@ -10,7 +10,7 @@ type Service struct {
 	movieSvc *movie.Service
 }
 
-func New(deps *svc.Deps) *Service {
+func NewFilmService(deps *svc.Deps) *Service {
 	return &Service{
 		deps:     deps,
 		movieSvc: movie.New(deps),

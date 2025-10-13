@@ -8,6 +8,7 @@ type Movie struct {
 	Name string `gorm:"not null;type:varchar(191);index:idx_name_only;index:idx_reldate_name,priority:2;index:idx_vnw_name,priority:2;index:idx_castage_name,priority:2;index:idx_score_name,priority:2;index:idx_detailupd_name,priority:2"`
 
 	Title              string `gorm:"not null;type:varchar(500)"`
+	EncodeName         string `gorm:"not null;type:varchar(191);index"`
 	Length             int64  `gorm:"not null;type:smallint"`
 	ViewersNumberWant  int64  `gorm:"not null;type:MEDIUMINT"`
 	ViewersNumberOwned int64  `gorm:"not null;type:MEDIUMINT"`

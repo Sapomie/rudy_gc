@@ -1,15 +1,14 @@
-// internal/infra/movie_infra/minfo_repo_sqlx.go
 package movie_infra
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"rudy_gc/internal/types"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/movie_repo"
+	"rudy_gc/internal/types"
 )
 
 var _ movie_repo.MinfoRepo = (*MinfoRepoSqlx)(nil)
@@ -22,7 +21,10 @@ func NewMinfoRepoSqlx(m moviex.BmMinfoModel) movie_repo.MinfoRepo {
 	return &MinfoRepoSqlx{m: m}
 }
 
-func (r *MinfoRepoSqlx) UpsertPreserve(ctx context.Context, in *moviex.BmMinfo) error {
+func (r *MinfoRepoSqlx) UpsertPreserve(ctx context.Context, in *types.Minfo) error {
+	if in == nil {
+		return fmt.Errorf("nil minfo")
+	}
 	// 查旧记录（按 jav_id）
 	old, err := r.m.FindOneByJavId(ctx, in.JavId)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
@@ -30,24 +32,23 @@ func (r *MinfoRepoSqlx) UpsertPreserve(ctx context.Context, in *moviex.BmMinfo) 
 	}
 
 	now := time.Now().Unix()
-
-	// 不存在：直接插入（CreatedOn/UpdatedOn 兜底）
 	if old == nil {
-		if in.CreatedOn == 0 {
-			in.CreatedOn = now
+		mv := mapTypesToModelx(in)
+		if mv.CreatedOn == 0 {
+			mv.CreatedOn = now
 		}
-		if in.UpdatedOn == 0 {
-			in.UpdatedOn = now
+		if mv.UpdatedOn == 0 {
+			mv.UpdatedOn = now
 		}
-		_, err := r.m.Insert(ctx, in)
+		_, err := r.m.Insert(ctx, mv)
 		return err
 	}
 
 	// 已存在：更新但保留历史字段
-	up := *in
+	up := mapTypesToModelx(in)
 	up.Id = old.Id
 
-	// 保留历史值（如果旧值存在）
+	// 保留既有字段（与你原逻辑一致）
 	if old.Chinese != "" {
 		up.Chinese = old.Chinese
 	}
@@ -56,33 +57,18 @@ func (r *MinfoRepoSqlx) UpsertPreserve(ctx context.Context, in *moviex.BmMinfo) 
 	up.DaysInRank = old.DaysInRank
 	up.NeedDownload = old.NeedDownload
 
-	// 保留创建时间，更新时间置为 now
 	up.CreatedOn = old.CreatedOn
 	up.UpdatedOn = now
 
-	return r.m.Update(ctx, &up)
+	return r.m.Update(ctx, up)
 }
 
-func (r *MinfoRepoSqlx) UpdateRankStatsByJavId(ctx context.Context, javId string, firstDay, highestRank, daysInRank, updatedOn int64) error {
+func (r *MinfoRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*types.Minfo, error) {
 	row, err := r.m.FindOneByJavId(ctx, javId)
 	if err != nil {
-		return fmt.Errorf("查询 minfo 失败(javId=%s): %w", javId, err)
+		return nil, err
 	}
-	// 更新排行相关字段
-	row.FirstRankDayNumber = firstDay
-	row.HighestRank = highestRank
-	row.DaysInRank = daysInRank
-	row.UpdatedOn = updatedOn
-
-	if err := r.m.Update(ctx, row); err != nil {
-		return fmt.Errorf("更新 minfo 失败(javId=%s): %w", javId, err)
-	}
-	return nil
-}
-
-// ✅ 新增：按 jav_id 查询
-func (r *MinfoRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*moviex.BmMinfo, error) {
-	return r.m.FindOneByJavId(ctx, javId)
+	return mapModelxToTypes(row), nil
 }
 
 func (r *MinfoRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, patch types.MinfoPatch) error {
@@ -94,10 +80,6 @@ func (r *MinfoRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, 
 
 	if patch.Chinese != nil && row.Chinese != *patch.Chinese {
 		row.Chinese = *patch.Chinese
-		changed = true
-	}
-	if patch.EncodeName != nil && row.EncodeName != *patch.EncodeName {
-		row.EncodeName = *patch.EncodeName
 		changed = true
 	}
 	if patch.FirstRankDayNumber != nil && row.FirstRankDayNumber != *patch.FirstRankDayNumber {
@@ -118,15 +100,46 @@ func (r *MinfoRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, 
 	}
 
 	if !changed && patch.UpdatedOn == nil {
-		// 没任何业务字段变化且未强制更新时间 → 直接返回
 		return nil
 	}
-
 	if patch.UpdatedOn != nil {
 		row.UpdatedOn = *patch.UpdatedOn
 	} else {
 		row.UpdatedOn = time.Now().Unix()
 	}
+	return r.m.Update(ctx, row) // go-zero 生成的 Update，带缓存失效
+}
 
-	return r.m.Update(ctx, row) // 用 go-zero 生成的 Update，自动清缓存
+/************ 映射函数 ************/
+
+func mapTypesToModelx(in *types.Minfo) *moviex.BmMinfo {
+	return &moviex.BmMinfo{
+		Id:                 in.Id,
+		JavId:              in.JavId, // 注意拼写：如果你的 types 字段是 JavId
+		Name:               in.Name,
+		Chinese:            in.Chinese,
+		FirstRankDayNumber: in.FirstRankDayNumber,
+		HighestRank:        in.HighestRank,
+		DaysInRank:         in.DaysInRank,
+		NeedDownload:       in.NeedDownload,
+		CreatedOn:          in.CreatedOn,
+		UpdatedOn:          in.UpdatedOn,
+		ReleasingDate:      in.ReleasingDate,
+	}
+}
+
+func mapModelxToTypes(m *moviex.BmMinfo) *types.Minfo {
+	return &types.Minfo{
+		Id:                 m.Id,
+		JavId:              m.JavId,
+		Name:               m.Name,
+		Chinese:            m.Chinese,
+		FirstRankDayNumber: m.FirstRankDayNumber,
+		HighestRank:        m.HighestRank,
+		DaysInRank:         m.DaysInRank,
+		NeedDownload:       m.NeedDownload,
+		CreatedOn:          m.CreatedOn,
+		UpdatedOn:          m.UpdatedOn,
+		ReleasingDate:      m.ReleasingDate,
+	}
 }

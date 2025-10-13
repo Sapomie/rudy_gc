@@ -12,21 +12,19 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 type ProcessFilmResponse struct {
-	Total   int                            // 命中的视频文件数
-	Items   []*processFilmDirectorResponse // 每个文件解析出的目录ID/文件名/路径
-	Skipped int                            // 跳过的小文件计数
+	Total   int
+	Items   []*processFilmDirectorResponse
+	Skipped int
 }
 
 // 单个影片在“本轮扫描”中的状态镜像
 type filmExistInfo struct {
 	Film       *types.Film
-	NeedRemove int64 // 本轮扫描是否在磁盘上看到
-	NeedScan   int64 // 是否需要解析元数据（由 DB 的 NeedScanMeta 映射）
+	NeedRemove int64
+	NeedScan   int64
 }
 
 type sameMovieInfo struct {
@@ -35,13 +33,11 @@ type sameMovieInfo struct {
 }
 
 type filmContext struct {
-	// 以“movieName（例如 IPX-529）”为 key 的索引
-	// 说明：老逻辑就是用 movieName 作为唯一键；你仍可继续沿用
 	FilmExistMap map[string]*filmExistInfo
 	NameMap      map[string]*sameMovieInfo
 	FilePathMap  map[string][]string
-	Processed    int64 // 成功处理（入库/更新）的数量
-	Removed      int64 // 本轮标记删除的数量
+	Processed    int64
+	Removed      int64
 }
 
 const (
@@ -67,7 +63,6 @@ func (s *Service) ProcessFilm(ctx context.Context) error {
 		return err
 	}
 
-	//todo:
 	//l.asyncUpdateOwnedMovieNumber()
 	//time.Sleep(time.Second * 10)
 
@@ -81,6 +76,7 @@ func (s *Service) buildFilmContext(ctx context.Context) (*filmContext, error) {
 	}
 
 	filmExistMap := map[string]*filmExistInfo{}
+
 	allRootFilmMap := map[string][]string{}
 	for _, film := range films {
 		filmInfo := &filmExistInfo{
@@ -95,9 +91,9 @@ func (s *Service) buildFilmContext(ctx context.Context) (*filmContext, error) {
 	fCtx := &filmContext{
 		FilmExistMap: filmExistMap,
 		NameMap:      make(map[string]*sameMovieInfo),
-
-		Processed: 0,
-		Removed:   0,
+		FilePathMap:  allRootFilmMap,
+		Processed:    0,
+		Removed:      0,
 	}
 
 	return fCtx, nil
@@ -119,20 +115,19 @@ func isVideo(path string) bool {
 	return ok
 }
 
-func dirDepth(root, dir string) int {
-	// 统一规范
+func dirDepth(root, path string) int {
 	root = strings.TrimRight(filepath.Clean(root), string(filepath.Separator))
-	dir = filepath.Clean(dir)
-
-	if dir == root {
-		return 0 // 根目录
-	}
-	rel := strings.TrimPrefix(dir, root+string(filepath.Separator))
-	if rel == dir || rel == "" {
-		// 不在root下，或异常
+	path = filepath.Clean(path)
+	if path == root {
 		return 0
 	}
-	// 第一层=1，所以分隔符个数+1
+	if !strings.HasPrefix(path, root+string(filepath.Separator)) {
+		return 0
+	}
+	rel := path[len(root)+1:]
+	if rel == "" {
+		return 0
+	}
 	return strings.Count(rel, string(filepath.Separator)) + 1
 }
 
@@ -157,7 +152,6 @@ func (s *Service) ProcessFiles(ctx context.Context, fCtx *filmContext) (*Process
 			if walkErr != nil {
 				if depth == 0 {
 					s.markDirFilmsAsExisting(p, fCtx)
-					logx.Info(p, "------------", depth, "-------", root)
 					return nil
 				} else {
 					return walkErr
@@ -168,18 +162,17 @@ func (s *Service) ProcessFiles(ctx context.Context, fCtx *filmContext) (*Process
 				return nil
 			}
 
-			if !isVideo(p) {
-				logx.Alert(fmt.Errorf("non-video file encountered: %s", p).Error())
-				return nil
-			}
-
-			// 文件大小检查（<50MB 跳过）
-			info, err := os.Stat(p)
+			info, err := d.Info()
 			if err != nil {
-				return err // 文件信息获取失败算严重错误
+				return err
 			}
 			if info.Size() < minFileSize {
 				skipped++
+				return nil
+			}
+
+			if !isVideo(p) {
+				s.deps.Log.Warnf("non-video file encountered: %s", p)
 				return nil
 			}
 
@@ -195,7 +188,6 @@ func (s *Service) ProcessFiles(ctx context.Context, fCtx *filmContext) (*Process
 			return nil
 		})
 
-		// 任意错误立即中止整个流程
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +228,7 @@ func (s *Service) makeAndInsertFilm(ctx context.Context, e os.DirEntry, rootDir,
 	}
 
 	filmBirthTime := getFileBirthTime(fullPath)
-	fullDir := strings.TrimSuffix(fullPath, string(filepath.Separator)+fileName)
+	fullDir := filepath.Dir(fullPath)
 
 	film := &types.Film{
 		MovieJavId:   movie.JavId,
@@ -305,8 +297,8 @@ func (s *Service) removeMissingFilmFiles(ctx context.Context, fCtx *filmContext)
 }
 
 func extractMovieName(fileName string) string {
-	strs := strings.Split(fileName, "_")
-	return strs[0]
+	head, _, _ := strings.Cut(fileName, "_")
+	return head
 }
 
 func (s *Service) handleMovieNameConflict(movieName string, fCtx *filmContext, fullPath string) {
@@ -343,10 +335,21 @@ func determineFilmEraseStatus(filmPath string) int64 {
 }
 
 func getFileBirthTime(path string) int64 {
-	fileInfo, _ := os.Stat(path)
-	ss := fileInfo.Sys().(*syscall.Stat_t)
-	tCreate := ss.Ctimespec.Sec
-	return tCreate
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Now().Unix() // 兜底返回当前时间
+	}
+
+	// 尝试系统调用级别的创建时间（仅 macOS / BSD 有效）
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		// macOS: Ctimespec 是创建时间；Linux 上只是状态变更时间
+		if stat.Ctimespec.Sec > 0 {
+			return stat.Ctimespec.Sec
+		}
+	}
+
+	// 兜底：用修改时间
+	return info.ModTime().Unix()
 }
 
 func (s *Service) filmAlias(movie *types.Movie, filmSize int64, birthTime int64) string {
@@ -371,13 +374,11 @@ func (s *Service) shouldScanMetadata(movieName string, fCtx *filmContext) bool {
 }
 
 func (s *Service) scanAndAttachMetadata(film *types.Film, filmPath string) error {
-	// 调用 filmMetaData 函数以解析元数据
 	vm, err := filmMetaData(filmPath)
 	if err != nil {
 		return fmt.Errorf("解析元数据失败: %w", err)
 	}
 
-	// 赋值解析到的元数据
 	film.Width = vm.Width
 	film.Height = vm.Height
 	film.BitRate = vm.BitRate

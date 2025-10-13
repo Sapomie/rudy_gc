@@ -5,6 +5,7 @@ import (
 	"fmt"
 	consts "rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
+	"rudy_gc/pkg/ptr"
 	"strings"
 	"time"
 
@@ -158,11 +159,19 @@ func (l *CrawlLogic) AddRankInfo(javId string) error {
 
 	// 4) 回写 bm_minfo 的排行三件套
 	now := time.Now().Unix()
-	if err := l.deps.MinfoRepo.UpdateRankStatsByJavId(l.ctx, javId,
-		firstDay, bestRank, daysInRank, now,
-	); err != nil {
+
+	patch := types.MinfoPatch{
+		Chinese:            nil,
+		FirstRankDayNumber: ptr.Int64(firstDay),
+		HighestRank:        ptr.Int64(bestRank),
+		DaysInRank:         ptr.Int64(daysInRank),
+		UpdatedOn:          ptr.Int64(now),
+	}
+	err = l.deps.MinfoRepo.UpdatePartialByJavId(l.ctx, javId, patch)
+	if err != nil {
 		return fmt.Errorf("写回 bm_minfo 排行信息失败(javId=%s): %w", javId, err)
 	}
+
 	l.movieSvc.InvalidateMovieType(l.ctx, javId)
 
 	return nil

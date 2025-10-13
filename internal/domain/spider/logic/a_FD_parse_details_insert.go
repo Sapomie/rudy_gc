@@ -7,8 +7,6 @@ import (
 	"rudy_gc/internal/types"
 	"strconv"
 	"time"
-
-	"rudy_gc/data/modelx/moviex"
 )
 
 // saveParsedMovieResponse 返回保存后的电影记录与演员 javId 集合（供后续统计/链路使用）
@@ -124,6 +122,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		Name:                 raw.Designation,
 		JavId:                raw.JavId,
 		Title:                raw.Title,
+		EncodeName:           fmt.Sprintf("%04d-%s", pfxID, raw.Number),
 		ReleasingDate:        releasingDate,
 		Length:               int64(length),
 		Score:                score,
@@ -162,11 +161,10 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 	}
 
 	// ===== 5) Upsert bm_minfo（编码名/中文/下载需求/排行信息）=====
-	encode := fmt.Sprintf("%04d-%s", pfxID, raw.Number)
-	minfo := &moviex.BmMinfo{
-		Name:       raw.Designation,
-		JavId:      raw.JavId,
-		EncodeName: encode,
+	minfo := &types.Minfo{
+		Name:          raw.Designation,
+		JavId:         raw.JavId,
+		ReleasingDate: releasingDate,
 		// Chinese / FirstRankDayNumber / HighestRank / DaysInRank / NeedDownload
 		// 这些由 Repo 内部“保留旧值”策略处理
 		CreatedOn: now,

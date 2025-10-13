@@ -50,22 +50,90 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 		return nil, 0, errors.New("nil input")
 	}
 
-	// 以 movie_jav_id 幂等
 	if row, err := r.m.FindOneByMovieJavId(ctx, in.MovieJavId); err == nil && row != nil {
 		changed := false
 
-		if row.RootDir != in.RootDir {
-			row.DirectoryId = in.DirectoryId
+		// 一次性对比 & 同步所有业务字段（除了 Id/CreatedOn）
+		if row.MovieName != in.MovieName {
+			row.MovieName = in.MovieName
 			changed = true
 		}
 		if row.FileName != in.FileName {
 			row.FileName = in.FileName
 			changed = true
 		}
-		if in.Size > 0 && row.Size != in.Size {
+		if row.DirectoryId != in.DirectoryId {
+			row.DirectoryId = in.DirectoryId
+			changed = true
+		}
+		if row.RootDir != in.RootDir {
+			row.RootDir = in.RootDir
+			changed = true
+		}
+		if row.FullDir != in.FullDir {
+			row.FullDir = in.FullDir
+			changed = true
+		}
+
+		if row.Dir1Id != in.Dir1Id {
+			row.Dir1Id = in.Dir1Id
+			changed = true
+		}
+		if row.Dir2Id != in.Dir2Id {
+			row.Dir2Id = in.Dir2Id
+			changed = true
+		}
+		if row.Dir3Id != in.Dir3Id {
+			row.Dir3Id = in.Dir3Id
+			changed = true
+		}
+		if row.Dir4Id != in.Dir4Id {
+			row.Dir4Id = in.Dir4Id
+			changed = true
+		}
+
+		if row.Alias != in.Alias {
+			row.Alias = in.Alias
+			changed = true
+		}
+		if row.Size != in.Size {
 			row.Size = in.Size
 			changed = true
 		}
+		if row.Width != in.Width {
+			row.Width = in.Width
+			changed = true
+		}
+		if row.Height != in.Height {
+			row.Height = in.Height
+			changed = true
+		}
+		if row.BitRate != in.BitRate {
+			row.BitRate = in.BitRate
+			changed = true
+		}
+		if row.Duration != in.Duration {
+			row.Duration = in.Duration
+			changed = true
+		}
+		if row.FrameAverage != in.FrameAverage {
+			row.FrameAverage = in.FrameAverage
+			changed = true
+		}
+
+		if row.HasSub != in.HasSub {
+			row.HasSub = in.HasSub
+			changed = true
+		}
+		if row.SelfMake != in.SelfMake {
+			row.SelfMake = in.SelfMake
+			changed = true
+		}
+		if row.HasMask != in.HasMask {
+			row.HasMask = in.HasMask
+			changed = true
+		}
+
 		if row.NeedScanMeta != in.NeedScanMeta {
 			row.NeedScanMeta = in.NeedScanMeta
 			changed = true
@@ -94,6 +162,10 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 			row.BirthTime = in.BirthTime
 			changed = true
 		}
+		if row.ReleasingDate != in.ReleasingDate {
+			row.ReleasingDate = in.ReleasingDate
+			changed = true
+		}
 
 		if changed {
 			row.UpdatedOn = time.Now().Unix()
@@ -102,7 +174,6 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 			}
 			return mapModelxToTypes(row), types.UpsertUpdated, nil
 		}
-
 		return mapModelxToTypes(row), types.UpsertUnchanged, nil
 	}
 
@@ -170,13 +241,14 @@ func mapTypesToModelx(in *types.Film) *moviex.VFilm {
 		SelfMake: in.SelfMake,
 		HasMask:  in.HasMask,
 
-		NeedScanMeta: in.NeedScanMeta,
-		IsRemoved:    in.IsRemoved,
-		RemoveTime:   in.RemoveTime,
-		ScTimes:      in.ScTimes,
-		ComeTimes:    in.ComeTimes,
-		LastScTime:   in.LastScTime,
-		BirthTime:    in.BirthTime,
+		NeedScanMeta:  in.NeedScanMeta,
+		IsRemoved:     in.IsRemoved,
+		RemoveTime:    in.RemoveTime,
+		ScTimes:       in.ScTimes,
+		ComeTimes:     in.ComeTimes,
+		LastScTime:    in.LastScTime,
+		BirthTime:     in.BirthTime,
+		ReleasingDate: in.ReleasingDate,
 
 		CreatedOn: in.CreatedOn,
 		UpdatedOn: in.UpdatedOn,
@@ -211,13 +283,14 @@ func mapModelxToTypes(mv *moviex.VFilm) *types.Film {
 		SelfMake: mv.SelfMake,
 		HasMask:  mv.HasMask,
 
-		NeedScanMeta: mv.NeedScanMeta,
-		IsRemoved:    mv.IsRemoved,
-		RemoveTime:   mv.RemoveTime,
-		ScTimes:      mv.ScTimes,
-		ComeTimes:    mv.ComeTimes,
-		LastScTime:   mv.LastScTime,
-		BirthTime:    mv.BirthTime,
+		NeedScanMeta:  mv.NeedScanMeta,
+		IsRemoved:     mv.IsRemoved,
+		RemoveTime:    mv.RemoveTime,
+		ScTimes:       mv.ScTimes,
+		ComeTimes:     mv.ComeTimes,
+		LastScTime:    mv.LastScTime,
+		BirthTime:     mv.BirthTime,
+		ReleasingDate: mv.ReleasingDate,
 
 		CreatedOn: mv.CreatedOn,
 		UpdatedOn: mv.UpdatedOn,

@@ -46,12 +46,6 @@ func (s *Service) processFilmDirectory(ctx context.Context, fullPath string) (*p
 	}, nil
 }
 
-// extractParts 拆分完整路径为目录层级 parts 和文件名。
-// 例如：
-//
-//	/Volumes/Expansion/v3_watched/sub/MARKV3_2024-001/2024-12-19-004/good_movie.mp4
-//	parts = ["Volumes","Expansion","v3_watched","sub","MARKV3_2024-001","2024-12-19-004"]
-//	file  = "good_movie.mp4"
 func extractParts(fullPath string) ([]string, string) {
 	// 清理路径（去掉多余的分隔符）
 	fullPath = filepath.Clean(fullPath)

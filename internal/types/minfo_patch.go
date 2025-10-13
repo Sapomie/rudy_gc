@@ -3,7 +3,6 @@ package types
 // MinfoPatch：按需局部更新（nil 表示不改）
 type MinfoPatch struct {
 	Chinese            *string
-	EncodeName         *string
 	FirstRankDayNumber *int64
 	HighestRank        *int64
 	DaysInRank         *int64

@@ -46,36 +46,37 @@ type (
 	}
 
 	VFilm struct {
-		Id           int64   `db:"id"`
-		MovieJavId   string  `db:"movie_jav_id"`
-		MovieName    string  `db:"movie_name"`
-		FileName     string  `db:"file_name"`
-		DirectoryId  int64   `db:"directory_id"`
-		RootDir      string  `db:"root_dir"`
-		Dir1Id       int64   `db:"dir1_id"`
-		Dir2Id       int64   `db:"dir2_id"`
-		Dir3Id       int64   `db:"dir3_id"`
-		Dir4Id       int64   `db:"dir4_id"`
-		Alias        string  `db:"alias"`
-		Size         int64   `db:"size"`
-		Width        int64   `db:"width"`
-		Height       int64   `db:"height"`
-		BitRate      int64   `db:"bit_rate"`
-		Duration     int64   `db:"duration"`
-		FrameAverage float64 `db:"frame_average"`
-		HasSub       int64   `db:"has_sub"`
-		SelfMake     int64   `db:"self_make"`
-		HasMask      int64   `db:"has_mask"`
-		NeedScanMeta int64   `db:"need_scan_meta"`
-		IsRemoved    int64   `db:"is_removed"`
-		RemoveTime   int64   `db:"remove_time"`
-		ScTimes      int64   `db:"sc_times"`
-		ComeTimes    int64   `db:"come_times"`
-		LastScTime   int64   `db:"last_sc_time"`
-		BirthTime    int64   `db:"birth_time"`
-		CreatedOn    int64   `db:"created_on"`
-		UpdatedOn    int64   `db:"updated_on"`
-		FullDir      string  `db:"full_dir"`
+		Id            int64   `db:"id"`
+		MovieJavId    string  `db:"movie_jav_id"`
+		MovieName     string  `db:"movie_name"`
+		FileName      string  `db:"file_name"`
+		DirectoryId   int64   `db:"directory_id"`
+		RootDir       string  `db:"root_dir"`
+		FullDir       string  `db:"full_dir"`
+		Dir1Id        int64   `db:"dir1_id"`
+		Dir2Id        int64   `db:"dir2_id"`
+		Dir3Id        int64   `db:"dir3_id"`
+		Dir4Id        int64   `db:"dir4_id"`
+		Alias         string  `db:"alias"`
+		Size          int64   `db:"size"`
+		Width         int64   `db:"width"`
+		Height        int64   `db:"height"`
+		BitRate       int64   `db:"bit_rate"`
+		Duration      int64   `db:"duration"`
+		FrameAverage  float64 `db:"frame_average"`
+		HasSub        int64   `db:"has_sub"`
+		SelfMake      int64   `db:"self_make"`
+		HasMask       int64   `db:"has_mask"`
+		NeedScanMeta  int64   `db:"need_scan_meta"`
+		IsRemoved     int64   `db:"is_removed"`
+		RemoveTime    int64   `db:"remove_time"`
+		ScTimes       int64   `db:"sc_times"`
+		ComeTimes     int64   `db:"come_times"`
+		LastScTime    int64   `db:"last_sc_time"`
+		BirthTime     int64   `db:"birth_time"`
+		CreatedOn     int64   `db:"created_on"`
+		UpdatedOn     int64   `db:"updated_on"`
+		ReleasingDate int64   `db:"releasing_date"`
 	}
 )
 
@@ -186,8 +187,8 @@ func (m *defaultVFilmModel) Insert(ctx context.Context, data *VFilm) (sql.Result
 	rudyGcVFilmMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcVFilmMovieJavIdPrefix, data.MovieJavId)
 	rudyGcVFilmMovieNameKey := fmt.Sprintf("%s%v", cacheRudyGcVFilmMovieNamePrefix, data.MovieName)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, vFilmRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FileName, data.DirectoryId, data.RootDir, data.Dir1Id, data.Dir2Id, data.Dir3Id, data.Dir4Id, data.Alias, data.Size, data.Width, data.Height, data.BitRate, data.Duration, data.FrameAverage, data.HasSub, data.SelfMake, data.HasMask, data.NeedScanMeta, data.IsRemoved, data.RemoveTime, data.ScTimes, data.ComeTimes, data.LastScTime, data.BirthTime, data.CreatedOn, data.UpdatedOn, data.FullDir)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, vFilmRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FileName, data.DirectoryId, data.RootDir, data.FullDir, data.Dir1Id, data.Dir2Id, data.Dir3Id, data.Dir4Id, data.Alias, data.Size, data.Width, data.Height, data.BitRate, data.Duration, data.FrameAverage, data.HasSub, data.SelfMake, data.HasMask, data.NeedScanMeta, data.IsRemoved, data.RemoveTime, data.ScTimes, data.ComeTimes, data.LastScTime, data.BirthTime, data.CreatedOn, data.UpdatedOn, data.ReleasingDate)
 	}, rudyGcVFilmFileNameKey, rudyGcVFilmIdKey, rudyGcVFilmMovieJavIdKey, rudyGcVFilmMovieNameKey)
 	return ret, err
 }
@@ -204,7 +205,7 @@ func (m *defaultVFilmModel) Update(ctx context.Context, newData *VFilm) error {
 	rudyGcVFilmMovieNameKey := fmt.Sprintf("%s%v", cacheRudyGcVFilmMovieNamePrefix, data.MovieName)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, vFilmRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FileName, newData.DirectoryId, newData.RootDir, newData.Dir1Id, newData.Dir2Id, newData.Dir3Id, newData.Dir4Id, newData.Alias, newData.Size, newData.Width, newData.Height, newData.BitRate, newData.Duration, newData.FrameAverage, newData.HasSub, newData.SelfMake, newData.HasMask, newData.NeedScanMeta, newData.IsRemoved, newData.RemoveTime, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.BirthTime, newData.CreatedOn, newData.UpdatedOn, newData.FullDir, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FileName, newData.DirectoryId, newData.RootDir, newData.FullDir, newData.Dir1Id, newData.Dir2Id, newData.Dir3Id, newData.Dir4Id, newData.Alias, newData.Size, newData.Width, newData.Height, newData.BitRate, newData.Duration, newData.FrameAverage, newData.HasSub, newData.SelfMake, newData.HasMask, newData.NeedScanMeta, newData.IsRemoved, newData.RemoveTime, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.BirthTime, newData.CreatedOn, newData.UpdatedOn, newData.ReleasingDate, newData.Id)
 	}, rudyGcVFilmFileNameKey, rudyGcVFilmIdKey, rudyGcVFilmMovieJavIdKey, rudyGcVFilmMovieNameKey)
 	return err
 }
