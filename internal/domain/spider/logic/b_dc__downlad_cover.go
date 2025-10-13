@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"rudy_gc/pkg/ptr"
 	"strconv"
@@ -16,7 +17,7 @@ const formatYearMonth = "2006-01"
 
 // ---- 顶层：按条下载，失败继续，限速保持 ----
 func (l *CrawlLogic) DownLoadAllPicture() error {
-	items, err := l.deps.ItemRepo.FindByDownloadCoverStatus(l.ctx, types.ItemCoverNone)
+	items, err := l.deps.ItemRepo.FindByDownloadCoverStatus(l.ctx, consts.ItemCoverNone)
 	if err != nil {
 		return fmt.Errorf("FindByDownloadCoverStatus: %w", err)
 	}
@@ -110,7 +111,7 @@ func (l *CrawlLogic) DownloadPictureOfMovie(item *types.Item) error {
 func (l *CrawlLogic) markItemCoverOK(javId string) error {
 	now := time.Now().Unix()
 	if err := l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, javId, types.ItemPatch{
-		HasDownloadCover: ptr.Int64(types.ItemCoverOK),
+		HasDownloadCover: ptr.Int64(consts.ItemCoverOK),
 		UpdatedOn:        &now,
 	}); err != nil {
 		return fmt.Errorf("ItemRepo.UpdatePartialByJavId(%s): %w", javId, err)

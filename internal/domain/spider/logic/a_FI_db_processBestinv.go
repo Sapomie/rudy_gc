@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
 
@@ -49,10 +50,10 @@ func (l *CrawlLogic) makeAndInsertItemsByBestinv(b *types.Bestinv) error {
 
 func getBestinvSearchType(category int64) int64 {
 	switch category {
-	case types.BestCategoryMonth:
-		return types.ItemSearchByBestMonth
-	case types.BestCategoryAllTime:
-		return types.ItemSearchByBestAllTime
+	case consts.BestCategoryMonth:
+		return consts.ItemSearchByBestMonth
+	case consts.BestCategoryAllTime:
+		return consts.ItemSearchByBestAllTime
 	default:
 		return 0
 	}

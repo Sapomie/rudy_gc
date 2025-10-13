@@ -34,28 +34,6 @@ func (s *Service) GetMovieType(ctx context.Context, javId string) (*types.MovieT
 	return mt, nil
 }
 
-func (s *Service) GetMovieTypeByJavId(ctx context.Context, javId string) (*types.MovieType, error) {
-	// 1) 先查缓存
-	if s.deps.MovieTypeCache != nil {
-		if v, err := s.deps.MovieTypeCache.GetMovieType(ctx, javId); err == nil && v != nil {
-			return v, nil
-		}
-	}
-
-	// 2) 回源：用你现有 repo 聚合拼装 MovieType（略）
-	mt, err := s.buildMovieTypeFromRepos(ctx, javId)
-	if err != nil || mt == nil {
-		return mt, err
-	}
-
-	// 3) 写缓存（忽略错误不影响主流程）
-	if s.deps.MovieTypeCache != nil {
-		_ = s.deps.MovieTypeCache.SetMovieType(ctx, javId, mt, movieTypeTTL)
-	}
-
-	return mt, nil
-}
-
 // 单个失效
 func (s *Service) InvalidateMovieType(ctx context.Context, javId string) {
 	if s.deps.MovieTypeCache == nil || javId == "" {

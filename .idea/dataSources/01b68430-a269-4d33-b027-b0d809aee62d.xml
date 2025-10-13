@@ -943,7 +943,7 @@
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <Current>1</Current>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2025-10-11.15:22:46</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-10-13.05:43:06</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <user id="299" parent="1" name="mysql.infoschema">
@@ -3583,7 +3583,7 @@ number</ColNames>
       <StoredType>int|0s</StoredType>
     </column>
     <column id="841" parent="328" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>103496</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -3755,7 +3755,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_a_movie_jav_id</UnderlyingIndexName>
     </key>
     <column id="876" parent="329" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>12091</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -3895,7 +3895,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_am_cast_name</UnderlyingIndexName>
     </key>
     <column id="906" parent="330" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>1846</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -3955,7 +3955,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_am_director_name</UnderlyingIndexName>
     </key>
     <column id="918" parent="331" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>342</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4015,7 +4015,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_am_genre_name</UnderlyingIndexName>
     </key>
     <column id="930" parent="332" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>727</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4075,7 +4075,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_am_label_name</UnderlyingIndexName>
     </key>
     <column id="942" parent="333" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>393</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4135,7 +4135,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_am_maker_name</UnderlyingIndexName>
     </key>
     <column id="954" parent="334" name="id">
-      <AutoIncrement>855</AutoIncrement>
+      <AutoIncrement>856</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4186,7 +4186,7 @@ name</ColNames>
       <UnderlyingIndexName>uni_am_prefix_name</UnderlyingIndexName>
     </key>
     <column id="964" parent="335" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>173733</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4241,7 +4241,7 @@ cast_id</ColNames>
       <UnderlyingIndexName>m_c</UnderlyingIndexName>
     </key>
     <column id="975" parent="336" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>473452</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4404,7 +4404,7 @@ name</ColNames>
       <UnderlyingIndexName>uniq_jav_id</UnderlyingIndexName>
     </key>
     <column id="1008" parent="338" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>103496</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -4726,7 +4726,7 @@ rank_pos</ColNames>
       <UnderlyingIndexName>idx_d_bestinv_name</UnderlyingIndexName>
     </key>
     <column id="1069" parent="342" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>103497</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -5000,7 +5000,7 @@ rank_pos</ColNames>
       <UnderlyingIndexName>uni_d_seed_name</UnderlyingIndexName>
     </key>
     <column id="1115" parent="345" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>103496</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -5174,7 +5174,7 @@ rank_pos</ColNames>
       <UnderlyingIndexName>uni_e_record_name</UnderlyingIndexName>
     </key>
     <column id="1149" parent="347" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>1362</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -5230,7 +5230,7 @@ rank_pos</ColNames>
       <UnderlyingIndexName>uni_g_list_name</UnderlyingIndexName>
     </key>
     <column id="1160" parent="348" name="id">
-      <AutoIncrement>1</AutoIncrement>
+      <AutoIncrement>80</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
@@ -5536,19 +5536,19 @@ name</ColNames>
       <Position>28</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="1220" parent="350" name="created_on">
-      <DefaultExpression>0</DefaultExpression>
+    <column id="1220" parent="350" name="releasing_date">
       <NotNull>1</NotNull>
       <Position>29</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="1221" parent="350" name="updated_on">
+    <column id="1221" parent="350" name="created_on">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>30</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="1222" parent="350" name="releasing_date">
+    <column id="1222" parent="350" name="updated_on">
+      <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>31</Position>
       <StoredType>bigint|0s</StoredType>

@@ -3,6 +3,7 @@ package logic
 
 import (
 	"fmt"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
 
@@ -54,10 +55,10 @@ func (l *CrawlLogic) makeAndInsertItemsByInventory(inv *types.Inventory) error {
 func getInventorySearchType(category int64) int64 {
 
 	switch category {
-	case types.InventoryCategoryByPrefix:
-		return types.ItemSearchByPrefix
-	case types.InventoryCategoryByLabel:
-		return types.ItemSearchByLabel
+	case consts.InventoryCategoryByPrefix:
+		return consts.ItemSearchByPrefix
+	case consts.InventoryCategoryByLabel:
+		return consts.ItemSearchByLabel
 	default:
 		return 0
 	}

@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"context"
+	"rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 	"rudy_gc/oldmodel/modelx"
@@ -38,6 +39,7 @@ type XModel struct {
 type Service struct {
 	crawlLogic *logic.CrawlLogic
 	deps       *svc.Deps
+	movieSvc   *movie.Service
 	xModel     *XModel
 }
 
@@ -46,6 +48,7 @@ func New(deps *svc.Deps) *Service {
 		deps:       deps,
 		xModel:     NewXModel(deps),
 		crawlLogic: logic.NewCrawlLogic(context.Background(), deps),
+		movieSvc:   movie.NewMovieService(deps),
 	}
 }
 

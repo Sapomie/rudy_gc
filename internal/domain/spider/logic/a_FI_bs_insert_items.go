@@ -57,12 +57,12 @@ func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64
 			SearchBy:            searchBy,
 			CreatedOn:           now,
 			UpdatedOn:           now,
-			HasDetail:           types.ItemDetailNone,
-			HasDownloadCover:    types.ItemCoverNone,
-			HasChinese:          types.ItemChineseNone,
+			HasDetail:           consts.ItemDetailNone,
+			HasDownloadCover:    consts.ItemCoverNone,
+			HasChinese:          consts.ItemChineseNone,
 			DetailBirthTime:     0,
 			LastQueryDetailTime: 0,
-			DetailNeedScan:      types.ItemDetailStatusNeedScan,
+			DetailNeedScan:      consts.ItemDetailStatusNeedScan,
 		}
 		toInsert = append(toInsert, it)
 	})
@@ -87,10 +87,10 @@ func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64
 // 与旧项目行为一致：Prefix→Prefix，Label→Label；未知保持原值
 func mapInventoryCategoryToItemSearchType(cat int64) int64 {
 	switch cat {
-	case types.InventoryCategoryByPrefix:
-		return types.ItemSearchByPrefix
-	case types.InventoryCategoryByLabel:
-		return types.ItemSearchByLabel
+	case consts.InventoryCategoryByPrefix:
+		return consts.ItemSearchByPrefix
+	case consts.InventoryCategoryByLabel:
+		return consts.ItemSearchByLabel
 	default:
 		return cat
 	}

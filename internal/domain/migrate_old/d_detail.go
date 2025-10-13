@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"rudy_gc/oldmodel/modelx"
 	"strings"
@@ -78,12 +79,12 @@ func (s *Service) MigrateDetail() error {
 			Name:                xDetail.Name,
 			JavId:               xDetail.JavId,
 			Prefix:              xDetail.Prefix,
-			SearchType:          types.ItemSearchByOld,
+			SearchType:          consts.ItemSearchByOld,
 			CoverUrl:            "migrate",
 			SearchBy:            "migrate",
-			HasDetail:           types.ItemDetailOK,
-			HasDownloadCover:    types.ItemCoverNone,
-			HasChinese:          types.ItemChineseNone,
+			HasDetail:           consts.ItemDetailOK,
+			HasDownloadCover:    consts.ItemCoverNone,
+			HasChinese:          consts.ItemChineseNone,
 			DetailNeedScan:      modelx.DetailStatusNeedScan,
 			DetailBirthTime:     now,
 			LastQueryDetailTime: xDetail.LastQueryTime,

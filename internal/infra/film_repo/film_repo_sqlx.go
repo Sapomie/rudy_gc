@@ -4,6 +4,7 @@ package film_infra
 import (
 	"context"
 	"errors"
+	"rudy_gc/internal/consts"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -45,7 +46,7 @@ func (r *FilmRepoSqlx) FindOneByMovieName(ctx context.Context, name string) (*ty
 	return mapModelxToTypes(row), nil
 }
 
-func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.Film, types.UpsertStatus, error) {
+func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.Film, consts.UpsertStatus, error) {
 	if in == nil {
 		return nil, 0, errors.New("nil input")
 	}
@@ -172,9 +173,9 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 			if err := r.m.Update(ctx, row); err != nil {
 				return nil, 0, err
 			}
-			return mapModelxToTypes(row), types.UpsertUpdated, nil
+			return mapModelxToTypes(row), consts.UpsertUpdated, nil
 		}
-		return mapModelxToTypes(row), types.UpsertUnchanged, nil
+		return mapModelxToTypes(row), consts.UpsertUnchanged, nil
 	}
 
 	// 不存在：插入
@@ -185,7 +186,7 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 
 	if _, err := r.m.Insert(ctx, mv); err != nil {
 		if row2, err2 := r.m.FindOneByMovieJavId(ctx, in.MovieJavId); err2 == nil && row2 != nil {
-			return mapModelxToTypes(row2), types.UpsertUpdated, nil // 并发插入时算更新
+			return mapModelxToTypes(row2), consts.UpsertUpdated, nil // 并发插入时算更新
 		}
 		return nil, 0, err
 	}
@@ -195,7 +196,7 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 		return nil, 0, err
 	}
 
-	return mapModelxToTypes(row3), types.UpsertInserted, nil
+	return mapModelxToTypes(row3), consts.UpsertInserted, nil
 }
 
 func (r *FilmRepoSqlx) FindAll(ctx context.Context) ([]*types.Film, error) {

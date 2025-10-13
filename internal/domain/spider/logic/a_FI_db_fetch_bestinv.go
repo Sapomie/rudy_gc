@@ -48,8 +48,8 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 
 	best := &types.Bestinv{
 		Name:          fmt.Sprintf("%s&date=%s", queryWithPage, date),
-		NeedScan:      types.BestinvNeedScan,
-		NeedRankCheck: types.BestinvNeedRankCheck,
+		NeedScan:      consts.BestinvNeedScan,
+		NeedRankCheck: consts.BestinvNeedRankCheck,
 		Category:      typ,
 		Page:          page,
 		DayNumber:     day,
@@ -71,9 +71,9 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 // 与旧项目等价的路由片段
 func getQueryByBestRatedType(typ int64) string {
 	switch typ {
-	case types.BestCategoryAllTime:
+	case consts.BestCategoryAllTime:
 		return consts.SearchByBestRatedAllTIme
-	case types.BestCategoryMonth:
+	case consts.BestCategoryMonth:
 		return consts.SearchByBestRatedMonth
 	default:
 		return ""

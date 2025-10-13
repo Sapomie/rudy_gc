@@ -23,6 +23,11 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	// 静态资源
 	r.Static("/static", "ui/static")
 
+	// 单独挂载需要的外置硬盘目录
+	r.Static("/Volumes/Expansion", "/Volumes/Expansion")
+	r.Static("/Volumes/Getea", "/Volumes/Getea")
+	r.Static("/Volumes/T7/data", "/Volumes/T7/data")
+
 	// HTML 路由
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })

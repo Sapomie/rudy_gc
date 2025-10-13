@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"rudy_gc/data/modelx/spiderx"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/repo/spider_repo"
 	"rudy_gc/internal/types"
 )
@@ -68,7 +69,7 @@ func (r *InventoryRepoSqlx) FindOne(ctx context.Context, id int64) (*types.Inven
 }
 
 func (r *InventoryRepoSqlx) ListNeedScanIDs(ctx context.Context, limit int) ([]int64, error) {
-	return r.m.ListNeedScanIDs(ctx, types.InventoryNeedScan, int64(limit))
+	return r.m.ListNeedScanIDs(ctx, consts.InventoryNeedScan, int64(limit))
 }
 
 func (r *InventoryRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64) error {
@@ -76,7 +77,7 @@ func (r *InventoryRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64)
 	if err != nil {
 		return err
 	}
-	row.NeedScan = types.InventoryNoNeedScan
+	row.NeedScan = consts.InventoryNoNeedScan
 	row.UpdatedOn = ts
 	return r.m.Update(ctx, row)
 }

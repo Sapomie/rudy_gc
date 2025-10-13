@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/film"
+	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/mylog"
 
@@ -33,10 +33,10 @@ func main() {
 		panic(err)
 	}
 
-	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
+	if err != nil {
+		panic(err)
+	}
 
 	//err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
 	//err = logic.NewCrawlLogic(ctx, deps).TranslateTitle()
@@ -44,10 +44,10 @@ func main() {
 	//	panic(err)
 	//}
 
-	err = film.NewFilmService(deps).ProcessFilm(ctx)
-	if err != nil {
-		panic(err)
-	}
+	//err = film.NewFilmService(deps).ProcessFilm(ctx)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//movieType, err := movie.New(deps).GetMovieType(ctx, "javmezriqa")
 	//if err != nil {

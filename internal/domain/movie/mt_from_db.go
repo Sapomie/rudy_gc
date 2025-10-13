@@ -64,12 +64,12 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 	// x) 扩展信息：图片/视频/编码
 	minfo, err := s.deps.MinfoRepo.FindOneByJavId(ctx, mv.JavId)
 	if err != nil {
-		return nil, fmt.Errorf("MinfoRepo .FindOneByJavId failed: %w", err)
+		return nil, fmt.Errorf("MinfoRepo.FindOneByJavId failed: %w", err)
 	}
 
 	item, err := s.deps.ItemRepo.FindOneByJavId(ctx, mv.JavId)
 	if err != nil {
-		return nil, fmt.Errorf("MinfoRepo .FindOneByJavId failed: %w", err)
+		return nil, fmt.Errorf("ItemRepo.FindOneByJavId failed: %w", err)
 	}
 
 	// 4) 主体赋值（与老项目一致）
@@ -122,7 +122,7 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 	}
 
 	// 6) 覆盖本地封面路径
-	if item.HasDownloadCover == types.ItemCoverOK {
+	if item.HasDownloadCover == consts.ItemCoverOK {
 		imgBase := s.deps.Config.Fetcher.LocalImageDir
 		if murl.JacketImgLocal != "" {
 			out.JacketImg = imgBase + murl.JacketImgLocal

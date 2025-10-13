@@ -14,16 +14,31 @@ import (
 	"time"
 )
 
+/* =========================
+   对外响应结构（可选）
+========================= */
+
 type ProcessFilmResponse struct {
 	Total   int
-	Items   []*processFilmDirectorResponse
+	Items   []*processFilmDirectorResponse // 目前未写入，如需返回明细可在 handleOneVideo 中append
 	Skipped int
 }
 
-// 单个影片在“本轮扫描”中的状态镜像
+/* =========================
+   本轮扫描状态镜像
+========================= */
+
+type RemoveFlag int8
+
+const (
+	RemoveUnknown RemoveFlag = iota
+	RemoveYes
+	RemoveNo
+)
+
 type filmExistInfo struct {
 	Film       *types.Film
-	NeedRemove int64
+	RemoveFlag RemoveFlag
 	NeedScan   int64
 }
 
@@ -35,78 +50,299 @@ type sameMovieInfo struct {
 type filmContext struct {
 	FilmExistMap map[string]*filmExistInfo
 	NameMap      map[string]*sameMovieInfo
-	FilePathMap  map[string][]string
+	FilePathMap  map[string][]string // rootDir -> []movieName（用于根目录不可读兜底）
 	Processed    int64
 	Removed      int64
 }
 
-const (
-	needRemove = iota + 1
-	noNeedRemove
+var (
+	errNoMovie        = errors.New("no movie found")
+	videoExts         = map[string]struct{}{".mp4": {}, ".mkv": {}, ".avi": {}, ".mov": {}, ".wmv": {}, ".flv": {}, ".ts": {}}
+	minFileSize int64 = 50 * 1024 * 1024 // 50MB
 )
 
-var errNoMovie = errors.New("no movie found")
+/* =========================
+   顶层流程
+========================= */
 
 func (s *Service) ProcessFilm(ctx context.Context) error {
-	fimCtx, err := s.buildFilmContext(ctx)
+	fctx, err := s.buildFilmContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.ProcessFiles(ctx, fimCtx)
-	if err != nil {
+	if _, err := s.scanRoots(ctx, fctx); err != nil {
 		return err
 	}
 
-	err = s.removeMissingFilmFiles(ctx, fimCtx)
-	if err != nil {
+	if err := s.removeMissingFilmFiles(ctx, fctx); err != nil {
 		return err
 	}
-
-	//l.asyncUpdateOwnedMovieNumber()
-	//time.Sleep(time.Second * 10)
-
 	return nil
 }
+
+/* =========================
+   Context 构建
+========================= */
 
 func (s *Service) buildFilmContext(ctx context.Context) (*filmContext, error) {
 	films, err := s.deps.FilmRepo.FindAll(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("FilmRepo.FindAll failed for  %s", err)
+		return nil, fmt.Errorf("FilmRepo.FindAll failed: %w", err)
 	}
 
-	filmExistMap := map[string]*filmExistInfo{}
+	filmExistMap := make(map[string]*filmExistInfo, len(films))
+	allRootFilmMap := make(map[string][]string)
 
-	allRootFilmMap := map[string][]string{}
 	for _, film := range films {
-		filmInfo := &filmExistInfo{
+		filmExistMap[film.MovieName] = &filmExistInfo{
 			Film:       film,
-			NeedRemove: needRemove,
+			RemoveFlag: RemoveYes, // 默认“需要删除”，扫描到文件后会标记为 RemoveNo
 			NeedScan:   film.NeedScanMeta,
 		}
-		filmExistMap[film.MovieName] = filmInfo
 		allRootFilmMap[film.RootDir] = append(allRootFilmMap[film.RootDir], film.MovieName)
 	}
 
-	fCtx := &filmContext{
+	return &filmContext{
 		FilmExistMap: filmExistMap,
 		NameMap:      make(map[string]*sameMovieInfo),
 		FilePathMap:  allRootFilmMap,
 		Processed:    0,
 		Removed:      0,
-	}
-
-	return fCtx, nil
+	}, nil
 }
 
-func (s *Service) markDirFilmsAsExisting(dir string, fCtx *filmContext) {
-	for _, filmName := range fCtx.FilePathMap[dir] {
-		fCtx.FilmExistMap[filmName].NeedRemove = noNeedRemove
+/* =========================
+   遍历根目录
+========================= */
+
+func (s *Service) scanRoots(ctx context.Context, fctx *filmContext) (*ProcessFilmResponse, error) {
+	var (
+		items   []*processFilmDirectorResponse
+		skipped int
+	)
+	for _, root := range s.deps.Config.Film.RootDirs {
+		if err := s.walkOneRoot(ctx, filepath.Clean(root), fctx, &items, &skipped); err != nil {
+			return nil, err
+		}
+	}
+	return &ProcessFilmResponse{
+		Total:   len(items),
+		Items:   items,
+		Skipped: skipped,
+	}, nil
+}
+
+func (s *Service) walkOneRoot(
+	ctx context.Context,
+	root string,
+	fctx *filmContext,
+	items *[]*processFilmDirectorResponse,
+	skipped *int,
+) error {
+	root = strings.TrimRight(root, string(filepath.Separator))
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
+		// 1) 支持取消
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		// 2) 根级不可读：视作“目录存在”，避免误删
+		if walkErr != nil {
+			if dirDepth(root, p) == 0 {
+				s.markDirFilmsAsExisting(p, fctx)
+				return nil
+			}
+			return walkErr
+		}
+
+		// 3) 目录跳过
+		if d.IsDir() {
+			return nil
+		}
+
+		// 4) 文件大小阈值
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		if info.Size() < minFileSize {
+			*skipped++
+			return nil
+		}
+
+		// 5) 非视频：仅告警
+		if !isVideo(p) {
+			s.deps.Log.Warnf("non-video file encountered: %s", p)
+			return nil
+		}
+
+		// 6) 处理单个视频
+		if _, err := s.handleOneVideo(ctx, root, p, fctx, info); err != nil {
+			return err
+		}
+
+		// 7) 进度日志
+		fctx.Processed++
+		if fctx.Processed%100 == 0 {
+			s.deps.Log.Infof("处理完成第 %v 部 film", fctx.Processed)
+		}
+		return nil
+	})
+}
+
+/* =========================
+   单文件流水线
+========================= */
+
+func (s *Service) handleOneVideo(ctx context.Context, root, fullPath string, fctx *filmContext, info os.FileInfo) (*types.Film, error) {
+	fileName := info.Name()
+	movieName := extractMovieName(fileName)
+
+	// 同名告警
+	s.handleMovieNameConflict(movieName, fctx, fullPath)
+
+	// 取 Movie
+	movie, err := s.pickMovieByName(ctx, movieName)
+	if err != nil {
+		return nil, err
+	}
+
+	// 目录链
+	dirMeta, err := s.processFilmDirectory(ctx, fullPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 组装基础 Film
+	film := s.buildFilmSkeleton(
+		movie, movieName, fileName, root, fullPath, info.Size(), dirMeta,
+	)
+
+	// 补全元数据（继承 or 扫描）
+	if err := s.fillFilmMeta(ctx, film, fullPath, fctx); err != nil {
+		return nil, err
+	}
+
+	// Upsert
+	_, status, err := s.deps.FilmRepo.UpsertFilm(ctx, film)
+	if err != nil {
+		return nil, err
+	}
+	if status == consts.UpsertInserted {
+		s.deps.Log.Info("Added Film:", film.MovieName)
+	}
+
+	// 失效缓存
+	s.movieSvc.InvalidateMovieType(ctx, film.MovieJavId)
+	return film, nil
+}
+
+func (s *Service) pickMovieByName(ctx context.Context, name string) (*types.Movie, error) {
+	movies, err := s.deps.MovieRepo.FindMoviesByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if len(movies) == 0 {
+		return nil, errNoMovie
+	}
+	if len(movies) > 1 {
+		s.deps.Log.Warnf("存在相同名字的电影：%s", name)
+	}
+	return movies[0], nil
+}
+
+func (s *Service) buildFilmSkeleton(
+	m *types.Movie,
+	movieName, fileName, root, fullPath string,
+	size int64,
+	d *processFilmDirectorResponse,
+) *types.Film {
+	birth := getFileBirthTime(fullPath)
+	return &types.Film{
+		MovieJavId:    m.JavId,
+		MovieName:     movieName,
+		FileName:      fileName,
+		DirectoryId:   d.DirectoryID,
+		RootDir:       root,
+		FullDir:       filepath.Dir(fullPath),
+		Dir1Id:        d.Dir1Id,
+		Dir2Id:        d.Dir2Id,
+		Dir3Id:        d.Dir3Id,
+		Dir4Id:        d.Dir4Id,
+		Alias:         s.filmAlias(m, size, birth),
+		Size:          size,
+		HasSub:        determineFilmSubStatus(fullPath),
+		SelfMake:      determineFilmSelfMakeStatus(fullPath),
+		HasMask:       determineFilmEraseStatus(fullPath),
+		NeedScanMeta:  consts.FilmMetaDataNoNeedScan,
+		IsRemoved:     consts.FilmIsNotRemoved,
+		RemoveTime:    0,
+		ReleasingDate: m.ReleasingDate,
+		BirthTime:     birth,
 	}
 }
 
-var videoExts = map[string]struct{}{
-	".mp4": {}, ".mkv": {}, ".avi": {}, ".mov": {}, ".wmv": {}, ".flv": {}, ".ts": {},
+func (s *Service) fillFilmMeta(ctx context.Context, f *types.Film, fullPath string, fctx *filmContext) error {
+	// 继承历史计数
+	if old, ok := fctx.FilmExistMap[f.MovieName]; ok {
+		f.ScTimes = old.Film.ScTimes
+		f.LastScTime = old.Film.LastScTime
+		f.ComeTimes = old.Film.ComeTimes
+	}
+
+	// 决定是否扫描
+	if s.shouldScanMetadata(f.MovieName, fctx) {
+		return s.scanAndAttachMetadata(f, fullPath)
+	}
+
+	// 不需要扫描：复用旧值
+	if old, ok := fctx.FilmExistMap[f.MovieName]; ok {
+		f.Width = old.Film.Width
+		f.Height = old.Film.Height
+		f.BitRate = old.Film.BitRate
+		f.Duration = old.Film.Duration
+		f.FrameAverage = old.Film.FrameAverage
+	}
+	return nil
+}
+
+/* =========================
+   清理：标记缺失文件
+========================= */
+
+func (s *Service) removeMissingFilmFiles(ctx context.Context, fctx *filmContext) error {
+	for _, fi := range fctx.FilmExistMap {
+		if fi.RemoveFlag == RemoveNo {
+			continue
+		}
+		film, err := s.deps.FilmRepo.FindOne(ctx, fi.Film.Id)
+		if err != nil {
+			return fmt.Errorf("查找 Film 条目失败: %w", err)
+		}
+		film.IsRemoved = consts.FilmIsRemoved
+		film.RemoveTime = time.Now().Unix()
+		if _, _, err := s.deps.FilmRepo.UpsertFilm(ctx, film); err != nil {
+			return fmt.Errorf("更新 Film 条目失败: %w", err)
+		}
+		s.movieSvc.InvalidateMovieType(ctx, film.MovieJavId)
+		s.deps.Log.Infof("Film 条目删除成功: %s", fi.Film.MovieName)
+	}
+	return nil
+}
+
+/* =========================
+   小工具 & 规则
+========================= */
+
+func (s *Service) markDirFilmsAsExisting(dir string, fctx *filmContext) {
+	for _, name := range fctx.FilePathMap[dir] {
+		if node, ok := fctx.FilmExistMap[name]; ok {
+			node.RemoveFlag = RemoveNo
+		}
+	}
 }
 
 func isVideo(path string) bool {
@@ -131,183 +367,17 @@ func dirDepth(root, path string) int {
 	return strings.Count(rel, string(filepath.Separator)) + 1
 }
 
-const minFileSize int64 = 50 * 1024 * 1024 // 50MB
-
-func (s *Service) ProcessFiles(ctx context.Context, fCtx *filmContext) (*ProcessFilmResponse, error) {
-	var items []*processFilmDirectorResponse
-	skipped := 0
-
-	for _, root := range s.deps.Config.Film.RootDirs {
-		root = filepath.Clean(root)
-		root = strings.TrimRight(root, string(filepath.Separator))
-		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-			}
-
-			depth := dirDepth(root, p)
-
-			if walkErr != nil {
-				if depth == 0 {
-					s.markDirFilmsAsExisting(p, fCtx)
-					return nil
-				} else {
-					return walkErr
-				}
-			}
-
-			if d.IsDir() {
-				return nil
-			}
-
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			if info.Size() < minFileSize {
-				skipped++
-				return nil
-			}
-
-			if !isVideo(p) {
-				s.deps.Log.Warnf("non-video file encountered: %s", p)
-				return nil
-			}
-
-			_, err = s.makeAndInsertFilm(ctx, d, root, p, fCtx)
-			if err != nil {
-				return err
-			}
-
-			fCtx.Processed++
-			if fCtx.Processed%100 == 0 {
-				s.deps.Log.Infof("处理完成第 %v部film", fCtx.Processed)
-			}
-			return nil
-		})
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &ProcessFilmResponse{
-		Total:   len(items),
-		Items:   items,
-		Skipped: skipped,
-	}, nil
-}
-
-func (s *Service) makeAndInsertFilm(ctx context.Context, e os.DirEntry, rootDir, fullPath string, fCtx *filmContext) (interface{}, error) {
-	fileInfo, err := e.Info()
-	if err != nil {
-		return nil, err
-	}
-	fileName := fileInfo.Name()
-	filmSize := fileInfo.Size()
-
-	movieName := extractMovieName(fileName)
-	s.handleMovieNameConflict(movieName, fCtx, fullPath)
-	movies, err := s.deps.MovieRepo.FindMoviesByName(ctx, movieName)
-	if err != nil {
-		return 0, err
-	}
-	if len(movies) == 0 {
-		return 0, errNoMovie
-	}
-	if len(movies) > 1 {
-		s.deps.Log.Warnf("存在相同名字的电影：%s", movieName)
-	}
-	movie := movies[0]
-
-	resp, err := s.processFilmDirectory(ctx, fullPath)
-	if err != nil {
-		return nil, err
-	}
-
-	filmBirthTime := getFileBirthTime(fullPath)
-	fullDir := filepath.Dir(fullPath)
-
-	film := &types.Film{
-		MovieJavId:   movie.JavId,
-		MovieName:    movieName,
-		FileName:     fileName,
-		DirectoryId:  resp.DirectoryID,
-		RootDir:      rootDir,
-		FullDir:      fullDir,
-		Dir1Id:       resp.Dir1Id,
-		Dir2Id:       resp.Dir2Id,
-		Dir3Id:       resp.Dir3Id,
-		Dir4Id:       resp.Dir4Id,
-		Alias:        s.filmAlias(movie, filmSize, filmBirthTime),
-		Size:         filmSize,
-		HasSub:       determineFilmSubStatus(fullPath),
-		SelfMake:     determineFilmSelfMakeStatus(fullPath),
-		HasMask:      determineFilmEraseStatus(fullPath),
-		NeedScanMeta: consts.FilmMetaDataNoNeedScan,
-		IsRemoved:    consts.FilmIsNotRemoved,
-		RemoveTime:   0,
-		BirthTime:    filmBirthTime,
-	}
-
-	err = s.processFilmMetadata(film, fullPath, fCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	_, upserted, err := s.deps.FilmRepo.UpsertFilm(ctx, film)
-	if err != nil {
-		return nil, err
-	}
-	if upserted == types.UpsertInserted {
-		s.deps.Log.Info("Added Film:", film.MovieName)
-	}
-
-	s.movieSvc.InvalidateMovieType(ctx, film.MovieJavId)
-
-	return nil, nil
-}
-
-func (s *Service) removeMissingFilmFiles(ctx context.Context, fCtx *filmContext) error {
-
-	for _, filmInfo := range fCtx.FilmExistMap {
-		if filmInfo.NeedRemove == noNeedRemove {
-			continue
-		}
-
-		film, err := s.deps.FilmRepo.FindOne(ctx, filmInfo.Film.Id)
-		if err != nil {
-			return fmt.Errorf("查找 Film 条目失败: %w", err)
-		}
-
-		film.IsRemoved = consts.FilmIsRemoved
-		film.RemoveTime = time.Now().Unix()
-		_, _, err = s.deps.FilmRepo.UpsertFilm(ctx, film)
-		if err != nil {
-			return fmt.Errorf("更新 Film 条目失败: %w", err)
-		}
-
-		s.movieSvc.InvalidateMovieType(ctx, film.MovieJavId)
-
-		s.deps.Log.Infof("Film 条目删除成功: %s", filmInfo.Film.MovieName)
-	}
-	return nil
-}
-
 func extractMovieName(fileName string) string {
 	head, _, _ := strings.Cut(fileName, "_")
 	return head
 }
 
-func (s *Service) handleMovieNameConflict(movieName string, fCtx *filmContext, fullPath string) {
-
-	if existingName, exists := fCtx.NameMap[movieName]; !exists {
-		fCtx.NameMap[movieName] = &sameMovieInfo{MovieName: movieName, MoviePath: fullPath}
+func (s *Service) handleMovieNameConflict(movieName string, fctx *filmContext, fullPath string) {
+	if existing, ok := fctx.NameMap[movieName]; !ok {
+		fctx.NameMap[movieName] = &sameMovieInfo{MovieName: movieName, MoviePath: fullPath}
 	} else {
-		s.deps.Log.Warnf("Same movie %v, Path 1: %s", existingName, fCtx.NameMap[movieName].MoviePath)
-		s.deps.Log.Warnf("Same movie %v, Path 2: %s", existingName, fullPath)
+		s.deps.Log.Warnf("Same movie %v, Path 1: %s", existing, existing.MoviePath)
+		s.deps.Log.Warnf("Same movie %v, Path 2: %s", existing, fullPath)
 	}
 }
 
@@ -328,7 +398,8 @@ func determineFilmSelfMakeStatus(filmPath string) int64 {
 func determineFilmEraseStatus(filmPath string) int64 {
 	if strings.Contains(filmPath, "_era") {
 		return consts.FilmErased
-	} else if strings.Contains(filmPath, "_nomsk") {
+	}
+	if strings.Contains(filmPath, "_nomsk") {
 		return consts.FilmNoMosaic
 	}
 	return consts.FilmNotErased
@@ -337,74 +408,54 @@ func determineFilmEraseStatus(filmPath string) int64 {
 func getFileBirthTime(path string) int64 {
 	info, err := os.Stat(path)
 	if err != nil {
-		return time.Now().Unix() // 兜底返回当前时间
+		return time.Now().Unix()
 	}
-
-	// 尝试系统调用级别的创建时间（仅 macOS / BSD 有效）
+	// macOS/BSD: Ctimespec 通常是创建时间；Linux上多为“状态变更时间”，已加修改时间兜底
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		// macOS: Ctimespec 是创建时间；Linux 上只是状态变更时间
 		if stat.Ctimespec.Sec > 0 {
 			return stat.Ctimespec.Sec
 		}
 	}
-
-	// 兜底：用修改时间
 	return info.ModTime().Unix()
 }
 
-func (s *Service) filmAlias(movie *types.Movie, filmSize int64, birthTime int64) string {
-	strs := strings.Split(movie.Name, "-")
-	if len(strs) < 2 {
+func (s *Service) filmAlias(movie *types.Movie, filmSize, birthTime int64) string {
+	parts := strings.Split(movie.Name, "-")
+	if len(parts) < 2 {
 		s.deps.Log.Warnf("MovieName 错误：%s", movie.Name)
 		return ""
 	}
-
 	return fmt.Sprintf("%04d-%v_%s_%v",
-		movie.PrefixId, strs[1],
+		movie.PrefixId, parts[1],
 		time.Unix(birthTime, 0).Format(time.DateOnly),
-		filmSize)
+		filmSize,
+	)
 }
 
-func (s *Service) shouldScanMetadata(movieName string, fCtx *filmContext) bool {
-	fm, exists := fCtx.FilmExistMap[movieName]
-	if exists {
-		fm.NeedRemove = noNeedRemove
+func (s *Service) shouldScanMetadata(movieName string, fctx *filmContext) bool {
+	if fm, ok := fctx.FilmExistMap[movieName]; ok {
+		fm.RemoveFlag = RemoveNo
+		return fm.NeedScan != consts.FilmMetaDataNoNeedScan
 	}
-	return !exists || fm.NeedScan != consts.FilmMetaDataNoNeedScan
+	return true
 }
 
-func (s *Service) scanAndAttachMetadata(film *types.Film, filmPath string) error {
+func (s *Service) scanAndAttachMetadata(f *types.Film, filmPath string) error {
 	vm, err := filmMetaData(filmPath)
 	if err != nil {
 		return fmt.Errorf("解析元数据失败: %w", err)
 	}
-
-	film.Width = vm.Width
-	film.Height = vm.Height
-	film.BitRate = vm.BitRate
-	film.Duration = vm.Duration
-	film.FrameAverage = vm.FrameAverage
-
+	f.Width = vm.Width
+	f.Height = vm.Height
+	f.BitRate = vm.BitRate
+	f.Duration = vm.Duration
+	f.FrameAverage = vm.FrameAverage
 	return nil
 }
 
-func (s *Service) processFilmMetadata(film *types.Film, filmPath string, fCtx *filmContext) error {
-	filmOld, exists := fCtx.FilmExistMap[film.MovieName]
-	if exists {
-		film.ScTimes = filmOld.Film.ScTimes
-		film.LastScTime = filmOld.Film.LastScTime
-		film.ComeTimes = filmOld.Film.ComeTimes
-	}
-
-	if s.shouldScanMetadata(film.MovieName, fCtx) {
-		return s.scanAndAttachMetadata(film, filmPath)
-	} else if exists {
-		film.Width = filmOld.Film.Width
-		film.Height = filmOld.Film.Height
-		film.BitRate = filmOld.Film.BitRate
-		film.Duration = filmOld.Film.Duration
-		film.FrameAverage = filmOld.Film.FrameAverage
-	}
-
-	return nil
-}
+/* =========================
+   注意：以下外部依赖
+   - processFilmDirectory(ctx, fullPath) (*processFilmDirectorResponse, error)
+   - processFilmDirectorResponse{ DirectoryID, Dir1Id..Dir4Id }
+   以上函数/结构体在你现有工程的目录模块中
+========================= */

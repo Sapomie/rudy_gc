@@ -4,6 +4,7 @@ package logic
 import (
 	"errors"
 	"fmt"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
 
@@ -113,10 +114,10 @@ func (l *CrawlLogic) handleSeed(s *types.Seed) error {
 	}
 
 	// 回写进度：ok/empty
-	status := types.SeedStatusOK
+	status := consts.SeedStatusOK
 	errMsg := ""
 	if newPageNow < s.PageNow {
-		status = types.SeedStatusEmpty
+		status = consts.SeedStatusEmpty
 	}
 	if err := l.deps.SeedRepo.UpdateProgress(
 		l.ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg,
@@ -176,7 +177,7 @@ func (l *CrawlLogic) fetchAndSaveInventory(nameType int64, keyword, queryBy stri
 	// 落库 raw_inventory（Upsert）
 	inv := &types.Inventory{
 		Name:          name,
-		NeedScan:      types.InventoryNeedScan,
+		NeedScan:      consts.InventoryNeedScan,
 		Keyword:       keyword,
 		Parent:        queryBy,
 		Page:          page,

@@ -13,6 +13,6 @@ type Service struct {
 func NewFilmService(deps *svc.Deps) *Service {
 	return &Service{
 		deps:     deps,
-		movieSvc: movie.New(deps),
+		movieSvc: movie.NewMovieService(deps),
 	}
 }

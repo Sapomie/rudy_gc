@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"rudy_gc/pkg/ptr"
 	"strings"
@@ -50,7 +51,7 @@ var (
 func (l *CrawlLogic) TranslateTitle() error {
 	var count int64
 
-	items, err := l.deps.ItemRepo.FindByTranslateStatus(l.ctx, types.ItemChineseNone)
+	items, err := l.deps.ItemRepo.FindByTranslateStatus(l.ctx, consts.ItemChineseNone)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func (l *CrawlLogic) TranslateTitle() error {
 			// 没有可翻译文本，按“失败”记（也可按需记 OK）
 			now := time.Now().Unix()
 			_ = l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, item.JavId, types.ItemPatch{
-				HasChinese: ptr.Int64(types.ItemChineseError),
+				HasChinese: ptr.Int64(consts.ItemChineseError),
 				UpdatedOn:  &now,
 			})
 			continue
@@ -113,19 +114,19 @@ func (l *CrawlLogic) TranslateTitle() error {
 				}
 
 				l.movieSvc.InvalidateMovieType(l.ctx, movie.JavId)
-				translationStatus = types.ItemChineseOK
+				translationStatus = consts.ItemChineseOK
 			} else {
-				translationStatus = types.ItemChineseError
+				translationStatus = consts.ItemChineseError
 			}
 
 		case errors.Is(err, errSensitive):
 			l.deps.Log.Warnf("敏感词：Name=%s, Title=%s", movie.Name, movie.Title)
-			translationStatus = types.ItemChineseSensitive
+			translationStatus = consts.ItemChineseSensitive
 
 		default:
 			// 非敏感的其它错误：记录并继续下一个（不返回整体失败）
 			l.deps.Log.Warnf("翻译失败 %s: %v", movie.Name, err)
-			translationStatus = types.ItemChineseError
+			translationStatus = consts.ItemChineseError
 		}
 
 		now := time.Now().Unix()

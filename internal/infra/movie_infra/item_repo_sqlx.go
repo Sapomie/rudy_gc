@@ -16,6 +16,8 @@ type ItemRepoSqlx struct {
 	m moviex.EItemModel
 }
 
+const defaultItemLimit int64 = 1_000_000
+
 func NewItemRepoSqlx(m moviex.EItemModel) spider_repo.ItemRepo {
 	return &ItemRepoSqlx{m: m}
 }
@@ -43,54 +45,6 @@ func (r *ItemRepoSqlx) TryInsert(ctx context.Context, it *types.Item) (bool, err
 		UpdatedOn:           it.UpdatedOn,
 	})
 	return ierr == nil, ierr
-}
-
-func (r *ItemRepoSqlx) FindByDetailStatus(ctx context.Context, status int64) ([]*types.Item, error) {
-	rows, err := r.m.ListByDetailStatus(ctx, status, 1000000)
-	if err != nil {
-		return nil, fmt.Errorf("ListByDetailStatus(%d): %w", status, err)
-	}
-	out := make([]*types.Item, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, itemRowToType(row))
-	}
-	return out, nil
-}
-
-func (r *ItemRepoSqlx) FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error) {
-	rows, err := r.m.ListByDetailNeedScan(ctx, needScan, 1000000)
-	if err != nil {
-		return nil, fmt.Errorf("ListByDetailNeedScan(%d): %w", needScan, err)
-	}
-	out := make([]*types.Item, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, itemRowToType(row))
-	}
-	return out, nil
-}
-
-func (r *ItemRepoSqlx) FindByDownloadCoverStatus(ctx context.Context, downloadCoverStatus int64) ([]*types.Item, error) {
-	rows, err := r.m.ListByDownloadCoverStatus(ctx, downloadCoverStatus, 1000000)
-	if err != nil {
-		return nil, fmt.Errorf("ListByDownloadCoverStatus(%d): %w", downloadCoverStatus, err)
-	}
-	out := make([]*types.Item, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, itemRowToType(row))
-	}
-	return out, nil
-}
-
-func (r *ItemRepoSqlx) FindByTranslateStatus(ctx context.Context, translateStatus int64) ([]*types.Item, error) {
-	rows, err := r.m.ListByTranslateStatus(ctx, translateStatus, 1000000)
-	if err != nil {
-		return nil, fmt.Errorf("ListByTranslateStatus(%d): %w", translateStatus, err)
-	}
-	out := make([]*types.Item, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, itemRowToType(row))
-	}
-	return out, nil
 }
 
 func (r *ItemRepoSqlx) UpdateDetailMeta(
@@ -127,32 +81,12 @@ func (r *ItemRepoSqlx) UpdateDetailMeta(
 	return r.m.Update(ctx, row)
 }
 
-func itemRowToType(row *moviex.EItem) *types.Item {
-	if row == nil {
-		return nil
+func (r *ItemRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*types.Item, error) {
+	row, err := r.m.FindOneByJavId(ctx, javId)
+	if err != nil {
+		return nil, err
 	}
-	return &types.Item{
-		Id:                  row.Id,
-		Name:                row.Name,
-		JavId:               row.JavId,
-		Prefix:              row.Prefix,
-		SearchType:          row.SearchType,
-		CoverUrl:            row.CoverUrl,
-		SearchBy:            row.SearchBy,
-		HasDetail:           row.HasDetail,
-		HasDownloadCover:    row.HasDownloadCover,
-		HasChinese:          row.HasChinese,
-		DetailNeedScan:      row.DetailNeedScan,
-		DetailBirthTime:     row.DetailBirthTime,
-		LastQueryDetailTime: row.LastQueryDetailTime,
-		CreatedOn:           row.CreatedOn,
-		UpdatedOn:           row.UpdatedOn,
-	}
-}
-
-// ✅ 新增：直接透传 modelx 的方法
-func (r *ItemRepoSqlx) FindOneByJavId(ctx context.Context, javId string) (*moviex.EItem, error) {
-	return r.m.FindOneByJavId(ctx, javId)
+	return itemRowToType(row), nil
 }
 
 // internal/infra/spider_infra/item_repo_sqlx.go
@@ -198,4 +132,71 @@ func (r *ItemRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, p
 		return r.m.Update(ctx, row) // go-zero 自动清缓存
 	}
 	return nil
+}
+
+func (r *ItemRepoSqlx) FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error) {
+	return r.listBy(ctx, "ListByDetailNeedScan", r.m.ListByDetailNeedScan, needScan)
+}
+
+func (r *ItemRepoSqlx) FindByDownloadCoverStatus(ctx context.Context, downloadCoverStatus int64) ([]*types.Item, error) {
+	return r.listBy(ctx, "ListByDownloadCoverStatus", r.m.ListByDownloadCoverStatus, downloadCoverStatus)
+}
+
+func (r *ItemRepoSqlx) FindByTranslateStatus(ctx context.Context, translateStatus int64) ([]*types.Item, error) {
+	return r.listBy(ctx, "ListByTranslateStatus", r.m.ListByTranslateStatus, translateStatus)
+}
+
+func (r *ItemRepoSqlx) FindByDetailStatus(ctx context.Context, status int64) ([]*types.Item, error) {
+	return r.listBy(ctx, "ListByDetailStatus", r.m.ListByDetailStatus, status)
+}
+
+// 把 modelx 行转成 types
+func mapItems(rows []*moviex.EItem) []*types.Item {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]*types.Item, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, itemRowToType(row))
+	}
+	return out
+}
+
+// 通用封装：调用指定的列表函数 + 统一错误包装 + 转型
+func (r *ItemRepoSqlx) listBy(
+	ctx context.Context,
+	label string,
+	fn func(context.Context, int64, int64) ([]*moviex.EItem, error),
+	val int64,
+) ([]*types.Item, error) {
+	rows, err := fn(ctx, val, defaultItemLimit)
+	if err != nil {
+		return nil, fmt.Errorf("%s(%d): %w", label, val, err)
+	}
+	return mapItems(rows), nil
+}
+
+// ===== 你的对外方法（变得很简洁）=====
+
+func itemRowToType(row *moviex.EItem) *types.Item {
+	if row == nil {
+		return nil
+	}
+	return &types.Item{
+		Id:                  row.Id,
+		Name:                row.Name,
+		JavId:               row.JavId,
+		Prefix:              row.Prefix,
+		SearchType:          row.SearchType,
+		CoverUrl:            row.CoverUrl,
+		SearchBy:            row.SearchBy,
+		HasDetail:           row.HasDetail,
+		HasDownloadCover:    row.HasDownloadCover,
+		HasChinese:          row.HasChinese,
+		DetailNeedScan:      row.DetailNeedScan,
+		DetailBirthTime:     row.DetailBirthTime,
+		LastQueryDetailTime: row.LastQueryDetailTime,
+		CreatedOn:           row.CreatedOn,
+		UpdatedOn:           row.UpdatedOn,
+	}
 }

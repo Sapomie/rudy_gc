@@ -16,7 +16,7 @@ type MovieHTMLHandler struct {
 }
 
 func NewMovieHTMLHandler(deps *svc.Deps) *MovieHTMLHandler {
-	return &MovieHTMLHandler{svc: movie.New(deps)}
+	return &MovieHTMLHandler{svc: movie.NewMovieService(deps)}
 }
 
 func (h *MovieHTMLHandler) ListMovieCardLite(c *gin.Context) {

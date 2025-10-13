@@ -65,9 +65,9 @@ func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map
 	castAgg := make(map[string]movieScInfo, 1024)
 	for movieJavId := range uniqueMovieIDs {
 		// 3.1 查一次完整电影（只按唯一电影）
-		movieType, err := l.deps.MovieTypeCache.GetMovieType(ctx, movieJavId)
+		movieType, err := l.movieSvc.GetMovieType(ctx, movieJavId)
 		if err != nil {
-			return fmt.Errorf("FindMovieCompleteByJavId %s: %w", movieJavId, err)
+			return fmt.Errorf("MovieTypeCache.GetMovieType err %s: %w", movieJavId, err)
 		}
 
 		// 3.2 取该电影的聚合结果
@@ -109,7 +109,7 @@ func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map
 	for movieJavId, info := range movieAgg {
 		vFilm, err := l.deps.FilmRepo.FindOneByMovieJavId(ctx, movieJavId)
 		if err != nil {
-			return fmt.Errorf("MinfoRepo.FindOneByJavId %s: %w", movieJavId, err)
+			return fmt.Errorf("FilmRepo.FindOneByMovieJavId %s: %w", movieJavId, err)
 		}
 		vFilm.ScTimes = info.ScTimes
 		vFilm.ComeTimes = info.ComeTimes

@@ -30,13 +30,14 @@ func (c *MovieTypeBizCache) key(javId string) string {
 }
 
 func (c *MovieTypeBizCache) GetMovieType(ctx context.Context, javId string) (*types.MovieType, error) {
-	val, err := c.rdb.Get(c.key(javId))
+	val, err := c.rdb.GetCtx(ctx, c.key(javId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil
 		}
 		return nil, err
 	}
+
 	var mt types.MovieType
 	if err := json.Unmarshal([]byte(val), &mt); err != nil {
 		return nil, err
@@ -52,10 +53,10 @@ func (c *MovieTypeBizCache) SetMovieType(ctx context.Context, javId string, v *t
 	if err != nil {
 		return err
 	}
-	return c.rdb.Setex(c.key(javId), string(bs), int(ttl/time.Second))
+	return c.rdb.SetexCtx(ctx, c.key(javId), string(bs), int(ttl/time.Second))
 }
 
 func (c *MovieTypeBizCache) DelMovieType(ctx context.Context, javId string) error {
-	_, err := c.rdb.Del(c.key(javId))
+	_, err := c.rdb.DelCtx(ctx, c.key(javId))
 	return err
 }

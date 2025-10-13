@@ -17,7 +17,7 @@ func (l *CrawlLogic) ProcessBestinvRank() error {
 	log := logx.WithContext(l.ctx)
 
 	// 取出需要排名检查的 bestinv
-	ids, err := l.deps.BestinvRepo.ListIDsByRankCheck(l.ctx, types.BestinvNeedRankCheck, 1000)
+	ids, err := l.deps.BestinvRepo.ListIDsByRankCheck(l.ctx, consts.BestinvNeedRankCheck, 1000)
 	if err != nil {
 		return fmt.Errorf("查询需要排名检查的 bestinv 失败: %w", err)
 	}

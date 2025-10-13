@@ -1,17 +1,5 @@
 package types
 
-// NeedScan：1=需要扫描, 2=不需要扫描
-const (
-	InventoryNeedScan   int64 = 1 + iota // 1
-	InventoryNoNeedScan                  // 2
-)
-
-// Category：1=Prefix, 2=Label
-const (
-	InventoryCategoryByPrefix int64 = 1 + iota // 1
-	InventoryCategoryByLabel                   // 2
-)
-
 // Inventory 供业务层/仓储层使用的领域模型（与 modelx.DInventory 一一对应）
 type Inventory struct {
 	Id            int64

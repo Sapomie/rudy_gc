@@ -8,6 +8,6 @@ type Service struct {
 	deps *svc.Deps
 }
 
-func New(deps *svc.Deps) *Service {
+func NewMovieService(deps *svc.Deps) *Service {
 	return &Service{deps}
 }

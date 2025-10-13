@@ -3,6 +3,7 @@ package logic
 
 import (
 	"fmt"
+	"rudy_gc/internal/consts"
 	"rudy_gc/pkg/ptr"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 
 func (l *CrawlLogic) ParseDetails() error {
 	// 查找需要解析的 Item
-	items, err := l.deps.ItemRepo.FindByDetailNeedScan(l.ctx, types.ItemDetailStatusNeedScan)
+	items, err := l.deps.ItemRepo.FindByDetailNeedScan(l.ctx, consts.ItemDetailStatusNeedScan)
 	if err != nil {
 		return fmt.Errorf("查询待解析的 Item 失败: %w", err)
 	}
@@ -36,7 +37,7 @@ func (l *CrawlLogic) ParseDetails() error {
 		// 更新 item.DetailNeedScan -> 已解析
 		now := time.Now().Unix()
 		patch := types.ItemPatch{
-			DetailNeedScan: ptr.Int64(types.ItemDetailStatusNoNeedScan),
+			DetailNeedScan: ptr.Int64(consts.ItemDetailStatusNoNeedScan),
 			UpdatedOn:      &now,
 		}
 		err := l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, it.JavId, patch)

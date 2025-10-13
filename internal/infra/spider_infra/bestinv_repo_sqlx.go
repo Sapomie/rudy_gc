@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"rudy_gc/internal/consts"
 
 	"rudy_gc/data/modelx/spiderx"
 	"rudy_gc/internal/repo/spider_repo"
@@ -65,7 +66,7 @@ func (r *BestinvRepoSqlx) Upsert(ctx context.Context, b *types.Bestinv) error {
 }
 
 func (r *BestinvRepoSqlx) ListNeedScanIDs(ctx context.Context, limit int) ([]int64, error) {
-	ids, err := r.m.ListNeedScanIDs(ctx, types.BestinvNeedScan, int64(limit))
+	ids, err := r.m.ListNeedScanIDs(ctx, consts.BestinvNeedScan, int64(limit))
 	if err != nil {
 		return nil, fmt.Errorf("d_bestinv ListNeedScanIDs: %w", err)
 	}
@@ -100,7 +101,7 @@ func (r *BestinvRepoSqlx) MarkScanned(ctx context.Context, id int64, ts int64) e
 	if err != nil {
 		return err
 	}
-	row.NeedScan = types.BestinvNoNeedScan // 使用你在 internal/types 里定义的常量
+	row.NeedScan = consts.BestinvNoNeedScan // 使用你在 internal/types 里定义的常量
 	row.UpdatedOn = ts
 	return r.m.Update(ctx, row)
 }
@@ -120,7 +121,7 @@ func (r *BestinvRepoSqlx) MarkRankChecked(ctx context.Context, id int64, ts int6
 	}
 
 	// 更新字段
-	row.NeedRankCheck = types.BestinvNoNeedRankCheck
+	row.NeedRankCheck = consts.BestinvNoNeedRankCheck
 	row.UpdatedOn = ts
 
 	if uerr := r.m.Update(ctx, row); uerr != nil {
