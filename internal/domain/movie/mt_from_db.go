@@ -96,7 +96,7 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 		BusUrl:               s.getBusUrl(mv.Name),
 		JacketImg:            murl.JacketImg,
 		Prefix:               prefix.Name,
-		Owned:                consts.MovieTypeNotOwned,
+		Owned:                consts.MovieAll,
 		NeedDownload:         minfo.NeedDownload,
 		EncodeName:           mv.EncodeName,
 	}
@@ -197,12 +197,14 @@ func (s *Service) getGenreNames(ctx context.Context, movieJavId string) ([]strin
 
 func determineOwnership(film *types.Film) int64 {
 	if film.IsRemoved == consts.FilmIsRemoved {
-		return consts.MovieTypeIsRemoved
+		//return consts.MovieTypeIsRemoved
+		return consts.OwnedRemoved
 	}
 	if film.HasSub == consts.FilmHasSub {
-		return consts.MovieTypeOwnedAndHasSub
+		//return consts.MovieTypeOwnedAndHasSub
+		return consts.OwnedHasSubNotRemoved
 	}
-	return consts.MovieTypeOwned
+	return consts.OwnedNoSubNotRemoved
 }
 
 // ====== 工具 ======

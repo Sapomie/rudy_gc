@@ -135,6 +135,7 @@ func (h *MovieHTMLHandler) ListMovieCardHasRank(c *gin.Context) {
 
 func (h *MovieHTMLHandler) ListMovieCardOwned(c *gin.Context) {
 	req := types.ListMovieFullRequest{
+		Owned:   consts.OwnedAllNotRemoved,
 		OrderBy: consts.OrderByBirthTime,
 	}
 

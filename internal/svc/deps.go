@@ -69,6 +69,17 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieModel = moviex.NewAMovieModel(conn, c)
 		minfoModel = moviex.NewBmMinfoModel(conn, c)
 		filmModel  = moviex.NewVFilmModel(conn, c)
+
+		// 新增的 8 个 model
+		labelModel    = moviex.NewAmLabelModel(conn, c)
+		makerModel    = moviex.NewAmMakerModel(conn, c)
+		directorModel = moviex.NewAmDirectorModel(conn, c)
+		prefixModel   = moviex.NewAmPrefixModel(conn, c)
+
+		castModel       = moviex.NewAmCastModel(conn, c)
+		genreModel      = moviex.NewAmGenreModel(conn, c)
+		movieCastModel  = moviex.NewAmrMovieCastModel(conn, c)
+		movieGenreModel = moviex.NewAmrMovieGenreModel(conn, c)
 	)
 
 	// ========== spider (无缓存) ==========
@@ -78,17 +89,18 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		bestRepo      = spider_infra.NewBestinvRepoSqlx(spiderx.NewDBestinvModel(conn))
 		detailRepo    = spider_infra.NewDetailRepoSqlx(spiderx.NewDDetailModel(conn))
 	)
-	// ========== movie (有缓存) ==========
+
+	// ========== movie (有缓存/按你原来保持) ==========
 	var (
 		movieRepo      = movie_infra.NewMovieRepoSqlx(movieModel)
-		castRepo       = movie_infra.NewCastRepoSqlx(moviex.NewAmCastModel(conn, c))
-		genreRepo      = movie_infra.NewGenreRepoSqlx(moviex.NewAmGenreModel(conn, c))
-		directorRepo   = movie_infra.NewDirectorRepoSqlx(moviex.NewAmDirectorModel(conn, c))
-		labelRepo      = movie_infra.NewLabelRepoSqlx(moviex.NewAmLabelModel(conn, c))
-		makerRepo      = movie_infra.NewMakerRepoSqlx(moviex.NewAmMakerModel(conn, c))
-		prefixRepo     = movie_infra.NewPrefixRepoSqlx(moviex.NewAmPrefixModel(conn, c))
-		movieCastRepo  = movie_infra.NewMovieCastRepoSqlx(moviex.NewAmrMovieCastModel(conn, c))
-		movieGenreRepo = movie_infra.NewMovieGenreRepoSqlx(moviex.NewAmrMovieGenreModel(conn, c))
+		castRepo       = movie_infra.NewCastRepoSqlx(castModel)
+		genreRepo      = movie_infra.NewGenreRepoSqlx(genreModel)
+		directorRepo   = movie_infra.NewDirectorRepoSqlx(directorModel)
+		labelRepo      = movie_infra.NewLabelRepoSqlx(labelModel)
+		makerRepo      = movie_infra.NewMakerRepoSqlx(makerModel)
+		prefixRepo     = movie_infra.NewPrefixRepoSqlx(prefixModel)
+		movieCastRepo  = movie_infra.NewMovieCastRepoSqlx(movieCastModel)
+		movieGenreRepo = movie_infra.NewMovieGenreRepoSqlx(movieGenreModel)
 		minfoRepo      = movie_infra.NewMinfoRepoSqlx(minfoModel)
 		murlRepo       = movie_infra.NewMurlRepoSqlx(moviex.NewBmMurlModel(conn, c))
 		itemRepo       = movie_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
@@ -96,9 +108,16 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		cafoRepo       = movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
 		directoryRepo  = film_infra.NewDirectoryRepoSqlx(moviex.NewVDirectoryModel(conn, c))
 		filmRepo       = film_infra.NewFilmRepoSqlx(filmModel)
-		movieListRepo  = movie_infra.NewMovieListRepoSqlx(movieModel, minfoModel, filmModel)
-		glistRepo      = film_infra.NewGListRepoSqlx(moviex.NewGListModel(conn, c))
-		scRepo         = film_infra.NewScRepoSqlx(moviex.NewGScModel(conn, c))
+
+		// 这里传入全部 11 个依赖（am/mi/vf + 8 个额外 model）
+		movieListRepo = movie_infra.NewMovieListRepoSqlx(
+			movieModel, minfoModel, filmModel,
+			labelModel, makerModel, directorModel, prefixModel,
+			castModel, genreModel, movieCastModel, movieGenreModel,
+		)
+
+		glistRepo = film_infra.NewGListRepoSqlx(moviex.NewGListModel(conn, c))
+		scRepo    = film_infra.NewScRepoSqlx(moviex.NewGScModel(conn, c))
 	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
