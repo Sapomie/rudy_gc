@@ -60,7 +60,7 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	needM := needMinfo(req)
 	needF := needVFilm(req)
 
-	// 如果包含 CastNames/GenreNames（多对多），禁止走 onlyA 快速路径
+	// 含 M2M（CastNames/GenreNames）时，不允许 onlyA 快速路径
 	hasM2M := req.CastNames != "" || req.GenreNames != ""
 
 	onlyA := needA && !needM && !needF && !hasM2M
@@ -131,7 +131,8 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 /* ---------------- 单表直取：COUNT + ORDER/LIMIT ---------------- */
 
 func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
-	w := whereAMovie(req)
+	// 关键修复：whereAMovie 需要能解析 Label/Maker/Director/Prefix 名称 → ID
+	w := whereAMovie(ctx, r, req)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.am.TableName()).Where(w).ToSql()
 	var total int64
@@ -293,6 +294,10 @@ func needAMovie(req *types.ListMovieFullRequest) bool {
 	case consts.OrderByViewerWatched, consts.OrderByCastAgeAsc, consts.OrderByCastAgeDesc, consts.OrderByDetailUpdateTime:
 		return true
 	}
+	// 这四个“单值名称”任意出现，就必须命中 a_movie
+	if req.LabelName != "" || req.MakerName != "" || req.DirectorName != "" || req.PrefixName != "" {
+		return true
+	}
 
 	// 仅发行日过滤/排序：如果 minfo 或 v_film 会被命中，则不强制命中 a_movie
 	releaseOnlyFilter := req.ReleasingDateStart != "" || req.ReleasingDateEnd != ""
@@ -332,8 +337,9 @@ func needVFilm(req *types.ListMovieFullRequest) bool {
 	return false
 }
 
-func whereAMovie(req *types.ListMovieFullRequest) squirrel.And {
+func whereAMovie(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
+	// 发行日 & 年龄
 	if req.ReleasingDateStart != "" {
 		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
 			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
@@ -359,6 +365,36 @@ func whereAMovie(req *types.ListMovieFullRequest) squirrel.And {
 				squirrel.NotEq{"cast_average_age": 0},
 			},
 		)
+	}
+
+	// 单值名称 → ID → 等值过滤；若找不到，则下推 1=0，避免全表扫描
+	if req.LabelName != "" {
+		if id, ok := r.idOfLabel(ctx, req.LabelName); ok {
+			w = append(w, squirrel.Eq{"label_id": id})
+		} else {
+			w = append(w, squirrel.Expr("1=0"))
+		}
+	}
+	if req.MakerName != "" {
+		if id, ok := r.idOfMaker(ctx, req.MakerName); ok {
+			w = append(w, squirrel.Eq{"maker_id": id})
+		} else {
+			w = append(w, squirrel.Expr("1=0"))
+		}
+	}
+	if req.DirectorName != "" {
+		if id, ok := r.idOfDirector(ctx, req.DirectorName); ok {
+			w = append(w, squirrel.Eq{"director_id": id})
+		} else {
+			w = append(w, squirrel.Expr("1=0"))
+		}
+	}
+	if req.PrefixName != "" {
+		if id, ok := r.idOfPrefix(ctx, req.PrefixName); ok {
+			w = append(w, squirrel.Eq{"prefix_id": id})
+		} else {
+			w = append(w, squirrel.Expr("1=0"))
+		}
 	}
 	return w
 }
@@ -393,7 +429,7 @@ func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
 func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
 
-	// ---- Owned 映射 ----
+	// Owned 映射
 	switch req.Owned {
 	case consts.OwnedHasSubNotRemoved:
 		w = append(w,
@@ -410,7 +446,7 @@ func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieF
 	case consts.OwnedRemoved:
 		w = append(w, squirrel.Eq{"is_removed": consts.FilmIsRemoved})
 	case consts.OwnedAll:
-		w = append(w, squirrel.Eq{"1": 1})
+		w = append(w, squirrel.Expr("1=1"))
 	case consts.MovieAll:
 		return squirrel.And{}
 	}
@@ -471,6 +507,7 @@ func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieF
 }
 
 /* ------------------- A. 各表筛选（只查需要的表，无 JOIN） ------------------- */
+
 func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListMovieFullRequest) (map[string]struct{}, error) {
 	w := squirrel.And{}
 
@@ -565,7 +602,6 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 		}
 	}
 
-	// base 可能仍为 nil（表示 a_movie 不限制且没有 M2M 过滤）——上层会与其它表集合取交集
 	return base, nil
 }
 
@@ -884,14 +920,6 @@ func intersectTwo(a, b map[string]struct{}) map[string]struct{} {
 		}
 	}
 	return res
-}
-
-func setToSlice(m map[string]struct{}) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
 }
 
 func intersectNonEmpty(sets ...map[string]struct{}) []string {

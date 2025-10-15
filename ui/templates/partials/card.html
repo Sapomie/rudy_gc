@@ -22,7 +22,7 @@
         <ul class="list-group list-group-flush">
             <li class="list-group-item">
                 <h6 class="mb-1 text-truncate" title="{{ .Title }}">
-                    <a href="/moviesum?pn={{ .Prefix }}" class="stretched-link text-reset text-decoration-none">{{ .Name }}</a>
+                    <a href="/cards?pn={{ .Prefix }}" class="stretched-link text-reset text-decoration-none">{{ .Name }}</a>
                     {{ if and (ne (printf "%v" .Score) "") (ne (printf "%v" .ViewersNumberWatched) "") }}
                     <small class="text-muted ml-2">({{ .ViewersNumberWatched }})</small>
                     {{ end }}
@@ -47,16 +47,16 @@
 
             <li class="list-group-item text-muted">
                 {{ range $i, $g := .Genre }}
-                <a href="/moviesum?gn={{ $g }}" class="badge badge-genre me-1 mb-1">{{ $g }}</a>
+                <a href="/cards?gn={{ $g }}" class="badge badge-genre me-1 mb-1">{{ $g }}</a>
                 {{ end }}
             </li>
 
             <li class="list-group-item">
                 {{ range $i, $c := .Cast }}
-                <a href="/moviesum?cn={{ $c.Name }}" class="person-tag mr-2" title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
+                <a href="/cards?cn={{ $c.Name }}" class="person-tag mr-2" title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
                 {{ end }}
                 {{ if .Director }}
-                <a href="/moviesum?dn={{ .Director }}" class="person-tag ml-2" title="{{ .Director }}">{{ .Director }}</a>
+                <a href="/cards?dn={{ .Director }}" class="person-tag ml-2" title="{{ .Director }}">{{ .Director }}</a>
                 {{ end }}
             </li>
 
