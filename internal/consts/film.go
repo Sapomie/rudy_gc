@@ -31,3 +31,12 @@ const (
 	FilmNoSub = iota + 1
 	FilmHasSub
 )
+
+const (
+	MovieAll              int64 = 1 // amovie里的所有数据，不再在仅限与vfilm里
+	OwnedAll              int64 = 2 // vfilm里的所有,不加条件
+	OwnedAllNotRemoved    int64 = 3 // is_removed=1
+	OwnedHasSubNotRemoved int64 = 4 // has_sub=2, is_removed=1
+	OwnedNoSubNotRemoved  int64 = 5 // has_sub=1, is_removed=1
+	OwnedRemoved          int64 = 6 // is_removed=2
+)
