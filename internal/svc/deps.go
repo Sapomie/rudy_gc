@@ -80,6 +80,9 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		genreModel      = moviex.NewAmGenreModel(conn, c)
 		movieCastModel  = moviex.NewAmrMovieCastModel(conn, c)
 		movieGenreModel = moviex.NewAmrMovieGenreModel(conn, c)
+
+		// ★ 新增：目录 model（供 MovieListRepoSqlx 做 Dir1-4 名称→id 解析）
+		vdirModel = moviex.NewVDirectoryModel(conn, c)
 	)
 
 	// ========== spider (无缓存) ==========
@@ -106,14 +109,15 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		itemRepo       = movie_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
 		rankRepo       = movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
 		cafoRepo       = movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
-		directoryRepo  = film_infra.NewDirectoryRepoSqlx(moviex.NewVDirectoryModel(conn, c))
+		directoryRepo  = film_infra.NewDirectoryRepoSqlx(vdirModel) // 复用 vdirModel
 		filmRepo       = film_infra.NewFilmRepoSqlx(filmModel)
 
-		// 这里传入全部 11 个依赖（am/mi/vf + 8 个额外 model）
+		// ★ 这里把 vdirModel 一并传入（am/mi/vf + 8 个 + vdir = 共 12 个依赖）
 		movieListRepo = movie_infra.NewMovieListRepoSqlx(
 			movieModel, minfoModel, filmModel,
 			labelModel, makerModel, directorModel, prefixModel,
 			castModel, genreModel, movieCastModel, movieGenreModel,
+			vdirModel,
 		)
 
 		glistRepo = film_infra.NewGListRepoSqlx(moviex.NewGListModel(conn, c))

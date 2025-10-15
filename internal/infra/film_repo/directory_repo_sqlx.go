@@ -38,20 +38,20 @@ func (r *DirectoryRepoSqlx) GetOrCreateChainWithLevels(ctx context.Context, part
 	now := time.Now().Unix()
 	var parentID int64 = 0 // 根=0（NOT NULL 约定）
 
+	// 先完整拿到从顶层到叶子的全部 ID
+	fullIDs := make([]int64, 0, len(clean))
 	for i, name := range clean {
 		// 1) 先查 (parent_id, name)
 		if row, err := r.m.FindOneByParentIdName(ctx, parentID, name); err == nil && row != nil {
 			parentID = row.Id
-			if i < 4 {
-				levels[i] = parentID
-			}
+			fullIDs = append(fullIDs, parentID)
 			continue
 		}
 
 		// 2) 不存在则插入
 		depth := int64(i + 1)
 		path := "/" + strings.Join(clean[:i+1], "/")
-		sum := md5.Sum([]byte(path)) // BINARY(16)：存原始 16 字节
+		sum := md5.Sum([]byte(path)) // BINARY(16)
 
 		vd := &moviex.VDirectory{
 			ParentId:  parentID,
@@ -67,9 +67,7 @@ func (r *DirectoryRepoSqlx) GetOrCreateChainWithLevels(ctx context.Context, part
 			// 并发兜底：再查一次
 			if row2, err2 := r.m.FindOneByParentIdName(ctx, parentID, name); err2 == nil && row2 != nil {
 				parentID = row2.Id
-				if i < 4 {
-					levels[i] = parentID
-				}
+				fullIDs = append(fullIDs, parentID)
 				continue
 			}
 			return levels, err
@@ -81,9 +79,17 @@ func (r *DirectoryRepoSqlx) GetOrCreateChainWithLevels(ctx context.Context, part
 			return levels, err
 		}
 		parentID = row3.Id
-		if i < 4 {
-			levels[i] = parentID
-		}
+		fullIDs = append(fullIDs, parentID)
+	}
+
+	// 只返回最后 4 层：右对齐到 levels
+	// levels[3] = 叶子(dir1)，levels[2] = 父(dir2)，levels[1] = 再父(dir3)，levels[0] = 最上层(dir4)
+	k := len(fullIDs)
+	if k > 4 {
+		k = 4
+	}
+	for i := 0; i < k; i++ {
+		levels[4-1-i] = fullIDs[len(fullIDs)-1-i]
 	}
 
 	return levels, nil

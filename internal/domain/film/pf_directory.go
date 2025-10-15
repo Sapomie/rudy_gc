@@ -20,37 +20,48 @@ type processFilmDirectorResponse struct {
 func (s *Service) processFilmDirectory(ctx context.Context, fullPath string) (*processFilmDirectorResponse, error) {
 	parts, file := extractParts(fullPath)
 
-	// 逐级创建/获取目录链（只拿前4层ID）
+	// GetOrCreateChainWithLevels 返回从顶层到叶子的 ID 列表（例如 [root, ..., leaf]）
 	levels, err := s.deps.DirectoryRepo.GetOrCreateChainWithLevels(ctx, parts)
 	if err != nil {
 		return nil, err
 	}
 
-	// 叶子目录ID：levels 中最后一个非 0
+	// 叶子目录（最接近文件的那层）
 	var leafID int64
-	for i := len(levels) - 1; i >= 0; i-- {
-		if levels[i] != 0 {
-			leafID = levels[i]
-			break
-		}
+	if len(levels) > 0 {
+		leafID = levels[len(levels)-1]
+	}
+
+	// 从尾部开始回填（不足则为 0）
+	var dir1, dir2, dir3, dir4 int64
+	n := len(levels)
+	if n >= 1 {
+		dir1 = levels[n-1] // 叶子
+	}
+	if n >= 2 {
+		dir2 = levels[n-2]
+	}
+	if n >= 3 {
+		dir3 = levels[n-3]
+	}
+	if n >= 4 {
+		dir4 = levels[n-4]
 	}
 
 	return &processFilmDirectorResponse{
 		DirectoryID: leafID,
 		FileName:    file,
 		FilePath:    fullPath,
-		Dir1Id:      levels[0],
-		Dir2Id:      levels[1],
-		Dir3Id:      levels[2],
-		Dir4Id:      levels[3],
+		Dir1Id:      dir1, // 文件所在的最后一层目录（叶子）
+		Dir2Id:      dir2, // 上层
+		Dir3Id:      dir3, // 再上一层
+		Dir4Id:      dir4, // 再上一层（靠近根）
 	}, nil
 }
 
 func extractParts(fullPath string) ([]string, string) {
-	// 清理路径（去掉多余的分隔符）
 	fullPath = filepath.Clean(fullPath)
 
-	// 拆出目录和文件名
 	dir := filepath.Dir(fullPath)
 	file := filepath.Base(fullPath)
 
@@ -58,13 +69,12 @@ func extractParts(fullPath string) ([]string, string) {
 	dir = strings.TrimPrefix(dir, string(filepath.Separator))
 	parts := strings.Split(dir, string(filepath.Separator))
 
-	// 过滤空字符串（防止多余 /）
+	// 过滤空字符串
 	res := make([]string, 0, len(parts))
 	for _, p := range parts {
 		if p != "" {
 			res = append(res, p)
 		}
 	}
-
 	return res, file
 }
