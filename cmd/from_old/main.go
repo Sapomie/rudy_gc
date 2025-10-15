@@ -25,13 +25,22 @@ func main() {
 		panic(err)
 	}
 
-	err = migrate.New(deps).MigrateLocalCover()
+	//err = migrate.New(deps).MigrateLocalCover()
 
 	//err = migrate.New(deps).MigrateDetail()
-	//err = migrate.New(deps).MigrateSc()
-	//err = migrate.New(deps).AddScInfoToMinfo()
+	err = migrate.New(deps).MigrateSc()
+	if err != nil {
+		panic(err)
+	}
+	err = migrate.New(deps).MigrateGlist()
+	if err != nil {
+		panic(err)
+	}
+	err = migrate.New(deps).AddScInfoToMinfo()
+	if err != nil {
+		panic(err)
+	}
 
-	//err = migrate.New(deps).MigrateGlist()
 	//err = migrate.New(deps).MigrateFilm()
 	//err = migrate.New(deps).MigrateRank()
 	//err = migrate.New(deps).MigrateTranslationAndNeedDown()

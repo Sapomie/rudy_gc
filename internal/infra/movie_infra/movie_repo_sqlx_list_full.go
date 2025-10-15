@@ -60,7 +60,7 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	needM := needMinfo(req)
 	needF := needVFilm(req)
 
-	// 含 M2M（CastNames/GenreNames）时，不允许 onlyA 快速路径
+	// Cast/Genre 是多对多，一旦出现就不能走 onlyA（因为需要交集）
 	hasM2M := req.CastNames != "" || req.GenreNames != ""
 
 	onlyA := needA && !needM && !needF && !hasM2M
@@ -131,8 +131,39 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 /* ---------------- 单表直取：COUNT + ORDER/LIMIT ---------------- */
 
 func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
-	// 关键修复：whereAMovie 需要能解析 Label/Maker/Director/Prefix 名称 → ID
-	w := whereAMovie(ctx, r, req)
+	w := amovieBaseFilters(req)
+
+	// ★ 在 onlyA 路径补充单值外键过滤（名称→ID）
+	if req.LabelName != "" {
+		if id, ok := r.idOfLabel(ctx, req.LabelName); ok {
+			w = append(w, squirrel.Eq{"label_id": id})
+		} else {
+			return nil, 0, nil
+		}
+	}
+	if req.MakerName != "" {
+		if id, ok := r.idOfMaker(ctx, req.MakerName); ok {
+			w = append(w, squirrel.Eq{"maker_id": id})
+		} else {
+			return nil, 0, nil
+		}
+	}
+	if req.DirectorName != "" {
+		if id, ok := r.idOfDirector(ctx, req.DirectorName); ok {
+			w = append(w, squirrel.Eq{"director_id": id})
+		} else {
+			return nil, 0, nil
+		}
+	}
+	if req.PrefixName != "" {
+		if id, ok := r.idOfPrefix(ctx, req.PrefixName); ok {
+			w = append(w, squirrel.Eq{"prefix_id": id})
+		} else {
+			return nil, 0, nil
+		}
+	}
+
+	w = append(w, amovieOrderGuards(req.OrderBy)...)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.am.TableName()).Where(w).ToSql()
 	var total int64
@@ -182,15 +213,8 @@ func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.L
 }
 
 func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
-	w := whereMinfo(req)
-
-	// 排序前置过滤
-	if req.OrderBy == consts.OrderByHighestRank {
-		w = append(w, squirrel.Expr("highest_rank <> 0"))
-	}
-	if req.OrderBy == consts.OrderByRankDate {
-		w = append(w, squirrel.Expr("days_in_rank <> 0"))
-	}
+	w := minfoBaseFilters(req)
+	w = append(w, minfoOrderGuards(req.OrderBy)...)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.mi.TableName()).Where(w).ToSql()
 	var total int64
@@ -234,7 +258,8 @@ func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.Li
 }
 
 func (r *MovieListRepoSqlx) listFromVFilmOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
-	w := whereVFilm(ctx, r, req)
+	w := vfilmBaseFilters(ctx, r, req)
+	w = append(w, vfilmOrderGuards(req.OrderBy)...)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.vf.TableName()).Where(w).ToSql()
 	var total int64
@@ -283,10 +308,18 @@ func (r *MovieListRepoSqlx) listFromVFilmOnly(ctx context.Context, req *types.Li
 	return out, total, nil
 }
 
-/* ---------------- 命中判断 & WHERE 复用 ---------------- */
+/* ---------------- 命中判断 ---------------- */
 
 func needAMovie(req *types.ListMovieFullRequest) bool {
-	// a_movie 独有：年龄/观看人数/细节更新时间排序
+	// ★ 必修复：Owned==MovieAll 时必须命中 a_movie（走 onlyA 快速路径）
+	if req.Owned == consts.MovieAll {
+		return true
+	}
+	// ★ 一旦有 a_movie 单值外键过滤，必须命中 a_movie
+	if req.DirectorName != "" || req.PrefixName != "" || req.MakerName != "" || req.LabelName != "" {
+		return true
+	}
+	// a_movie 独有
 	if req.CastAgeMin > 0 || req.CastAgeMax > 0 {
 		return true
 	}
@@ -294,12 +327,7 @@ func needAMovie(req *types.ListMovieFullRequest) bool {
 	case consts.OrderByViewerWatched, consts.OrderByCastAgeAsc, consts.OrderByCastAgeDesc, consts.OrderByDetailUpdateTime:
 		return true
 	}
-	// 这四个“单值名称”任意出现，就必须命中 a_movie
-	if req.LabelName != "" || req.MakerName != "" || req.DirectorName != "" || req.PrefixName != "" {
-		return true
-	}
-
-	// 仅发行日过滤/排序：如果 minfo 或 v_film 会被命中，则不强制命中 a_movie
+	// 仅发行日过滤/排序：若其余表会命中则不强制
 	releaseOnlyFilter := req.ReleasingDateStart != "" || req.ReleasingDateEnd != ""
 	releaseOnlyOrder := req.OrderBy == consts.OrderByReleasingDate
 	if releaseOnlyFilter || releaseOnlyOrder {
@@ -323,8 +351,11 @@ func needMinfo(req *types.ListMovieFullRequest) bool {
 }
 
 func needVFilm(req *types.ListMovieFullRequest) bool {
+	if req.Owned == consts.MovieAll {
+		return false
+	}
 	if req.Owned > consts.MovieAll || // OwnedAll/OwnedAllNotRemoved/... 都需要 v_film
-		req.HasSub > 0 || req.ComeTimesMin > 0 ||
+		req.ComeTimesMin > 0 ||
 		req.LastScTimeMin != "" || req.ScTimesMin > 0 || req.ScTimesMax != nil ||
 		req.FilmBirthTimeStart != "" || req.FilmBirthTimeEnd != "" ||
 		req.Dir1 != "" || req.Dir2 != "" || req.Dir3 != "" || req.Dir4 != "" {
@@ -337,9 +368,11 @@ func needVFilm(req *types.ListMovieFullRequest) bool {
 	return false
 }
 
-func whereAMovie(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
+/* ---------------- 共享的“基础过滤构造器” ---------------- */
+
+func amovieBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
-	// 发行日 & 年龄
+	// 发行日
 	if req.ReleasingDateStart != "" {
 		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
 			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
@@ -350,56 +383,23 @@ func whereAMovie(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovie
 			w = append(w, squirrel.LtOrEq{"releasing_date": ts})
 		}
 	}
+	// 年龄（排除 0）
 	if req.CastAgeMin > 0 {
-		w = append(w,
-			squirrel.And{
-				squirrel.GtOrEq{"cast_average_age": int64(req.CastAgeMin*10.0 + 0.5)},
-				squirrel.NotEq{"cast_average_age": 0},
-			},
-		)
+		w = append(w, squirrel.And{
+			squirrel.GtOrEq{"cast_average_age": int64(req.CastAgeMin*10.0 + 0.5)},
+			squirrel.NotEq{"cast_average_age": 0},
+		})
 	}
 	if req.CastAgeMax > 0 {
-		w = append(w,
-			squirrel.And{
-				squirrel.LtOrEq{"cast_average_age": int64(req.CastAgeMax*10.0 + 0.5)},
-				squirrel.NotEq{"cast_average_age": 0},
-			},
-		)
-	}
-
-	// 单值名称 → ID → 等值过滤；若找不到，则下推 1=0，避免全表扫描
-	if req.LabelName != "" {
-		if id, ok := r.idOfLabel(ctx, req.LabelName); ok {
-			w = append(w, squirrel.Eq{"label_id": id})
-		} else {
-			w = append(w, squirrel.Expr("1=0"))
-		}
-	}
-	if req.MakerName != "" {
-		if id, ok := r.idOfMaker(ctx, req.MakerName); ok {
-			w = append(w, squirrel.Eq{"maker_id": id})
-		} else {
-			w = append(w, squirrel.Expr("1=0"))
-		}
-	}
-	if req.DirectorName != "" {
-		if id, ok := r.idOfDirector(ctx, req.DirectorName); ok {
-			w = append(w, squirrel.Eq{"director_id": id})
-		} else {
-			w = append(w, squirrel.Expr("1=0"))
-		}
-	}
-	if req.PrefixName != "" {
-		if id, ok := r.idOfPrefix(ctx, req.PrefixName); ok {
-			w = append(w, squirrel.Eq{"prefix_id": id})
-		} else {
-			w = append(w, squirrel.Expr("1=0"))
-		}
+		w = append(w, squirrel.And{
+			squirrel.LtOrEq{"cast_average_age": int64(req.CastAgeMax*10.0 + 0.5)},
+			squirrel.NotEq{"cast_average_age": 0},
+		})
 	}
 	return w
 }
 
-func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
+func minfoBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
 	if req.StartRankingDate != "" {
 		if ts, ok := parseYMD(req.StartRankingDate); ok {
@@ -412,7 +412,7 @@ func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
 	if req.Word != "" {
 		w = append(w, squirrel.Like{"chinese": "%" + req.Word + "%"})
 	}
-	// 发行日过滤（minfo 冗余）
+	// 发行日（minfo 冗余）
 	if req.ReleasingDateStart != "" {
 		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
 			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
@@ -426,21 +426,14 @@ func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
 	return w
 }
 
-func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
+func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
-
 	// Owned 映射
 	switch req.Owned {
 	case consts.OwnedHasSubNotRemoved:
-		w = append(w,
-			squirrel.Eq{"has_sub": consts.FilmHasSub},
-			squirrel.Eq{"is_removed": consts.FilmIsNotRemoved},
-		)
+		w = append(w, squirrel.Eq{"has_sub": consts.FilmHasSub}, squirrel.Eq{"is_removed": consts.FilmIsNotRemoved})
 	case consts.OwnedNoSubNotRemoved:
-		w = append(w,
-			squirrel.Eq{"has_sub": consts.FilmNoSub},
-			squirrel.Eq{"is_removed": consts.FilmIsNotRemoved},
-		)
+		w = append(w, squirrel.Eq{"has_sub": consts.FilmNoSub}, squirrel.Eq{"is_removed": consts.FilmIsNotRemoved})
 	case consts.OwnedAllNotRemoved:
 		w = append(w, squirrel.Eq{"is_removed": consts.FilmIsNotRemoved})
 	case consts.OwnedRemoved:
@@ -451,9 +444,6 @@ func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieF
 		return squirrel.And{}
 	}
 
-	if req.HasSub > 0 {
-		w = append(w, squirrel.Eq{"has_sub": req.HasSub})
-	}
 	if req.ComeTimesMin > 0 {
 		w = append(w, squirrel.GtOrEq{"come_times": req.ComeTimesMin})
 	}
@@ -478,7 +468,7 @@ func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieF
 			w = append(w, squirrel.LtOrEq{"birth_time": ts})
 		}
 	}
-	// 发行日过滤（v_film 冗余）
+	// 发行日（v_film 冗余）
 	if req.ReleasingDateStart != "" {
 		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
 			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
@@ -502,28 +492,21 @@ func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieF
 	if req.Dir4 != "" {
 		w = append(w, squirrel.Like{"full_dir": "%/" + req.Dir4 + "/%"})
 	}
-
 	return w
+}
+
+/* ---------------- whereXxx：仅返回“基础过滤”以供复用 ---------------- */
+
+func whereAMovie(req *types.ListMovieFullRequest) squirrel.And { return amovieBaseFilters(req) }
+func whereMinfo(req *types.ListMovieFullRequest) squirrel.And  { return minfoBaseFilters(req) }
+func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
+	return vfilmBaseFilters(ctx, r, req)
 }
 
 /* ------------------- A. 各表筛选（只查需要的表，无 JOIN） ------------------- */
 
 func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListMovieFullRequest) (map[string]struct{}, error) {
-	w := squirrel.And{}
-
-	// 发行日 & 年龄
-	if ts, ok := parseYMD(req.ReleasingDateStart); ok {
-		w = append(w, squirrel.GtOrEq{"releasing_date": ts})
-	}
-	if ts, ok := parseYMD(req.ReleasingDateEnd); ok {
-		w = append(w, squirrel.LtOrEq{"releasing_date": ts})
-	}
-	if req.CastAgeMin > 0 {
-		w = append(w, squirrel.GtOrEq{"cast_average_age": int64(req.CastAgeMin*10.0 + 0.5)})
-	}
-	if req.CastAgeMax > 0 {
-		w = append(w, squirrel.LtOrEq{"cast_average_age": int64(req.CastAgeMax*10.0 + 0.5)})
-	}
+	w := amovieBaseFilters(req)
 
 	// 单值外键：精确命名 → 查 ID → 等值过滤
 	if req.LabelName != "" {
@@ -555,6 +538,9 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 		}
 	}
 
+	// 排序护栏
+	w = append(w, amovieOrderGuards(req.OrderBy)...)
+
 	// 基集合：只有当 w 非空时才查询 a_movie；否则置为 nil（表示“不限制”）
 	var base map[string]struct{} = nil
 	if len(w) > 0 {
@@ -565,7 +551,7 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 		var ids []string
 		if err := r.am.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
 			if errors.Is(err, sqlx.ErrNotFound) {
-				base = map[string]struct{}{} // 明确空集
+				base = map[string]struct{}{}
 			} else {
 				return nil, err
 			}
@@ -574,7 +560,7 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 		}
 	}
 
-	// 多对多：演员（支持多名，拆分后逐名取交集）
+	// 多对多：演员
 	if req.CastNames != "" {
 		for _, name := range splitNames(req.CastNames) {
 			sCast, err := r.pickFromCast(ctx, name)
@@ -587,8 +573,7 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 			}
 		}
 	}
-
-	// 多对多：类型（支持多名，拆分后逐名取交集）
+	// 多对多：类型
 	if req.GenreNames != "" {
 		for _, name := range splitNames(req.GenreNames) {
 			sGenre, err := r.pickFromGenre(ctx, name)
@@ -601,35 +586,12 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 			}
 		}
 	}
-
 	return base, nil
 }
 
 func (r *MovieListRepoSqlx) pickFromMinfo(ctx context.Context, req *types.ListMovieFullRequest) (map[string]struct{}, error) {
-	w := squirrel.And{}
-
-	if req.StartRankingDate != "" {
-		if ts, ok := parseYMD(req.StartRankingDate); ok {
-			w = append(w, squirrel.GtOrEq{"first_rank_day_number": ts})
-		}
-	}
-	if req.NeedDownload > 0 {
-		w = append(w, squirrel.Eq{"need_download": req.NeedDownload})
-	}
-	if req.Word != "" {
-		w = append(w, squirrel.Like{"chinese": "%" + req.Word + "%"})
-	}
-	// 发行日（冗余）
-	if req.ReleasingDateStart != "" {
-		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
-			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
-		}
-	}
-	if req.ReleasingDateEnd != "" {
-		if ts, ok := parseYMD(req.ReleasingDateEnd); ok {
-			w = append(w, squirrel.LtOrEq{"releasing_date": ts})
-		}
-	}
+	w := minfoBaseFilters(req)
+	w = append(w, minfoOrderGuards(req.OrderBy)...)
 
 	// 无条件且排序不依赖 minfo：返回 nil “不限制”
 	if len(w) == 0 && req.OrderBy != consts.OrderByRankDate && req.OrderBy != consts.OrderByHighestRank {
@@ -651,7 +613,8 @@ func (r *MovieListRepoSqlx) pickFromMinfo(ctx context.Context, req *types.ListMo
 }
 
 func (r *MovieListRepoSqlx) pickFromVFilm(ctx context.Context, req *types.ListMovieFullRequest) (map[string]struct{}, error) {
-	w := whereVFilm(ctx, r, req)
+	w := vfilmBaseFilters(ctx, r, req)
+	w = append(w, vfilmOrderGuards(req.OrderBy)...)
 
 	// 若 v_film 完全未命中且排序也不依赖 v_film 字段，则返回 nil 表示“不限制”
 	if len(w) == 0 && !orderBelongsToVFilm(req.OrderBy) {
@@ -733,11 +696,16 @@ func (r *MovieListRepoSqlx) pageOnAMovie(ctx context.Context, finalIDs []string,
 	case consts.OrderByCastAgeDesc:
 		order = "cast_average_age DESC"
 	}
+
+	w := squirrel.And{squirrel.Eq{"jav_id": finalIDs}}
+	w = append(w, amovieOrderGuards(od)...)
+
 	sb := squirrel.Select("jav_id").
 		From(r.am.TableName()).
-		Where(squirrel.Eq{"jav_id": finalIDs}).
+		Where(w).
 		OrderBy(order).
 		Offset(uint64(offset)).Limit(uint64(limit))
+
 	sqlStr, args, err := sb.ToSql()
 	if err != nil {
 		return nil, err
@@ -763,14 +731,18 @@ func (r *MovieListRepoSqlx) pageOnMinfo(ctx context.Context, finalIDs []string, 
 	case consts.OrderByHighestRank:
 		order = "highest_rank ASC"
 	default:
-		// 若传错，退回按 amovie 排序
 		return r.pageOnAMovie(ctx, finalIDs, consts.OrderByReleasingDate, offset, limit)
 	}
+
+	w := squirrel.And{squirrel.Eq{"jav_id": finalIDs}}
+	w = append(w, minfoOrderGuards(od)...)
+
 	sb := squirrel.Select("jav_id").
 		From(r.mi.TableName()).
-		Where(squirrel.Eq{"jav_id": finalIDs}).
+		Where(w).
 		OrderBy(order).
 		Offset(uint64(offset)).Limit(uint64(limit))
+
 	sqlStr, args, err := sb.ToSql()
 	if err != nil {
 		return nil, err
@@ -802,11 +774,16 @@ func (r *MovieListRepoSqlx) pageOnVFilm(ctx context.Context, finalIDs []string, 
 	default:
 		return r.pageOnAMovie(ctx, finalIDs, consts.OrderByReleasingDate, offset, limit)
 	}
+
+	w := squirrel.And{squirrel.Eq{"movie_jav_id": finalIDs}}
+	w = append(w, vfilmOrderGuards(od)...)
+
 	sb := squirrel.Select("movie_jav_id").
 		From(r.vf.TableName()).
-		Where(squirrel.Eq{"movie_jav_id": finalIDs}).
+		Where(w).
 		OrderBy(order).
 		Offset(uint64(offset)).Limit(uint64(limit))
+
 	sqlStr, args, err := sb.ToSql()
 	if err != nil {
 		return nil, err
@@ -922,6 +899,14 @@ func intersectTwo(a, b map[string]struct{}) map[string]struct{} {
 	return res
 }
 
+func setToSlice(m map[string]struct{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
 func intersectNonEmpty(sets ...map[string]struct{}) []string {
 	// 跳过 nil（“不限制”），对非空集合取交集
 	nonNil := make([]map[string]struct{}, 0, len(sets))
@@ -968,4 +953,31 @@ func orderBelongsToVFilm(od string) bool {
 	default:
 		return false
 	}
+}
+
+/* ---------------- 排序护栏：保证不同路径一致 ---------------- */
+
+func amovieOrderGuards(orderBy string) squirrel.And {
+	w := squirrel.And{}
+	switch orderBy {
+	case consts.OrderByCastAgeAsc, consts.OrderByCastAgeDesc:
+		w = append(w, squirrel.NotEq{"cast_average_age": 0})
+	}
+	return w
+}
+
+func minfoOrderGuards(orderBy string) squirrel.And {
+	w := squirrel.And{}
+	switch orderBy {
+	case consts.OrderByHighestRank:
+		w = append(w, squirrel.Expr("highest_rank <> 0"))
+	case consts.OrderByRankDate:
+		w = append(w, squirrel.Expr("days_in_rank <> 0"))
+	}
+	return w
+}
+
+func vfilmOrderGuards(orderBy string) squirrel.And {
+	// 目前无特殊护栏
+	return squirrel.And{}
 }

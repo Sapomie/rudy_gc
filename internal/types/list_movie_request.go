@@ -30,7 +30,6 @@ type ListMovieFullRequest struct {
 	Word             string `form:"wd"`
 
 	Owned              int64  `form:"owned"`
-	HasSub             int64  `form:"hs"`
 	ComeTimesMin       int64  `form:"comin"`
 	LastScTimeMin      string `form:"lsct"`
 	ScTimesMin         int64  `form:"scmin"`
