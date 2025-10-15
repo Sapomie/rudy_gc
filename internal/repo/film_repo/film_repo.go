@@ -8,7 +8,7 @@ import (
 
 type FilmRepo interface {
 	UpsertFilm(ctx context.Context, in *types.Film) (*types.Film, consts.UpsertStatus, error)
-	FindAll(ctx context.Context) ([]*types.Film, error)
+	FindAll(ctx context.Context, removedStatus int64) ([]*types.Film, error)
 
 	FindOne(ctx context.Context, id int64) (*types.Film, error)
 	FindOneByMovieJavId(ctx context.Context, javId string) (*types.Film, error)

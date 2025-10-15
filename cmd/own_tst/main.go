@@ -6,9 +6,7 @@ import (
 	"rudy_gc/internal/config"
 	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
-	"rudy_gc/pkg/mylog"
 
-	"github.com/sirupsen/logrus"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -19,11 +17,6 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	logx.SetWriter(mylog.NewLogrusWriter(mylog.Options{
-		JSON:            false,
-		TimestampFormat: "2006-01-02 15:04:05",
-		Level:           logrus.InfoLevel,
-	}))
 	logx.Disable()
 
 	var err error
@@ -33,10 +26,15 @@ func main() {
 		panic(err)
 	}
 
-	err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
+	err = logic.NewCrawlLogic(ctx, deps).DailyBestProcession()
 	if err != nil {
 		panic(err)
 	}
+
+	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = logic.NewCrawlLogic(ctx, deps).DownLoadAllPicture()
 	//err = logic.NewCrawlLogic(ctx, deps).TranslateTitle()
@@ -65,7 +63,7 @@ func main() {
 	//	panic(err)
 	//}
 
-	//err = l.CrawlDailyBestinv()
+	//err = l.FetchAndParseDailyBestinv()
 	//if err != nil {
 	//	panic(err)
 	//}

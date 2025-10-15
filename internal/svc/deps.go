@@ -5,7 +5,7 @@ import (
 	"rudy_gc/internal/infra/bizcache"
 	film_infra "rudy_gc/internal/infra/film_repo"
 	"rudy_gc/internal/repo/film_repo"
-	log "rudy_gc/pkg/loga"
+	"rudy_gc/pkg/mylog"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -122,7 +122,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 
 	return &Deps{
 		Config: cfg,
-		Log:    log.NewLogrusLogger(cfg.LogursLevel),
+		Log:    mylog.NewLogrusLogger(cfg.LogursLevel),
 
 		SqlConn: conn,
 		Cache:   c,

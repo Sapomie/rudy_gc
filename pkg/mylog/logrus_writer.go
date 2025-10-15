@@ -2,11 +2,10 @@ package mylog
 
 import (
 	"fmt"
-	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // -------- Formatter: 时间戳灰色，Level 彩色，消息体固定白/灰 --------
@@ -75,104 +74,30 @@ type logrusWriter struct {
 	logger *logrus.Logger
 }
 
-// NewLogrusWriter: 将 logx 输出交给 logrus
-func NewLogrusWriter(opts ...Options) logx.Writer {
-	var o Options
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	if o.TimestampFormat == "" {
-		o.TimestampFormat = "2006-01-02 15:04:05"
-	}
-	if o.Level == 0 {
-		o.Level = logrus.InfoLevel
-	}
-
+func NewLogrusLogger(level string) *logrus.Logger {
 	l := logrus.New()
-	l.SetLevel(o.Level)
-
-	if o.JSON {
-		l.SetFormatter(&logrus.JSONFormatter{
-			TimestampFormat: o.TimestampFormat,
-		})
-	} else {
-		l.SetFormatter(&LevelColorFormatter{
-			TimestampFormat: o.TimestampFormat,
-		})
+	var logLevel logrus.Level
+	switch level {
+	case "debug":
+		logLevel = logrus.DebugLevel
+	case "info":
+		logLevel = logrus.InfoLevel
+	case "warn":
+		logLevel = logrus.WarnLevel
+	case "error":
+		logLevel = logrus.ErrorLevel
 	}
+	l.SetLevel(logLevel)
 
-	return &logrusWriter{logger: l}
-}
+	l.SetFormatter(&logrus.TextFormatter{
+		ForceColors:     true,
+		FullTimestamp:   true,
+		TimestampFormat: time.DateTime,
+	})
 
-// ---- 实现 logx.Writer 接口 ----
+	l.SetFormatter(&LevelColorFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
 
-func (w *logrusWriter) Alert(v any) {
-	w.logger.WithField("tag", "alert").Warn(anyToString(v))
-}
-
-func (w *logrusWriter) Close() error {
-	// logrus 无需清理
-	return nil
-}
-
-func (w *logrusWriter) Debug(v any, fields ...logx.LogField) {
-	w.logger.WithFields(toFields(fields...)).Debug(anyToString(v))
-}
-
-func (w *logrusWriter) Error(v any, fields ...logx.LogField) {
-	w.logger.WithFields(toFields(fields...)).Error(anyToString(v))
-}
-
-func (w *logrusWriter) Info(v any, fields ...logx.LogField) {
-	w.logger.WithFields(toFields(fields...)).Info(anyToString(v))
-}
-
-func (w *logrusWriter) Severe(v any) {
-	w.logger.WithField("severity", "severe").Error(anyToString(v))
-}
-
-func (w *logrusWriter) Slow(v any, fields ...logx.LogField) {
-	fs := toFields(fields...)
-	fs["tag"] = "slow"
-	w.logger.WithFields(fs).Warn(anyToString(v))
-}
-
-func (w *logrusWriter) Stack(v any) {
-	w.logger.WithField("stack", string(debug.Stack())).Error(anyToString(v))
-}
-
-func (w *logrusWriter) Stat(v any, fields ...logx.LogField) {
-	fs := toFields(fields...)
-	fs["tag"] = "stat"
-	w.logger.WithFields(fs).Info(anyToString(v))
-}
-
-// ---- 辅助 ----
-
-func anyToString(v any) string {
-	if v == nil {
-		return ""
-	}
-	switch t := v.(type) {
-	case string:
-		return strings.TrimSpace(t)
-	case error:
-		return strings.TrimSpace(t.Error())
-	default:
-		return strings.TrimSpace(fmt.Sprintf("%v", t))
-	}
-}
-
-// 假设 go-zero 的 LogField 为 {Key string; Value any}
-func toFields(fields ...logx.LogField) logrus.Fields {
-	if len(fields) == 0 {
-		return nil
-	}
-	fs := logrus.Fields{}
-	for _, f := range fields {
-		if f.Key != "" {
-			fs[f.Key] = f.Value
-		}
-	}
-	return fs
+	return l
 }

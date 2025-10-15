@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func (l *CrawlLogic) ProcessBestinvRank() error {
-	log := logx.WithContext(l.ctx)
+	log := l.deps.Log.WithContext(l.ctx)
 
 	// 取出需要排名检查的 bestinv
 	ids, err := l.deps.BestinvRepo.ListIDsByRankCheck(l.ctx, consts.BestinvNeedRankCheck, 1000)

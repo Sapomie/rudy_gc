@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"rudy_gc/internal/types"
-
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func (l *CrawlLogic) ParseDetails() error {
@@ -21,7 +19,7 @@ func (l *CrawlLogic) ParseDetails() error {
 
 	total := len(items)
 	if total == 0 {
-		logx.WithContext(l.ctx).Info("没有需要解析的 Detail")
+		l.deps.Log.WithContext(l.ctx).Info("没有需要解析的 Detail")
 		return nil
 	}
 	l.deps.Log.Infof("共有 %d 个 Item 需要解析 Detail", total)

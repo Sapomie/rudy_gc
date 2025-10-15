@@ -7,10 +7,8 @@ import (
 	"rudy_gc/internal/config"
 	"rudy_gc/internal/svc"
 	http2 "rudy_gc/internal/transport/http"
-	"rudy_gc/pkg/mylog"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -22,11 +20,6 @@ func main() {
 	conf.MustLoad(*configFile, &c)
 
 	logx.DisableStat()
-	logx.SetWriter(mylog.NewLogrusWriter(mylog.Options{
-		JSON:            false,
-		TimestampFormat: "2006-01-02 15:04:05",
-		Level:           logrus.InfoLevel,
-	}))
 
 	deps, err := svc.NewDeps(c)
 	if err != nil {

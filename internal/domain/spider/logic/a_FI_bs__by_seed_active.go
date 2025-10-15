@@ -4,11 +4,12 @@ package logic
 import (
 	"errors"
 	"fmt"
-	"rudy_gc/internal/consts"
-	"rudy_gc/internal/types"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/logx"
+	"rudy_gc/internal/consts"
+	"rudy_gc/internal/types"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ---- 与老项目保持一致的常量 ----
@@ -32,7 +33,7 @@ var ErrBlankPage = errors.New("blank page")
 // - 保存至 raw_inventory（落库见 fetchAndSaveInventory）
 // - 成功页推进断点；空页/异常的退避与记录
 func (l *CrawlLogic) FetchInventoriesBySeedActive() error {
-	logx.WithContext(l.ctx).Info("FetchInventoriesBySeedActive: begin")
+	l.deps.Log.Info("FetchInventoriesBySeedActive: begin")
 
 	// 1) Prefix
 	if err := l.fetchByNameType(nameTypePrefix); err != nil {
@@ -43,7 +44,7 @@ func (l *CrawlLogic) FetchInventoriesBySeedActive() error {
 		return err
 	}
 
-	logx.WithContext(l.ctx).Info("FetchInventoriesBySeedActive: done")
+	l.deps.Log.Info("FetchInventoriesBySeedActive: done")
 	return nil
 }
 
@@ -52,21 +53,23 @@ func (l *CrawlLogic) fetchByNameType(nameType int64) error {
 	if err != nil {
 		return fmt.Errorf("FindActiveSeeds(nameType=%d): %w", nameType, err)
 	}
-	logx.WithContext(l.ctx).Infow("active seeds fetched",
-		logx.Field("nameType", nameType),
-		logx.Field("count", len(seeds)),
-	)
+
+	l.deps.Log.WithFields(logrus.Fields{
+		"nameType": nameType,
+		"count":    len(seeds),
+	}).Info("active seeds fetched")
 
 	for i, s := range seeds {
 		if err := l.handleSeed(s); err != nil {
 			return err
 		}
 		// 轻微打点 + 随机 sleep，避免被限流
-		logx.WithContext(l.ctx).Infow("seed done",
-			logx.Field("idx", i+1),
-			logx.Field("total", len(seeds)),
-			logx.Field("name", s.Name),
-		)
+		l.deps.Log.WithFields(logrus.Fields{
+			"idx":   i + 1,
+			"total": len(seeds),
+			"name":  s.Name,
+		}).Info("seed done")
+
 		time.Sleep(getRandomSleepDuration())
 	}
 	return nil
@@ -83,12 +86,12 @@ func (l *CrawlLogic) handleSeed(s *types.Seed) error {
 		return nil
 	}
 
-	logx.WithContext(l.ctx).Infow("seed begin",
-		logx.Field("name", s.Name),
-		logx.Field("searchType", s.SearchType),
-		logx.Field("pageStart", pageStart),
-		logx.Field("pageEnd", pageEnd),
-	)
+	l.deps.Log.WithFields(logrus.Fields{
+		"name":       s.Name,
+		"searchType": s.SearchType,
+		"pageStart":  pageStart,
+		"pageEnd":    pageEnd,
+	}).Info("seed begin")
 
 	newPageNow := s.PageNow
 	queryBy := buildQueryPath(s.NameType, s.Name) // 与老项目一致
@@ -98,11 +101,11 @@ func (l *CrawlLogic) handleSeed(s *types.Seed) error {
 		if err := l.fetchAndSaveInventory(s.NameType, s.Name, queryBy, p); err != nil {
 			if errors.Is(err, ErrBlankPage) {
 				newPageNow = p - 1
-				logx.WithContext(l.ctx).Infow("blank page hit, stop range",
-					logx.Field("name", s.Name),
-					logx.Field("page", p),
-					logx.Field("newPageNow", newPageNow),
-				)
+				l.deps.Log.WithFields(logrus.Fields{
+					"name":       s.Name,
+					"page":       p,
+					"newPageNow": newPageNow,
+				}).Info("blank page hit, stop range")
 				break
 			}
 			// 其它错误直接返回，让上层感知（可按需改成“记录后继续”）
@@ -122,14 +125,14 @@ func (l *CrawlLogic) handleSeed(s *types.Seed) error {
 	if err := l.deps.SeedRepo.UpdateProgress(
 		l.ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg,
 	); err != nil {
-		logx.WithContext(l.ctx).Errorf("update seed progress failed: %v", err)
+		l.deps.Log.Errorf("update seed progress failed: %v", err)
 	}
 
-	logx.WithContext(l.ctx).Infow("seed progress",
-		logx.Field("name", s.Name),
-		logx.Field("pageNow(old)", s.PageNow),
-		logx.Field("pageNow(new)", newPageNow),
-	)
+	l.deps.Log.WithFields(logrus.Fields{
+		"name":       s.Name,
+		"pageNowOld": s.PageNow,
+		"pageNowNew": newPageNow,
+	}).Info("seed progress")
 
 	return nil
 }
@@ -191,14 +194,15 @@ func (l *CrawlLogic) fetchAndSaveInventory(nameType int64, keyword, queryBy stri
 		return fmt.Errorf("save inventory failed: %w", err)
 	}
 
-	logx.WithContext(l.ctx).Infow("fetched page",
-		logx.Field("url", fullURL),
-		logx.Field("name", name),
-		logx.Field("nameType", nameType),
-		logx.Field("keyword", keyword),
-		logx.Field("page", page),
-		logx.Field("bytes", len(content)),
-	)
+	l.deps.Log.WithFields(logrus.Fields{
+		"url":      fullURL,
+		"name":     name,
+		"nameType": nameType,
+		"keyword":  keyword,
+		"page":     page,
+		"bytes":    len(content),
+	}).Info("fetched page")
+
 	return nil
 }
 

@@ -120,8 +120,8 @@ func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.L
 	switch req.OrderBy {
 	case consts.OrderByReleasingDate:
 		order = "releasing_date DESC"
-	case consts.OrderByName:
-		order = "name ASC"
+	case consts.OrderByDetailUpdateTime:
+		order = "detail_update_time DESC"
 	case consts.OrderByViewerWatched:
 		order = "viewers_number_watched DESC"
 	case consts.OrderByCastAgeAsc:
@@ -156,9 +156,11 @@ func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.L
 func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
 	w := whereMinfo(req)
 
-	// 当按最高排名排序时，排除最高排名为 0 的记录
 	if req.OrderBy == consts.OrderByHighestRank {
-		w = append(w, squirrel.NotEq{"highest_rank": 0})
+		w = append(w, squirrel.Expr("highest_rank <> 0"))
+	}
+	if req.OrderBy == consts.OrderByRankDate {
+		w = append(w, squirrel.Expr("days_in_rank <> 0"))
 	}
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.mi.TableName()).Where(w).ToSql()
@@ -170,9 +172,12 @@ func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.Li
 		return nil, 0, nil
 	}
 
-	order := "first_rank_day_number DESC"
-	if req.OrderBy == consts.OrderByHighestRank {
+	order := "first_rank_day_number desc,name desc"
+	switch req.OrderBy {
+	case consts.OrderByHighestRank:
 		order = "highest_rank ASC"
+	case consts.OrderByReleasingDate:
+		order = "releasing_date DESC"
 	}
 
 	page, size := normalizePage(req.Page, req.PageSize)
@@ -221,7 +226,10 @@ func (r *MovieListRepoSqlx) listFromVFilmOnly(ctx context.Context, req *types.Li
 		order = "come_times DESC"
 	case consts.OrderByLastScTime:
 		order = "last_sc_time DESC"
+	case consts.OrderByReleasingDate:
+		order = "releasing_date DESC"
 	}
+
 	page, size := normalizePage(req.Page, req.PageSize)
 	sqlStr, args, _ := squirrel.
 		Select("movie_jav_id").
@@ -249,15 +257,28 @@ func (r *MovieListRepoSqlx) listFromVFilmOnly(ctx context.Context, req *types.Li
 /* ---------------- 命中判断 & WHERE 复用 ---------------- */
 
 func needAMovie(req *types.ListMovieFullRequest) bool {
-	// 命中 a_movie 的“过滤”或“排序”
-	if req.ReleasingDateStart != "" || req.ReleasingDateEnd != "" || req.CastAgeMin > 0 || req.CastAgeMax > 0 {
+	// 确认是否用了 a_movie 独有字段
+	if req.CastAgeMin > 0 || req.CastAgeMax > 0 {
 		return true
 	}
 	switch req.OrderBy {
-	case consts.OrderByReleasingDate, consts.OrderByName, consts.OrderByViewerWatched,
-		consts.OrderByCastAgeAsc, consts.OrderByCastAgeDesc:
+	case consts.OrderByViewerWatched, consts.OrderByCastAgeAsc, consts.OrderByCastAgeDesc, consts.OrderByDetailUpdateTime:
 		return true
 	}
+
+	// 仅发行日过滤/排序：如果本次请求还会命中 minfo 或 v_film，就让它们承接，不强制命中 a_movie
+	releaseOnlyFilter := req.ReleasingDateStart != "" || req.ReleasingDateEnd != ""
+	releaseOnlyOrder := req.OrderBy == consts.OrderByReleasingDate
+
+	if releaseOnlyFilter || releaseOnlyOrder {
+		// 若其它两表本就会被命中（例如 Owned/HasSub/Dir 或 NeedDownload/Word 等），则放弃 a_movie
+		if needMinfo(req) || needVFilm(req) {
+			return false
+		}
+		// 否则还是得靠 a_movie
+		return true
+	}
+
 	return false
 }
 
@@ -316,7 +337,6 @@ func whereAMovie(req *types.ListMovieFullRequest) squirrel.And {
 	}
 	return w
 }
-
 func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
 	if req.StartRankingDate != "" {
@@ -330,13 +350,23 @@ func whereMinfo(req *types.ListMovieFullRequest) squirrel.And {
 	if req.Word != "" {
 		w = append(w, squirrel.Like{"chinese": "%" + req.Word + "%"})
 	}
+	// 发行日过滤（minfo 也有冗余）
+	if req.ReleasingDateStart != "" {
+		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
+			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
+		}
+	}
+	if req.ReleasingDateEnd != "" {
+		if ts, ok := parseYMD(req.ReleasingDateEnd); ok {
+			w = append(w, squirrel.LtOrEq{"releasing_date": ts})
+		}
+	}
 	return w
 }
 
 func whereVFilm(req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
 	if req.Owned == 1 {
-		// 你的常量里 FilmIsNotRemoved=1，按你的语义：拥有=存在且未删除
 		w = append(w, squirrel.Eq{"is_removed": 1})
 	}
 	if req.HasSub > 0 {
@@ -366,6 +396,18 @@ func whereVFilm(req *types.ListMovieFullRequest) squirrel.And {
 			w = append(w, squirrel.LtOrEq{"birth_time": ts})
 		}
 	}
+	// 发行日过滤（v_film 也有冗余）
+	if req.ReleasingDateStart != "" {
+		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
+			w = append(w, squirrel.GtOrEq{"releasing_date": ts})
+		}
+	}
+	if req.ReleasingDateEnd != "" {
+		if ts, ok := parseYMD(req.ReleasingDateEnd); ok {
+			w = append(w, squirrel.LtOrEq{"releasing_date": ts})
+		}
+	}
+	// 目录 LIKE
 	if req.Dir1 != "" {
 		w = append(w, squirrel.Like{"full_dir": "%/" + req.Dir1 + "/%"})
 	}
@@ -419,7 +461,7 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 	}
 
 	// 如果用户没有在 a_movie 维度提供任何条件，也可以不查 a_movie（返回 nil 表示“不限制”）
-	if len(w) == 0 && req.OrderBy != consts.OrderByReleasingDate && req.OrderBy != consts.OrderByName &&
+	if len(w) == 0 && req.OrderBy != consts.OrderByReleasingDate &&
 		req.OrderBy != consts.OrderByViewerWatched && req.OrderBy != consts.OrderByCastAgeAsc &&
 		req.OrderBy != consts.OrderByCastAgeDesc {
 		return nil, nil
@@ -567,8 +609,6 @@ func (r *MovieListRepoSqlx) pageOnAMovie(ctx context.Context, finalIDs []string,
 	switch od {
 	case consts.OrderByReleasingDate:
 		order = "releasing_date DESC"
-	case consts.OrderByName:
-		order = "name ASC"
 	case consts.OrderByViewerWatched:
 		order = "viewers_number_watched DESC"
 	case consts.OrderByCastAgeAsc:

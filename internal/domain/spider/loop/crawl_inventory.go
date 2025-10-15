@@ -58,7 +58,7 @@ func (m *LoopServer) executeCrawl(n *types.Notification) {
 	case types.ActionActiveQueries:
 		err = l.CrawlActiveSeeds()
 	case types.ActionDailyBestinv:
-		err = l.CrawlDailyBestinv()
+		err = l.FetchAndParseDailyBestinv()
 	case types.ActionSyncDailyBestinv:
 		err = l.SyncDailyBestinv()
 	default:

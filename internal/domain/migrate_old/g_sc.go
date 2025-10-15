@@ -99,7 +99,7 @@ func (s *Service) FindDiff() error {
 	}
 
 	// 新数据（来自 FilmRepo）
-	newFilms, err := s.deps.FilmRepo.FindAll(ctx)
+	newFilms, err := s.deps.FilmRepo.FindAll(ctx, 0)
 	if err != nil {
 		return err
 	}

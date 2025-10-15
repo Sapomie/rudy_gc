@@ -86,7 +86,7 @@ func (s *Service) ProcessFilm(ctx context.Context) error {
 ========================= */
 
 func (s *Service) buildFilmContext(ctx context.Context) (*filmContext, error) {
-	films, err := s.deps.FilmRepo.FindAll(ctx)
+	films, err := s.deps.FilmRepo.FindAll(ctx, consts.FilmIsNotRemoved)
 	if err != nil {
 		return nil, fmt.Errorf("FilmRepo.FindAll failed: %w", err)
 	}

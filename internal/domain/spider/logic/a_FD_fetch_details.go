@@ -11,7 +11,6 @@ import (
 	"rudy_gc/pkg/mylog"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func (l *CrawlLogic) FetchDetails() (int, error) {
@@ -22,12 +21,12 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 	}
 	total := len(items)
 	if total == 0 {
-		logx.WithContext(l.ctx).Info("没有需要抓取的详情")
+		l.deps.Log.WithContext(l.ctx).Info("没有需要抓取的详情")
 		return 0, nil
 	}
 
 	start := time.Now()
-	logx.WithContext(l.ctx).Infof("有 %d 个详情需要抓取", total)
+	l.deps.Log.WithContext(l.ctx).Infof("有 %d 个详情需要抓取", total)
 
 	for i, it := range items {
 		// 2) 拼 URL（与老项目一致）
@@ -37,11 +36,6 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 		respBody, ferr := l.fetchDetailWithRetry(it.Name, url)
 		if ferr != nil {
 			return i, fmt.Errorf("抓取 %s(%s) 详情失败: %w", it.Name, it.JavId, ferr)
-		}
-
-		// 4) 校验详情页内容
-		if !isValidDetail(respBody) {
-			return i, fmt.Errorf("详情页内容无效: %s(%s)", it.Name, it.JavId)
 		}
 
 		now := time.Now().Unix()
@@ -85,7 +79,7 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 		time.Sleep(getRandomSleepDuration())
 
 		// 8) 进度日志（中文）
-		logItemProgress(i+1, total, it.Name, start)
+		l.logItemProgress(i+1, total, it.Name, start)
 	}
 
 	return total, nil
@@ -103,6 +97,9 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 	var err error
 
 	for attempts := 1; attempts <= maxRetries; attempts++ {
+
+		l.deps.Log.WithContext(l.ctx).Infof("第 %d 次尝试: %s", attempts, url)
+
 		resp, ferr := l.deps.Fetcher.Get(l.ctx, url)
 		if ferr == nil {
 			body = resp.Body
@@ -110,7 +107,7 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 			// 调用过滤函数，裁剪掉无用的部分
 			content, ferr := filterDetailContent(body)
 			if ferr == nil {
-				if isValidDetail(content) {
+				if isValidDetail(string(body)) {
 					return content, nil
 				}
 				// 请求成功但页面无效/空白
@@ -121,7 +118,7 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 		}
 		err = ferr
 
-		logx.WithContext(l.ctx).Infof("%s 第%d次尝试: %s", name, attempts, url)
+		l.deps.Log.WithContext(l.ctx).Infof("%s 第%d次尝试: %s", name, attempts, url)
 
 		if attempts%20 == 0 {
 			mylog.Warn(l.ctx, "多次重试失败，10分钟后重试",
@@ -136,11 +133,11 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 	return "", fmt.Errorf("达到最大重试次数，无法获取 URL: %s", url)
 }
 
-func logItemProgress(done, total int, name string, start time.Time) {
+func (l *CrawlLogic) logItemProgress(done, total int, name string, start time.Time) {
 	elapsed := time.Since(start).Minutes()
 	etaTotal := (elapsed / float64(done)) * float64(total)
 	remain := etaTotal - elapsed
-	logx.Infof("已完成 %d/%d: %s，用时 %.1f 分钟，预计剩余 %.1f 分钟",
+	l.deps.Log.Infof("已完成 %d/%d: %s，用时 %.1f 分钟，预计剩余 %.1f 分钟",
 		done, total, name, elapsed, remain)
 }
 

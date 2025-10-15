@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/sirupsen/logrus"
 )
 
 func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64) error {
@@ -43,7 +43,10 @@ func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64
 
 		prefix, _ := splitPrefixAndNumber(name)
 		if isRedundantPrefix(prefix) {
-			logx.WithContext(l.ctx).Infow("skip redundant prefix", logx.Field("name", name), logx.Field("prefix", prefix))
+			l.deps.Log.WithFields(logrus.Fields{
+				"name":   name,
+				"prefix": prefix,
+			}).Info("skip redundant prefix")
 			return
 		}
 
@@ -74,7 +77,10 @@ func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64
 			return fmt.Errorf("insert item name=%s javId=%s: %w", it.Name, it.JavId, err)
 		}
 		if inserted {
-			logx.WithContext(l.ctx).Infow("item inserted", logx.Field("name", it.Name), logx.Field("javId", it.JavId))
+			l.deps.Log.WithFields(logrus.Fields{
+				"name":  it.Name,
+				"javId": it.JavId,
+			}).Info("item inserted")
 		}
 	}
 

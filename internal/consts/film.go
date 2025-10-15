@@ -1,10 +1,6 @@
 package consts
 
 // ---- 字幕状态 ----
-const (
-	FilmNoSub = iota + 1
-	FilmHasSub
-)
 
 // ---- 自制状态 ----
 const (
@@ -29,4 +25,9 @@ const (
 const (
 	FilmIsNotRemoved = iota + 1
 	FilmIsRemoved
+)
+
+const (
+	FilmNoSub = iota + 1
+	FilmHasSub
 )

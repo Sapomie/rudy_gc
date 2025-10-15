@@ -6,26 +6,24 @@ import (
 	consts "rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
-
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func (l *CrawlLogic) FetchBestinv(typ int64, pageEnd int64) error {
 	date := time.Now().Add(-8 * time.Hour).Format(time.DateOnly) // 与老项目保持相同的日期口径
-	logx.WithContext(l.ctx).Infof("开始抓取 Bestinv：typ=%d, date=%s, 至多 %d 页", typ, date, pageEnd)
+	l.deps.Log.WithContext(l.ctx).Infof("开始抓取 Bestinv：typ=%d, date=%s, 至多 %d 页", typ, date, pageEnd)
 
 	for page := int64(1); page <= pageEnd; page++ {
 		if err := l.fetchBestinvByRated(typ, date, page); err != nil {
 			// 已有的 retry 流程在空列表时会返回 ErrBlankPage，这里直接提前结束
 			if errors.Is(err, ErrBlankPage) {
-				logx.WithContext(l.ctx).Infof("第 %d 页为空白页，提前停止", page)
+				l.deps.Log.WithContext(l.ctx).Infof("第 %d 页为空白页，提前停止", page)
 				break
 			}
 			return err
 		}
 		time.Sleep(getRandomSleepDuration())
 	}
-	logx.WithContext(l.ctx).Info("抓取 Bestinv 完成")
+	l.deps.Log.WithContext(l.ctx).Info("抓取 Bestinv 完成")
 	return nil
 }
 
@@ -64,7 +62,7 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 		return fmt.Errorf("写入 Bestinv 失败(page=%d): %w", page, err)
 	}
 
-	logx.WithContext(l.ctx).Infof("已抓取 Bestinv 第 %d 页：%s", page, best.Name)
+	l.deps.Log.WithContext(l.ctx).Infof("已抓取 Bestinv 第 %d 页：%s", page, best.Name)
 	return nil
 }
 

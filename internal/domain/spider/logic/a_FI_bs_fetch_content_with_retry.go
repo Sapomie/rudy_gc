@@ -9,19 +9,16 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 const maxRetries = 45
 
-// fetchInventoryContentWithRetry 复刻老项目策略：成功200且正文有效才返回；否则重试。
-// 碰到“有效请求但页面无结果”时，返回 ErrBlankPage。
 func (l *CrawlLogic) fetchInventoryContentWithRetry(fullURL string) (string, error) {
 	tryAttempts := 0
 
 	for {
 		tryAttempts++
-		logx.WithContext(l.ctx).Infof("第 %d 次尝试: %s", tryAttempts, fullURL)
+		l.deps.Log.WithContext(l.ctx).Infof("第 %d 次尝试: %s", tryAttempts, fullURL)
 
 		// 使用已注入的 Fetcher（直连）
 		resp, err := l.deps.Fetcher.Get(l.ctx, fullURL)

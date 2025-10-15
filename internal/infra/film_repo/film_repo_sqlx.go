@@ -199,8 +199,8 @@ func (r *FilmRepoSqlx) UpsertFilm(ctx context.Context, in *types.Film) (*types.F
 	return mapModelxToTypes(row3), consts.UpsertInserted, nil
 }
 
-func (r *FilmRepoSqlx) FindAll(ctx context.Context) ([]*types.Film, error) {
-	rows, err := r.m.FindAll(ctx)
+func (r *FilmRepoSqlx) FindAll(ctx context.Context, removedStatus int64) ([]*types.Film, error) {
+	rows, err := r.m.FindAll(ctx, removedStatus)
 	if err != nil {
 		return nil, err
 	}

@@ -5,22 +5,20 @@ import (
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
-
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
-func (l *CrawlLogic) ProcessBestinv() error {
-	log := logx.WithContext(l.ctx)
+func (l *CrawlLogic) ParseBestinv() error {
+	log := l.deps.Log.WithContext(l.ctx)
 
 	ids, err := l.deps.BestinvRepo.ListNeedScanIDs(l.ctx, 1000) // 防止一次性全扫过多
 	if err != nil {
 		return fmt.Errorf("查询待扫描的 Bestinv 失败: %w", err)
 	}
 	if len(ids) == 0 {
-		log.Info("ProcessBestinv: 没有需要扫描的 Bestinv")
+		log.Info("ParseBestinv: 没有需要扫描的 Bestinv")
 		return nil
 	}
-	log.Infof("ProcessBestinv: 共有 %d 个 Bestinv 需要扫描", len(ids))
+	log.Infof("ParseBestinv: 共有 %d 个 Bestinv 需要扫描", len(ids))
 
 	for _, id := range ids {
 		b, err := l.deps.BestinvRepo.FindOne(l.ctx, id)
@@ -36,7 +34,7 @@ func (l *CrawlLogic) ProcessBestinv() error {
 		}
 	}
 
-	log.Info("ProcessBestinv: 完成")
+	log.Info("ParseBestinv: 完成")
 	return nil
 
 }

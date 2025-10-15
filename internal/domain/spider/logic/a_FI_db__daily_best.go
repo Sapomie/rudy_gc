@@ -3,22 +3,21 @@ package logic
 
 import (
 	"rudy_gc/internal/consts"
-
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
-func (l *CrawlLogic) CrawlDailyBestinv() error {
-	logx.WithContext(l.ctx).Info("CrawlDailyBestinv: begin")
-	if err := l.FetchBestinv(consts.BestCategoryMonth, 2); err != nil {
-		logx.WithContext(l.ctx).Errorf("FetchBestinv: %v", err)
+func (l *CrawlLogic) FetchAndParseDailyBestinv() error {
+	l.deps.Log.WithContext(l.ctx).Info("FetchAndParseDailyBestinv: begin")
+
+	if err := l.FetchBestinv(consts.BestCategoryMonth, 25); err != nil {
+		l.deps.Log.WithContext(l.ctx).Errorf("FetchBestinv: %v", err)
 		return err
 	}
 
-	if err := l.ProcessBestinv(); err != nil {
-		logx.WithContext(l.ctx).Errorf("ProcessBestinv: %v", err)
+	if err := l.ParseBestinv(); err != nil {
+		l.deps.Log.WithContext(l.ctx).Errorf("ParseBestinv: %v", err)
 		return err
 	}
 
-	logx.WithContext(l.ctx).Info("CrawlDailyBestinv: done")
+	l.deps.Log.WithContext(l.ctx).Info("FetchAndParseDailyBestinv: done")
 	return nil
 }

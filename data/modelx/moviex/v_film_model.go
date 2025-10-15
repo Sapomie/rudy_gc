@@ -15,7 +15,7 @@ type (
 	VFilmModel interface {
 		vFilmModel
 
-		FindAll(ctx context.Context) ([]*VFilm, error)
+		FindAll(ctx context.Context, removedStatus int64) ([]*VFilm, error)
 		TableName() string
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
@@ -32,9 +32,12 @@ func NewVFilmModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) V
 	}
 }
 
-// FindAll 返回所有 v_film 记录（不走缓存）
-func (m *customVFilmModel) FindAll(ctx context.Context) ([]*VFilm, error) {
-	q, args, err := squirrel.Select(vFilmRows).From(m.table).ToSql()
+func (m *customVFilmModel) FindAll(ctx context.Context, removedStatus int64) ([]*VFilm, error) {
+	builder := squirrel.Select(vFilmRows).From(m.table)
+	if removedStatus > 0 {
+		builder = builder.Where(squirrel.Eq{"is_removed": removedStatus})
+	}
+	q, args, err := builder.ToSql()
 	if err != nil {
 		return nil, err
 	}

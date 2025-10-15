@@ -15,7 +15,6 @@ import (
 
 const formatYearMonth = "2006-01"
 
-// ---- 顶层：按条下载，失败继续，限速保持 ----
 func (l *CrawlLogic) DownLoadAllPicture() error {
 	items, err := l.deps.ItemRepo.FindByDownloadCoverStatus(l.ctx, consts.ItemCoverNone)
 	if err != nil {
@@ -39,7 +38,6 @@ func (l *CrawlLogic) DownLoadAllPicture() error {
 		done++
 		l.deps.Log.Infof("图片下载已完成 %d/%d --- %s", done, len(items), it.Name)
 		time.Sleep(getRandomSleepDuration())
-
 	}
 	return nil
 }

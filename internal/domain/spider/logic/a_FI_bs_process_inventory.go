@@ -6,12 +6,10 @@ import (
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
-
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 func (l *CrawlLogic) ProcessInventory() error {
-	log := logx.WithContext(l.ctx)
+	log := l.deps.Log.WithContext(l.ctx)
 
 	ids, err := l.deps.InventoryRepo.ListNeedScanIDs(l.ctx, 10000) // 先给一个上限，避免一次性全扫
 	if err != nil {
