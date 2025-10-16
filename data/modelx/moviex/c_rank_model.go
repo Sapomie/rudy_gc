@@ -65,7 +65,7 @@ func (m *defaultCRankModel) FindHighestRank(ctx context.Context, movieJavId stri
 	query, args, err := squirrel.Select("*").
 		From(m.tableName()).
 		Where(squirrel.Eq{"movie_jav_id": movieJavId}).
-		OrderBy("number ASC, day_number ASC").
+		OrderBy("rank_pos ASC, day_number ASC").
 		Limit(limit).
 		ToSql()
 	if err != nil {

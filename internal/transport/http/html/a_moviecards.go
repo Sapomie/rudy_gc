@@ -106,7 +106,7 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 	ownedQ := buildOwnedFilterInfo(c)
 	sortQ := buildSortQuery(c, curOD)
 
-	c.HTML(http.StatusOK, "base", gin.H{
+	c.HTML(http.StatusOK, "page.list_movie_card", gin.H{
 		"Title":       title,
 		"movies":      resp.List,
 		"Total":       resp.Total,

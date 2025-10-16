@@ -3,7 +3,6 @@ package movie_repo
 
 import (
 	"context"
-	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/types"
 )
 
@@ -12,5 +11,5 @@ type RankRepo interface {
 	Upsert(ctx context.Context, rk *types.Rank) error
 	AggregateByJavId(ctx context.Context, javId string) (firstDay int64, bestRank int64, daysInRank int64, err error)
 	All(ctx context.Context) ([]*types.Rank, error)
-	FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*moviex.CRank, error)
+	FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*types.Rank, error)
 }
