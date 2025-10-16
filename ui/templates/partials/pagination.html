@@ -32,13 +32,6 @@
      Owned
   </a>
 
-  <a href="{{ .ownedQuery.NotOwned.Href }}"
-     class="btn btn-secondary waves-effect {{ if .ownedQuery.NotOwned.Active }}active disabled{{ end }}"
-     aria-current="{{ if .ownedQuery.NotOwned.Active }}true{{ else }}false{{ end }}">
-     NotOwned
-  </a>
-
-
   <span class="btn btn-primary waves-effect waves-light">Total: {{ .total }}</span>
 </span>
 {{ end }}

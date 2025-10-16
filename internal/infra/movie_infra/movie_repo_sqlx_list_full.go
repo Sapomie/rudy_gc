@@ -112,7 +112,7 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	switch req.OrderBy {
 	case consts.OrderByBirthTime, consts.OrderByScTimes, consts.OrderByComeTimes, consts.OrderByLastScTime:
 		ordered, err = r.pageOnVFilm(ctx, finalIDs, req.OrderBy, offset, size)
-	case consts.OrderByRankDate, consts.OrderByHighestRank:
+	case consts.OrderByRankDate, consts.OrderByHighestRank, consts.OrderByDaysInRank:
 		ordered, err = r.pageOnMinfo(ctx, finalIDs, req.OrderBy, offset, size)
 	default:
 		ordered, err = r.pageOnAMovie(ctx, finalIDs, req.OrderBy, offset, size)
@@ -295,11 +295,11 @@ func needAMovie(req *types.ListMovieFullRequest) bool {
 }
 
 func needMinfo(req *types.ListMovieFullRequest) bool {
-	if req.StartRankingDate != "" || req.NeedDownload > 0 || req.Word != "" {
+	if req.StartRankingDateStart != "" || req.StartRankingDateEnd != "" || req.DaysInRankMin > 0 || req.NeedDownload > 0 || req.Word != "" {
 		return true
 	}
 	switch req.OrderBy {
-	case consts.OrderByRankDate, consts.OrderByHighestRank:
+	case consts.OrderByRankDate, consts.OrderByHighestRank, consts.OrderByDaysInRank:
 		return true
 	}
 	return false
@@ -311,7 +311,7 @@ func needVFilm(req *types.ListMovieFullRequest) bool {
 		return false
 	}
 	if req.Owned > consts.MovieAll ||
-		req.ComeTimesMin > 0 ||
+		req.ComeTimesMin > 0 || req.ComeTimesMax > 0 ||
 		req.LastScTimeMin != "" || req.LastScTimeMax != "" ||
 		req.ScTimesMin > 0 || req.ScTimesMax != nil ||
 		req.FilmBirthTimeStart != "" || req.FilmBirthTimeEnd != "" ||
@@ -358,10 +358,19 @@ func amovieBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 
 func minfoBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 	w := squirrel.And{}
-	if req.StartRankingDate != "" {
-		if ts, ok := parseYMD(req.StartRankingDate); ok {
-			w = append(w, squirrel.GtOrEq{"first_rank_day_number": ts})
-		}
+	if req.StartRankingDateStart != "" {
+		ts := consts.GetRankDayNumber(req.StartRankingDateStart)
+		w = append(w, squirrel.GtOrEq{"first_rank_day_number": ts})
+		w = append(w, squirrel.NotEq{"days_in_rank": 0})
+	}
+	if req.StartRankingDateEnd != "" {
+		ts := consts.GetRankDayNumber(req.StartRankingDateEnd)
+		w = append(w, squirrel.LtOrEq{"first_rank_day_number": ts})
+		w = append(w, squirrel.NotEq{"days_in_rank": 0})
+	}
+
+	if req.DaysInRankMin > 0 {
+		w = append(w, squirrel.GtOrEq{"days_in_rank": req.DaysInRankMin})
 	}
 	if req.NeedDownload > 0 {
 		w = append(w, squirrel.Eq{"need_download": req.NeedDownload})
@@ -397,7 +406,7 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 	case consts.OwnedRemoved:
 		w = append(w, squirrel.Eq{"is_removed": consts.FilmIsRemoved})
 	case consts.OwnedAll:
-		w = append(w, squirrel.Expr("1=1")) // 你坚持保留的护栏
+		w = append(w, squirrel.Expr("1=1"))
 	case consts.MovieAll:
 		return squirrel.And{}
 	}
@@ -405,6 +414,7 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 	if req.ComeTimesMin > 0 {
 		w = append(w, squirrel.GtOrEq{"come_times": req.ComeTimesMin})
 	}
+
 	if req.LastScTimeMin != "" {
 		if ts, ok := parseYMD(req.LastScTimeMin); ok {
 			w = append(w, squirrel.GtOrEq{"last_sc_time": ts})
@@ -474,14 +484,6 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 	}
 
 	return w
-}
-
-/* ---------------- whereXxx（兼容旧调用） ---------------- */
-
-func whereAMovie(req *types.ListMovieFullRequest) squirrel.And { return amovieBaseFilters(req) }
-func whereMinfo(req *types.ListMovieFullRequest) squirrel.And  { return minfoBaseFilters(req) }
-func whereVFilm(ctx context.Context, r *MovieListRepoSqlx, req *types.ListMovieFullRequest) squirrel.And {
-	return vfilmBaseFilters(ctx, r, req)
 }
 
 /* ------------------- A. 各表筛选（取 ID 集） ------------------- */
@@ -575,7 +577,7 @@ func (r *MovieListRepoSqlx) pickFromMinfo(ctx context.Context, req *types.ListMo
 	w = append(w, minfoOrderGuards(req.OrderBy)...)
 
 	// minfo 完全无条件且排序不依赖 minfo → “不限制”
-	if len(w) == 0 && req.OrderBy != consts.OrderByRankDate && req.OrderBy != consts.OrderByHighestRank {
+	if len(w) == 0 && req.OrderBy != consts.OrderByRankDate && req.OrderBy != consts.OrderByHighestRank && req.OrderBy != consts.OrderByDaysInRank {
 		return nil, nil
 	}
 
@@ -792,22 +794,29 @@ func minfoOrderGuards(orderBy string) squirrel.And {
 		w = append(w, squirrel.Expr("highest_rank <> 0"))
 	case consts.OrderByRankDate:
 		w = append(w, squirrel.Expr("days_in_rank <> 0"))
+	case consts.OrderByDaysInRank:
+		w = append(w, squirrel.Expr("days_in_rank <> 0"))
 	}
 	return w
 }
 
-func vfilmOrderGuards(_ string) squirrel.And {
-	// 目前无特殊护栏
-	return squirrel.And{}
+func vfilmOrderGuards(orderBy string) squirrel.And {
+	w := squirrel.And{}
+	switch orderBy {
+	case consts.OrderByScTimes, consts.OrderByComeTimes, consts.OrderByLastScTime:
+		// 固定护栏：这三种排序都要求 sc_times 非 0
+		w = append(w, squirrel.Expr("sc_times <> 0"))
+	}
+	return w
 }
 
 func amovieOrdering(orderBy string) (order string, guards squirrel.And) {
-	order = "releasing_date DESC"
+	order = "releasing_date DESC,name DESC"
 	switch orderBy {
 	case consts.OrderByReleasingDate:
-		order = "releasing_date DESC"
+		order = "releasing_date DESC,name DESC"
 	case consts.OrderByDetailUpdateTime:
-		order = "detail_update_time DESC"
+		order = "detail_update_time DESC,name DESC"
 	case consts.OrderByViewerWatched:
 		order = "viewers_number_watched DESC"
 	case consts.OrderByCastAgeAsc:
@@ -823,11 +832,13 @@ func minfoOrdering(orderBy string) (order string, guards squirrel.And) {
 	order = "first_rank_day_number desc,name desc"
 	switch orderBy {
 	case consts.OrderByHighestRank:
-		order = "highest_rank ASC"
+		order = "highest_rank ASC,name ASC"
+	case consts.OrderByDaysInRank:
+		order = "days_in_rank DESC"
 	case consts.OrderByReleasingDate:
-		order = "releasing_date DESC"
+		order = "releasing_date DESC,name DESC"
 	case consts.OrderByRankDate:
-		order = "first_rank_day_number DESC"
+		order = "first_rank_day_number DESC,name DESC"
 	}
 	guards = minfoOrderGuards(orderBy)
 	return
@@ -837,15 +848,15 @@ func vfilmOrdering(orderBy string) (order string, guards squirrel.And) {
 	order = "birth_time DESC"
 	switch orderBy {
 	case consts.OrderByBirthTime:
-		order = "birth_time DESC"
+		order = "birth_time DESC,movie_name DESC"
 	case consts.OrderByScTimes:
-		order = "sc_times DESC"
+		order = "sc_times DESC,last_sc_time DESC,movie_name DESC"
 	case consts.OrderByComeTimes:
-		order = "come_times DESC"
+		order = "come_times DESC,last_sc_time DESC,movie_name DESC"
 	case consts.OrderByLastScTime:
-		order = "last_sc_time DESC"
+		order = "last_sc_time DESC,movie_name DESC"
 	case consts.OrderByReleasingDate:
-		order = "releasing_date DESC"
+		order = "releasing_date DESC,movie_name DESC"
 	}
 	guards = vfilmOrderGuards(orderBy)
 	return

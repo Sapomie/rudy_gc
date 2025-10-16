@@ -1,11 +1,5 @@
 package types
 
-type ListMovieLiteRequest struct {
-	Page     int64  `form:"p"`
-	PageSize int64  `form:"ps"`
-	OrderBy  string `form:"od"`
-}
-
 type ListMovieResponse struct {
 	List  []*MovieType
 	Total int64
@@ -25,12 +19,15 @@ type ListMovieFullRequest struct {
 	CastAgeMin         float64 `form:"cay"`
 	CastAgeMax         float64 `form:"cao"`
 
-	StartRankingDate string `form:"srd"`
-	NeedDownload     int64  `form:"nd"`
-	Word             string `form:"wd"`
-	Owned            int64  `form:"owned"`
-	ComeTimesMin     int64  `form:"comin"`
-	ComeTimesMax     int64  `form:"comax"`
+	StartRankingDateStart string `form:"srds"`
+	StartRankingDateEnd   string `form:"srde"`
+
+	DaysInRankMin int64  `form:"drkmin"`
+	NeedDownload  int64  `form:"nd"`
+	Word          string `form:"wd"`
+	Owned         int64  `form:"owned"`
+	ComeTimesMin  int64  `form:"comin"`
+	ComeTimesMax  int64  `form:"comax"`
 
 	LastScTimeMin      string `form:"lsctmin"`
 	LastScTimeMax      string `form:"lsctmax"`
@@ -44,7 +41,6 @@ type ListMovieFullRequest struct {
 	Dir3 string `form:"d3"`
 	Dir4 string `form:"d4"`
 
-	//todo:daysinrank
 	OrderBy  string `form:"od"`
 	Page     int64  `form:"p"`
 	PageSize int64  `form:"ps"`

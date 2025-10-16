@@ -1,0 +1,28 @@
+{{ define "sort_bar" }}
+    <div class="btn-group btn-group-sm" role="group" aria-label="Sort Options">
+
+        <a href="{{ .sortQuery.ByRankDate.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByRankDate.Active }}active disabled{{ end }}">上榜日期</a>
+        <a href="{{ .sortQuery.ByDetailUpdate.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByDetailUpdate.Active }}active disabled{{ end }}">Detail更新</a>
+        <a href="{{ .sortQuery.ByReleasing.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByReleasing.Active }}active disabled{{ end }}">上映日期</a>
+        <a href="{{ .sortQuery.ByViewer.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByViewer.Active }}active disabled{{ end }}">观看人数</a>
+
+        <a href="{{ .sortQuery.ByDaysInRank.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByDaysInRank.Active }}active disabled{{ end }}">在榜天数</a>
+        <a href="{{ .sortQuery.ByHighestRank.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByHighestRank.Active }}active disabled{{ end }}">最高排名</a>
+
+
+        <a href="{{ .sortQuery.ByBirthTime.Href }}" a
+           class="btn btn-outline-primary {{ if .sortQuery.ByBirthTime.Active }}active disabled{{ end }}">下载时间</a>
+        <a href="{{ .sortQuery.ByLastScTime.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByLastScTime.Active }}active disabled{{ end }}">最后sc</a>
+        <a href="{{ .sortQuery.ByScTimes.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByScTimes.Active }}active disabled{{ end }}">sc次数</a>
+        <a href="{{ .sortQuery.ByComeTimes.Href }}"
+           class="btn btn-outline-primary {{ if .sortQuery.ByComeTimes.Active }}active disabled{{ end }}">co次数</a>
+    </div>
+{{ end }}
