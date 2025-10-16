@@ -11,6 +11,6 @@ type GListRepo interface {
 	Upsert(ctx context.Context, in *types.GList) (*types.GList, error)
 	FindGList(ctx context.Context, scName string, isCome *int64, page, pageSize int) ([]*types.GList, error)
 
-	//todo:需要新增
 	FindGListByMovieJavIds(ctx context.Context, movieJavIds []string) ([]*types.GList, error)
+	FindGListByMovieJavId(ctx context.Context, movieJavId string) ([]*types.GList, error)
 }

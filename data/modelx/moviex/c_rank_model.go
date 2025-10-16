@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
@@ -18,6 +19,7 @@ type (
 		cRankModel
 		All(ctx context.Context) ([]*CRank, error)
 		AggregateByJavId(ctx context.Context, javId string) (firstDay int64, bestRank int64, daysInRank int64, err error)
+		FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*CRank, error)
 	}
 
 	customCRankModel struct {
@@ -54,6 +56,28 @@ func (m *customCRankModel) AggregateByJavId(ctx context.Context, javId string) (
 		return 0, 0, 0, err
 	}
 	return dst.FirstDay, dst.BestRank, dst.DaysInRank, nil
+}
+
+func (m *defaultCRankModel) FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*CRank, error) {
+	var ranks []*CRank
+
+	// 使用 SQL 构建器来创建查询语句
+	query, args, err := squirrel.Select("*").
+		From(m.tableName()).
+		Where(squirrel.Eq{"movie_jav_id": movieJavId}).
+		OrderBy("number ASC, day_number ASC").
+		Limit(limit).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	// 执行查询并填充 ranks 切片
+	if err := m.QueryRowsNoCacheCtx(ctx, &ranks, query, args...); err != nil {
+		return nil, err
+	}
+
+	return ranks, nil
 }
 
 func (m *customCRankModel) All(ctx context.Context) ([]*CRank, error) {

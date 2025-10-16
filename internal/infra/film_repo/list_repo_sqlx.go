@@ -117,6 +117,18 @@ func (r *GListRepoSqlx) FindGListByMovieJavIds(ctx context.Context, movieJavIds 
 	return out, nil
 }
 
+func (r *GListRepoSqlx) FindGListByMovieJavId(ctx context.Context, movieJavId string) ([]*types.GList, error) {
+	rows, err := r.m.ListByMovieJavId(ctx, movieJavId)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, mapGListModelToTypes(v))
+	}
+	return out, nil
+}
+
 /******** helpers ********/
 
 func mapGListModelToTypes(g *moviex.GList) *types.GList {

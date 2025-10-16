@@ -1,4 +1,4 @@
-// internal/types/movie_vew.go
+// internal/types/movie_type.go
 package types
 
 type MovieType struct {

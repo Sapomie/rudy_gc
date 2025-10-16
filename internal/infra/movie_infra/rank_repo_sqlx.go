@@ -10,6 +10,8 @@ import (
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/movie_repo"
 	"rudy_gc/internal/types"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 var _ movie_repo.RankRepo = (*RankRepoSqlx)(nil)
@@ -61,6 +63,25 @@ func (r *RankRepoSqlx) Upsert(ctx context.Context, rk *types.Rank) error {
 	return nil
 }
 
+func (r *RankRepoSqlx) FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*types.Rank, error) {
+	rows, err := r.m.FindHighestRank(ctx, movieJavId, limit)
+	if err != nil {
+		// 查无数据时返回空列表而不是报错
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*types.Rank{}, nil
+		}
+		return nil, err
+	}
+	out := make([]*types.Rank, 0, len(rows))
+	for _, v := range rows {
+		if v == nil {
+			continue
+		}
+		out = append(out, mapCRankToTypes(v))
+	}
+	return out, nil
+}
+
 func (r *RankRepoSqlx) AggregateByJavId(ctx context.Context, javId string) (int64, int64, int64, error) {
 	firstDay, bestRank, daysInRank, err := r.m.AggregateByJavId(ctx, javId)
 	if err != nil {
@@ -90,7 +111,6 @@ func (r *RankRepoSqlx) All(ctx context.Context) ([]*types.Rank, error) {
 }
 
 /******** helpers ********/
-
 func mapCRankToTypes(v *moviex.CRank) *types.Rank {
 	return &types.Rank{
 		RankKey:    v.RankKey,

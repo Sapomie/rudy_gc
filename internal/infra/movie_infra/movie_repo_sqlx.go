@@ -125,6 +125,18 @@ func (r *MovieRepoSqlx) FindMoviesByName(ctx context.Context, name string) ([]*t
 	return list, nil
 }
 
+func (r *MovieRepoSqlx) FindMoviesByEncode(ctx context.Context, encode string) ([]*types.Movie, error) {
+	rows, err := r.m.FindMoviesByEncode(ctx, encode)
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*types.Movie, 0, len(rows))
+	for _, x := range rows {
+		list = append(list, toTypesMovie(x))
+	}
+	return list, nil
+}
+
 // 内部转换函数
 func toTypesMovie(mv *moviex.AMovie) *types.Movie {
 	if mv == nil {

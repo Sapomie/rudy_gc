@@ -18,6 +18,7 @@ type (
 		ListPageWithTotal(ctx context.Context, offset, limit int64, orderKey string) ([]*AMovie, int64, error)
 		CountAll(ctx context.Context) (int64, error)
 		FindMoviesByName(ctx context.Context, name string) ([]*AMovie, error)
+		FindMoviesByEncode(ctx context.Context, encode string) ([]*AMovie, error)
 
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
@@ -56,6 +57,26 @@ func (m *customAMovieModel) FindMoviesByName(ctx context.Context, name string) (
 		Select(aMovieRows).
 		From(m.table).
 		Where("`name` = ?", name).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var list []*AMovie
+	if err := m.QueryRowsNoCacheCtx(ctx, &list, q, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*AMovie{}, nil
+		}
+		return nil, err
+	}
+	return list, nil
+}
+
+func (m *customAMovieModel) FindMoviesByEncode(ctx context.Context, encode string) ([]*AMovie, error) {
+	q, args, err := squirrel.
+		Select(aMovieRows).
+		From(m.table).
+		Where("`encode_name` = ?", encode).
 		ToSql()
 	if err != nil {
 		return nil, err
