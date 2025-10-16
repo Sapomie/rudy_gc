@@ -23,10 +23,10 @@ func (h *MovieHTMLHandler) MovieDetail(c *gin.Context) {
 		return
 	}
 
-	// 旧模板中用了 .magUpdateDate，这里用 MovieType.UpdateDate 填充
 	data := gin.H{
 		"Title":         md.MovieType.Title,
 		"movieType":     md.MovieType,
+		"hasFilm":       md.HasFilm,
 		"film":          md.FilmInfo,
 		"rankInfos":     md.RankInfos,
 		"sc":            md.SC,

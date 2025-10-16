@@ -1,0 +1,19 @@
+{{ define "partials.md.rank_info" }}
+<table id="moviedetail_rankinfo" class="table table-bordered dt-responsive nowrap"
+       style="border-collapse: collapse; border-spacing: 0; width: 100%;">
+    <thead>
+    <tr class="table-light">
+        <th>Date</th>
+        <th>Pts</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{range .rankInfos}}
+    <tr>
+        <td><a href="/moviecarddayrank?date={{.Date}}">{{.Date}}</a></td>
+        <td><span>{{.Rank}}</span></td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+{{ end }}

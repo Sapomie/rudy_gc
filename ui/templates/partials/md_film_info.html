@@ -1,0 +1,44 @@
+{{ define "partials.md.film_info" }}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-bordered dt-responsive nowrap" style="width:100%">
+            <thead>
+            <tr class="table-light">
+                <th>BirthTime</th>
+                <th>Size</th>
+                <th>Height</th>
+                <th>BitRate</th>
+                <th>Duration</th>
+                <th>Ratio</th>
+                <th>Frame</th>
+                <th>SelfMake</th>
+                <th>Erased</th>
+                <th>Dir</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>{{.film.BirthTime}}</td>
+                <td><a href="{{.film.FilePath}}">{{.film.Size}}</a></td>
+                <td>{{.film.Height}}</td>
+                <td>{{.film.BitRate}}</td>
+                <td>{{.film.Duration}}</td>
+                <td>{{.film.SizeDurationRatio}}</td>
+                <td>{{.film.Frame}}</td>
+                <td>{{.film.SelfMake}}</td>
+                <td>{{.film.Erased}}</td>
+                <td>
+                    <a href="#" class="open-in-finder" data-path="{{.film.Directory}}" title="在 Finder 打开">
+                        {{.film.Directory}}
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="card-title">
+            Update Time: <span class="badge badge-secondary">{{.magUpdateDate}}</span>
+        </div>
+    </div>
+</div>
+{{ end }}

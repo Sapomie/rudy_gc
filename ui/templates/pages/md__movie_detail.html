@@ -1,0 +1,136 @@
+{{ define "page.movie_detail" }}
+    <!doctype html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <!-- 核心样式 -->
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+
+        <!-- DataTables（如有用到） -->
+        <link href="/static/css/dataTables.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/buttons.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
+
+        <!-- 自定义样式 -->
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviedetail.css" rel="stylesheet">
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+
+                <div class="row">
+                    <!-- 左侧：海报 + 标题 -->
+                    <div class="col-lg-7 mb-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body pb-2">
+                                <h4 class="mb-1" title="{{.movieType.Title}}">{{.movieType.Title}}</h4>
+                            </div>
+                            <div class="thumb-2x2">
+                                <img src="{{.movieType.JacketImg}}" alt="Card image cap"
+                                     class="card-img-bottom img-fluid"
+                                     style="object-fit: contain; width: 100%; height: auto;">
+
+                                <div class="badge-stack">
+                                    {{if gt .movieType.ComeTimes 0}}<span class="badge-come">❤ {{.movieType.ComeTimes}}</span>{{end}}
+                                    {{if gt .movieType.ScTimes 0}}  <span class="badge-times">× {{.movieType.ScTimes}}</span>{{end}}
+                                </div>
+                                {{if ne (printf "%v" .movieType.Score) ""}}
+                                    <span class="badge-score">★ {{.movieType.Score}}</span>
+                                {{end}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：信息表（Tab） -->
+                    <div class="col-lg-5">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+
+                                <!-- Nav tabs -->
+                                <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-bs-toggle="tab" href="#tab_primary" role="tab">
+                                            <span class="d-block d-sm-none"><i class="far fa-envelope"></i></span>
+                                            <span class="d-none d-sm-block">Info</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#tab_average" role="tab">
+                                            <span class="d-block d-sm-none"><i class="fas fa-home"></i></span>
+                                            <span class="d-none d-sm-block">Rank</span>
+                                        </a>
+                                    </li>
+                                </ul>
+
+                                <!-- Tab panes -->
+                                <div class="tab-content">
+                                    <!-- MovieInfo -->
+                                    <div class="tab-pane p-3 active" id="tab_primary" role="tabpanel">
+                                        {{ template "partials.md.movie_info" . }}
+                                    </div>
+
+                                    <!-- RankInfo -->
+                                    <div class="tab-pane p-3" id="tab_average" role="tabpanel">
+                                        {{ template "partials.md.rank_info" . }}
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FilmInfo -->
+                {{ if eq .hasFilm 2 }}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            {{ template "partials.md.film_info" . }}
+                        </div>
+                    </div>
+                {{ end }}
+
+            </div><!-- /.container-fluid -->
+        </div><!-- /.page-content -->
+    </main>
+
+    <!-- JS -->
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script src="/static/js/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/js/dataTables.responsive.min.js"></script>
+    <script src="/static/js/responsive.bootstrap4.min.js"></script>
+    <script src="/static/js/dataTables.buttons.min.js"></script>
+    <script src="/static/js/buttons.bootstrap4.min.js"></script>
+    <script src="/static/js/jszip.min.js"></script>
+    <script src="/static/js/buttons.html5.min.js"></script>
+    <script src="/static/js/buttons.print.min.js"></script>
+    <script src="/static/js/buttons.colVis.min.js"></script>
+    <script src="/static/js/datatables.init.js"></script>
+
+    <!-- 其他插件 -->
+    <script src="/static/js/dropzone.min.js"></script>
+
+    <!-- 项目脚本 -->
+    <script src="/static/js/dashboard.init.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/open_finder.js"></script>
+    </body>
+    </html>
+{{ end }}

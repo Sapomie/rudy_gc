@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	detailFilmInfoNone = 1
+	detailFilmInfoOK   = 2
+)
+
 func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.MovieDetail, error) {
 	movieType, err := s.GetMovieType(ctx, m.JavId)
 	if err != nil {
@@ -26,10 +31,15 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 	if err != nil {
 		return nil, err
 	}
+	var hasFilm int64 = detailFilmInfoOK
+	if filmInfo == nil {
+		hasFilm = detailFilmInfoNone
+	}
 
 	md := &types.MovieDetail{
 		MovieType: movieType,
 		FilmInfo:  filmInfo,
+		HasFilm:   hasFilm,
 		RankInfos: rankInfos,
 		SC:        scInfo,
 	}

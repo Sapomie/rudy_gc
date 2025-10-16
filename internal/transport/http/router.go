@@ -15,7 +15,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 
 	// 模板（不使用 ** 通配；仅按需解析三层）
 	tpl := template.New("")
-	tpl = template.Must(tpl.ParseGlob("ui/templates/layouts/*.html"))
+	//tpl = template.Must(tpl.ParseGlob("ui/templates/layouts/*.html"))
 	tpl = template.Must(tpl.ParseGlob("ui/templates/partials/*.html"))
 	tpl = template.Must(tpl.ParseGlob("ui/templates/pages/*.html"))
 	r.SetHTMLTemplate(tpl)

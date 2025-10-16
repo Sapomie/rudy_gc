@@ -155,7 +155,7 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 			LastScTime: c.LastScTime,
 			Name:       c.Name,
 			// 防止中文/空格等字符破坏 URL，做下转义
-			Url: fmt.Sprintf("moviesum?cn=%s", url.QueryEscape(c.Name)),
+			Url: fmt.Sprintf("cards?cn=%s", url.QueryEscape(c.Name)),
 		}
 
 		// ✅ 按你之前在 saveParsedMovie 里用到的 CafoRepo.FindBirthByName 来算年龄
