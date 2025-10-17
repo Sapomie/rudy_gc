@@ -12,6 +12,7 @@ type Sc struct {
 	FG        string `gorm:"not null;type:varchar(191)"`
 	Vessel    string `gorm:"not null;type:varchar(191)"`
 	MovieCast string `gorm:"not null;type:varchar(191)"`
+	Remarks   string `gorm:"not null;type:varchar(500)"`
 
 	CreatedOn int64 `gorm:"not null;default:0"`
 	UpdatedOn int64 `gorm:"not null;default:0"`

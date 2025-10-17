@@ -73,7 +73,10 @@ func (r *ScRepoSqlx) Upsert(ctx context.Context, in *types.GSc) (*types.GSc, err
 			old.MovieCast = in.MovieCast
 			changed = true
 		}
-
+		if old.Remarks != in.Remarks {
+			old.Remarks = in.Remarks
+			changed = true
+		}
 		if changed {
 			old.UpdatedOn = now
 			if err := r.m.Update(ctx, old); err != nil {
@@ -94,6 +97,7 @@ func (r *ScRepoSqlx) Upsert(ctx context.Context, in *types.GSc) (*types.GSc, err
 		Fg:            in.Fg,
 		Vessel:        in.Vessel,
 		MovieCast:     in.MovieCast,
+		Remarks:       in.Remarks,
 		CreatedOn:     now,
 		UpdatedOn:     now,
 	}
@@ -122,6 +126,14 @@ func (r *ScRepoSqlx) FindTopNRecentSc(ctx context.Context, n uint64) ([]*types.G
 	return out, nil
 }
 
+func (r *ScRepoSqlx) FindNearest(ctx context.Context, t int64) (*types.GSc, error) {
+	row, err := r.m.FindNearest(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return mapModelToTypes(row), nil
+}
+
 /******** helpers ********/
 
 func mapModelToTypes(v *moviex.GSc) *types.GSc {
@@ -136,6 +148,7 @@ func mapModelToTypes(v *moviex.GSc) *types.GSc {
 		Fg:            v.Fg,
 		Vessel:        v.Vessel,
 		MovieCast:     v.MovieCast,
+		Remarks:       v.Remarks,
 		CreatedOn:     v.CreatedOn,
 		UpdatedOn:     v.UpdatedOn,
 	}

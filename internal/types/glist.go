@@ -22,6 +22,7 @@ type GSc struct {
 	Fg            string
 	Vessel        string
 	MovieCast     string
+	Remarks       string
 	CreatedOn     int64
 	UpdatedOn     int64
 }

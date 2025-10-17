@@ -16,9 +16,9 @@ type (
 	// and implement the added methods in customGScModel.
 	GScModel interface {
 		gScModel
-
 		FindAll(ctx context.Context) ([]*GSc, error)
 		ListTopNByScTime(ctx context.Context, n uint64) ([]*GSc, error)
+		FindNearest(ctx context.Context, t int64) (*GSc, error)
 	}
 
 	customGScModel struct {
@@ -70,4 +70,26 @@ func (m *customGScModel) FindAll(ctx context.Context) ([]*GSc, error) {
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (m *customGScModel) FindNearest(ctx context.Context, t int64) (*GSc, error) {
+	sqlStr, args, err := squirrel.
+		Select(gScRows).
+		From(m.table).
+		Where(squirrel.Lt{"sc_time": t}).
+		OrderBy("sc_time DESC").
+		Limit(1).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var row GSc
+	if err := m.QueryRowNoCacheCtx(ctx, &row, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, sqlx.ErrNotFound
+		}
+		return nil, err
+	}
+	return &row, nil
 }

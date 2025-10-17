@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/spider/logic"
+	"rudy_gc/internal/domain/sc"
 	"rudy_gc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -26,10 +26,10 @@ func main() {
 		panic(err)
 	}
 
-	err = logic.NewCrawlLogic(ctx, deps).DailyBestProcession()
-	if err != nil {
-		panic(err)
-	}
+	//err = logic.NewCrawlLogic(ctx, deps).DailyBestProcession()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
 	//if err != nil {
@@ -46,6 +46,11 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
+
+	err = sc.NewScService(deps).AddSc(ctx, "/Users/gaojinwei/Desktop/temp/sc/2025-10-17-06-30")
+	if err != nil {
+		panic(err)
+	}
 
 	//movieType, err := movie.New(deps).GetMovieType(ctx, "javmezriqa")
 	//if err != nil {

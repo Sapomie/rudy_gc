@@ -29,18 +29,27 @@ func (l *ScService) AddSc(ctx context.Context, dir string) error {
 	}
 
 	var (
-		count         int64
-		comeMovie     string
-		movieJavIdMap = make(map[string]struct{})
+		count          int64
+		comeMovie      string
+		comeMovieJavId string
+		movieJavIdMap  = make(map[string]struct{})
 	)
 
+	var data scJsonData
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {
 			return fmt.Errorf("failed to get info for entry %s: %w", entry.Name(), err)
 		}
 
-		if !isValidFile(info) {
+		if !isMp4File(info) {
+			if isDataJsonFile(info.Name()) {
+				path := filepath.Join(dir, entry.Name())
+				data, err = getJsonData(path)
+				if err != nil {
+					return fmt.Errorf("failed to get json data for entry %s: %w", entry.Name(), err)
+				}
+			}
 			continue // 过滤不符合条件的文件
 		}
 
@@ -54,7 +63,9 @@ func (l *ScService) AddSc(ctx context.Context, dir string) error {
 		gl := createGList(scName, movieName, vf.MovieJavId, info.Name())
 		if gl.IsCome == consts.GListIsCome {
 			comeMovie = vf.MovieName
+			comeMovieJavId = vf.MovieJavId
 		}
+
 		_, err = l.deps.GListRepo.Upsert(ctx, gl)
 		if err != nil {
 			return fmt.Errorf("failed to upsert glist: %w", err)
@@ -67,7 +78,26 @@ func (l *ScService) AddSc(ctx context.Context, dir string) error {
 		ScTime:        scTime,
 		ComeMovieName: comeMovie,
 		MovieNumber:   count,
+		Cooldown:      0,
+		Duration:      data.Duration,
+		Fg:            data.Fg,
+		Vessel:        data.Vessel,
+		Remarks:       data.Remarks,
 	}
+
+	mt, err := l.movieSvc.GetMovieType(ctx, comeMovieJavId)
+	if err != nil || mt == nil {
+		return fmt.Errorf("failed to get movie type: %w", err)
+	}
+	if len(mt.Cast) >= 1 {
+		sc.MovieCast = mt.Cast[0].Name
+	}
+
+	prev, err := l.deps.ScRepo.FindNearest(ctx, scTime)
+	if err != nil {
+		return fmt.Errorf("failed to find previous sc: %w", err)
+	}
+	sc.Cooldown = scTime - prev.ScTime
 
 	_, err = l.deps.ScRepo.Upsert(ctx, sc)
 	if err != nil {
@@ -107,7 +137,7 @@ func getScTime(scName string) (int64, error) {
 	return t.Unix(), nil
 }
 
-func isValidFile(info os.FileInfo) bool {
+func isMp4File(info os.FileInfo) bool {
 	return strings.HasSuffix(info.Name(), ".mp4") && info.Size() >= 20000
 }
 
