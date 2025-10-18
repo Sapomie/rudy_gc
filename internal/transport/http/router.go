@@ -3,6 +3,7 @@ package http
 import (
 	"html/template"
 	"net/http"
+	api2 "rudy_gc/internal/transport/http/api"
 
 	"github.com/gin-gonic/gin"
 
@@ -38,6 +39,17 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
+
+	// API 路由：稍后下载
+	api := r.Group("/api")
+	movieDownload := api2.NewAPI(deps)
+	api.POST("/movie/:movie/downloadlater", movieDownload.Add)
+	api.DELETE("/movie/:movie/downloadlater", movieDownload.Remove)
+
+	api.POST("/open-finder", movieDownload.OpenFinderHandler([]string{
+		"/Volumes/Getea",
+		"/Volumes/Expansion",
+	}))
 
 	return r
 }

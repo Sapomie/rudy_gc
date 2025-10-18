@@ -13,12 +13,18 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func (l *CrawlLogic) FetchDetails() (int, error) {
+func (l *CrawlLogic) FetchDetailsByItemDetailStatus() (int, error) {
 	// 1) 找待抓详情的 item（HasDetail = None）
 	items, err := l.deps.ItemRepo.FindByDetailStatus(l.ctx, consts.ItemDetailNone)
 	if err != nil {
 		return 0, fmt.Errorf("获取待抓取详情的条目失败: %w", err)
 	}
+
+	return l.handleFetchDetails(items)
+}
+
+// 抽出的函数：统一处理详情抓取逻辑
+func (l *CrawlLogic) handleFetchDetails(items []*types.Item) (int, error) {
 	total := len(items)
 	if total == 0 {
 		l.deps.Log.WithContext(l.ctx).Info("没有需要抓取的详情")
@@ -29,60 +35,72 @@ func (l *CrawlLogic) FetchDetails() (int, error) {
 	l.deps.Log.WithContext(l.ctx).Infof("有 %d 个详情需要抓取", total)
 
 	for i, it := range items {
-		// 2) 拼 URL（与老项目一致）
-		url := fmt.Sprintf("https://%s/cn/?v=%s", l.deps.Config.Fetcher.JavAddress, it.JavId)
-
-		// 3) 用“详情专用”的重试策略抓取
-		respBody, ferr := l.fetchDetailWithRetry(it.Name, url)
-		if ferr != nil {
-			return i, fmt.Errorf("抓取 %s(%s) 详情失败: %w", it.Name, it.JavId, ferr)
+		if err := l.fetchAndSaveDetail(it); err != nil {
+			return i, err
 		}
-
-		now := time.Now().Unix()
-
-		// 先查是否已有 detail，决定 birthTime
-		var birthTime int64
-		if old, _ := l.deps.DetailRepo.FindOneByJavId(l.ctx, it.JavId); old != nil && old.CreatedOn > 0 {
-			birthTime = old.CreatedOn
-		} else {
-			birthTime = now
-		}
-
-		// 5) 保存 raw_detail（幂等：按 JavId Upsert）
-		detail := &types.Detail{
-			Name:      it.Name,
-			JavId:     it.JavId,
-			Prefix:    it.Prefix,
-			QueryUrl:  url,
-			Content:   respBody,
-			CreatedOn: birthTime, // 首次创建时间；若已存在保持旧值
-			UpdatedOn: now,
-		}
-		if err := l.deps.DetailRepo.Upsert(l.ctx, detail); err != nil {
-			return i, fmt.Errorf("保存详情失败 %s(%s): %w", it.Name, it.JavId, err)
-		}
-
-		// 6) 更新 item 的“详情元信息”
-		if err := l.deps.ItemRepo.UpdateDetailMeta(
-			l.ctx,
-			it.Id,
-			consts.ItemDetailStatusNeedScan, // needScan
-			birthTime,                       // birthTime（仅首次写入）
-			now,                             // updateTime（本次抓/解详情时间）
-			now,                             // updatedOn（记录更新时间）
-			consts.ItemDetailOK,             // hasDetail（已具备详情）
-		); err != nil {
-			return i, fmt.Errorf("更新条目详情元信息失败 %s: %w", it.Name, err)
-		}
-
-		// 7) 轻微休眠（沿用你的随机 sleep）
-		time.Sleep(getRandomSleepDuration())
-
-		// 8) 进度日志（中文）
+		// 7) 进度日志（中文）
 		l.logItemProgress(i+1, total, it.Name, start)
+		time.Sleep(getRandomSleepDuration())
 	}
 
 	return total, nil
+}
+
+func (l *CrawlLogic) fetchAndSaveDetail(it *types.Item) error {
+	// 支持取消
+	select {
+	case <-l.ctx.Done():
+		return l.ctx.Err()
+	default:
+	}
+
+	// 1) 拼 URL（与老项目一致）
+	url := fmt.Sprintf("https://%s/cn/?v=%s", l.deps.Config.Fetcher.JavAddress, it.JavId)
+
+	// 2) 用“详情专用”的重试策略抓取
+	respBody, ferr := l.fetchDetailWithRetry(it.Name, url)
+	if ferr != nil {
+		return fmt.Errorf("抓取 %s(%s) 详情失败: %w", it.Name, it.JavId, ferr)
+	}
+
+	now := time.Now().Unix()
+
+	// 3) 先查是否已有 detail，决定 birthTime
+	var birthTime int64
+	if old, _ := l.deps.DetailRepo.FindOneByJavId(l.ctx, it.JavId); old != nil && old.CreatedOn > 0 {
+		birthTime = old.CreatedOn
+	} else {
+		birthTime = now
+	}
+
+	// 4) 保存 raw_detail（幂等：按 JavId Upsert）
+	detail := &types.Detail{
+		Name:      it.Name,
+		JavId:     it.JavId,
+		Prefix:    it.Prefix,
+		QueryUrl:  url,
+		Content:   respBody,
+		CreatedOn: birthTime, // 首次创建时间；若已存在保持旧值
+		UpdatedOn: now,
+	}
+	if err := l.deps.DetailRepo.Upsert(l.ctx, detail); err != nil {
+		return fmt.Errorf("保存详情失败 %s(%s): %w", it.Name, it.JavId, err)
+	}
+
+	// 5) 更新 item 的“详情元信息”
+	if err := l.deps.ItemRepo.UpdateDetailMeta(
+		l.ctx,
+		it.Id,
+		consts.ItemDetailStatusNeedScan, // needScan
+		birthTime,                       // birthTime（仅首次写入）
+		now,                             // updateTime（本次抓/解详情时间）
+		now,                             // updatedOn（记录更新时间）
+		consts.ItemDetailOK,             // hasDetail（已具备详情）
+	); err != nil {
+		return fmt.Errorf("更新条目详情元信息失败 %s: %w", it.Name, err)
+	}
+
+	return nil
 }
 
 // 详情页有效性：包含 "video_title" 且长度 >= 5000（与老项目一致）

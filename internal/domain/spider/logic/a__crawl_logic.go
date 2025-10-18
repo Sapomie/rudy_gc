@@ -22,24 +22,54 @@ func NewCrawlLogic(ctx context.Context, deps *svc.Deps) *CrawlLogic {
 	}
 }
 
-func (l *CrawlLogic) DailyBestProcession() error {
+func (l *CrawlLogic) CrawlDailyBestProcession() error {
 	var err error
+
 	err = l.FetchAndParseDailyBestinv()
 	if err != nil {
 		return err
 	}
+
 	_, err = l.FetchAndParseDetails()
 	if err != nil {
 		return err
 	}
+
 	err = l.ProcessBestinvRank()
 	if err != nil {
 		return err
 	}
+
 	err = l.DownLoadAllPicture()
 	if err != nil {
 		return err
 	}
+
+	err = l.TranslateTitle()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *CrawlLogic) CrawlBySeedsProcession() error {
+	var err error
+
+	err = l.FetchAndParseInventoryBySeed()
+	if err != nil {
+		return err
+	}
+
+	_, err = l.FetchAndParseDetails()
+	if err != nil {
+		return err
+	}
+
+	err = l.DownLoadAllPicture()
+	if err != nil {
+		return err
+	}
+
 	err = l.TranslateTitle()
 	if err != nil {
 		return err

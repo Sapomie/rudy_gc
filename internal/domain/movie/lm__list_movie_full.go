@@ -15,16 +15,19 @@ func (s *Service) ListMovieFull(ctx context.Context, r *types.ListMovieFullReque
 
 	// 聚合 MovieType（走你已有缓存/聚合链路）
 	out := make([]*types.MovieType, 0, len(rows))
+	javIds := make([]string, 0, len(rows))
 	for _, mv := range rows {
 		mt, err := s.GetMovieType(ctx, mv.JavId)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, mt)
+		javIds = append(javIds, mv.JavId)
 	}
 
 	return &types.ListMovieResponse{
-		List:  out,
-		Total: total,
+		List:   out,
+		Total:  total,
+		JavIds: javIds,
 	}, nil
 }

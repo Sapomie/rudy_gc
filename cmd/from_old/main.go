@@ -43,7 +43,7 @@ func main() {
 
 	//err = migrate.New(deps).MigrateFilm()
 	//err = migrate.New(deps).MigrateRank()
-	//err = migrate.New(deps).MigrateTranslationAndNeedDown()
+	err = migrate.New(deps).MigrateTranslationAndNeedDown()
 	//err = migrate.New(deps).UpDateAllRankInfo()
 	if err != nil {
 		panic(err)

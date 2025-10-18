@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/sc"
+	"rudy_gc/internal/domain/film"
+	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
+	"rudy_gc/pkg/redis"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -26,10 +28,12 @@ func main() {
 		panic(err)
 	}
 
-	//err = logic.NewCrawlLogic(ctx, deps).DailyBestProcession()
-	//if err != nil {
-	//	panic(err)
-	//}
+	//flushDb()
+
+	err = logic.NewCrawlLogic(ctx, deps).CrawlDailyBestProcession()
+	if err != nil {
+		panic(err)
+	}
 
 	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
 	//if err != nil {
@@ -42,15 +46,15 @@ func main() {
 	//	panic(err)
 	//}
 
-	//err = film.NewFilmService(deps).ProcessFilm(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	err = sc.NewScService(deps).AddSc(ctx, "/Users/gaojinwei/Desktop/temp/sc/2025-10-17-06-30")
+	err = film.NewFilmService(deps).ProcessFilm(ctx)
 	if err != nil {
 		panic(err)
 	}
+
+	//err = sc.NewScService(deps).AddSc(ctx, "/Users/gaojinwei/Desktop/temp/sc/2025-10-17-06-30")
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//movieType, err := movie.New(deps).GetMovieType(ctx, "javmezriqa")
 	//if err != nil {
@@ -59,7 +63,7 @@ func main() {
 	//deps.Log.Info("movieType", movieType.Name)
 
 	//l :=
-	//err = l.CrawlActiveSeeds()
+	//err = l.FetchAndParseInventoryBySeed()
 	//if err != nil {
 	//	panic(err)
 	//}
@@ -81,4 +85,9 @@ func main() {
 	//	panic(err)
 	//}
 
+}
+
+func flushDb() {
+	redis.FlushDB("6378")
+	redis.FlushDB("63789")
 }

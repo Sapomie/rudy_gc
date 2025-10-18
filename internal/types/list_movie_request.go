@@ -1,8 +1,9 @@
 package types
 
 type ListMovieResponse struct {
-	List  []*MovieType
-	Total int64
+	List   []*MovieType
+	Total  int64
+	JavIds []string
 }
 
 type ListMovieFullRequest struct {

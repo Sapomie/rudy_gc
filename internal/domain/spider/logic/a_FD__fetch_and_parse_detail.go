@@ -2,9 +2,9 @@
 package logic
 
 func (l *CrawlLogic) FetchAndParseDetails() (int, error) {
-	detailNum, err := l.FetchDetails()
+	detailNum, err := l.FetchDetailsByItemDetailStatus()
 	if err != nil {
-		l.deps.Log.WithContext(l.ctx).Errorf("FetchDetails: %v", err)
+		l.deps.Log.WithContext(l.ctx).Errorf("FetchDetailsByItemDetailStatus: %v", err)
 		return 0, err
 	}
 

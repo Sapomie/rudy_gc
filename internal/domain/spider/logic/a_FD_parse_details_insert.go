@@ -4,6 +4,7 @@ package logic
 import (
 	"fmt"
 	"math"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"strconv"
 	"time"
@@ -165,6 +166,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		Name:          raw.Designation,
 		JavId:         raw.JavId,
 		ReleasingDate: releasingDate,
+		NeedDownload:  consts.MovieNeedDownLoadNone,
 		// Chinese / FirstRankDayNumber / HighestRank / DaysInRank / NeedDownload
 		// 这些由 Repo 内部“保留旧值”策略处理
 		CreatedOn: now,

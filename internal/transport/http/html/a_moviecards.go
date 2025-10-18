@@ -2,12 +2,13 @@ package html
 
 import (
 	"net/http"
+	"rudy_gc/internal/types"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/consts"
-	"rudy_gc/internal/types"
 )
 
 // 分页参数常量
@@ -17,29 +18,23 @@ const (
 	pageWindow      = 3
 )
 
-// ===== 具体页面：只传差异化默认参数 =====
+// ===== 各页面入口 =====
 
 // /moviecard：按上映日倒序
 func (h *MovieHTMLHandler) ListMovieCardFull(c *gin.Context) {
 	h.renderMovieCard(c,
-		types.ListMovieFullRequest{
-			OrderBy: consts.OrderByReleasingDate,
-		},
-		"MovieCard",
-		"Movies",
-	)
+		types.ListMovieFullRequest{OrderBy: consts.OrderByReleasingDate},
+		"MovieCard", "Movies")
 }
 
+// /moviecardtoday：只显示今天前上映
 func (h *MovieHTMLHandler) ListMovieCardToday(c *gin.Context) {
-
 	h.renderMovieCard(c,
 		types.ListMovieFullRequest{
 			OrderBy:          consts.OrderByReleasingDate,
 			ReleasingDateEnd: time.Now().Format("2006-01-02"),
 		},
-		"MovieCard",
-		"Movies",
-	)
+		"MovieCard", "Movies")
 }
 
 // /moviecardrank：在榜（≥1 天），按榜单日期倒序
@@ -49,21 +44,17 @@ func (h *MovieHTMLHandler) ListMovieCardHasRank(c *gin.Context) {
 			OrderBy:       consts.OrderByRankDate,
 			DaysInRankMin: 1,
 		},
-		"MovieCard",
-		"Movies",
-	)
+		"MovieCard", "Movies")
 }
 
-// /moviecardowned：仅已拥有（不含已移除），按拍摄/生成时间倒序
+// /moviecardowned：仅已拥有，按拍摄/生成时间倒序
 func (h *MovieHTMLHandler) ListMovieCardOwned(c *gin.Context) {
 	h.renderMovieCard(c,
 		types.ListMovieFullRequest{
 			Owned:   consts.OwnedAllNotRemoved,
 			OrderBy: consts.OrderByBirthTime,
 		},
-		"MovieCard",
-		"Movies",
-	)
+		"MovieCard", "Movies")
 }
 
 // /moviecardneeddownload：需要下载 OK，按上映日倒序
@@ -73,12 +64,10 @@ func (h *MovieHTMLHandler) ListMovieCardNeedDownload(c *gin.Context) {
 			NeedDownload: consts.MovieNeedDownLoadOK,
 			OrderBy:      consts.OrderByReleasingDate,
 		},
-		"MovieCard",
-		"Movies",
-	)
+		"MovieCard", "Movies")
 }
 
-// 统一的渲染函数：把公共流程收敛到一处
+// -------- 渲染核心 --------
 func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieFullRequest, title, fieldName string) {
 	req := base
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -92,7 +81,6 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 		req.PageSize = defaultPageSize
 	}
 
-	// ✅ 读取 od 参数，并对非法值回落到默认
 	curOD := normalizeOrderBy(c.Query("od"), req.OrderBy)
 	req.OrderBy = curOD
 
@@ -102,7 +90,10 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 		return
 	}
 
-	pi := BuildPageInfo(c, resp.Total, req.Page, req.PageSize, pageWindow) // ⚠️ 建议你的 BuildPageInfo 用 p/ps
+	// ✅ 将 javIds 投递给后台 DetailFetchLoopSingle（非阻塞 + 去重）
+	h.enqueueJavIDsNonBlocking(resp.JavIds)
+
+	pi := BuildPageInfo(c, resp.Total, req.Page, req.PageSize, pageWindow)
 	ownedQ := buildOwnedFilterInfo(c)
 	sortQ := buildSortQuery(c, curOD)
 
@@ -113,9 +104,44 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 		"PageInfo":    pi,
 		"pageInfo":    pi,
 		"ownedQuery":  ownedQ,
-		"sortQuery":   sortQ, // ✅ 模板可用
-		"CurrentSort": curOD, // （可选）模板也可直接用
+		"sortQuery":   sortQ,
+		"CurrentSort": curOD,
 		"total":       resp.Total,
 		"fieldName":   fieldName,
 	})
+}
+
+// -------- 工具函数 --------
+
+// 去重 + 非阻塞逐个发送
+func (h *MovieHTMLHandler) enqueueJavIDsNonBlocking(ids []string) {
+	if h.detailJobs == nil || len(ids) == 0 {
+		return
+	}
+	for _, id := range uniqueNonEmpty(ids) {
+		select {
+		case h.detailJobs <- id: // 成功投递一个 javId
+		default:
+			// 通道已满时跳过，避免阻塞 HTTP
+			continue
+		}
+	}
+}
+
+// 本次请求内去重并清理空值
+func uniqueNonEmpty(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
 }

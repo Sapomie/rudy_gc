@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
 	"rudy_gc/internal/config"
+	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 	http2 "rudy_gc/internal/transport/http"
 	"time"
@@ -19,19 +21,17 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	logx.DisableStat()
+	logx.Disable()
 
 	deps, err := svc.NewDeps(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// 实例化并启动 loop
-	//ctx := context.Background()
-	//ls := loop.NewLoopServer(ctx, deps, 1)
-	//ls.Start()
-
+	//实例化并启动 loop
 	engine := http2.NewEngine(deps)
+
+	go logic.NewCrawlLogic(context.Background(), deps).DetailFetchLoopSingle(deps.DetailJobs, time.Second*10, 100)
 
 	// 4) 启动 HTTP 服务器（可换成 graceful/shutdown）
 	srv := &http.Server{
@@ -43,9 +43,6 @@ func main() {
 	}
 	log.Printf("HTTP listening on %s\n", c.Port)
 	log.Fatal(srv.ListenAndServe())
-
-	// 示例：手动触发（实际应由管理接口写入 invCh）
-	// invCh <- &spiderx.Notification{Info: spiderx.NotifyCrawActiveQueries}
 
 	select {} // 阻塞主协程，或按你的方式优雅退出
 }

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (l *CrawlLogic) ProcessInventory() error {
+func (l *CrawlLogic) ParseInventory() error {
 	log := l.deps.Log.WithContext(l.ctx)
 
 	ids, err := l.deps.InventoryRepo.ListNeedScanIDs(l.ctx, 10000) // 先给一个上限，避免一次性全扫
@@ -16,10 +16,10 @@ func (l *CrawlLogic) ProcessInventory() error {
 		return fmt.Errorf("list need-scan inventory ids: %w", err)
 	}
 	if len(ids) == 0 {
-		log.Info("ProcessInventory: nothing to scan")
+		log.Info("ParseInventory: nothing to scan")
 		return nil
 	}
-	log.Infof("ProcessInventory: %d inventories to scan", len(ids))
+	log.Infof("ParseInventory: %d inventories to scan", len(ids))
 
 	for _, id := range ids {
 		inv, err := l.deps.InventoryRepo.FindOne(l.ctx, id)
@@ -35,7 +35,7 @@ func (l *CrawlLogic) ProcessInventory() error {
 		}
 	}
 
-	log.Info("ProcessInventory: done")
+	log.Info("ParseInventory: done")
 	return nil
 }
 

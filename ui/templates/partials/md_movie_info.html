@@ -1,107 +1,117 @@
 {{ define "partials.md.movie_info" }}
-<table class="table table-bordered dt-responsive nowrap" style="width:100%">
-    <tr class="table-light">
-        <th>识别码</th>
-        <td>
-            <a href="/cards?pn={{.movieType.Prefix}}" class="mr-2">{{.movieType.Name}}</a>
-            {{if eq .movieType.Owned 5}}
-            <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-info mr-1">Play</a>
-            {{else if eq .movieType.Owned 4}}
-            <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-success mr-1">Play</a>
-            {{else if eq .movieType.Owned 6}}
-            <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-secondary mr-1">Removed</a>
-            {{end}}
-            <small class="text-muted">({{.movieType.EncodeName}})</small>
-        </td>
-    </tr>
+    <table class="table table-bordered dt-responsive nowrap" style="width:100%">
+        <tr class="table-light">
+            <th>识别码</th>
+            <td>
+                <a href="/cards?pn={{.movieType.Prefix}}" class="mr-2">{{.movieType.Name}}</a>
+                {{if eq .movieType.Owned 5}}
+                    <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-info mr-1">Play</a>
+                {{else if eq .movieType.Owned 4}}
+                    <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-success mr-1">Play</a>
+                {{else if eq .movieType.Owned 6}}
+                    <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-secondary mr-1">Removed</a>
+                {{end}}
+                <small class="text-muted">({{.movieType.EncodeName}})</small>
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>发行时间</th>
-        <td>{{.movieType.ReleasingDate}}</td>
-    </tr>
+        <tr class="table-light">
+            <th>发行时间</th>
+            <td>{{.movieType.ReleasingDate}}</td>
+        </tr>
 
-    <tr class="table-light">
-        <th>长度</th>
-        <td>
-            {{.movieType.Length}}
-            {{ if or (eq .movieType.Owned 3) (eq .movieType.Owned 2) }}
-            <a href="/copyfilm/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Copy</a>
-            {{ end}}
-        </td>
-    </tr>
+        <tr class="table-light">
+            <th>长度</th>
+            <td>
+                {{.movieType.Length}}
+                {{ if or (eq .movieType.Owned 3) (eq .movieType.Owned 2) }}
+                    <a href="/copyfilm/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Copy</a>
+                {{ end}}
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>制作商</th>
-        <td><a class="tag" href="/cards?mn={{.movieType.Maker}}">{{.movieType.Maker}}</a></td>
-    </tr>
+        <tr class="table-light">
+            <th>制作商</th>
+            <td><a class="tag" href="/cards?mn={{.movieType.Maker}}">{{.movieType.Maker}}</a></td>
+        </tr>
 
-    <tr class="table-light">
-        <th>发行商</th>
-        <td><a class="tag" href="/cards?ln={{.movieType.Label}}">{{.movieType.Label}}</a></td>
-    </tr>
+        <tr class="table-light">
+            <th>发行商</th>
+            <td><a class="tag" href="/cards?ln={{.movieType.Label}}">{{.movieType.Label}}</a></td>
+        </tr>
 
-    <tr class="table-light">
-        <th>导演</th>
-        <td>
-            <a class="tag" href="/cards?dn={{.movieType.Director}}" title="{{.movieType.Director}}">
-                {{.movieType.Director}}
-            </a>
-        </td>
-    </tr>
+        <tr class="table-light">
+            <th>导演</th>
+            <td>
+                <a class="tag" href="/cards?dn={{.movieType.Director}}" title="{{.movieType.Director}}">
+                    {{.movieType.Director}}
+                </a>
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>分类</th>
-        <td>
-            {{range .movieType.Genre}}
-            <a class="tag" href="/cards?gn={{.}}">{{.}}</a>
-            {{end}}
-        </td>
-    </tr>
+        <tr class="table-light">
+            <th>分类</th>
+            <td>
+                {{range .movieType.Genre}}
+                    <a class="tag" href="/cards?gn={{.}}">{{.}}</a>
+                {{end}}
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>演员</th>
-        <td>
-            {{range .movieType.Cast}}
-            <a class="tag" href="/{{.Url}}" title="{{.NameShow}}">{{.NameShow}}</a>
-            {{end}}
-        </td>
-    </tr>
+        <tr class="table-light">
+            <th>演员</th>
+            <td>
+                {{range .movieType.Cast}}
+                    <a class="tag" href="/{{.Url}}" title="{{.NameShow}}">{{.NameShow}}</a>
+                {{end}}
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>评分</th>
-        <td>
-            {{.movieType.Score}}
-            <small class="text-muted">（{{.movieType.ViewersNumberWatched}}）</small>
-            <small class="text-muted ml-2">{{.movieType.UpdateDate}}</small>
-            {{if ne .movieType.NeedDownload 2}}
-            <a href="/downloadlater/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Add</a>
-            {{else}}
-            <a href="/removedownloadlater/{{.movieType.Name}}" class="btn btn-sm btn-pink ml-2">Remove</a>
-            {{ end}}
-        </td>
-    </tr>
+        <tr class="table-light">
+            <th>评分</th>
+            <td>
+                {{.movieType.Score}}
+                <small class="text-muted">（{{.movieType.ViewersNumberWatched}}）</small>
+                <small class="text-muted ml-2">{{.movieType.UpdateDate}}</small>
+                <button
+                        id="btn-downloadlater"
+                        class="btn btn-sm {{ if eq .movieType.NeedDownload 2 }}btn-warning{{ else }}btn-outline-warning{{ end }} ms-2"
+                        data-name="{{ .movieType.JavId }}"
+                        data-needdownload="{{ .movieType.NeedDownload }}"
+                        title="{{ if eq .movieType.NeedDownload 2 }}取消稍后下载{{ else }}添加稍后下载{{ end }}">
+                    <i class="mdi mdi-download{{ if ne .movieType.NeedDownload 2 }}-outline{{ end }}"></i>
+                    <span class="ms-1">{{ if eq .movieType.NeedDownload 2 }}已添加{{ else }}稍后下载{{ end }}</span>
+                </button>
 
-    <tr class="table-light">
-        <th>链接</th>
-        <td>
-            <a href="{{.movieType.BusUrl}}"    class="mr-2" target="_blank" rel="noopener">Bus</a>
-            <a href="{{.movieType.SearchUrl}}" class="mr-2" target="_blank" rel="noopener">Suk</a>
-            <a href="{{.movieType.JavUrl}}"               target="_blank" rel="noopener">Lib</a>
-        </td>
-    </tr>
+                {{/*            {{if ne .movieType.NeedDownload 2}}*/}}
+                {{/*            <a href="/downloadlater/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Add</a>*/}}
+                {{/*            {{else}}*/}}
+                {{/*            <a href="/removedownloadlater/{{.movieType.Name}}" class="btn btn-sm btn-pink ml-2">Remove</a>*/}}
+                {{/*            {{ end}}*/}}
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>RankInfo</th>
-        <td>{{.movieType.FirstRankingDay}}</td>
-    </tr>
+        <tr class="table-light">
+            <th>链接</th>
+            <td>
+                <a href="{{.movieType.BusUrl}}" class="mr-2" target="_blank" rel="noopener">Bus</a>
+                <a href="{{.movieType.SearchUrl}}" class="mr-2" target="_blank" rel="noopener">Suk</a>
+                <a href="{{.movieType.JavUrl}}" target="_blank" rel="noopener">Lib</a>
+            </td>
+        </tr>
 
-    <tr class="table-light">
-        <th>Sc</th>
-        <td>
-            {{range .sc}}
-            <a class="tag" href="/moviecardsc?sn={{.}}">{{.}}</a>
-            {{end}}
-        </td>
-    </tr>
-</table>
+        <tr class="table-light">
+            <th>RankInfo</th>
+            <td>{{.movieType.FirstRankingDay}}</td>
+        </tr>
+
+        <tr class="table-light">
+            <th>Sc</th>
+            <td>
+                {{range .sc}}
+                    <a class="tag" href="/moviecardsc?sn={{.}}">{{.}}</a>
+                {{end}}
+            </td>
+        </tr>
+    </table>
 {{ end }}

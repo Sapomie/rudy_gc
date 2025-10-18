@@ -28,7 +28,7 @@ func (l *CrawlLogic) ParseDetails() error {
 	//todo: parallel parse
 	for _, it := range items {
 		// 解析并入库
-		if _, err := l.parseDetailAndInsertMovie(it); err != nil {
+		if err := l.parseDetailAndInsertMovie(it); err != nil {
 			return fmt.Errorf("解析并入库失败 %s(%s): %w", it.Name, it.JavId, err)
 		}
 
@@ -50,17 +50,17 @@ func (l *CrawlLogic) ParseDetails() error {
 	return nil
 }
 
-func (l *CrawlLogic) parseDetailAndInsertMovie(it *types.Item) (interface{}, interface{}) {
+func (l *CrawlLogic) parseDetailAndInsertMovie(it *types.Item) error {
 	//build rawMovie
 	rawJavMovie, err := l.buildRawMovieByDetail(it)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	//insert raw
 	_, err = l.saveParsedMovie(rawJavMovie)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return nil, nil
+	return nil
 }

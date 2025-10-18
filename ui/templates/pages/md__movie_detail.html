@@ -41,8 +41,10 @@
                                      style="object-fit: contain; width: 100%; height: auto;">
 
                                 <div class="badge-stack">
-                                    {{if gt .movieType.ComeTimes 0}}<span class="badge-come">❤ {{.movieType.ComeTimes}}</span>{{end}}
-                                    {{if gt .movieType.ScTimes 0}}  <span class="badge-times">× {{.movieType.ScTimes}}</span>{{end}}
+                                    {{if gt .movieType.ComeTimes 0}}<span
+                                            class="badge-come">❤ {{.movieType.ComeTimes}}</span>{{end}}
+                                    {{if gt .movieType.ScTimes 0}}
+                                        <span class="badge-times">× {{.movieType.ScTimes}}</span>{{end}}
                                 </div>
                                 {{if ne (printf "%v" .movieType.Score) ""}}
                                     <span class="badge-score">★ {{.movieType.Score}}</span>
@@ -103,6 +105,8 @@
         </div><!-- /.page-content -->
     </main>
 
+
+    <script src="/static/customer/movie_downloadlater.js"></script>
     <!-- JS -->
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>

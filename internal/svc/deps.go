@@ -58,7 +58,8 @@ type Deps struct {
 
 	MovieTypeCache movie_repo.MovieTypeCache
 
-	Fetcher *fetcher.Fetcher
+	Fetcher    *fetcher.Fetcher
+	DetailJobs chan string
 }
 
 func NewDeps(cfg config.Config) (*Deps, error) {
@@ -175,6 +176,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		FilmRepo:       filmRepo,
 		GListRepo:      glistRepo,
 		ScRepo:         scRepo,
+		DetailJobs:     make(chan string, 200),
 
 		Fetcher: f,
 	}, nil

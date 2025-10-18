@@ -69,7 +69,7 @@ func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
 	}
 
 	allHref, allAct := makeHref("1")
-	ownedHref, ownedAct := makeHref("2")
+	ownedHref, ownedAct := makeHref("3")
 	notHref, notAct := makeHref("3")
 
 	return &OwnedQuery{
