@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/spider/logic"
+	"rudy_gc/internal/domain/loop"
 	"rudy_gc/internal/svc"
 	http2 "rudy_gc/internal/transport/http"
 	"time"
@@ -31,7 +31,7 @@ func main() {
 	//实例化并启动 loop
 	engine := http2.NewEngine(deps)
 
-	go logic.NewCrawlLogic(context.Background(), deps).DetailFetchLoopSingle(deps.DetailJobs, time.Second*10, 100)
+	go loop.NewFetchLoopService(deps).DetailFetchLoopSingle(context.Background(), deps.DetailJobs, time.Second*10, 100)
 
 	// 4) 启动 HTTP 服务器（可换成 graceful/shutdown）
 	srv := &http.Server{

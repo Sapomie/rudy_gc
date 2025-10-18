@@ -7,70 +7,68 @@ import (
 )
 
 type CrawlLogic struct {
-	ctx       context.Context
 	deps      *svc.Deps
 	castIdMap map[int64]struct{}
 	movieSvc  *movie.Service
 }
 
-func NewCrawlLogic(ctx context.Context, deps *svc.Deps) *CrawlLogic {
+func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 	return &CrawlLogic{
-		ctx:       ctx,
 		deps:      deps,
 		castIdMap: map[int64]struct{}{},
 		movieSvc:  movie.NewMovieService(deps),
 	}
 }
 
-func (l *CrawlLogic) CrawlDailyBestProcession() error {
+func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context) error {
 	var err error
 
-	err = l.FetchAndParseDailyBestinv()
+	err = l.FetchAndParseDailyBestinv(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = l.FetchAndParseDetails()
+	_, err = l.FetchAndParseDetails(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = l.ProcessBestinvRank()
+	err = l.ProcessBestinvRank(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = l.DownLoadAllPicture()
+	err = l.DownLoadAllPicture(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = l.TranslateTitle()
+	err = l.TranslateTitle(ctx)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (l *CrawlLogic) CrawlBySeedsProcession() error {
+func (l *CrawlLogic) CrawlBySeedsProcession(ctx context.Context) error {
 	var err error
 
-	err = l.FetchAndParseInventoryBySeed()
+	err = l.FetchAndParseInventoryBySeed(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = l.FetchAndParseDetails()
+	_, err = l.FetchAndParseDetails(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = l.DownLoadAllPicture()
+	err = l.DownLoadAllPicture(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = l.TranslateTitle()
+	err = l.TranslateTitle(ctx)
 	if err != nil {
 		return err
 	}

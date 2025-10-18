@@ -2,16 +2,17 @@
 package logic
 
 import (
+	"context"
 	"fmt"
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"time"
 )
 
-func (l *CrawlLogic) ParseInventory() error {
-	log := l.deps.Log.WithContext(l.ctx)
+func (l *CrawlLogic) ParseInventory(ctx context.Context) error {
+	log := l.deps.Log.WithContext(ctx)
 
-	ids, err := l.deps.InventoryRepo.ListNeedScanIDs(l.ctx, 10000) // 先给一个上限，避免一次性全扫
+	ids, err := l.deps.InventoryRepo.ListNeedScanIDs(ctx, 10000) // 先给一个上限，避免一次性全扫
 	if err != nil {
 		return fmt.Errorf("list need-scan inventory ids: %w", err)
 	}
@@ -22,15 +23,15 @@ func (l *CrawlLogic) ParseInventory() error {
 	log.Infof("ParseInventory: %d inventories to scan", len(ids))
 
 	for _, id := range ids {
-		inv, err := l.deps.InventoryRepo.FindOne(l.ctx, id)
+		inv, err := l.deps.InventoryRepo.FindOne(ctx, id)
 		if err != nil {
 			return fmt.Errorf("find inventory id=%d: %w", id, err)
 		}
-		if err := l.makeAndInsertItemsByInventory(inv); err != nil {
+		if err := l.makeAndInsertItemsByInventory(ctx, inv); err != nil {
 			return err
 		}
 		// 标记已扫描
-		if err := l.deps.InventoryRepo.MarkScanned(l.ctx, id, time.Now().Unix()); err != nil {
+		if err := l.deps.InventoryRepo.MarkScanned(ctx, id, time.Now().Unix()); err != nil {
 			return fmt.Errorf("mark inventory scanned id=%d: %w", id, err)
 		}
 	}
@@ -39,12 +40,12 @@ func (l *CrawlLogic) ParseInventory() error {
 	return nil
 }
 
-func (l *CrawlLogic) makeAndInsertItemsByInventory(inv *types.Inventory) error {
+func (l *CrawlLogic) makeAndInsertItemsByInventory(ctx context.Context, inv *types.Inventory) error {
 	if inv == nil {
 		return fmt.Errorf("nil inventory")
 	}
 
-	if err := l.makeAndInsertItems(inv.Content, inv.Name, getInventorySearchType(inv.Category)); err != nil {
+	if err := l.makeAndInsertItems(ctx, inv.Content, inv.Name, getInventorySearchType(inv.Category)); err != nil {
 		return err
 	}
 	return nil

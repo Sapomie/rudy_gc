@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"context"
 	"fmt"
 	consts "rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
@@ -11,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64) error {
+func (l *CrawlLogic) makeAndInsertItems(ctx context.Context, content, searchBy string, category int64) error {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {
 		return fmt.Errorf("parse document: %w", err)
@@ -72,7 +73,7 @@ func (l *CrawlLogic) makeAndInsertItems(content, searchBy string, category int64
 
 	// 幂等插入
 	for _, it := range toInsert {
-		inserted, err := l.deps.ItemRepo.TryInsert(l.ctx, it)
+		inserted, err := l.deps.ItemRepo.TryInsert(ctx, it)
 		if err != nil {
 			return fmt.Errorf("insert item name=%s javId=%s: %w", it.Name, it.JavId, err)
 		}

@@ -35,7 +35,6 @@ func main() {
 	detailJobs := make(chan []string, 16)
 
 	// 2) 启动 loop
-	go logic.d(detailJobs)
 
 	// 3) 在主流程的合适位置投递任务
 	detailJobs <- []string{"IPZ-001", "SSIS-123"}

@@ -3,6 +3,7 @@ package logic
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"rudy_gc/pkg/mylog"
 	"strings"
@@ -13,15 +14,15 @@ import (
 
 const maxRetries = 45
 
-func (l *CrawlLogic) fetchInventoryContentWithRetry(fullURL string) (string, error) {
+func (l *CrawlLogic) fetchInventoryContentWithRetry(ctx context.Context, fullURL string) (string, error) {
 	tryAttempts := 0
 
 	for {
 		tryAttempts++
-		l.deps.Log.WithContext(l.ctx).Infof("第 %d 次尝试: %s", tryAttempts, fullURL)
+		l.deps.Log.WithContext(ctx).Infof("第 %d 次尝试: %s", tryAttempts, fullURL)
 
 		// 使用已注入的 Fetcher（直连）
-		resp, err := l.deps.Fetcher.Get(l.ctx, fullURL)
+		resp, err := l.deps.Fetcher.Get(ctx, fullURL)
 		statusCode := 0
 		var body []byte
 		if resp != nil {
@@ -41,7 +42,7 @@ func (l *CrawlLogic) fetchInventoryContentWithRetry(fullURL string) (string, err
 		}
 
 		// 重试/退避
-		if !l.retryHandler(tryAttempts, err, string(body)) {
+		if !l.retryHandler(ctx, tryAttempts, err, string(body)) {
 			// 到达上限或需要终止
 			if err == nil {
 				// 无具体 err 时给一个描述
@@ -53,17 +54,17 @@ func (l *CrawlLogic) fetchInventoryContentWithRetry(fullURL string) (string, err
 }
 
 // 与老代码相同：每 20 次长退避；超过 maxRetries 终止；其余每次 3s。
-func (l *CrawlLogic) retryHandler(attempts int, err error, response string) bool {
+func (l *CrawlLogic) retryHandler(ctx context.Context, attempts int, err error, response string) bool {
 	if attempts%20 == 0 {
-		mylog.Warn(l.ctx, "多次重试失败(第%d次)，10分钟后重试。resp=%.200s", attempts, response)
+		mylog.Warn(ctx, "多次重试失败(第%d次)，10分钟后重试。resp=%.200s", attempts, response)
 		time.Sleep(10 * time.Minute)
 		return true
 	}
 	if attempts >= maxRetries {
-		mylog.Warn(l.ctx, "多次重试失败(到达上限%d)，停止。resp=%.200s", maxRetries, response)
+		mylog.Warn(ctx, "多次重试失败(到达上限%d)，停止。resp=%.200s", maxRetries, response)
 		return false
 	}
-	mylog.Warn(l.ctx, "GetHttpResponse error: %v（3秒后重试）", err)
+	mylog.Warn(ctx, "GetHttpResponse error: %v（3秒后重试）", err)
 	time.Sleep(3 * time.Second)
 	return true
 }

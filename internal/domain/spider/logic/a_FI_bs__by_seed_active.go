@@ -2,6 +2,7 @@
 package logic
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -32,15 +33,15 @@ var ErrBlankPage = errors.New("blank page")
 // - 依据断点(pageNow/start-end/offset)分页请求
 // - 保存至 raw_inventory（落库见 fetchAndSaveInventory）
 // - 成功页推进断点；空页/异常的退避与记录
-func (l *CrawlLogic) FetchInventoriesBySeedActive() error {
+func (l *CrawlLogic) FetchInventoriesBySeedActive(ctx context.Context) error {
 	l.deps.Log.Info("FetchInventoriesBySeedActive: begin")
 
 	// 1) Prefix
-	if err := l.fetchByNameType(nameTypePrefix); err != nil {
+	if err := l.fetchByNameType(ctx, nameTypePrefix); err != nil {
 		return err
 	}
 	// 2) Label
-	if err := l.fetchByNameType(nameTypeLabel); err != nil {
+	if err := l.fetchByNameType(ctx, nameTypeLabel); err != nil {
 		return err
 	}
 
@@ -48,8 +49,8 @@ func (l *CrawlLogic) FetchInventoriesBySeedActive() error {
 	return nil
 }
 
-func (l *CrawlLogic) fetchByNameType(nameType int64) error {
-	seeds, err := l.deps.SeedRepo.FindActiveByNameType(l.ctx, nameType)
+func (l *CrawlLogic) fetchByNameType(ctx context.Context, nameType int64) error {
+	seeds, err := l.deps.SeedRepo.FindActiveByNameType(ctx, nameType)
 	if err != nil {
 		return fmt.Errorf("FindActiveSeeds(nameType=%d): %w", nameType, err)
 	}
@@ -60,7 +61,7 @@ func (l *CrawlLogic) fetchByNameType(nameType int64) error {
 	}).Info("active seeds fetched")
 
 	for i, s := range seeds {
-		if err := l.handleSeed(s); err != nil {
+		if err := l.handleSeed(ctx, s); err != nil {
 			return err
 		}
 		// 轻微打点 + 随机 sleep，避免被限流
@@ -76,7 +77,7 @@ func (l *CrawlLogic) fetchByNameType(nameType int64) error {
 }
 
 // 处理单个 seed：计算页区间 -> 逐页抓取并保存 -> 推进断点
-func (l *CrawlLogic) handleSeed(s *types.Seed) error {
+func (l *CrawlLogic) handleSeed(ctx context.Context, s *types.Seed) error {
 	pageStart, pageEnd := determinePageRange(s)
 	if pageStart <= 0 {
 		pageStart = 1
@@ -98,7 +99,7 @@ func (l *CrawlLogic) handleSeed(s *types.Seed) error {
 
 	for p := pageStart; p <= pageEnd; p++ {
 		// 抓取并保存单页
-		if err := l.fetchAndSaveInventory(s.NameType, s.Name, queryBy, p); err != nil {
+		if err := l.fetchAndSaveInventory(ctx, s.NameType, s.Name, queryBy, p); err != nil {
 			if errors.Is(err, ErrBlankPage) {
 				newPageNow = p - 1
 				l.deps.Log.WithFields(logrus.Fields{
@@ -123,7 +124,7 @@ func (l *CrawlLogic) handleSeed(s *types.Seed) error {
 		status = consts.SeedStatusEmpty
 	}
 	if err := l.deps.SeedRepo.UpdateProgress(
-		l.ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg,
+		ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg,
 	); err != nil {
 		l.deps.Log.Errorf("update seed progress failed: %v", err)
 	}
@@ -161,14 +162,14 @@ func determinePageRange(s *types.Seed) (start int64, end int64) {
 }
 
 // 抓取并保存到 raw_inventory
-func (l *CrawlLogic) fetchAndSaveInventory(nameType int64, keyword, queryBy string, page int64) error {
+func (l *CrawlLogic) fetchAndSaveInventory(ctx context.Context, nameType int64, keyword, queryBy string, page int64) error {
 	// 构造 URL（与老项目一致）：https://{JavAddress}/cn + /{queryBy}&page={page}
 	queryWithPage := fmt.Sprintf("/%s&page=%d", queryBy, page)
 	base := fmt.Sprintf("https://%s/cn", l.deps.Config.Fetcher.JavAddress)
 	fullURL := base + queryWithPage
 
 	// 抓取（带重试、空页判定；内部已走 l.deps.Fetcher.Get）
-	content, err := l.fetchInventoryContentWithRetry(fullURL)
+	content, err := l.fetchInventoryContentWithRetry(ctx, fullURL)
 	if err != nil {
 		return err
 	}
@@ -190,7 +191,7 @@ func (l *CrawlLogic) fetchAndSaveInventory(nameType int64, keyword, queryBy stri
 		CreatedOn:     now.Unix(),
 		UpdatedOn:     now.Unix(),
 	}
-	if err := l.deps.InventoryRepo.Upsert(l.ctx, inv); err != nil {
+	if err := l.deps.InventoryRepo.Upsert(ctx, inv); err != nil {
 		return fmt.Errorf("save inventory failed: %w", err)
 	}
 

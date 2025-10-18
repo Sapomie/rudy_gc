@@ -2,6 +2,7 @@
 package logic
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"rudy_gc/internal/consts"
@@ -23,7 +24,7 @@ var genreUnused = map[string]struct{}{
 	"数位马赛克": {},
 }
 
-func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse, error) {
+func (l *CrawlLogic) saveParsedMovie(ctx context.Context, raw *RawJavMovie) (*saveParsedMovieResponse, error) {
 	// ===== 1) 解析原始数值字段 =====
 	length, err := strconv.Atoi(raw.Length)
 	if err != nil {
@@ -51,19 +52,19 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 	}
 
 	// ===== 2) 字典实体 Upsert =====
-	dirID, err := l.deps.DirectorRepo.GetOrCreateByName(l.ctx, raw.Director.Name, raw.Director.JavId)
+	dirID, err := l.deps.DirectorRepo.GetOrCreateByName(ctx, raw.Director.Name, raw.Director.JavId)
 	if err != nil {
 		return nil, fmt.Errorf("导演 Upsert 失败: %w", err)
 	}
-	mkrID, err := l.deps.MakerRepo.GetOrCreateByName(l.ctx, raw.Maker.Name, raw.Maker.JavId)
+	mkrID, err := l.deps.MakerRepo.GetOrCreateByName(ctx, raw.Maker.Name, raw.Maker.JavId)
 	if err != nil {
 		return nil, fmt.Errorf("厂牌 Upsert 失败: %w", err)
 	}
-	labID, err := l.deps.LabelRepo.GetOrCreateByName(l.ctx, raw.Label.Name, raw.Label.JavId)
+	labID, err := l.deps.LabelRepo.GetOrCreateByName(ctx, raw.Label.Name, raw.Label.JavId)
 	if err != nil {
 		return nil, fmt.Errorf("标签 Upsert 失败: %w", err)
 	}
-	pfxID, err := l.deps.PrefixRepo.GetOrCreateByName(l.ctx, raw.Prefix)
+	pfxID, err := l.deps.PrefixRepo.GetOrCreateByName(ctx, raw.Prefix)
 	if err != nil {
 		return nil, fmt.Errorf("前缀 Upsert 失败: %w", err)
 	}
@@ -73,7 +74,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		if _, drop := genreUnused[g.Name]; drop {
 			continue
 		}
-		gid, gerr := l.deps.GenreRepo.GetOrCreateByName(l.ctx, g.Name, g.JavId)
+		gid, gerr := l.deps.GenreRepo.GetOrCreateByName(ctx, g.Name, g.JavId)
 		if gerr != nil {
 			return nil, fmt.Errorf("类型 Upsert 失败(%s): %w", g.Name, gerr)
 		}
@@ -83,7 +84,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 	castIDs := make([]int64, 0, len(raw.Casts))
 	castJavIdMap := make(map[string]struct{}, len(raw.Casts))
 	for _, c := range raw.Casts {
-		cid, cerr := l.deps.CastRepo.GetOrCreateByName(l.ctx, c.Name, c.JavId)
+		cid, cerr := l.deps.CastRepo.GetOrCreateByName(ctx, c.Name, c.JavId)
 		if cerr != nil {
 			return nil, fmt.Errorf("演员 Upsert 失败(%s): %w", c.Name, cerr)
 		}
@@ -100,7 +101,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		)
 		for _, c := range raw.Casts {
 			// 使用 Repo 查询生日
-			birth, found, err := l.deps.CafoRepo.FindBirthByName(l.ctx, c.Name)
+			birth, found, err := l.deps.CafoRepo.FindBirthByName(ctx, c.Name)
 			if err != nil {
 				return nil, fmt.Errorf("查询 Cafo 失败(%s): %w", c.Name, err)
 			}
@@ -143,7 +144,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 	}
 
 	//todo:1.事物        2.BatchTryLink(movieId, ids []int64)
-	mvSaved, err := l.deps.MovieRepo.UpsertByJavId(l.ctx, mv)
+	mvSaved, err := l.deps.MovieRepo.UpsertByJavId(ctx, mv)
 	if err != nil {
 		return nil, fmt.Errorf("保存电影失败: %w", err)
 	}
@@ -157,7 +158,7 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		CreatedOn:      now,
 		UpdatedOn:      now,
 	}
-	if err := l.deps.MurlRepo.UpsertByJavIdPreserveLocal(l.ctx, murl); err != nil {
+	if err := l.deps.MurlRepo.UpsertByJavIdPreserveLocal(ctx, murl); err != nil {
 		return nil, fmt.Errorf("保存 MURL 失败: %w", err)
 	}
 
@@ -172,22 +173,22 @@ func (l *CrawlLogic) saveParsedMovie(raw *RawJavMovie) (*saveParsedMovieResponse
 		CreatedOn: now,
 		UpdatedOn: now,
 	}
-	if err := l.deps.MinfoRepo.UpsertPreserve(l.ctx, minfo); err != nil {
+	if err := l.deps.MinfoRepo.UpsertPreserve(ctx, minfo); err != nil {
 		return nil, fmt.Errorf("保存 MINFO 失败: %w", err)
 	}
 
 	// ===== 6) 关系表（amr_movie_cast / amr_movie_genre）=====
 	for _, cid := range castIDs {
-		if err := l.deps.MovieCastRepo.TryLink(l.ctx, mvSaved.JavId, cid, now); err != nil {
+		if err := l.deps.MovieCastRepo.TryLink(ctx, mvSaved.JavId, cid, now); err != nil {
 			return nil, fmt.Errorf("建立关系 movie_cast 失败: %w", err)
 		}
 	}
 	for _, gid := range genreIDs {
-		if err := l.deps.MovieGenreRepo.TryLink(l.ctx, mvSaved.JavId, gid, now); err != nil {
+		if err := l.deps.MovieGenreRepo.TryLink(ctx, mvSaved.JavId, gid, now); err != nil {
 			return nil, fmt.Errorf("建立关系 movie_genre 失败: %w", err)
 		}
 	}
-	l.movieSvc.InvalidateMovieType(l.ctx, raw.JavId)
+	l.movieSvc.InvalidateMovieType(ctx, raw.JavId)
 
 	return &saveParsedMovieResponse{
 		movie:        mvSaved,

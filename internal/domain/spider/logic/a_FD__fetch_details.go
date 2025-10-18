@@ -1,14 +1,15 @@
 package logic
 
 import (
+	"context"
 	"rudy_gc/internal/types"
 	"strings"
 	"time"
 )
 
-func (l *CrawlLogic) HandleFetchDetailsById(javIds []string) (int, error) {
+func (l *CrawlLogic) HandleFetchDetailsById(ctx context.Context, javIds []string) (int, error) {
 	if len(javIds) == 0 {
-		l.deps.Log.WithContext(l.ctx).Info("handleFetchDetailsById: 空列表，跳过")
+		l.deps.Log.WithContext(ctx).Info("handleFetchDetailsById: 空列表，跳过")
 		return 0, nil
 	}
 
@@ -19,22 +20,22 @@ func (l *CrawlLogic) HandleFetchDetailsById(javIds []string) (int, error) {
 			continue
 		}
 
-		it, err := l.deps.ItemRepo.FindOneByJavId(l.ctx, javId)
+		it, err := l.deps.ItemRepo.FindOneByJavId(ctx, javId)
 		if err != nil {
-			l.deps.Log.WithContext(l.ctx).Warnf("handleFetchDetailsById: 根据 javId=%s 查询 Item 失败: %v（将尝试抓取）", javId, err)
+			l.deps.Log.WithContext(ctx).Warnf("handleFetchDetailsById: 根据 javId=%s 查询 Item 失败: %v（将尝试抓取）", javId, err)
 			// 查询失败时，宁可尝试抓取（以免漏处理）
 			// 但此时没有 it 无法继续，跳过该 id
 			continue
 		}
 		if it == nil {
-			l.deps.Log.WithContext(l.ctx).Warnf("handleFetchDetailsById: 根据 javId=%s 未找到 Item（跳过）", javId)
+			l.deps.Log.WithContext(ctx).Warnf("handleFetchDetailsById: 根据 javId=%s 未找到 Item（跳过）", javId)
 			continue
 		}
 
 		// 读取 Movie 的上映日，失败/缺失时按“需要更新”处理
 		var releasingDate int64
-		if m, merr := l.deps.MovieRepo.FindOneByJavId(l.ctx, javId); merr != nil {
-			l.deps.Log.WithContext(l.ctx).Warnf("handleFetchDetailsById: MovieRepo.FindOneByJavId(%s) 失败: %v（视为需要更新）", javId, merr)
+		if m, merr := l.deps.MovieRepo.FindOneByJavId(ctx, javId); merr != nil {
+			l.deps.Log.WithContext(ctx).Warnf("handleFetchDetailsById: MovieRepo.FindOneByJavId(%s) 失败: %v（视为需要更新）", javId, merr)
 			releasingDate = 0 // 让 shouldSkipUpdate 返回 false
 		} else if m == nil {
 			// Movie 还未建立，必然需要抓详情
@@ -44,39 +45,39 @@ func (l *CrawlLogic) HandleFetchDetailsById(javIds []string) (int, error) {
 		}
 
 		// 只有“不应跳过”时才加入待处理列表
-		if !l.shouldSkipUpdate(it.LastQueryDetailTime, releasingDate, it.Name) {
+		if !l.shouldSkipUpdate(ctx, it.LastQueryDetailTime, releasingDate, it.Name) {
 			items = append(items, it)
 		}
 	}
 
-	total, err := l.handleFetchAndParseDetails(items)
+	total, err := l.handleFetchAndParseDetails(ctx, items)
 	if err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
-func (l *CrawlLogic) handleFetchAndParseDetails(items []*types.Item) (int, error) {
+func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*types.Item) (int, error) {
 	total := len(items)
 	if total == 0 {
-		l.deps.Log.WithContext(l.ctx).Info("没有需要抓取的详情")
+		l.deps.Log.WithContext(ctx).Info("没有需要抓取的详情")
 		return 0, nil
 	}
 
 	start := time.Now()
-	l.deps.Log.WithContext(l.ctx).Infof("有 %d 个详情需要抓取", total)
+	l.deps.Log.WithContext(ctx).Infof("有 %d 个详情需要抓取", total)
 
 	for i, it := range items {
-		if err := l.fetchAndSaveDetail(it); err != nil {
+		if err := l.fetchAndSaveDetail(ctx, it); err != nil {
 			return 0, err
 		}
 
 		// 紧接解析与入库
-		item, err := l.deps.ItemRepo.FindOneByJavId(l.ctx, it.JavId)
+		item, err := l.deps.ItemRepo.FindOneByJavId(ctx, it.JavId)
 		if err != nil {
 			return 0, err
 		}
-		if err := l.parseDetailAndInsertMovie(item); err != nil {
+		if err := l.parseDetailAndInsertMovie(ctx, item); err != nil {
 			return 0, err
 		}
 
@@ -97,8 +98,8 @@ const (
 )
 
 // 返回 true 表示“可以跳过本次更新”（即近期已抓过/离上映较久且更新频率较低）
-func (l *CrawlLogic) shouldSkipUpdate(lastQueryTime, releasingDate int64, name string) bool {
-	log := l.deps.Log.WithContext(l.ctx)
+func (l *CrawlLogic) shouldSkipUpdate(ctx context.Context, lastQueryTime, releasingDate int64, name string) bool {
+	log := l.deps.Log.WithContext(ctx)
 	now := time.Now().Unix()
 
 	// 若缺数据，默认不跳过（需要更新）

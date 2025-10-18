@@ -48,10 +48,10 @@ var (
 )
 
 // TranslateTitle：核心逻辑不变，但更稳、更幂等
-func (l *CrawlLogic) TranslateTitle() error {
+func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
 	var count int64
 
-	items, err := l.deps.ItemRepo.FindByTranslateStatus(l.ctx, consts.ItemChineseNone)
+	items, err := l.deps.ItemRepo.FindByTranslateStatus(ctx, consts.ItemChineseNone)
 	if err != nil {
 		return err
 	}
@@ -65,12 +65,12 @@ func (l *CrawlLogic) TranslateTitle() error {
 	for _, item := range items {
 		// 支持取消
 		select {
-		case <-l.ctx.Done():
-			return l.ctx.Err()
+		case <-ctx.Done():
+			return ctx.Err()
 		default:
 		}
 
-		movie, err := l.deps.MovieRepo.FindOneByJavId(l.ctx, item.JavId)
+		movie, err := l.deps.MovieRepo.FindOneByJavId(ctx, item.JavId)
 		if err != nil {
 			return fmt.Errorf("MovieRepo.FindOneByJavId err: %w, name=%s", err, item.Name)
 		}
@@ -80,7 +80,7 @@ func (l *CrawlLogic) TranslateTitle() error {
 		if src == "" {
 			// 没有可翻译文本，按“失败”记（也可按需记 OK）
 			now := time.Now().Unix()
-			_ = l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, item.JavId, types.ItemPatch{
+			_ = l.deps.ItemRepo.UpdatePartialByJavId(ctx, item.JavId, types.ItemPatch{
 				HasChinese: ptr.Int64(consts.ItemChineseError),
 				UpdatedOn:  &now,
 			})
@@ -93,7 +93,7 @@ func (l *CrawlLogic) TranslateTitle() error {
 			time.Sleep(sleepDelta)
 		}
 
-		dst, err := l.translateWithRetry(l.ctx, src)
+		dst, err := l.translateWithRetry(ctx, src)
 		lastCall = time.Now()
 
 		var translationStatus int64
@@ -106,14 +106,14 @@ func (l *CrawlLogic) TranslateTitle() error {
 
 				// 读旧值（可选：若你上层已有 minfo 就不再读）
 				// 这里直接尝试更新，repo 层可选择只更新非空字段
-				if uerr := l.deps.MinfoRepo.UpdatePartialByJavId(l.ctx, movie.JavId, types.MinfoPatch{
+				if uerr := l.deps.MinfoRepo.UpdatePartialByJavId(ctx, movie.JavId, types.MinfoPatch{
 					Chinese:   &dst,
 					UpdatedOn: &now,
 				}); uerr != nil {
 					return uerr
 				}
 
-				l.movieSvc.InvalidateMovieType(l.ctx, movie.JavId)
+				l.movieSvc.InvalidateMovieType(ctx, movie.JavId)
 				translationStatus = consts.ItemChineseOK
 			} else {
 				translationStatus = consts.ItemChineseError
@@ -130,7 +130,7 @@ func (l *CrawlLogic) TranslateTitle() error {
 		}
 
 		now := time.Now().Unix()
-		if uerr := l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, item.JavId, types.ItemPatch{
+		if uerr := l.deps.ItemRepo.UpdatePartialByJavId(ctx, item.JavId, types.ItemPatch{
 			HasChinese: ptr.Int64(translationStatus),
 			UpdatedOn:  &now,
 		}); uerr != nil {
@@ -158,7 +158,7 @@ func (l *CrawlLogic) translateWithRetry(ctx context.Context, src string) (string
 		default:
 		}
 
-		dst, err := l.GetChineseNameFromBaidu(src)
+		dst, err := l.GetChineseNameFromBaidu(ctx, src)
 		if err == nil || errors.Is(err, errSensitive) || errors.Is(err, errBadJSON) {
 			return dst, err // 成功/敏感词/明显非重试错误：直接返回
 		}
@@ -173,14 +173,14 @@ func (l *CrawlLogic) translateWithRetry(ctx context.Context, src string) (string
 }
 
 // 更稳的百度解析：支持 error_code / error_msg，不再依赖“Hit sensitive word”字符串
-func (l *CrawlLogic) GetChineseNameFromBaidu(src string) (string, error) {
+func (l *CrawlLogic) GetChineseNameFromBaidu(ctx context.Context, src string) (string, error) {
 	sign := md5Hex(appID + src + salt + apiKey)
 	queryURL := fmt.Sprintf(
 		"https://api.fanyi.baidu.com/api/trans/vip/translate?q=%s&from=jp&to=zh&appid=%s&salt=%s&sign=%s",
 		url.QueryEscape(src), appID, salt, sign,
 	)
 
-	r, err := l.deps.Fetcher.GetWithProxy(l.ctx, queryURL)
+	r, err := l.deps.Fetcher.GetWithProxy(ctx, queryURL)
 	if err != nil {
 		return "", err
 	}

@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	consts "rudy_gc/internal/consts"
@@ -8,26 +9,26 @@ import (
 	"time"
 )
 
-func (l *CrawlLogic) FetchBestinv(typ int64, pageEnd int64) error {
+func (l *CrawlLogic) FetchBestinv(ctx context.Context, typ int64, pageEnd int64) error {
 	date := time.Now().Add(-8 * time.Hour).Format(time.DateOnly) // 与老项目保持相同的日期口径
-	l.deps.Log.WithContext(l.ctx).Infof("开始抓取 Bestinv：typ=%d, date=%s, 至多 %d 页", typ, date, pageEnd)
+	l.deps.Log.WithContext(ctx).Infof("开始抓取 Bestinv：typ=%d, date=%s, 至多 %d 页", typ, date, pageEnd)
 
 	for page := int64(1); page <= pageEnd; page++ {
-		if err := l.fetchBestinvByRated(typ, date, page); err != nil {
+		if err := l.fetchBestinvByRated(ctx, typ, date, page); err != nil {
 			// 已有的 retry 流程在空列表时会返回 ErrBlankPage，这里直接提前结束
 			if errors.Is(err, ErrBlankPage) {
-				l.deps.Log.WithContext(l.ctx).Infof("第 %d 页为空白页，提前停止", page)
+				l.deps.Log.WithContext(ctx).Infof("第 %d 页为空白页，提前停止", page)
 				break
 			}
 			return err
 		}
 		time.Sleep(getRandomSleepDuration())
 	}
-	l.deps.Log.WithContext(l.ctx).Info("抓取 Bestinv 完成")
+	l.deps.Log.WithContext(ctx).Info("抓取 Bestinv 完成")
 	return nil
 }
 
-func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) error {
+func (l *CrawlLogic) fetchBestinvByRated(ctx context.Context, typ int64, date string, page int64) error {
 	queryBy := getQueryByBestRatedType(typ)
 	if queryBy == "" {
 		return fmt.Errorf("不支持的 Bestinv 类型: %d", typ)
@@ -36,7 +37,7 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 	queryWithPage := fmt.Sprintf("/%s&page=%d", queryBy, page)
 	fullURL := fmt.Sprintf("https://%s/cn%s", l.deps.Config.Fetcher.JavAddress, queryWithPage)
 
-	content, err := l.fetchInventoryContentWithRetry(fullURL)
+	content, err := l.fetchInventoryContentWithRetry(ctx, fullURL)
 	if err != nil {
 		return err // 这里包含 ErrBlankPage；上层会识别并提前停止
 	}
@@ -58,11 +59,11 @@ func (l *CrawlLogic) fetchBestinvByRated(typ int64, date string, page int64) err
 		UpdatedOn:     now,
 	}
 
-	if err := l.deps.BestinvRepo.Upsert(l.ctx, best); err != nil {
+	if err := l.deps.BestinvRepo.Upsert(ctx, best); err != nil {
 		return fmt.Errorf("写入 Bestinv 失败(page=%d): %w", page, err)
 	}
 
-	l.deps.Log.WithContext(l.ctx).Infof("已抓取 Bestinv 第 %d 页：%s", page, best.Name)
+	l.deps.Log.WithContext(ctx).Infof("已抓取 Bestinv 第 %d 页：%s", page, best.Name)
 	return nil
 }
 

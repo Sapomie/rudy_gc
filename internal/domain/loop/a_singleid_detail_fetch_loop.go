@@ -1,13 +1,15 @@
-package logic
+// internal/domain/loop/a_singleid_detail_fetch_loop.go
+package loop
 
 import (
+	"context"
 	"runtime/debug"
 	"strings"
 	"time"
 )
 
-func (l *CrawlLogic) DetailFetchLoopSingle(job <-chan string, baseWindow time.Duration, maxBatch int) {
-	log := l.deps.Log.WithContext(l.ctx)
+func (l *FetchLoopService) DetailFetchLoopSingle(ctx context.Context, job <-chan string, baseWindow time.Duration, maxBatch int) {
+	log := l.deps.Log.WithContext(ctx)
 	log.Info("DetailFetchLoopSingle: started")
 	defer log.Info("DetailFetchLoopSingle: stopped")
 
@@ -21,13 +23,13 @@ func (l *CrawlLogic) DetailFetchLoopSingle(job <-chan string, baseWindow time.Du
 
 	for {
 		select {
-		case <-l.ctx.Done():
-			l.flushBatch(&buf)
+		case <-ctx.Done():
+			l.flushBatch(ctx, &buf)
 			return
 
 		case id, ok := <-job:
 			if !ok {
-				l.flushBatch(&buf)
+				l.flushBatch(ctx, &buf)
 				return
 			}
 
@@ -40,7 +42,7 @@ func (l *CrawlLogic) DetailFetchLoopSingle(job <-chan string, baseWindow time.Du
 
 				if len(buf) >= maxBatch {
 					log.Infof("DetailFetchLoopSingle: 达到批次上限(%d)，立即 flush", maxBatch)
-					l.flushBatch(&buf)
+					l.flushBatch(ctx, &buf)
 					window = baseWindow / 2
 					resetTimer(timer, window)
 				}
@@ -50,7 +52,7 @@ func (l *CrawlLogic) DetailFetchLoopSingle(job <-chan string, baseWindow time.Du
 			if len(buf) > 0 {
 				log.Infof("DetailFetchLoopSingle: 定时 flush，缓冲数量=%d", len(buf))
 			}
-			l.flushBatch(&buf)
+			l.flushBatch(ctx, &buf)
 
 			if len(buf) == 0 {
 				window = minDuration(baseWindow*2, 5*time.Second)
@@ -63,10 +65,10 @@ func (l *CrawlLogic) DetailFetchLoopSingle(job <-chan string, baseWindow time.Du
 }
 
 // --- 新增：独立的 flush 函数 ---
-func (l *CrawlLogic) flushBatch(buf *[]string) {
+func (l *FetchLoopService) flushBatch(ctx context.Context, buf *[]string) {
 	defer func() {
 		if r := recover(); r != nil {
-			l.deps.Log.WithContext(l.ctx).
+			l.deps.Log.WithContext(ctx).
 				Errorf("flushBatch panic: %v\n%s", r, debug.Stack())
 		}
 	}()
@@ -79,9 +81,9 @@ func (l *CrawlLogic) flushBatch(buf *[]string) {
 		return
 	}
 
-	log := l.deps.Log.WithContext(l.ctx)
+	log := l.deps.Log.WithContext(ctx)
 	start := time.Now()
-	n, err := l.HandleFetchDetailsById(batch)
+	n, err := l.crawlLogic.HandleFetchDetailsById(ctx, batch)
 	if err != nil {
 		log.Errorf("DetailFetchLoopSingle: batch failed (n=%d): %v", n, err)
 		return

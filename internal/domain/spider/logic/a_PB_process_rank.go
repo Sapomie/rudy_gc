@@ -2,6 +2,7 @@ package logic
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	consts "rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
@@ -12,11 +13,11 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func (l *CrawlLogic) ProcessBestinvRank() error {
-	log := l.deps.Log.WithContext(l.ctx)
+func (l *CrawlLogic) ProcessBestinvRank(ctx context.Context) error {
+	log := l.deps.Log.WithContext(ctx)
 
 	// 取出需要排名检查的 bestinv
-	ids, err := l.deps.BestinvRepo.ListIDsByRankCheck(l.ctx, consts.BestinvNeedRankCheck, 1000)
+	ids, err := l.deps.BestinvRepo.ListIDsByRankCheck(ctx, consts.BestinvNeedRankCheck, 1000)
 	if err != nil {
 		return fmt.Errorf("查询需要排名检查的 bestinv 失败: %w", err)
 	}
@@ -28,12 +29,12 @@ func (l *CrawlLogic) ProcessBestinvRank() error {
 
 	javIdMap := make(map[string]struct{})
 	for count, id := range ids {
-		bestinv, err := l.deps.BestinvRepo.FindOne(l.ctx, id)
+		bestinv, err := l.deps.BestinvRepo.FindOne(ctx, id)
 		if err != nil {
 			return fmt.Errorf("根据 id=%d 查询 bestinv 失败: %w", id, err)
 		}
 
-		if err := l.makeAndInsertRankByBestinv(bestinv, javIdMap); err != nil {
+		if err := l.makeAndInsertRankByBestinv(ctx, bestinv, javIdMap); err != nil {
 			return fmt.Errorf("处理 bestinv 排名失败(id=%d): %w", id, err)
 		}
 
@@ -42,13 +43,13 @@ func (l *CrawlLogic) ProcessBestinvRank() error {
 		}
 
 		// 标记已完成 rank check
-		if err := l.deps.BestinvRepo.MarkRankChecked(l.ctx, id, time.Now().Unix()); err != nil {
+		if err := l.deps.BestinvRepo.MarkRankChecked(ctx, id, time.Now().Unix()); err != nil {
 			return fmt.Errorf("标记 bestinv 已完成排名检查失败(id=%d): %w", id, err)
 		}
 	}
 
 	// 最后更新电影的排名信息
-	if err := l.UpdateMovieRankInfo(javIdMap); err != nil {
+	if err := l.UpdateMovieRankInfo(ctx, javIdMap); err != nil {
 		return fmt.Errorf("更新影片排名信息失败: %w", err)
 	}
 
@@ -56,7 +57,7 @@ func (l *CrawlLogic) ProcessBestinvRank() error {
 	return nil
 }
 
-func (l *CrawlLogic) makeAndInsertRankByBestinv(best *types.Bestinv, javIdsMap map[string]struct{}) error {
+func (l *CrawlLogic) makeAndInsertRankByBestinv(ctx context.Context, best *types.Bestinv, javIdsMap map[string]struct{}) error {
 	// 解析
 	rks, err := makeRanksFromBestinv(best)
 	if err != nil {
@@ -65,7 +66,7 @@ func (l *CrawlLogic) makeAndInsertRankByBestinv(best *types.Bestinv, javIdsMap m
 
 	// 写库（幂等）
 	for _, rk := range rks {
-		if err := l.deps.RankRepo.Upsert(l.ctx, rk); err != nil {
+		if err := l.deps.RankRepo.Upsert(ctx, rk); err != nil {
 			return fmt.Errorf("写入排名失败 rank_key=%s, javId=%s: %w", rk.RankKey, rk.MovieJavId, err)
 		}
 		// 收集本批涉及的影片
@@ -73,7 +74,7 @@ func (l *CrawlLogic) makeAndInsertRankByBestinv(best *types.Bestinv, javIdsMap m
 	}
 
 	// 标记本条 Bestinv 的“需要排名检查”为已处理
-	if err := l.deps.BestinvRepo.MarkRankChecked(l.ctx, best.Id, time.Now().Unix()); err != nil {
+	if err := l.deps.BestinvRepo.MarkRankChecked(ctx, best.Id, time.Now().Unix()); err != nil {
 		return fmt.Errorf("标记 Bestinv(id=%d) 已完成排名检查失败: %w", best.Id, err)
 	}
 
@@ -120,12 +121,12 @@ func makeRanksFromBestinv(best *types.Bestinv) ([]*types.Rank, error) {
 }
 
 // UpdateMovieRankInfo 批量按 javId 聚合更新排行信息
-func (l *CrawlLogic) UpdateMovieRankInfo(javIdSet map[string]struct{}) error {
+func (l *CrawlLogic) UpdateMovieRankInfo(ctx context.Context, javIdSet map[string]struct{}) error {
 	l.deps.Log.Infof("开始汇总并更新排行信息，待处理 %d 个 javId", len(javIdSet))
 
 	updated := 0
 	for javId := range javIdSet {
-		if err := l.AddRankInfo(javId); err != nil {
+		if err := l.AddRankInfo(ctx, javId); err != nil {
 			return fmt.Errorf("更新 javId=%s 的排行信息失败: %w", javId, err)
 		}
 		updated++
@@ -135,20 +136,20 @@ func (l *CrawlLogic) UpdateMovieRankInfo(javIdSet map[string]struct{}) error {
 }
 
 // AddRankInfo 计算单个影片的：首次上榜日、最佳名次、上榜天数，并写回 bm_minfo
-func (l *CrawlLogic) AddRankInfo(javId string) error {
+func (l *CrawlLogic) AddRankInfo(ctx context.Context, javId string) error {
 	// 1) 统计聚合（SQL 聚合更快；没有就先在 Repo 做一层）
-	firstDay, bestRank, daysInRank, err := l.deps.RankRepo.AggregateByJavId(l.ctx, javId)
+	firstDay, bestRank, daysInRank, err := l.deps.RankRepo.AggregateByJavId(ctx, javId)
 	if err != nil {
 		return fmt.Errorf("统计排行聚合失败(javId=%s): %w", javId, err)
 	}
 
 	// 2) 取得 movie.id（用于回刷关联演员缓存 / 侧写）
-	mv, err := l.deps.MovieRepo.FindOneByJavId(l.ctx, javId)
+	mv, err := l.deps.MovieRepo.FindOneByJavId(ctx, javId)
 	if err != nil {
 		return fmt.Errorf("查询电影失败(javId=%s): %w", javId, err)
 	}
 	// 3) 取演员 ids（保持与老项目等价的副作用：填充内存 Map）
-	castIDs, err := l.deps.MovieCastRepo.ListCastIDsByMovieJavId(l.ctx, mv.JavId)
+	castIDs, err := l.deps.MovieCastRepo.ListCastIDsByMovieJavId(ctx, mv.JavId)
 	if err != nil {
 		return fmt.Errorf("查询电影演员关系失败(movieId=%d): %w", mv.Id, err)
 	}
@@ -166,12 +167,12 @@ func (l *CrawlLogic) AddRankInfo(javId string) error {
 		DaysInRank:         ptr.Int64(daysInRank),
 		UpdatedOn:          ptr.Int64(now),
 	}
-	err = l.deps.MinfoRepo.UpdatePartialByJavId(l.ctx, javId, patch)
+	err = l.deps.MinfoRepo.UpdatePartialByJavId(ctx, javId, patch)
 	if err != nil {
 		return fmt.Errorf("写回 bm_minfo 排行信息失败(javId=%s): %w", javId, err)
 	}
 
-	l.movieSvc.InvalidateMovieType(l.ctx, javId)
+	l.movieSvc.InvalidateMovieType(ctx, javId)
 
 	return nil
 }

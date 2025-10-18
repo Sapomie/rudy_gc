@@ -2,6 +2,7 @@ package logic
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"rudy_gc/internal/consts"
 	"strings"
@@ -13,29 +14,29 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func (l *CrawlLogic) FetchDetailsByItemDetailStatus() (int, error) {
+func (l *CrawlLogic) FetchDetailsByItemDetailStatus(ctx context.Context) (int, error) {
 	// 1) 找待抓详情的 item（HasDetail = None）
-	items, err := l.deps.ItemRepo.FindByDetailStatus(l.ctx, consts.ItemDetailNone)
+	items, err := l.deps.ItemRepo.FindByDetailStatus(ctx, consts.ItemDetailNone)
 	if err != nil {
 		return 0, fmt.Errorf("获取待抓取详情的条目失败: %w", err)
 	}
 
-	return l.handleFetchDetails(items)
+	return l.handleFetchDetails(ctx, items)
 }
 
 // 抽出的函数：统一处理详情抓取逻辑
-func (l *CrawlLogic) handleFetchDetails(items []*types.Item) (int, error) {
+func (l *CrawlLogic) handleFetchDetails(ctx context.Context, items []*types.Item) (int, error) {
 	total := len(items)
 	if total == 0 {
-		l.deps.Log.WithContext(l.ctx).Info("没有需要抓取的详情")
+		l.deps.Log.WithContext(ctx).Info("没有需要抓取的详情")
 		return 0, nil
 	}
 
 	start := time.Now()
-	l.deps.Log.WithContext(l.ctx).Infof("有 %d 个详情需要抓取", total)
+	l.deps.Log.WithContext(ctx).Infof("有 %d 个详情需要抓取", total)
 
 	for i, it := range items {
-		if err := l.fetchAndSaveDetail(it); err != nil {
+		if err := l.fetchAndSaveDetail(ctx, it); err != nil {
 			return i, err
 		}
 		// 7) 进度日志（中文）
@@ -46,11 +47,11 @@ func (l *CrawlLogic) handleFetchDetails(items []*types.Item) (int, error) {
 	return total, nil
 }
 
-func (l *CrawlLogic) fetchAndSaveDetail(it *types.Item) error {
+func (l *CrawlLogic) fetchAndSaveDetail(ctx context.Context, it *types.Item) error {
 	// 支持取消
 	select {
-	case <-l.ctx.Done():
-		return l.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
 	default:
 	}
 
@@ -58,7 +59,7 @@ func (l *CrawlLogic) fetchAndSaveDetail(it *types.Item) error {
 	url := fmt.Sprintf("https://%s/cn/?v=%s", l.deps.Config.Fetcher.JavAddress, it.JavId)
 
 	// 2) 用“详情专用”的重试策略抓取
-	respBody, ferr := l.fetchDetailWithRetry(it.Name, url)
+	respBody, ferr := l.fetchDetailWithRetry(ctx, it.Name, url)
 	if ferr != nil {
 		return fmt.Errorf("抓取 %s(%s) 详情失败: %w", it.Name, it.JavId, ferr)
 	}
@@ -67,7 +68,7 @@ func (l *CrawlLogic) fetchAndSaveDetail(it *types.Item) error {
 
 	// 3) 先查是否已有 detail，决定 birthTime
 	var birthTime int64
-	if old, _ := l.deps.DetailRepo.FindOneByJavId(l.ctx, it.JavId); old != nil && old.CreatedOn > 0 {
+	if old, _ := l.deps.DetailRepo.FindOneByJavId(ctx, it.JavId); old != nil && old.CreatedOn > 0 {
 		birthTime = old.CreatedOn
 	} else {
 		birthTime = now
@@ -83,13 +84,13 @@ func (l *CrawlLogic) fetchAndSaveDetail(it *types.Item) error {
 		CreatedOn: birthTime, // 首次创建时间；若已存在保持旧值
 		UpdatedOn: now,
 	}
-	if err := l.deps.DetailRepo.Upsert(l.ctx, detail); err != nil {
+	if err := l.deps.DetailRepo.Upsert(ctx, detail); err != nil {
 		return fmt.Errorf("保存详情失败 %s(%s): %w", it.Name, it.JavId, err)
 	}
 
 	// 5) 更新 item 的“详情元信息”
 	if err := l.deps.ItemRepo.UpdateDetailMeta(
-		l.ctx,
+		ctx,
 		it.Id,
 		consts.ItemDetailStatusNeedScan, // needScan
 		birthTime,                       // birthTime（仅首次写入）
@@ -109,16 +110,16 @@ func isValidDetail(content string) bool {
 }
 
 // 专用详情重试：每 20 次休眠 10 分钟，其余 3 秒；打印中文日志
-func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
+func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string) (string, error) {
 	const maxRetries = 45
 	var body []byte
 	var err error
 
 	for attempts := 1; attempts <= maxRetries; attempts++ {
 
-		l.deps.Log.WithContext(l.ctx).Infof("第 %d 次尝试: %s", attempts, url)
+		l.deps.Log.WithContext(ctx).Infof("第 %d 次尝试: %s", attempts, url)
 
-		resp, ferr := l.deps.Fetcher.Get(l.ctx, url)
+		resp, ferr := l.deps.Fetcher.Get(ctx, url)
 		if ferr == nil {
 			body = resp.Body
 
@@ -136,14 +137,14 @@ func (l *CrawlLogic) fetchDetailWithRetry(name, url string) (string, error) {
 		}
 		err = ferr
 
-		l.deps.Log.WithContext(l.ctx).Infof("%s 第%d次尝试: %s", name, attempts, url)
+		l.deps.Log.WithContext(ctx).Infof("%s 第%d次尝试: %s", name, attempts, url)
 
 		if attempts%20 == 0 {
-			mylog.Warn(l.ctx, "多次重试失败，10分钟后重试",
+			mylog.Warn(ctx, "多次重试失败，10分钟后重试",
 				"name", name, "attempts", attempts, "url", url)
 			time.Sleep(10 * time.Minute)
 		} else {
-			mylog.Warn(l.ctx, "请求错误，3秒后重试",
+			mylog.Warn(ctx, "请求错误，3秒后重试",
 				"name", name, "attempts", attempts, "url", url, "err", err.Error())
 			time.Sleep(3 * time.Second)
 		}

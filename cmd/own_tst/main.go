@@ -30,7 +30,7 @@ func main() {
 
 	//flushDb()
 
-	err = logic.NewCrawlLogic(ctx, deps).CrawlDailyBestProcession()
+	err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
 	if err != nil {
 		panic(err)
 	}

@@ -407,7 +407,7 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 		w = append(w, squirrel.Eq{"is_removed": consts.FilmIsRemoved})
 	case consts.OwnedAll:
 		w = append(w, squirrel.Expr("1=1"))
-	case consts.MovieAll:
+	case consts.MovieAll, 0:
 		return squirrel.And{}
 	}
 
@@ -441,7 +441,7 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 			w = append(w, squirrel.LtOrEq{"birth_time": ts})
 		}
 	}
-	// 发行日（v_film 冗余列）
+	//发行日（v_film 冗余列）
 	if req.ReleasingDateStart != "" {
 		if ts, ok := parseYMD(req.ReleasingDateStart); ok {
 			w = append(w, squirrel.GtOrEq{"releasing_date": ts})

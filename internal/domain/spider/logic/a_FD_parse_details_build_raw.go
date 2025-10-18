@@ -3,6 +3,7 @@ package logic
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 
@@ -39,9 +40,9 @@ type RawItem struct {
 	JavId string
 }
 
-func (l *CrawlLogic) buildRawMovieByDetail(it *types.Item) (*RawJavMovie, error) {
+func (l *CrawlLogic) buildRawMovieByDetail(ctx context.Context, it *types.Item) (*RawJavMovie, error) {
 	// 1. 查询 detail
-	detail, err := l.deps.DetailRepo.FindOneByJavId(l.ctx, it.JavId)
+	detail, err := l.deps.DetailRepo.FindOneByJavId(ctx, it.JavId)
 	if err != nil {
 		return nil, fmt.Errorf("根据 JavId=%s 查询 detail 失败: %w", it.JavId, err)
 	}

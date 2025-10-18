@@ -15,8 +15,8 @@ import (
 
 const formatYearMonth = "2006-01"
 
-func (l *CrawlLogic) DownLoadAllPicture() error {
-	items, err := l.deps.ItemRepo.FindByDownloadCoverStatus(l.ctx, consts.ItemCoverNone)
+func (l *CrawlLogic) DownLoadAllPicture(ctx context.Context) error {
+	items, err := l.deps.ItemRepo.FindByDownloadCoverStatus(ctx, consts.ItemCoverNone)
 	if err != nil {
 		return fmt.Errorf("FindByDownloadCoverStatus: %w", err)
 	}
@@ -25,12 +25,12 @@ func (l *CrawlLogic) DownLoadAllPicture() error {
 	for _, it := range items {
 		// 支持取消
 		select {
-		case <-l.ctx.Done():
-			return l.ctx.Err()
+		case <-ctx.Done():
+			return ctx.Err()
 		default:
 		}
 
-		if err := l.DownloadPictureOfMovie(it); err != nil {
+		if err := l.DownloadPictureOfMovie(ctx, it); err != nil {
 			l.deps.Log.Errorf("图片下载错误: %s (%s): %v", it.Name, it.JavId, err)
 			time.Sleep(getRandomSleepDuration())
 			continue
@@ -42,9 +42,9 @@ func (l *CrawlLogic) DownLoadAllPicture() error {
 	return nil
 }
 
-func (l *CrawlLogic) DownloadPictureOfMovie(item *types.Item) error {
+func (l *CrawlLogic) DownloadPictureOfMovie(ctx context.Context, item *types.Item) error {
 	// 1) 查 Movie
-	movie, err := l.deps.MovieRepo.FindOneByJavId(l.ctx, item.JavId)
+	movie, err := l.deps.MovieRepo.FindOneByJavId(ctx, item.JavId)
 	if err != nil {
 		return fmt.Errorf("MovieRepo.FindOneByJavId(%s): %w", item.JavId, err)
 	}
@@ -56,7 +56,7 @@ func (l *CrawlLogic) DownloadPictureOfMovie(item *types.Item) error {
 	}
 
 	// 3) 查 Murl
-	murl, err := l.deps.MurlRepo.FindOneByJavId(l.ctx, movie.JavId)
+	murl, err := l.deps.MurlRepo.FindOneByJavId(ctx, movie.JavId)
 	if err != nil {
 		return fmt.Errorf("MurlRepo.FindOneByJavId(%s): %w", movie.JavId, err)
 	}
@@ -71,44 +71,44 @@ func (l *CrawlLogic) DownloadPictureOfMovie(item *types.Item) error {
 		// 如果 DB 存的本地路径不一致，先对齐（不早退）
 		if murl.JacketImgLocal != dstRel {
 			now := time.Now().Unix()
-			if err := l.deps.MurlRepo.UpdatePartialByJavId(l.ctx, movie.JavId, types.MurlPatch{
+			if err := l.deps.MurlRepo.UpdatePartialByJavId(ctx, movie.JavId, types.MurlPatch{
 				JacketImgLocal: &dstRel,
 				UpdatedOn:      &now,
 			}); err != nil {
 				return fmt.Errorf("MurlRepo.UpdatePartialByJavId (align existing file): %w", err)
 			}
-			l.movieSvc.InvalidateMovieType(l.ctx, murl.JavId)
+			l.movieSvc.InvalidateMovieType(ctx, murl.JavId)
 		}
 	}
 
 	// 无论存在与否，都重新下载并原子覆盖
-	if err := l.downloadToFileAtomic(l.ctx, murl.JacketImg, dstAbs); err != nil {
+	if err := l.downloadToFileAtomic(ctx, murl.JacketImg, dstAbs); err != nil {
 		return fmt.Errorf("downloadToFileAtomic: %w", err)
 	}
 
 	// 覆盖后再次对齐 DB（防止上面未对齐的情况）
 	{
 		now := time.Now().Unix()
-		if err := l.deps.MurlRepo.UpdatePartialByJavId(l.ctx, movie.JavId, types.MurlPatch{
+		if err := l.deps.MurlRepo.UpdatePartialByJavId(ctx, movie.JavId, types.MurlPatch{
 			JacketImgLocal: &dstRel,
 			UpdatedOn:      &now,
 		}); err != nil {
 			return fmt.Errorf("MurlRepo.UpdatePartialByJavId: %w", err)
 		}
-		l.movieSvc.InvalidateMovieType(l.ctx, murl.JavId)
+		l.movieSvc.InvalidateMovieType(ctx, murl.JavId)
 	}
 
 	// 标记 item 封面 OK
-	if err := l.markItemCoverOK(movie.JavId); err != nil {
+	if err := l.markItemCoverOK(ctx, movie.JavId); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (l *CrawlLogic) markItemCoverOK(javId string) error {
+func (l *CrawlLogic) markItemCoverOK(ctx context.Context, javId string) error {
 	now := time.Now().Unix()
-	if err := l.deps.ItemRepo.UpdatePartialByJavId(l.ctx, javId, types.ItemPatch{
+	if err := l.deps.ItemRepo.UpdatePartialByJavId(ctx, javId, types.ItemPatch{
 		HasDownloadCover: ptr.Int64(consts.ItemCoverOK),
 		UpdatedOn:        &now,
 	}); err != nil {
