@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"context"
 	"rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
@@ -47,7 +46,7 @@ func New(deps *svc.Deps) *Service {
 	return &Service{
 		deps:       deps,
 		xModel:     NewXModel(deps),
-		crawlLogic: logic.NewCrawlLogic(context.Background(), deps),
+		crawlLogic: logic.NewCrawlLogic(deps),
 		movieSvc:   movie.NewMovieService(deps),
 	}
 }

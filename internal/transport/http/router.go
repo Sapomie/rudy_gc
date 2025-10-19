@@ -14,17 +14,14 @@ import (
 func NewEngine(deps *svc.Deps) *gin.Engine {
 	r := gin.Default()
 
-	// 模板（不使用 ** 通配；仅按需解析三层）
+	// 模板
 	tpl := template.New("")
-	//tpl = template.Must(tpl.ParseGlob("ui/templates/layouts/*.html"))
 	tpl = template.Must(tpl.ParseGlob("ui/templates/partials/*.html"))
 	tpl = template.Must(tpl.ParseGlob("ui/templates/pages/*.html"))
 	r.SetHTMLTemplate(tpl)
 
 	// 静态资源
 	r.Static("/static", "ui/static")
-
-	// 单独挂载需要的外置硬盘目录
 	r.Static("/Volumes/Expansion", "/Volumes/Expansion")
 	r.Static("/Volumes/Getea", "/Volumes/Getea")
 	r.Static("/Volumes/T7/data", "/Volumes/T7/data")
@@ -32,7 +29,6 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	// HTML 路由
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })
-
 	r.GET("/cards", movieHTML.ListMovieCardFull)
 	r.GET("/cardstoday", movieHTML.ListMovieCardToday)
 	r.GET("/cardshasrank", movieHTML.ListMovieCardHasRank)
@@ -40,16 +36,30 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
 
-	// API 路由：稍后下载
+	// API 路由
 	api := r.Group("/api")
-	movieDownload := api2.NewAPI(deps)
-	api.POST("/movie/:movie/downloadlater", movieDownload.Add)
-	api.DELETE("/movie/:movie/downloadlater", movieDownload.Remove)
+	{
+		movieDownload := api2.NewAPI(deps)
+		api.POST("/movie/:movie/downloadlater", movieDownload.Add)
+		api.DELETE("/movie/:movie/downloadlater", movieDownload.Remove)
+		api.POST("/open-finder", movieDownload.OpenFinderHandler([]string{
+			"/Volumes/Getea",
+			"/Volumes/Expansion",
+		}))
 
-	api.POST("/open-finder", movieDownload.OpenFinderHandler([]string{
-		"/Volumes/Getea",
-		"/Volumes/Expansion",
-	}))
+		// triggers
+		trigger := api2.NewTriggerAPI(deps)
+		api.POST("/triggers/daily-best", trigger.DailyBest)
+		api.POST("/triggers/seeds", trigger.Seeds) // 支持 seeds
+		api.POST("/triggers/both", trigger.Both)
+	}
+
+	// Admin（建议加鉴权中间件）
+	admin := r.Group("/admin")
+	{
+		trig := api2.NewTriggerAPI(deps)
+		admin.GET("/triggers", trig.Page)
+	}
 
 	return r
 }

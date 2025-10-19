@@ -14,7 +14,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func (l *CrawlLogic) FetchDetailsByItemDetailStatus(ctx context.Context) (int, error) {
+func (l *CrawlLogic) FetchDetailsByItemDetailStatus(ctx context.Context) (int64, error) {
 	// 1) 找待抓详情的 item（HasDetail = None）
 	items, err := l.deps.ItemRepo.FindByDetailStatus(ctx, consts.ItemDetailNone)
 	if err != nil {
@@ -25,7 +25,7 @@ func (l *CrawlLogic) FetchDetailsByItemDetailStatus(ctx context.Context) (int, e
 }
 
 // 抽出的函数：统一处理详情抓取逻辑
-func (l *CrawlLogic) handleFetchDetails(ctx context.Context, items []*types.Item) (int, error) {
+func (l *CrawlLogic) handleFetchDetails(ctx context.Context, items []*types.Item) (int64, error) {
 	total := len(items)
 	if total == 0 {
 		l.deps.Log.WithContext(ctx).Info("没有需要抓取的详情")
@@ -37,14 +37,14 @@ func (l *CrawlLogic) handleFetchDetails(ctx context.Context, items []*types.Item
 
 	for i, it := range items {
 		if err := l.fetchAndSaveDetail(ctx, it); err != nil {
-			return i, err
+			return 0, err
 		}
 		// 7) 进度日志（中文）
 		l.logItemProgress(i+1, total, it.Name, start)
 		time.Sleep(getRandomSleepDuration())
 	}
 
-	return total, nil
+	return int64(total), nil
 }
 
 func (l *CrawlLogic) fetchAndSaveDetail(ctx context.Context, it *types.Item) error {

@@ -77,7 +77,8 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 		if err != nil {
 			return 0, err
 		}
-		if err := l.parseDetailAndInsertMovie(ctx, item); err != nil {
+
+		if err := l.handleDetailParse(ctx, item); err != nil {
 			return 0, err
 		}
 

@@ -65,7 +65,7 @@ func (s *Service) MigrateRank() error {
 		s.deps.Log.Infof("已完成%v/%v", count, len(ranksNeedUpsert))
 	}
 
-	err = s.crawlLogic.UpdateMovieRankInfo(javIdMap)
+	err = s.crawlLogic.UpdateMovieRankInfo(ctx, javIdMap)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (s *Service) UpDateAllRankInfo() error {
 
 	var count int
 	for _, javId := range javIds {
-		err = s.crawlLogic.AddRankInfo(javId)
+		err = s.crawlLogic.AddRankInfo(ctx, javId)
 		if err != nil {
 			return err
 		}

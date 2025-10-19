@@ -26,6 +26,7 @@ type (
 		InsertData(ctx context.Context, data orm.DataStruct) error
 		UpdateDataByDescription(ctx context.Context, data orm.DataStruct) error
 		FindQueriesActive(ctx context.Context, nameType int64) ([]*DQuery, error)
+		FindAll(ctx context.Context) ([]*DQuery, error)
 	}
 
 	customDQueryModel struct {
@@ -122,4 +123,21 @@ func (m *customDQueryModel) FindQueriesActive(ctx context.Context, nameType int6
 	}
 
 	return queries, nil
+}
+
+func (m *customDQueryModel) FindAll(ctx context.Context) ([]*DQuery, error) {
+	query, args, err := squirrel.
+		Select("*").
+		From(m.tableName()).
+		OrderBy("id DESC").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	var list []*DQuery
+	if err := m.conn.QueryRowsCtx(ctx, &list, query, args...); err != nil {
+		return nil, err
+	}
+	return list, nil
 }

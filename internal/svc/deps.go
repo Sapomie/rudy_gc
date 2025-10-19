@@ -1,6 +1,9 @@
+// internal/svc/deps.go
+
 package svc
 
 import (
+	"rudy_gc/internal/contracts"
 	"rudy_gc/internal/domain/spider/fetcher"
 	"rudy_gc/internal/infra/bizcache"
 	film_infra "rudy_gc/internal/infra/film_repo"
@@ -24,6 +27,9 @@ import (
 )
 
 type Deps struct {
+	BestTrigger chan contracts.TriggerMsg
+
+	// ...
 	Config  config.Config
 	SqlConn sqlx.SqlConn
 	Cache   cache.CacheConf
@@ -56,6 +62,9 @@ type Deps struct {
 	GListRepo      film_repo.GListRepo
 	ScRepo         film_repo.ScRepo
 
+	// ✅ 新增：记录表仓库（ERecord）
+	RecordRepo movie_repo.RecordRepo
+
 	MovieTypeCache movie_repo.MovieTypeCache
 
 	Fetcher    *fetcher.Fetcher
@@ -82,7 +91,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieCastModel  = moviex.NewAmrMovieCastModel(conn, c)
 		movieGenreModel = moviex.NewAmrMovieGenreModel(conn, c)
 
-		// ★ 新增：目录 model（供 MovieListRepoSqlx 做 Dir1-4 名称→id 解析）
+		// ★ 目录 model
 		vdirModel = moviex.NewVDirectoryModel(conn, c)
 	)
 
@@ -94,7 +103,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		detailRepo    = spider_infra.NewDetailRepoSqlx(spiderx.NewDDetailModel(conn))
 	)
 
-	// ========== movie (有缓存/按你原来保持) ==========
+	// ========== movie (有缓存) ==========
 	var (
 		movieRepo      = movie_infra.NewMovieRepoSqlx(movieModel)
 		castRepo       = movie_infra.NewCastRepoSqlx(castModel)
@@ -110,10 +119,9 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		itemRepo       = movie_infra.NewItemRepoSqlx(moviex.NewEItemModel(conn, c))
 		rankRepo       = movie_infra.NewRankRepoSqlx(moviex.NewCRankModel(conn, c))
 		cafoRepo       = movie_infra.NewCafoRepoSqlx(moviex.NewCCafoModel(conn, c))
-		directoryRepo  = film_infra.NewDirectoryRepoSqlx(vdirModel) // 复用 vdirModel
+		directoryRepo  = film_infra.NewDirectoryRepoSqlx(vdirModel)
 		filmRepo       = film_infra.NewFilmRepoSqlx(filmModel)
 
-		// ★ 这里把 vdirModel 一并传入（am/mi/vf + 8 个 + vdir = 共 12 个依赖）
 		movieListRepo = movie_infra.NewMovieListRepoSqlx(
 			movieModel, minfoModel, filmModel,
 			labelModel, makerModel, directorModel, prefixModel,
@@ -121,8 +129,9 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 			vdirModel,
 		)
 
-		glistRepo = film_infra.NewGListRepoSqlx(moviex.NewGListModel(conn, c))
-		scRepo    = film_infra.NewScRepoSqlx(moviex.NewGScModel(conn, c))
+		glistRepo  = film_infra.NewGListRepoSqlx(moviex.NewGListModel(conn, c))
+		scRepo     = film_infra.NewScRepoSqlx(moviex.NewGScModel(conn, c))
+		recordRepo = movie_infra.NewRecordRepoSqlx(moviex.NewERecordModel(conn, c))
 	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
@@ -133,7 +142,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	movieTypeCache := bizcache.NewMovieTypeBizCache(bizRedis, cfg.MovieTypeCache.Prefix, cfg.MovieTypeCache.Version, cfg.MovieTypeCache.TTL)
 
 	// ========== fetcher ==========
@@ -176,7 +184,12 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		FilmRepo:       filmRepo,
 		GListRepo:      glistRepo,
 		ScRepo:         scRepo,
-		DetailJobs:     make(chan string, 200),
+
+		// ✅ 注入 RecordRepo
+		RecordRepo: recordRepo,
+
+		DetailJobs:  make(chan string, 200),
+		BestTrigger: make(chan contracts.TriggerMsg, 8),
 
 		Fetcher: f,
 	}, nil

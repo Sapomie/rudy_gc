@@ -26,31 +26,35 @@ func (l *CrawlLogic) ParseDetails(ctx context.Context) error {
 	l.deps.Log.Infof("共有 %d 个 Item 需要解析 Detail", total)
 
 	var done int
-	//todo: parallel parse
 	for _, it := range items {
-		// 解析并入库
-		if err := l.parseDetailAndInsertMovie(ctx, it); err != nil {
-			return fmt.Errorf("解析并入库失败 %s(%s): %w", it.Name, it.JavId, err)
+		if err := l.handleDetailParse(ctx, it); err != nil {
+			return err
 		}
-
-		// 更新 item.DetailNeedScan -> 已解析
-		now := time.Now().Unix()
-		patch := types.ItemPatch{
-			DetailNeedScan: ptr.Int64(consts.ItemDetailStatusNoNeedScan),
-			UpdatedOn:      &now,
-		}
-		err := l.deps.ItemRepo.UpdatePartialByJavId(ctx, it.JavId, patch)
-		if err != nil {
-			return fmt.Errorf("更新 Item 详情状态失败 %s: %w", it.Name, err)
-		}
-
 		done++
 		l.deps.Log.Infof("%s 处理Detail，已完成 %d/%d", it.Name, done, total)
+	}
+	return nil
+}
+
+// handleDetailParse: 负责解析详情并更新状态
+func (l *CrawlLogic) handleDetailParse(ctx context.Context, it *types.Item) error {
+	// 解析并入库
+	if err := l.parseDetailAndInsertMovie(ctx, it); err != nil {
+		return fmt.Errorf("解析并入库失败 %s(%s): %w", it.Name, it.JavId, err)
+	}
+
+	// 更新 item.DetailNeedScan -> 已解析
+	now := time.Now().Unix()
+	patch := types.ItemPatch{
+		DetailNeedScan: ptr.Int64(consts.ItemDetailStatusNoNeedScan),
+		UpdatedOn:      &now,
+	}
+	if err := l.deps.ItemRepo.UpdatePartialByJavId(ctx, it.JavId, patch); err != nil {
+		return fmt.Errorf("更新 Item 详情状态失败 %s: %w", it.Name, err)
 	}
 
 	return nil
 }
-
 func (l *CrawlLogic) parseDetailAndInsertMovie(ctx context.Context, it *types.Item) error {
 	//build rawMovie
 	rawJavMovie, err := l.buildRawMovieByDetail(ctx, it)

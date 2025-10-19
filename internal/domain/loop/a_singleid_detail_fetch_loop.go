@@ -35,10 +35,6 @@ func (l *FetchLoopService) DetailFetchLoopSingle(ctx context.Context, job <-chan
 
 			id = strings.TrimSpace(id)
 			if tryAddID(&buf, id, seen, ttl) {
-				// ✅ 打印当前缓冲数量（仅偶尔打一次，防止太频繁）
-				if len(buf)%10 == 0 || len(buf) == 1 {
-					log.Infof("DetailFetchLoopSingle: 当前缓冲数量=%d", len(buf))
-				}
 
 				if len(buf) >= maxBatch {
 					log.Infof("DetailFetchLoopSingle: 达到批次上限(%d)，立即 flush", maxBatch)
