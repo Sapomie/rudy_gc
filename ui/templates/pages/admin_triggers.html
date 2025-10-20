@@ -27,10 +27,11 @@
                             <div class="card-body">
                                 <h4 class="card-title">触发 / 控制</h4>
                                 <p class="card-title-desc">
-                                    点击按钮触发后端任务流程，或停止当前正在运行的流程。
+                                    点击按钮触发后端任务流程。
                                 </p>
 
                                 <div class="button-items">
+                                    <!-- 爬虫流程 -->
                                     <button id="btnDailyBest" type="button" class="btn btn-primary waves-effect waves-light">
                                         触发 DailyBest
                                     </button>
@@ -39,6 +40,14 @@
                                         触发 Seeds
                                     </button>
 
+                                    <!-- 影片流程 -->
+                                    <button id="btnFilmRename" type="button" class="btn btn-info waves-effect waves-light">
+                                        触发 影片重命名
+                                    </button>
+
+                                    <button id="btnFilmProcess" type="button" class="btn btn-warning waves-effect waves-light">
+                                        触发 影片处理
+                                    </button>
                                 </div>
 
                                 <hr class="my-4">
@@ -88,7 +97,7 @@
                 status.textContent = msg;
             }
 
-            // === 触发：DailyBest ===
+            // === 爬虫：DailyBest ===
             document.getElementById('btnDailyBest').onclick = function () {
                 ok('触发中…');
                 post('/api/triggers/daily-best')
@@ -96,14 +105,29 @@
                     .catch(e => err('触发异常：' + e));
             };
 
-            // === 触发：Seeds ===
+            // === 爬虫：Seeds ===
             document.getElementById('btnSeeds').onclick = function () {
                 ok('触发中…');
                 post('/api/triggers/seeds')
                     .then(r => r.ok ? ok('已触发 Seeds') : err('触发失败（' + r.status + '）'))
                     .catch(e => err('触发异常：' + e));
             };
-            
+
+            // === 影片：RenameFilm ===
+            document.getElementById('btnFilmRename').onclick = function () {
+                ok('触发中…');
+                post('/api/triggers/film/rename')
+                    .then(r => r.ok ? ok('已触发 影片重命名') : err('触发失败（' + r.status + '）'))
+                    .catch(e => err('触发异常：' + e));
+            };
+
+            // === 影片：ProcessFilm ===
+            document.getElementById('btnFilmProcess').onclick = function () {
+                ok('触发中…');
+                post('/api/triggers/film/process')
+                    .then(r => r.ok ? ok('已触发 影片处理') : err('触发失败（' + r.status + '）'))
+                    .catch(e => err('触发异常：' + e));
+            };
         })();
     </script>
 

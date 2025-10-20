@@ -3,7 +3,6 @@ package vfilm
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"rudy_gc/internal/consts"
@@ -16,196 +15,213 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
+// 文件内使用的小写常量
 const (
-	FilmNameHasSub     = "sub"
-	FilmNameNoSub      = "nos"
-	FilmNameCompress   = "comp"
-	FilmNameNoCompress = "nop"
-	FilmNameErased     = "era"
-	FilmNameNOMosaic   = "nomsk"
-	FilmNameNoErased   = "noe"
-	VideoExt           = ".mp4"
-	MinFileSize        = 20000
+	filmNameHasSub     = "sub"
+	filmNameNoSub      = "nos"
+	filmNameCompress   = "comp"
+	filmNameNoCompress = "nop"
+	filmNameErased     = "era"
+	filmNameNOMosaic   = "nomsk"
+	filmNameNoErased   = "noe"
+	videoExt           = ".mp4"
 )
 
-func (s *FilmService) RenameFilm() error {
-	ctx := context.Background()
+// RenameFilm 扫描配置目录下的 mp4 文件并按规则重命名。
+func (s *FilmService) RenameFilm(ctx context.Context) error {
+
 	dir := s.deps.Config.Film.RenamePath
-	fs, err := ioutil.ReadDir(dir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("read dir %q: %w", dir, err)
 	}
 
-	filmMap, err := s.getExistingFilmNames(ctx)
+	filmSet, err := s.getExistingFilmNameSet(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("get existing films: %w", err)
 	}
 
-	count := 0
-	for _, f := range fs {
-		if !isValidMovieFile(f) {
+	var count, total int
+	for _, e := range entries {
+		if !e.Type().IsRegular() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(strings.ToLower(name), videoExt) {
+			continue
+		}
+		info, statErr := e.Info()
+		if statErr != nil {
+			s.deps.Log.Warnf("stat %s failed: %v", name, statErr)
+			continue
+		}
+		if info.Size() < minFileSize {
+			continue
+		}
+		total++
+
+		movieName := movieNameFromRawFile(name)
+		if _, exists := filmSet[movieName]; exists {
+			s.deps.Log.Warnf("已存在 film: %s", movieName)
+		}
+
+		newName, genErr := s.generateNewFileName(ctx, dir, name, movieName)
+		if genErr != nil {
+			s.deps.Log.Warnf("generateNewFileName(%s) err: %v", name, genErr)
+			continue
+		}
+		if newName == name {
+			s.deps.Log.Infof("跳过：文件名相同（%s）", name)
 			continue
 		}
 
-		movieName := getMovieNameByFileRawName(f.Name())
-		if _, exists := filmMap[movieName]; exists {
-			s.deps.Log.Warn("已存在film:", movieName)
-		}
-
-		newName, err := s.generateNewFileName(ctx, dir, f.Name(), movieName)
-		if err != nil {
-			s.deps.Log.Warnf("generateNewFileName err:%v", err.Error())
-			continue
-		}
-
-		oldPath := filepath.Join(dir, f.Name())
+		oldPath := filepath.Join(dir, name)
 		newPath := filepath.Join(dir, newName)
+		if _, existErr := os.Stat(newPath); existErr == nil {
+			s.deps.Log.Warnf("目标已存在，跳过：%s", newPath)
+			continue
+		}
 		if err = os.Rename(oldPath, newPath); err != nil {
-			return err
+			return fmt.Errorf("rename %q -> %q: %w", oldPath, newPath, err)
 		}
 
 		count++
-		s.deps.Log.Infof("重命名第%d部: %s", count, newName)
+		s.deps.Log.Infof("重命名第 %d/%d 个: %s -> %s", count, total, name, newName)
 	}
-
+	s.deps.Log.Infof("重命名完成：共扫描 %d，成功 %d", total, count)
 	return nil
 }
 
-func (s *FilmService) getExistingFilmNames(ctx context.Context) (map[string]int, error) {
+func (s *FilmService) getExistingFilmNameSet(ctx context.Context) (map[string]struct{}, error) {
 	films, err := s.deps.FilmRepo.FindAll(ctx, consts.FilmIsNotRemoved)
 	if err != nil {
 		return nil, err
 	}
-
-	filmMap := make(map[string]int, len(films))
-	for _, film := range films {
-		filmMap[film.MovieName] = 1
+	set := make(map[string]struct{}, len(films))
+	for _, f := range films {
+		set[f.MovieName] = struct{}{}
 	}
-	return filmMap, nil
-}
-
-func isValidMovieFile(f os.FileInfo) bool {
-	return strings.HasSuffix(f.Name(), VideoExt) && f.Size() >= MinFileSize
+	return set, nil
 }
 
 func (s *FilmService) generateNewFileName(ctx context.Context, dir, fileName, movieName string) (string, error) {
 	movies, err := s.deps.MovieRepo.FindMoviesByName(ctx, movieName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("FindMoviesByName(%s): %w", movieName, err)
 	}
-	if len(movies) < 1 {
-		s.deps.Log.Error("No record :", movieName)
+	if len(movies) == 0 {
+		s.deps.Log.Errorf("No record: %s", movieName)
 		return "", sqlx.ErrNotFound
 	}
 	if len(movies) > 1 {
-		s.deps.Log.Warn("More than one record :", movieName)
+		s.deps.Log.Warnf("More than one record: %s (选用第一条)", movieName)
 	}
 	movie := movies[0]
 
 	movieType, err := s.movieSvc.GetMovieType(ctx, movie.JavId)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("GetMovieType(%s): %w", movie.JavId, err)
 	}
 
-	fullPathName := dir + "/" + fileName
-	metaData, err := s.getMetadataForFile(fullPathName)
+	fullPath := filepath.Join(dir, fileName)
+	meta, err := s.getMetadataForFile(fullPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getMetadataForFile(%s): %w", fullPath, err)
 	}
 
-	subPart := getSubPart(fileName)
-	compressPart := getCompressPart(fileName)
-	erasedPart := getErasedPart(fileName)
-	castPart, genrePart := getMovieParts(movieType)
+	subPart := parseSubPart(fileName)
+	compressPart := parseCompressPart(fileName)
+	erasedPart := parseErasedPart(fileName)
+	castPart, genrePart := buildMovieParts(movieType)
+	heightPart, bitRatePart := s.extractTech(meta)
 
-	heightPart, bitRatePart := s.getMovieTechnicalDetails(metaData)
 	movieNameUpper := strings.ToUpper(movieName)
-
-	fullName := fmt.Sprintf("%s_%s_%s_%s_%s_%s_%s_%s_%s_%s%s",
+	newBase := fmt.Sprintf("%s_%s_%s_%s_%s_%s_%s_%s_%s_%s",
 		movieNameUpper, castPart, genrePart, movieType.Director,
 		heightPart, bitRatePart, subPart, compressPart,
-		erasedPart, movieType.Title, VideoExt)
+		erasedPart, movieType.Title)
 
-	return fullName, nil
+	return newBase + videoExt, nil
 }
 
 func (s *FilmService) getMetadataForFile(name string) (*models.Metadata, error) {
-	_, metaData, err := getMetadata(name)
-	return metaData, err
+	_, md, err := getMetadata(name)
+	return md, err
 }
 
-func getSubPart(fileName string) string {
+// --- 文件名标记解析 ---
+
+func parseSubPart(fileName string) string {
 	if strings.Contains(fileName, "-C") {
-		return FilmNameHasSub
+		return filmNameHasSub
 	}
-	return FilmNameNoSub
+	return filmNameNoSub
 }
 
-func getCompressPart(fileName string) string {
+func parseCompressPart(fileName string) string {
 	if strings.Contains(fileName, "~1") {
-		return FilmNameCompress
+		return filmNameCompress
 	}
-	return FilmNameNoCompress
+	return filmNameNoCompress
 }
 
-func getErasedPart(fileName string) string {
-	if strings.Contains(fileName, "~E") {
-		return FilmNameErased
-	} else if strings.Contains(fileName, "~P") {
-		return FilmNameNOMosaic
+func parseErasedPart(fileName string) string {
+	switch {
+	case strings.Contains(fileName, "~E"):
+		return filmNameErased
+	case strings.Contains(fileName, "~P"):
+		return filmNameNOMosaic
+	default:
+		return filmNameNoErased
 	}
-	return FilmNameNoErased
 }
 
-func getMovieParts(movieType *types.MovieType) (string, string) {
-	var (
-		castPart  strings.Builder
-		genrePart strings.Builder
-	)
-
-	for i, cast := range movieType.Cast {
+func buildMovieParts(mt *types.MovieType) (cast string, genre string) {
+	var castB, genreB strings.Builder
+	for i, c := range mt.Cast {
 		if i > 0 {
-			castPart.WriteString("-")
+			castB.WriteByte('-')
 		}
-		castPart.WriteString(cast.Name)
+		castB.WriteString(c.Name)
 	}
-
-	for i, genre := range movieType.Genre {
+	for i, g := range mt.Genre {
 		if i > 0 {
-			genrePart.WriteString("-")
+			genreB.WriteByte('-')
 		}
-		genrePart.WriteString(genre)
+		genreB.WriteString(g)
 	}
-
-	return castPart.String(), genrePart.String()
+	return castB.String(), genreB.String()
 }
 
-func (s *FilmService) getMovieTechnicalDetails(metaData *models.Metadata) (string, string) {
-	var heightPart string
-	for _, stream := range metaData.Streams {
-		if stream.CodecType == "video" {
-			heightPart = strconv.Itoa(stream.Height)
+func (s *FilmService) extractTech(md *models.Metadata) (heightPart, bitRatePart string) {
+	// 取视频流的高度
+	for _, st := range md.Streams {
+		if strings.EqualFold(st.CodecType, "video") && st.Height > 0 {
+			heightPart = strconv.Itoa(st.Height)
 			break
 		}
 	}
 
-	bitRate, err := strconv.ParseFloat(metaData.Format.BitRate, 64)
-	if err != nil {
-		s.deps.Log.Errorf("Error parsing bit rate: %v", err)
-		return heightPart, ""
+	// 解析比特率（models.Metadata.Format 为值类型，不是指针）
+	if md.Format.BitRate != "" {
+		if br, err := strconv.ParseFloat(md.Format.BitRate, 64); err == nil && br > 0 {
+			// 你的原逻辑：除以 1e5 后取整
+			bitRatePart = convert.FloatTo(br / 1e5).DecimalStr(0)
+		} else if err != nil {
+			s.deps.Log.Warnf("parse bitrate failed: %v", err)
+		}
 	}
-	bitRatePart := convert.FloatTo(bitRate / 1e5).DecimalStr(0)
 
-	return heightPart, bitRatePart
+	return
 }
 
-func getMovieNameByFileRawName(fileName string) string {
-	name := strings.TrimSuffix(fileName, VideoExt)
-	extraSuffixes := []string{"~E", "~P", "~1", "-C"}
-
-	for _, suffix := range extraSuffixes {
-		name = strings.TrimSuffix(name, suffix)
+func movieNameFromRawFile(fileName string) string {
+	if !strings.HasSuffix(strings.ToLower(fileName), videoExt) {
+		return fileName
 	}
-
+	name := strings.TrimSuffix(fileName, videoExt)
+	for _, suf := range []string{"~E", "~P", "~1", "-C"} {
+		name = strings.TrimSuffix(name, suf)
+	}
 	return name
 }

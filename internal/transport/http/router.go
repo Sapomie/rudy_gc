@@ -29,7 +29,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 
 	// ====== 实例化服务与 handler ======
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
-	trig := api2.NewTriggerAPI(deps) // ✅ 传入 srv
+	trig := api2.NewTriggerAPI(deps) //
 
 	// ====== HTML 页面路由 ======
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })
@@ -59,6 +59,11 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		// === triggers ===
 		api.POST("/triggers/daily-best", trig.DailyBest)
 		api.POST("/triggers/seeds", trig.Seeds)
+
+		// 新增：影片触发
+		filmTrig := api2.NewFilmTriggerAPI(deps)
+		api.POST("/triggers/film/rename", filmTrig.Rename)
+		api.POST("/triggers/film/process", filmTrig.Process)
 	}
 
 	return r

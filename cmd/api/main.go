@@ -48,6 +48,8 @@ func main() {
 
 	// 启动“每日榜触发”loop
 	go srv.ProcessionTriggerLoop(ctx, deps.BestTrigger)
+	// ✅ 新增：影片触发 loop
+	go srv.FilmTriggerLoop(ctx, deps.FilmTrigger)
 
 	// 6) 启动 HTTP Server（建议放协程里）
 	engine := http2.NewEngine(deps)

@@ -8,6 +8,5 @@ const (
 )
 
 type TriggerMsg struct {
-	Kind  TriggerKind
-	Seeds []string // 可选
+	Kind TriggerKind
 }

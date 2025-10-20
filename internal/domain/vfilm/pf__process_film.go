@@ -58,7 +58,7 @@ type filmContext struct {
 var (
 	errNoMovie        = errors.New("no movie found")
 	videoExts         = map[string]struct{}{".mp4": {}, ".mkv": {}, ".avi": {}, ".mov": {}, ".wmv": {}, ".flv": {}, ".ts": {}}
-	minFileSize int64 = 50 * 1024 * 1024 // 50MB
+	minFileSize int64 = 100 * 1024 * 1024 // 100MB
 )
 
 /* =========================

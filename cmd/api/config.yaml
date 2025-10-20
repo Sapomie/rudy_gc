@@ -32,6 +32,7 @@ Film:
     - "/Volumes/Expansion/v3/"
     - "/Volumes/Getea/vx/"
   CopyDestinationPath: "/Users/gaojinwei/Desktop/temp/sc/"
+  RenamePath: "/Volumes/Getea/x_process/rename/"
 
 
 
