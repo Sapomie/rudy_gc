@@ -1,4 +1,4 @@
-package film
+package vfilm
 
 import (
 	"context"
@@ -65,7 +65,7 @@ var (
    顶层流程
 ========================= */
 
-func (s *Service) ProcessFilm(ctx context.Context) error {
+func (s *FilmService) ProcessFilm(ctx context.Context) error {
 	fctx, err := s.buildFilmContext(ctx)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (s *Service) ProcessFilm(ctx context.Context) error {
    Context 构建
 ========================= */
 
-func (s *Service) buildFilmContext(ctx context.Context) (*filmContext, error) {
+func (s *FilmService) buildFilmContext(ctx context.Context) (*filmContext, error) {
 	films, err := s.deps.FilmRepo.FindAll(ctx, consts.FilmIsNotRemoved)
 	if err != nil {
 		return nil, fmt.Errorf("FilmRepo.FindAll failed: %w", err)
@@ -116,7 +116,7 @@ func (s *Service) buildFilmContext(ctx context.Context) (*filmContext, error) {
    遍历根目录
 ========================= */
 
-func (s *Service) scanRoots(ctx context.Context, fctx *filmContext) (*ProcessFilmResponse, error) {
+func (s *FilmService) scanRoots(ctx context.Context, fctx *filmContext) (*ProcessFilmResponse, error) {
 	var (
 		items   []*processFilmDirectorResponse
 		skipped int
@@ -133,7 +133,7 @@ func (s *Service) scanRoots(ctx context.Context, fctx *filmContext) (*ProcessFil
 	}, nil
 }
 
-func (s *Service) walkOneRoot(
+func (s *FilmService) walkOneRoot(
 	ctx context.Context,
 	root string,
 	fctx *filmContext,
@@ -197,7 +197,7 @@ func (s *Service) walkOneRoot(
    单文件流水线
 ========================= */
 
-func (s *Service) handleOneVideo(ctx context.Context, root, fullPath string, fctx *filmContext, info os.FileInfo) (*types.Film, error) {
+func (s *FilmService) handleOneVideo(ctx context.Context, root, fullPath string, fctx *filmContext, info os.FileInfo) (*types.Film, error) {
 	fileName := info.Name()
 	movieName := extractMovieName(fileName)
 
@@ -240,7 +240,7 @@ func (s *Service) handleOneVideo(ctx context.Context, root, fullPath string, fct
 	return film, nil
 }
 
-func (s *Service) pickMovieByName(ctx context.Context, name string) (*types.Movie, error) {
+func (s *FilmService) pickMovieByName(ctx context.Context, name string) (*types.Movie, error) {
 	movies, err := s.deps.MovieRepo.FindMoviesByName(ctx, name)
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (s *Service) pickMovieByName(ctx context.Context, name string) (*types.Movi
 	return movies[0], nil
 }
 
-func (s *Service) buildFilmSkeleton(
+func (s *FilmService) buildFilmSkeleton(
 	m *types.Movie,
 	movieName, fileName, root, fullPath string,
 	size int64,
@@ -285,7 +285,7 @@ func (s *Service) buildFilmSkeleton(
 	}
 }
 
-func (s *Service) fillFilmMeta(ctx context.Context, f *types.Film, fullPath string, fctx *filmContext) error {
+func (s *FilmService) fillFilmMeta(ctx context.Context, f *types.Film, fullPath string, fctx *filmContext) error {
 	// 继承历史计数
 	if old, ok := fctx.FilmExistMap[f.MovieName]; ok {
 		f.ScTimes = old.Film.ScTimes
@@ -313,7 +313,7 @@ func (s *Service) fillFilmMeta(ctx context.Context, f *types.Film, fullPath stri
    清理：标记缺失文件
 ========================= */
 
-func (s *Service) removeMissingFilmFiles(ctx context.Context, fctx *filmContext) error {
+func (s *FilmService) removeMissingFilmFiles(ctx context.Context, fctx *filmContext) error {
 	for _, fi := range fctx.FilmExistMap {
 		if fi.RemoveFlag == RemoveNo {
 			continue
@@ -337,7 +337,7 @@ func (s *Service) removeMissingFilmFiles(ctx context.Context, fctx *filmContext)
    小工具 & 规则
 ========================= */
 
-func (s *Service) markDirFilmsAsExisting(dir string, fctx *filmContext) {
+func (s *FilmService) markDirFilmsAsExisting(dir string, fctx *filmContext) {
 	for _, name := range fctx.FilePathMap[dir] {
 		if node, ok := fctx.FilmExistMap[name]; ok {
 			node.RemoveFlag = RemoveNo
@@ -372,7 +372,7 @@ func extractMovieName(fileName string) string {
 	return head
 }
 
-func (s *Service) handleMovieNameConflict(movieName string, fctx *filmContext, fullPath string) {
+func (s *FilmService) handleMovieNameConflict(movieName string, fctx *filmContext, fullPath string) {
 	if existing, ok := fctx.NameMap[movieName]; !ok {
 		fctx.NameMap[movieName] = &sameMovieInfo{MovieName: movieName, MoviePath: fullPath}
 	} else {
@@ -419,7 +419,7 @@ func getFileBirthTime(path string) int64 {
 	return info.ModTime().Unix()
 }
 
-func (s *Service) filmAlias(movie *types.Movie, filmSize, birthTime int64) string {
+func (s *FilmService) filmAlias(movie *types.Movie, filmSize, birthTime int64) string {
 	parts := strings.Split(movie.Name, "-")
 	if len(parts) < 2 {
 		s.deps.Log.Warnf("MovieName 错误：%s", movie.Name)
@@ -432,7 +432,7 @@ func (s *Service) filmAlias(movie *types.Movie, filmSize, birthTime int64) strin
 	)
 }
 
-func (s *Service) shouldScanMetadata(movieName string, fctx *filmContext) bool {
+func (s *FilmService) shouldScanMetadata(movieName string, fctx *filmContext) bool {
 	if fm, ok := fctx.FilmExistMap[movieName]; ok {
 		fm.RemoveFlag = RemoveNo
 		return fm.NeedScan != consts.FilmMetaDataNoNeedScan
@@ -440,7 +440,7 @@ func (s *Service) shouldScanMetadata(movieName string, fctx *filmContext) bool {
 	return true
 }
 
-func (s *Service) scanAndAttachMetadata(f *types.Film, filmPath string) error {
+func (s *FilmService) scanAndAttachMetadata(f *types.Film, filmPath string) error {
 	vm, err := filmMetaData(filmPath)
 	if err != nil {
 		return fmt.Errorf("解析元数据失败: %w", err)

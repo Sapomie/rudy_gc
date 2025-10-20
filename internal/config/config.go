@@ -22,6 +22,7 @@ type Config struct {
 type Film struct {
 	RootDirs            []string
 	CopyDestinationPath string
+	RenamePath          string
 }
 
 type FetcherConf struct {

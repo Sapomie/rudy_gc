@@ -1,4 +1,4 @@
-package film
+package vfilm
 
 import (
 	"encoding/json"

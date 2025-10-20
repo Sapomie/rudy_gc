@@ -1,5 +1,5 @@
 // internal/domain/film/a__service.go
-package film
+package vfilm
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type processFilmDirectorResponse struct {
 	Dir4Id      int64
 }
 
-func (s *Service) processFilmDirectory(ctx context.Context, fullPath string) (*processFilmDirectorResponse, error) {
+func (s *FilmService) processFilmDirectory(ctx context.Context, fullPath string) (*processFilmDirectorResponse, error) {
 	parts, file := extractParts(fullPath)
 
 	// GetOrCreateChainWithLevels 返回从顶层到叶子的 ID 列表（例如 [root, ..., leaf]）

@@ -2,11 +2,13 @@ package loop
 
 import (
 	"context"
-	"errors"
 	"rudy_gc/internal/contracts"
 	"time"
 )
 
+// ProcessionTriggerLoop
+// 监听 trigger 通道，根据触发类型执行相应流程（DailyBest / Seeds）
+// 不再支持 StopCurrentProcess。
 func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-chan contracts.TriggerMsg) {
 	log := l.deps.Log.WithContext(ctx)
 	log.Info("ProcessionTriggerLoop: started")
@@ -23,15 +25,6 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 			}
 
 			switch msg.Kind {
-			case contracts.ProcStop:
-				// ✅ 停止当前正在运行的触发式大流程
-				if l.StopCurrentProcess() {
-					log.Info("ProcessionTriggerLoop: stop signal accepted")
-				} else {
-					log.Info("ProcessionTriggerLoop: no active process to stop")
-				}
-				continue
-
 			case contracts.ProcDailyBest, contracts.ProcSeeds:
 				// 尝试登记一个新流程（已在跑就跳过）
 				procCtx, ok := l.tryBeginProcess(ctx)
@@ -45,7 +38,7 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 
 					start := time.Now()
 
-					// ✅ 先暂停详情抓取
+					// 暂停详情抓取
 					log.Info("ProcessionTriggerLoop: stopping Detail loop...")
 					l.StopDetailLoop()
 
@@ -57,12 +50,7 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 
 					case contracts.ProcSeeds:
 						log.Info("ProcessionTriggerLoop: running CrawlBySeedsProcession")
-						// 若 m.Seeds 有值，你的 CrawlBySeedsProcession 可自行读取/忽略
 						err = l.crawlLogic.CrawlBySeedsProcession(procCtx)
-
-					default:
-						// 理论不会进来
-						err = errors.New("unknown trigger kind")
 					}
 
 					if err != nil {
@@ -71,7 +59,7 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 						log.Infof("ProcessionTriggerLoop: done in %v", time.Since(start))
 					}
 
-					// ✅ 再恢复详情抓取
+					// 恢复详情抓取
 					log.Info("ProcessionTriggerLoop: restarting Detail loop...")
 					l.StartDetailLoop(ctx, 10*time.Second, 100)
 				}(msg)
