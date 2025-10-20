@@ -273,6 +273,132 @@ func (l *ScService) PickMovie(ctx context.Context, reqs []*requestWithWeight, n 
 	return selected, nil
 }
 
+// 单请求：从 req 指定的候选集中按规则抽取 n 个
+func (l *ScService) PickMovieOnce(ctx context.Context, req *types.ListMovieFullRequest, n int) ([]*types.MovieType, error) {
+	if n <= 0 {
+		return nil, errors.New("n must be > 0")
+	}
+	if req == nil {
+		return nil, errors.New("req is nil")
+	}
+
+	// 读取观影历史并构建“最近观看映射”
+	history, err := l.allScMovies(ctx)
+	if err != nil {
+		return nil, err
+	}
+	movieLastWatch, actorLastWatch := buildWatchMaps(history)
+	now := time.Now()
+
+	// 请求兜底
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.PageSize == 0 {
+		req.PageSize = 100
+	}
+
+	// 拉取候选集
+	resp, err := l.movieSvc.ListMovieFull(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	candidates := resp.List
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+	if n > len(candidates) {
+		n = len(candidates)
+	}
+
+	// 计算基础权重
+	baseWeights := make([]float64, len(candidates))
+	for i, m := range candidates {
+		w := scoreMovie(m, movieLastWatch, actorLastWatch, now)
+		if w < pickCfg.MinWeight {
+			w = pickCfg.MinWeight
+		}
+		baseWeights[i] = w
+	}
+
+	// 选择（组内多样性、无放回；仅保证本次选择内不重复）
+	selected := make([]*types.MovieType, 0, n)
+	selectedActors := make(map[string]struct{})
+	selectedMovie := make(map[string]struct{})
+
+	seed := pickCfg.RandomSeed
+	if seed <= 0 {
+		seed = time.Now().UnixNano()
+	}
+	rnd := rand.New(rand.NewSource(seed))
+
+	alive := make([]int, len(candidates))
+	for i := range alive {
+		alive[i] = i
+	}
+
+	for len(selected) < n && len(alive) > 0 {
+		// 当前权重 = 基础权重 × 多样性因子
+		curWeights := make([]float64, len(alive))
+		var sum float64
+		for j, idx := range alive {
+			m := candidates[idx]
+			// 避免同一次结果内的电影重复（同 JavId）
+			if m != nil && m.JavId != "" {
+				if _, ok := selectedMovie[m.JavId]; ok {
+					curWeights[j] = 0
+					continue
+				}
+			}
+			overlap := overlapActorCount(m, selectedActors)
+			diversityFactor := 1.0 / (1.0 + pickCfg.DiversityBeta*float64(overlap))
+			w := baseWeights[idx] * diversityFactor
+			if w < pickCfg.MinWeight {
+				w = pickCfg.MinWeight
+			}
+			curWeights[j] = w
+			sum += w
+		}
+
+		// 权重全为 0 时退化为等概率
+		if sum <= 0 {
+			for j := range curWeights {
+				curWeights[j] = 1
+			}
+			sum = float64(len(curWeights))
+		}
+
+		// 加权随机
+		r := rnd.Float64() * sum
+		var pickPos int
+		acc := 0.0
+		for j, w := range curWeights {
+			acc += w
+			if r <= acc {
+				pickPos = j
+				break
+			}
+		}
+
+		// 记录与无放回
+		pickIdx := alive[pickPos]
+		picked := candidates[pickIdx]
+		selected = append(selected, picked)
+		if picked != nil && picked.JavId != "" {
+			selectedMovie[picked.JavId] = struct{}{}
+		}
+		for _, c := range picked.Cast {
+			name := canonicalActorName(c)
+			if name != "" {
+				selectedActors[name] = struct{}{}
+			}
+		}
+		alive = append(alive[:pickPos], alive[pickPos+1:]...)
+	}
+
+	return selected, nil
+}
+
 // 你已有声明：在别处实现实际读取逻辑
 func (l *ScService) allScMovies(ctx context.Context) ([]*scMovies, error) {
 	glists, err := l.deps.GListRepo.FindAll(ctx)

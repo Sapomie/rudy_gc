@@ -33,9 +33,9 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardstoday", movieHTML.ListMovieCardToday)
 	r.GET("/cardshasrank", movieHTML.ListMovieCardHasRank)
 	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
-	r.GET("/cardsrandom", movieHTML.ListMovieCardOwned)
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
+	r.GET("/cardsrandom", movieHTML.ListMovieCardRandom)
 
 	// API 路由
 	api := r.Group("/api")
