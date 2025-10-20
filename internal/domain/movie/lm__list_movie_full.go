@@ -5,7 +5,7 @@ import (
 	"rudy_gc/internal/types"
 )
 
-func (s *Service) ListMovieFull(ctx context.Context, r *types.ListMovieFullRequest) (*types.ListMovieResponse, error) {
+func (s *MovieService) ListMovieFull(ctx context.Context, r *types.ListMovieFullRequest) (*types.ListMovieResponse, error) {
 
 	// 交给 Repo 做：分表筛选 -> 交集 -> 指定表排序分页 -> 返回 javId 列表 + total
 	rows, total, err := s.deps.MovieListRepo.ListFull(ctx, r)

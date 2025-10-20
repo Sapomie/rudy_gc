@@ -17,7 +17,7 @@ import (
 )
 
 // buildMovieTypeFromRepos 聚合多个表，生成用于前端展示的 MovieType
-func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*types.MovieType, error) {
+func (s *MovieService) buildMovieTypeFromRepos(ctx context.Context, javId string) (*types.MovieType, error) {
 	// 0) 基础 Movie
 	mv, err := s.deps.MovieRepo.FindOneByJavId(ctx, javId)
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *Service) buildMovieTypeFromRepos(ctx context.Context, javId string) (*t
 }
 
 // ===== 辅助函数 =====
-func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasingTs int64) ([]*types.CastInfo, error) {
+func (s *MovieService) getCastInfos(ctx context.Context, movieJavId string, releasingTs int64) ([]*types.CastInfo, error) {
 	// ✅ 使用你已有的方法：ListCastIDsByMovie
 	castIDs, err := s.deps.MovieCastRepo.ListCastIDsByMovieJavId(ctx, movieJavId)
 	if err != nil {
@@ -176,7 +176,7 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 	return infos, nil
 }
 
-func (s *Service) getGenreNames(ctx context.Context, movieJavId string) ([]string, error) {
+func (s *MovieService) getGenreNames(ctx context.Context, movieJavId string) ([]string, error) {
 	// ✅ 使用你已有的方法：ListGenreIDsByMovie
 	genreIDs, err := s.deps.MovieGenreRepo.ListGenreIDsByMovieJavId(ctx, movieJavId)
 	if err != nil {
@@ -217,7 +217,7 @@ func getMovieSearchUrl(movieName string) string {
 	return fmt.Sprintf("https://sukebei.nyaa.si/?f=0&c=0_0&q=%v+%v", parts[0], parts[1])
 }
 
-func (s *Service) getBusUrl(movieName string) string {
+func (s *MovieService) getBusUrl(movieName string) string {
 	return fmt.Sprintf("https://%v/%v", s.deps.Config.Fetcher.BusAddress, movieName) // TODO: 对齐配置字段
 }
 

@@ -38,7 +38,7 @@ type XModel struct {
 type Service struct {
 	crawlLogic *logic.CrawlLogic
 	deps       *svc.Deps
-	movieSvc   *movie.Service
+	movieSvc   *movie.MovieService
 	xModel     *XModel
 }
 

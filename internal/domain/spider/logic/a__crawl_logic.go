@@ -12,7 +12,7 @@ import (
 type CrawlLogic struct {
 	deps      *svc.Deps
 	castIdMap map[int64]struct{}
-	movieSvc  *movie.Service
+	movieSvc  *movie.MovieService
 }
 
 func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {

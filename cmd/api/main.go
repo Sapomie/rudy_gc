@@ -68,6 +68,11 @@ func main() {
 		}
 	}()
 
+	//select {
+	//case deps.BestTrigger <- contracts.TriggerMsg{Kind: contracts.ProcSeeds}:
+	//default:
+	//}
+
 	// 7) 等待：信号 or 服务器异常退出
 	select {
 	case <-ctx.Done():

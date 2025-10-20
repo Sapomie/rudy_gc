@@ -13,7 +13,7 @@ func (h *MovieHTMLHandler) MovieDetail(c *gin.Context) {
 		return
 	}
 
-	md, err := h.svc.GetMovieDetailByName(c.Request.Context(), movieName)
+	md, err := h.movieSvc.GetMovieDetailByName(c.Request.Context(), movieName)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "查询失败: %v", err)
 		return

@@ -12,7 +12,7 @@ import (
 
 const movieTypeTTL = 7 * 24 * time.Hour // 也可放 config
 
-func (s *Service) GetMovieType(ctx context.Context, javId string) (*types.MovieType, error) {
+func (s *MovieService) GetMovieType(ctx context.Context, javId string) (*types.MovieType, error) {
 	// 1) 先查缓存
 	if s.deps.MovieTypeCache != nil {
 		if v, err := s.deps.MovieTypeCache.GetMovieType(ctx, javId); err == nil && v != nil {
@@ -35,7 +35,7 @@ func (s *Service) GetMovieType(ctx context.Context, javId string) (*types.MovieT
 }
 
 // 单个失效
-func (s *Service) InvalidateMovieType(ctx context.Context, javId string) {
+func (s *MovieService) InvalidateMovieType(ctx context.Context, javId string) {
 	if s.deps.MovieTypeCache == nil || javId == "" {
 		return
 	}
@@ -47,7 +47,7 @@ func (s *Service) InvalidateMovieType(ctx context.Context, javId string) {
 }
 
 // InvalidateMovieTypes 精确失效：多个影片（去重 + 跳过空值）
-func (s *Service) InvalidateMovieTypes(ctx context.Context, javIds ...string) {
+func (s *MovieService) InvalidateMovieTypes(ctx context.Context, javIds ...string) {
 	if s.deps.MovieTypeCache == nil || len(javIds) == 0 {
 		return
 	}

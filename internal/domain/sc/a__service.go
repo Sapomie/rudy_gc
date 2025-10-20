@@ -7,7 +7,7 @@ import (
 
 type ScService struct {
 	deps     *svc.Deps
-	movieSvc *movie.Service
+	movieSvc *movie.MovieService
 }
 
 func NewScService(deps *svc.Deps) *ScService {

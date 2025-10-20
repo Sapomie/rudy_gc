@@ -14,7 +14,7 @@ const (
 	detailFilmInfoOK   = 2
 )
 
-func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.MovieDetail, error) {
+func (s *MovieService) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.MovieDetail, error) {
 	movieType, err := s.GetMovieType(ctx, m.JavId)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 	return md, nil
 }
 
-func (s *Service) findRankInfo(ctx context.Context, movieJavId string) ([]*types.RankInfo, error) {
+func (s *MovieService) findRankInfo(ctx context.Context, movieJavId string) ([]*types.RankInfo, error) {
 	rankMonths, err := s.deps.RankRepo.FindHighestRank(ctx, movieJavId, 1000)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (s *Service) findRankInfo(ctx context.Context, movieJavId string) ([]*types
 	return rankInfos, nil
 }
 
-func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.FilmInfo, error) {
+func (s *MovieService) findFilmInfo(ctx context.Context, movieJavId string) (*types.FilmInfo, error) {
 	vf, err := s.deps.FilmRepo.FindOneByMovieJavId(ctx, movieJavId)
 	if err != nil {
 		if errors.Is(err, types.ErrNotFound) {
@@ -88,7 +88,7 @@ func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.F
 	return filmInfo, nil
 }
 
-func (s *Service) findScInfo(ctx context.Context, movieJavId string) ([]string, error) {
+func (s *MovieService) findScInfo(ctx context.Context, movieJavId string) ([]string, error) {
 	gLists, err := s.deps.GListRepo.FindGListByMovieJavId(ctx, movieJavId)
 	if err != nil {
 		return nil, err

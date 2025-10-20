@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *Service) AddToDownloadLater(ctx context.Context, javId string) (int64, error) {
+func (s *MovieService) AddToDownloadLater(ctx context.Context, javId string) (int64, error) {
 	patch := types.MinfoPatch{
 		NeedDownload: ptr.Int64(consts.MovieNeedDownLoadOK),
 	}
@@ -26,7 +26,7 @@ func (s *Service) AddToDownloadLater(ctx context.Context, javId string) (int64, 
 	return minfo.NeedDownload, nil
 }
 
-func (s *Service) RemoveFromDownloadLater(ctx context.Context, javId string) (int64, error) {
+func (s *MovieService) RemoveFromDownloadLater(ctx context.Context, javId string) (int64, error) {
 	patch := types.MinfoPatch{
 		NeedDownload: ptr.Int64(1),
 	}

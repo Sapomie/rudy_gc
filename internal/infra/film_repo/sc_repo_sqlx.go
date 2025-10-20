@@ -134,6 +134,14 @@ func (r *ScRepoSqlx) FindNearest(ctx context.Context, t int64) (*types.GSc, erro
 	return mapModelToTypes(row), nil
 }
 
+func (r *ScRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.GSc, error) {
+	row, err := r.m.FindOneByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return mapModelToTypes(row), nil
+}
+
 /******** helpers ********/
 
 func mapModelToTypes(v *moviex.GSc) *types.GSc {

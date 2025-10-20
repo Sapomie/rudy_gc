@@ -62,15 +62,10 @@ func (l *CrawlLogic) fetchByNameType(ctx context.Context, nameType int64) error 
 
 	for i, s := range seeds {
 		if err := l.handleSeed(ctx, s); err != nil {
-			return err
+			return fmt.Errorf("handleSeed(name=%s): %w", s.Name, err)
 		}
-		// 轻微打点 + 随机 sleep，避免被限流
-		l.deps.Log.WithFields(logrus.Fields{
-			"idx":   i + 1,
-			"total": len(seeds),
-			"name":  s.Name,
-		}).Info("seed done")
-
+		// ✅ 进度日志
+		l.deps.Log.Infof("fetchByNameType: processed %d/%d seeds (%s)", i+1, len(seeds), s.Name)
 		time.Sleep(getRandomSleepDuration())
 	}
 	return nil
@@ -195,14 +190,7 @@ func (l *CrawlLogic) fetchAndSaveInventory(ctx context.Context, nameType int64, 
 		return fmt.Errorf("save inventory failed: %w", err)
 	}
 
-	l.deps.Log.WithFields(logrus.Fields{
-		"url":      fullURL,
-		"name":     name,
-		"nameType": nameType,
-		"keyword":  keyword,
-		"page":     page,
-		"bytes":    len(content),
-	}).Info("fetched page")
+	//log
 
 	return nil
 }

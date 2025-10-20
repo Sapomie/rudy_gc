@@ -20,7 +20,8 @@ type Config struct {
 }
 
 type Film struct {
-	RootDirs []string
+	RootDirs            []string
+	CopyDestinationPath string
 }
 
 type FetcherConf struct {

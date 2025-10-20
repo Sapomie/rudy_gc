@@ -84,7 +84,7 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 	curOD := normalizeOrderBy(c.Query("od"), req.OrderBy)
 	req.OrderBy = curOD
 
-	resp, err := h.svc.ListMovieFull(c.Request.Context(), &req)
+	resp, err := h.movieSvc.ListMovieFull(c.Request.Context(), &req)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "查询失败: %v", err)
 		return

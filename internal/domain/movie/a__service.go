@@ -4,10 +4,10 @@ import (
 	"rudy_gc/internal/svc"
 )
 
-type Service struct {
+type MovieService struct {
 	deps *svc.Deps
 }
 
-func NewMovieService(deps *svc.Deps) *Service {
-	return &Service{deps}
+func NewMovieService(deps *svc.Deps) *MovieService {
+	return &MovieService{deps}
 }

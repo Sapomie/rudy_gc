@@ -877,7 +877,7 @@ func normalizePage(page, size int64) (int64, int64) {
 	if page <= 0 {
 		page = 1
 	}
-	if size <= 0 || size > 200 {
+	if size <= 0 {
 		size = 18
 	}
 	return page, size

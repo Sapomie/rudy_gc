@@ -10,7 +10,7 @@ import (
 )
 
 type MovieAPI struct {
-	svc *movie.Service
+	svc *movie.MovieService
 }
 
 func NewAPI(deps *svc.Deps) *MovieAPI {

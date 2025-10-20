@@ -13,7 +13,7 @@ const (
 )
 const defaultMovieJavId = "javli6a53m"
 
-func (s *Service) GetMovieDetailByName(ctx context.Context, movieName string) (*types.MovieDetail, error) {
+func (s *MovieService) GetMovieDetailByName(ctx context.Context, movieName string) (*types.MovieDetail, error) {
 	movie, err := s.findOrFallbackMovie(ctx, movieName)
 	if err != nil {
 		return nil, err
@@ -21,16 +21,16 @@ func (s *Service) GetMovieDetailByName(ctx context.Context, movieName string) (*
 	return s.buildMovieDetail(ctx, movie)
 }
 
-func (s *Service) findOrFallbackMovie(ctx context.Context, movieName string) (*types.Movie, error) {
+func (s *MovieService) findOrFallbackMovie(ctx context.Context, movieName string) (*types.Movie, error) {
 	return s.findOrFallbackMovieByField(ctx, fieldTypeName, movieName)
 }
 
-func (s *Service) findOrFallbackMovieByEncodeName(ctx context.Context, encodeName string) (*types.Movie, error) {
+func (s *MovieService) findOrFallbackMovieByEncodeName(ctx context.Context, encodeName string) (*types.Movie, error) {
 	return s.findOrFallbackMovieByField(ctx, fieldTypeEncode, encodeName)
 }
 
 // 通用的电影查找方法，参数 FieldName 用来标识查询字段（如 "Name" 或 "EncodeName"）
-func (s *Service) findOrFallbackMovieByField(ctx context.Context, fieldType int, fieldValue string) (*types.Movie, error) {
+func (s *MovieService) findOrFallbackMovieByField(ctx context.Context, fieldType int, fieldValue string) (*types.Movie, error) {
 	var movies []*types.Movie
 	var err error
 

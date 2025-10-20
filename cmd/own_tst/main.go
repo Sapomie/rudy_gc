@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/film"
+	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/redis"
 
@@ -28,17 +28,16 @@ func main() {
 	}
 
 	//flushDb()
-	//todo:多余的parse更新
 
-	//err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	err = film.NewFilmService(deps).ProcessFilm(ctx)
+	err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
 	if err != nil {
 		panic(err)
 	}
+
+	//err = film.NewFilmService(deps).ProcessFilm(ctx)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
 	//if err != nil {
