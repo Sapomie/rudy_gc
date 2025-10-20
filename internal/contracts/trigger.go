@@ -1,15 +1,14 @@
 package contracts
 
-type ProcKind int
+type TriggerKind int
 
 const (
-	ProcDailyBest ProcKind = iota + 1
+	ProcDailyBest TriggerKind = iota + 1
 	ProcSeeds
-	ProcBoth
+	ProcStop // ✅ 新增：停止当前正在运行的大流程
 )
 
 type TriggerMsg struct {
-	Kind  ProcKind
-	Seeds []string // 可选：指定 seeds；为空则用默认配置
-	Force bool     // 预留：是否强制忽略限流等
+	Kind  TriggerKind
+	Seeds []string // 可选
 }

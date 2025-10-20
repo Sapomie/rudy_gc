@@ -100,14 +100,12 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 	c.HTML(http.StatusOK, "page.list_movie_card", gin.H{
 		"Title":       title,
 		"movies":      resp.List,
-		"Total":       resp.Total,
+		"total":       resp.Total,
 		"PageInfo":    pi,
 		"pageInfo":    pi,
 		"ownedQuery":  ownedQ,
 		"sortQuery":   sortQ,
 		"CurrentSort": curOD,
-		"total":       resp.Total,
-		"fieldName":   fieldName,
 	})
 }
 

@@ -20,9 +20,9 @@ func (h *MovieHTMLHandler) ListMovieCardRandom(c *gin.Context) {
 
 	curOD := normalizeOrderBy(c.Query("od"), req.OrderBy)
 	req.OrderBy = curOD
-	movieTypes, err := h.scSvc.PickMovieOnce(c, &req, 6)
+	movieTypes, err := h.scSvc.PickFromSource(c, &req, 18)
 	if err != nil {
-		c.String(http.StatusBadRequest, "PickMovieOnce err: %v", err)
+		c.String(http.StatusBadRequest, "PickFromSource err: %v", err)
 		return
 	}
 	total := len(movieTypes)
@@ -40,7 +40,5 @@ func (h *MovieHTMLHandler) ListMovieCardRandom(c *gin.Context) {
 		"ownedQuery":  ownedQ,
 		"sortQuery":   sortQ,
 		"CurrentSort": curOD,
-		"total":       total,
-		"fieldName":   "random",
 	})
 }

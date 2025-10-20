@@ -3,14 +3,15 @@ package http
 import (
 	"html/template"
 	"net/http"
-	api2 "rudy_gc/internal/transport/http/api"
 
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/svc"
+	api2 "rudy_gc/internal/transport/http/api"
 	htmlHandlers "rudy_gc/internal/transport/http/html"
 )
 
+// NewEngine 启动 HTTP 路由
 func NewEngine(deps *svc.Deps) *gin.Engine {
 	r := gin.Default()
 
@@ -26,8 +27,11 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.Static("/Volumes/Getea", "/Volumes/Getea")
 	r.Static("/Volumes/T7/data", "/Volumes/T7/data")
 
-	// HTML 路由
+	// ====== 实例化服务与 handler ======
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
+	trig := api2.NewTriggerAPI(deps) // ✅ 传入 srv
+
+	// ====== HTML 页面路由 ======
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })
 	r.GET("/cards", movieHTML.ListMovieCardFull)
 	r.GET("/cardstoday", movieHTML.ListMovieCardToday)
@@ -37,29 +41,24 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
 	r.GET("/cardsrandom", movieHTML.ListMovieCardRandom)
 
-	// API 路由
+	// trigger 页面
+	r.GET("/triggers", trig.Page)
+
+	// ====== API 路由 ======
 	api := r.Group("/api")
 	{
 		movieDownload := api2.NewAPI(deps)
 		api.POST("/movie/:movie/downloadlater", movieDownload.Add)
 		api.DELETE("/movie/:movie/downloadlater", movieDownload.Remove)
+
 		api.POST("/open-finder", movieDownload.OpenFinderHandler([]string{
 			"/Volumes/Getea",
 			"/Volumes/Expansion",
 		}))
 
-		// triggers
-		trigger := api2.NewTriggerAPI(deps)
-		api.POST("/triggers/daily-best", trigger.DailyBest)
-		api.POST("/triggers/seeds", trigger.Seeds) // 支持 seeds
-		api.POST("/triggers/both", trigger.Both)
-	}
-
-	// Admin（建议加鉴权中间件）
-	admin := r.Group("/admin")
-	{
-		trig := api2.NewTriggerAPI(deps)
-		admin.GET("/triggers", trig.Page)
+		// === triggers ===
+		api.POST("/triggers/daily-best", trig.DailyBest)
+		api.POST("/triggers/seeds", trig.Seeds)
 	}
 
 	return r

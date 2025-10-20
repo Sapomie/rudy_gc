@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/spider/logic"
+	"rudy_gc/internal/domain/film"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/redis"
 
@@ -29,15 +29,15 @@ func main() {
 
 	//flushDb()
 
-	err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	//err = film.NewFilmService(deps).ProcessFilm(ctx)
+	//err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
 	//if err != nil {
 	//	panic(err)
 	//}
+
+	err = film.NewFilmService(deps).ProcessFilm(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
 	//if err != nil {
@@ -51,7 +51,7 @@ func main() {
 	//}
 	//
 
-	//err = sc.NewScService(deps).AddSc(ctx, "/Users/gaojinwei/Desktop/temp/sc/2025-10-17-06-30")
+	//err = sc.NewScService(deps).AddSc(ctx, "/Users/gaojinwei/Desktop/temp/sc/2025-10-20-10-15")
 	//if err != nil {
 	//	panic(err)
 	//}
