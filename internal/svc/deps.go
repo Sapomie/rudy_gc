@@ -29,6 +29,7 @@ import (
 type Deps struct {
 	BestTrigger chan contracts.TriggerMsg
 	FilmTrigger chan contracts.FilmTriggerMsg
+	ScTrigger   chan contracts.ScTriggerMsg
 	// ...
 	Config  config.Config
 	SqlConn sqlx.SqlConn
@@ -190,7 +191,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 
 		DetailJobs:  make(chan string, 200),
 		BestTrigger: make(chan contracts.TriggerMsg, 8),
-		FilmTrigger: make(chan contracts.FilmTriggerMsg, 8), // ✅ 初始化
+		FilmTrigger: make(chan contracts.FilmTriggerMsg, 8),
+		ScTrigger:   make(chan contracts.ScTriggerMsg, 16),
 
 		Fetcher: f,
 	}, nil

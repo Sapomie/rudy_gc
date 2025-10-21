@@ -1,9 +1,12 @@
-// internal/repo/film_repo/directory_repo.go
 package film_repo
 
-import "context"
+import (
+	"context"
+	"rudy_gc/internal/types"
+)
 
 type DirectoryRepo interface {
-	// 逐级 GetOrCreate，返回叶子目录ID
 	GetOrCreateChainWithLevels(ctx context.Context, parts []string) ([4]int64, error)
+	FindOneByID(ctx context.Context, id int64) (*types.Directory, error)
+	FindOneByName(ctx context.Context, name string) (*types.Directory, error)
 }

@@ -21,40 +21,46 @@
                     <h4 class="mb-0">Trigger 控制台</h4>
                 </div>
 
-                <div class="row">
+                <div class="row g-4">
+                    <!-- 左：爬虫触发 -->
                     <div class="col-xl-6">
                         <div class="card">
                             <div class="card-body">
-                                <h4 class="card-title">触发 / 控制</h4>
-                                <p class="card-title-desc">
-                                    点击按钮触发后端任务流程。
-                                </p>
+                                <h4 class="card-title">爬虫任务</h4>
+                                <p class="card-title-desc">点击按钮触发相应的爬虫流程。</p>
 
                                 <div class="button-items">
-                                    <!-- 爬虫流程 -->
-                                    <button id="btnDailyBest" type="button" class="btn btn-primary waves-effect waves-light">
+                                    <button id="btnDailyBest" type="button"
+                                            class="btn btn-primary waves-effect waves-light me-2 mb-2">
                                         触发 DailyBest
                                     </button>
 
-                                    <button id="btnSeeds" type="button" class="btn btn-success waves-effect waves-light">
+                                    <button id="btnSeeds" type="button"
+                                            class="btn btn-success waves-effect waves-light me-2 mb-2">
                                         触发 Seeds
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                    <!-- 影片流程 -->
-                                    <button id="btnFilmRename" type="button" class="btn btn-info waves-effect waves-light">
+                    <!-- 右：影片触发 -->
+                    <div class="col-xl-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">影片任务</h4>
+                                <p class="card-title-desc">点击按钮执行影片相关任务（重命名或处理）。</p>
+
+                                <div class="button-items">
+                                    <button id="btnFilmRename" type="button"
+                                            class="btn btn-info waves-effect waves-light me-2 mb-2">
                                         触发 影片重命名
                                     </button>
 
-                                    <button id="btnFilmProcess" type="button" class="btn btn-warning waves-effect waves-light">
+                                    <button id="btnFilmProcess" type="button"
+                                            class="btn btn-warning waves-effect waves-light me-2 mb-2">
                                         触发 影片处理
                                     </button>
-                                </div>
-
-                                <hr class="my-4">
-
-                                <div>
-                                    <h5 class="card-title mb-2">状态</h5>
-                                    <div id="statusArea" class="small text-muted">尚未触发。</div>
                                 </div>
                             </div>
                         </div>
@@ -75,8 +81,6 @@
 
     <script>
         (function () {
-            const status = document.getElementById('statusArea');
-
             function post(url, body) {
                 return fetch(url, {
                     method: 'POST',
@@ -85,48 +89,24 @@
                 });
             }
 
-            function ok(msg) {
-                status.classList.remove('text-danger');
-                status.classList.add('text-success');
-                status.textContent = msg;
-            }
-
-            function err(msg) {
-                status.classList.remove('text-success');
-                status.classList.add('text-danger');
-                status.textContent = msg;
-            }
-
             // === 爬虫：DailyBest ===
             document.getElementById('btnDailyBest').onclick = function () {
-                ok('触发中…');
-                post('/api/triggers/daily-best')
-                    .then(r => r.ok ? ok('已触发 DailyBest') : err('触发失败（' + r.status + '）'))
-                    .catch(e => err('触发异常：' + e));
+                post('/api/triggers/daily-best');
             };
 
             // === 爬虫：Seeds ===
             document.getElementById('btnSeeds').onclick = function () {
-                ok('触发中…');
-                post('/api/triggers/seeds')
-                    .then(r => r.ok ? ok('已触发 Seeds') : err('触发失败（' + r.status + '）'))
-                    .catch(e => err('触发异常：' + e));
+                post('/api/triggers/seeds');
             };
 
             // === 影片：RenameFilm ===
             document.getElementById('btnFilmRename').onclick = function () {
-                ok('触发中…');
-                post('/api/triggers/film/rename')
-                    .then(r => r.ok ? ok('已触发 影片重命名') : err('触发失败（' + r.status + '）'))
-                    .catch(e => err('触发异常：' + e));
+                post('/api/triggers/film/rename');
             };
 
             // === 影片：ProcessFilm ===
             document.getElementById('btnFilmProcess').onclick = function () {
-                ok('触发中…');
-                post('/api/triggers/film/process')
-                    .then(r => r.ok ? ok('已触发 影片处理') : err('触发失败（' + r.status + '）'))
-                    .catch(e => err('触发异常：' + e));
+                post('/api/triggers/film/process');
             };
         })();
     </script>

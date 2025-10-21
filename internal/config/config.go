@@ -20,9 +20,14 @@ type Config struct {
 }
 
 type Film struct {
-	RootDirs            []string
+	Pairs               []FilmDirPair
 	CopyDestinationPath string
 	RenamePath          string
+}
+
+type FilmDirPair struct {
+	RootDir             string
+	MoveFilmDestination string
 }
 
 type FetcherConf struct {

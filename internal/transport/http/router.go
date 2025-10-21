@@ -64,6 +64,11 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		filmTrig := api2.NewFilmTriggerAPI(deps)
 		api.POST("/triggers/film/rename", filmTrig.Rename)
 		api.POST("/triggers/film/process", filmTrig.Process)
+
+		// ✅ 新增 SC 触发
+		scTrig := api2.NewScTriggerAPI(deps)
+		api.POST("/triggers/sc/move", scTrig.Move) // 带 scName
+		api.POST("/triggers/sc/add", scTrig.Add)   // 带 dir
 	}
 
 	return r

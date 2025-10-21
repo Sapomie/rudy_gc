@@ -4,11 +4,14 @@ package film_infra
 import (
 	"context"
 	"crypto/md5"
+	"rudy_gc/internal/types"
 	"strings"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/film_repo"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlc"
 )
 
 var _ film_repo.DirectoryRepo = (*DirectoryRepoSqlx)(nil)
@@ -93,4 +96,43 @@ func (r *DirectoryRepoSqlx) GetOrCreateChainWithLevels(ctx context.Context, part
 	}
 
 	return levels, nil
+}
+
+// 省略已有结构：type DirectoryRepoSqlx struct { m moviex.VDirectoryModel }
+
+func (r *DirectoryRepoSqlx) FindOneByID(ctx context.Context, id int64) (*types.Directory, error) {
+	v, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		if err == sqlc.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return toTypesDirectory(v), nil
+}
+
+func (r *DirectoryRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.Directory, error) {
+	v, err := r.m.FindOneByName(ctx, name)
+	if err != nil {
+		if err == sqlc.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return toTypesDirectory(v), nil
+}
+
+func toTypesDirectory(v *moviex.VDirectory) *types.Directory {
+	if v == nil {
+		return nil
+	}
+	return &types.Directory{
+		Id:        v.Id,
+		ParentId:  v.ParentId,
+		Name:      v.Name,
+		Depth:     v.Depth,
+		Path:      v.Path,
+		CreatedOn: v.CreatedOn,
+		UpdatedOn: v.UpdatedOn,
+	}
 }

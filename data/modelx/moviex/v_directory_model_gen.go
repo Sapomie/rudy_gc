@@ -24,6 +24,7 @@ var (
 	vDirectoryRowsWithPlaceHolder = strings.Join(stringx.Remove(vDirectoryFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
 	cacheRudyGcVDirectoryIdPrefix           = "cache:rudyGc:vDirectory:id:"
+	cacheRudyGcVDirectoryNamePrefix         = "cache:rudyGc:vDirectory:name:"
 	cacheRudyGcVDirectoryParentIdNamePrefix = "cache:rudyGc:vDirectory:parentId:name:"
 	cacheRudyGcVDirectoryPathPrefix         = "cache:rudyGc:vDirectory:path:"
 )
@@ -32,6 +33,7 @@ type (
 	vDirectoryModel interface {
 		Insert(ctx context.Context, data *VDirectory) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*VDirectory, error)
+		FindOneByName(ctx context.Context, name string) (*VDirectory, error)
 		FindOneByParentIdName(ctx context.Context, parentId int64, name string) (*VDirectory, error)
 		FindOneByPath(ctx context.Context, path string) (*VDirectory, error)
 		Update(ctx context.Context, data *VDirectory) error
@@ -69,12 +71,13 @@ func (m *defaultVDirectoryModel) Delete(ctx context.Context, id int64) error {
 	}
 
 	rudyGcVDirectoryIdKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryIdPrefix, id)
+	rudyGcVDirectoryNameKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryNamePrefix, data.Name)
 	rudyGcVDirectoryParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcVDirectoryParentIdNamePrefix, data.ParentId, data.Name)
 	rudyGcVDirectoryPathKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryPathPrefix, data.Path)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
-	}, rudyGcVDirectoryIdKey, rudyGcVDirectoryParentIdNameKey, rudyGcVDirectoryPathKey)
+	}, rudyGcVDirectoryIdKey, rudyGcVDirectoryNameKey, rudyGcVDirectoryParentIdNameKey, rudyGcVDirectoryPathKey)
 	return err
 }
 
@@ -85,6 +88,26 @@ func (m *defaultVDirectoryModel) FindOne(ctx context.Context, id int64) (*VDirec
 		query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", vDirectoryRows, m.table)
 		return conn.QueryRowCtx(ctx, v, query, id)
 	})
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlc.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *defaultVDirectoryModel) FindOneByName(ctx context.Context, name string) (*VDirectory, error) {
+	rudyGcVDirectoryNameKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryNamePrefix, name)
+	var resp VDirectory
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcVDirectoryNameKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `name` = ? limit 1", vDirectoryRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, name); err != nil {
+			return nil, err
+		}
+		return resp.Id, nil
+	}, m.queryPrimary)
 	switch err {
 	case nil:
 		return &resp, nil
@@ -137,12 +160,13 @@ func (m *defaultVDirectoryModel) FindOneByPath(ctx context.Context, path string)
 
 func (m *defaultVDirectoryModel) Insert(ctx context.Context, data *VDirectory) (sql.Result, error) {
 	rudyGcVDirectoryIdKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryIdPrefix, data.Id)
+	rudyGcVDirectoryNameKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryNamePrefix, data.Name)
 	rudyGcVDirectoryParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcVDirectoryParentIdNamePrefix, data.ParentId, data.Name)
 	rudyGcVDirectoryPathKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryPathPrefix, data.Path)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, vDirectoryRowsExpectAutoSet)
 		return conn.ExecCtx(ctx, query, data.ParentId, data.Name, data.Depth, data.Path, data.PathHash, data.CreatedOn, data.UpdatedOn)
-	}, rudyGcVDirectoryIdKey, rudyGcVDirectoryParentIdNameKey, rudyGcVDirectoryPathKey)
+	}, rudyGcVDirectoryIdKey, rudyGcVDirectoryNameKey, rudyGcVDirectoryParentIdNameKey, rudyGcVDirectoryPathKey)
 	return ret, err
 }
 
@@ -153,12 +177,13 @@ func (m *defaultVDirectoryModel) Update(ctx context.Context, newData *VDirectory
 	}
 
 	rudyGcVDirectoryIdKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryIdPrefix, data.Id)
+	rudyGcVDirectoryNameKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryNamePrefix, data.Name)
 	rudyGcVDirectoryParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcVDirectoryParentIdNamePrefix, data.ParentId, data.Name)
 	rudyGcVDirectoryPathKey := fmt.Sprintf("%s%v", cacheRudyGcVDirectoryPathPrefix, data.Path)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, vDirectoryRowsWithPlaceHolder)
 		return conn.ExecCtx(ctx, query, newData.ParentId, newData.Name, newData.Depth, newData.Path, newData.PathHash, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, rudyGcVDirectoryIdKey, rudyGcVDirectoryParentIdNameKey, rudyGcVDirectoryPathKey)
+	}, rudyGcVDirectoryIdKey, rudyGcVDirectoryNameKey, rudyGcVDirectoryParentIdNameKey, rudyGcVDirectoryPathKey)
 	return err
 }
 

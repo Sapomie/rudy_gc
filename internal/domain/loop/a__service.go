@@ -2,6 +2,7 @@ package loop
 
 import (
 	"context"
+	"rudy_gc/internal/domain/sc"
 	"rudy_gc/internal/domain/vfilm"
 	"runtime/debug"
 	"sync"
@@ -18,6 +19,7 @@ type FetchLoopService struct {
 	deps       *svc.Deps
 	crawlLogic *logic.CrawlLogic
 	filmSvc    *vfilm.FilmService //
+	scSvc      *sc.ScService
 
 	// ====== 详情抓取 loop 控制 ======
 	detailMu     sync.Mutex
@@ -36,6 +38,7 @@ func NewFetchLoopService(deps *svc.Deps) *FetchLoopService {
 		deps:       deps,
 		crawlLogic: logic.NewCrawlLogic(deps),
 		filmSvc:    vfilm.NewFilmService(deps),
+		scSvc:      sc.NewScService(deps),
 	}
 }
 

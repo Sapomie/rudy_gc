@@ -26,14 +26,14 @@ Fetcher:
   BusAddress: "www.javbus.com"
   LocalImageDir: "/Volumes/T7/data/jacket_cover/"
 #  LocalImageDir: "/Volumes/T7/data/jacket_cover_rudy_gc/"
+LogursLevel: "info"
+
 
 Film:
-  RootDirs:
-    - "/Volumes/Expansion/v3/"
-    - "/Volumes/Getea/vx/"
   CopyDestinationPath: "/Users/gaojinwei/Desktop/temp/sc/"
   RenamePath: "/Volumes/Getea/x_process/rename/"
-
-
-
-LogursLevel: "info"
+  Pairs:
+    - RootDir: "/Volumes/Expansion/v3/"
+      MoveFilmDestination: "/Volumes/Getea/goingon/"
+    - RootDir: "/Volumes/Getea/vx/"
+      MoveFilmDestination: "/Volumes/Expansion/goingon/"

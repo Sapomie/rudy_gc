@@ -121,8 +121,8 @@ func (s *FilmService) scanRoots(ctx context.Context, fctx *filmContext) (*Proces
 		items   []*processFilmDirectorResponse
 		skipped int
 	)
-	for _, root := range s.deps.Config.Film.RootDirs {
-		if err := s.walkOneRoot(ctx, filepath.Clean(root), fctx, &items, &skipped); err != nil {
+	for _, p := range s.deps.Config.Film.Pairs {
+		if err := s.walkOneRoot(ctx, filepath.Clean(p.RootDir), fctx, &items, &skipped); err != nil {
 			return nil, err
 		}
 	}

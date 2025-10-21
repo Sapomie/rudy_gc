@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"rudy_gc/pkg/ptr"
@@ -43,8 +44,9 @@ const (
 )
 
 var (
-	errSensitive = errors.New("translate sensitive word")
-	errBadJSON   = errors.New("bad baidu json")
+	errSensitive     = errors.New("translate sensitive word")
+	errBadJSON       = errors.New("bad baidu json")
+	invalidFileChars = regexp.MustCompile(`[^a-zA-Z0-9\p{Han} _\-$begin:math:text$$end:math:text$$begin:math:display$$end:math:display$【】（）]`)
 )
 
 // TranslateTitle：核心逻辑不变，但更稳、更幂等
@@ -100,10 +102,9 @@ func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
 		switch {
 		case err == nil:
 			dst = replaceSlashes(strings.TrimSpace(dst))
+			dst = sanitizeFilenamePart(dst)
 			if dst != "" {
-				// 仅当中文真的变化时再更新 & 失效缓存
 				now := time.Now().Unix()
-
 				// 读旧值（可选：若你上层已有 minfo 就不再读）
 				// 这里直接尝试更新，repo 层可选择只更新非空字段
 				if uerr := l.deps.MinfoRepo.UpdatePartialByJavId(ctx, movie.JavId, types.MinfoPatch{
@@ -217,4 +218,10 @@ func replaceSlashes(s string) string {
 func md5Hex(s string) string {
 	h := md5.Sum([]byte(s))
 	return hex.EncodeToString(h[:])
+}
+func sanitizeFilenamePart(s string) string {
+	// 替换非法字符为空
+	clean := invalidFileChars.ReplaceAllString(s, "")
+	// 去除两端空格
+	return strings.TrimSpace(clean)
 }
