@@ -46,10 +46,9 @@ func main() {
 	// 先启动详情抓取 loop（可随时被 DailyBest 暂停/恢复）
 	srv.StartDetailLoop(ctx, 10*time.Second, 100)
 
-	// 启动“每日榜触发”loop
 	go srv.ProcessionTriggerLoop(ctx, deps.BestTrigger)
-	// ✅ 新增：影片触发 loop
 	go srv.FilmTriggerLoop(ctx, deps.FilmTrigger)
+	go srv.ScTriggerLoop(ctx, deps.ScTrigger)
 
 	// 6) 启动 HTTP Server（建议放协程里）
 	engine := http2.NewEngine(deps)

@@ -8,6 +8,18 @@
         <link href="/static/css/bootstrap.min.css" rel="stylesheet">
         <link href="/static/css/icons.min.css" rel="stylesheet">
         <link href="/static/css/app.min.css" rel="stylesheet">
+        <style>
+            .trigger-input {
+                max-width: 360px;
+            }
+            #msgArea {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2000;
+                display: none;
+            }
+        </style>
     </head>
 
     <body data-sidebar="dark">
@@ -31,14 +43,9 @@
 
                                 <div class="button-items">
                                     <button id="btnDailyBest" type="button"
-                                            class="btn btn-primary waves-effect waves-light me-2 mb-2">
-                                        触发 DailyBest
-                                    </button>
-
+                                            class="btn btn-primary me-2 mb-2">触发 DailyBest</button>
                                     <button id="btnSeeds" type="button"
-                                            class="btn btn-success waves-effect waves-light me-2 mb-2">
-                                        触发 Seeds
-                                    </button>
+                                            class="btn btn-success me-2 mb-2">触发 Seeds</button>
                                 </div>
                             </div>
                         </div>
@@ -53,15 +60,52 @@
 
                                 <div class="button-items">
                                     <button id="btnFilmRename" type="button"
-                                            class="btn btn-info waves-effect waves-light me-2 mb-2">
-                                        触发 影片重命名
-                                    </button>
-
+                                            class="btn btn-info me-2 mb-2">触发 影片重命名</button>
                                     <button id="btnFilmProcess" type="button"
-                                            class="btn btn-warning waves-effect waves-light me-2 mb-2">
-                                        触发 影片处理
-                                    </button>
+                                            class="btn btn-warning me-2 mb-2">触发 影片处理</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 下：SC 任务 -->
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">SC 任务</h4>
+                                <p class="card-title-desc">填写参数后触发 SC 相关流程。</p>
+
+                                <!-- 一行排列 -->
+                                <form id="formScMove" class="row align-items-center g-2 mb-3 needs-validation" novalidate>
+                                    <div class="col-auto">
+                                        <label for="scMoveName" class="col-form-label">SC 名称：</label>
+                                    </div>
+                                    <div class="col-auto trigger-input">
+                                        <input type="text" class="form-control" id="scMoveName" placeholder="例如：睡前" required>
+                                        <div class="invalid-tooltip">请输入 SC 名称</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="submit" class="btn btn-outline-primary">
+                                            移动 SC 影片
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <form id="formScAdd" class="row align-items-center g-2 needs-validation" novalidate>
+                                    <div class="col-auto">
+                                        <label for="scAddDir" class="col-form-label">目录路径：</label>
+                                    </div>
+                                    <div class="col-auto trigger-input">
+                                        <input type="text" class="form-control" id="scAddDir" placeholder="/path/to/scan" required>
+                                        <div class="invalid-tooltip">请输入目录路径</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="submit" class="btn btn-outline-success">
+                                            添加 SC 目录
+                                        </button>
+                                    </div>
+                                </form>
+
                             </div>
                         </div>
                     </div>
@@ -71,16 +115,24 @@
         </div>
     </main>
 
-    <!-- JS -->
-    <script src="/static/js/jquery.min.js"></script>
-    <script src="/static/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/metisMenu.min.js"></script>
-    <script src="/static/js/simplebar.min.js"></script>
-    <script src="/static/js/waves.min.js"></script>
-    <script src="/static/js/app.js"></script>
+    <!-- 浮动提示 -->
+    <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
 
+    <!-- JS -->
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script>
         (function () {
+            const msgArea = document.getElementById('msgArea');
+            let msgTimer = null;
+
+            function showMsg(text, ok = true) {
+                clearTimeout(msgTimer);
+                msgArea.textContent = text;
+                msgArea.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger') + ' fade show small py-2 px-3';
+                msgArea.style.display = 'block';
+                msgTimer = setTimeout(() => msgArea.style.display = 'none', 2500);
+            }
+
             function post(url, body) {
                 return fetch(url, {
                     method: 'POST',
@@ -89,25 +141,47 @@
                 });
             }
 
-            // === 爬虫：DailyBest ===
-            document.getElementById('btnDailyBest').onclick = function () {
-                post('/api/triggers/daily-best');
-            };
+            // 通用绑定
+            function bindBtn(id, url, msg) {
+                document.getElementById(id).onclick = function () {
+                    post(url)
+                        .then(r => r.ok ? showMsg(msg) : showMsg('触发失败(' + r.status + ')', false))
+                        .catch(e => showMsg('异常：' + e, false));
+                };
+            }
 
-            // === 爬虫：Seeds ===
-            document.getElementById('btnSeeds').onclick = function () {
-                post('/api/triggers/seeds');
-            };
+            bindBtn('btnDailyBest', '/api/triggers/daily-best', 'DailyBest 已触发');
+            bindBtn('btnSeeds', '/api/triggers/seeds', 'Seeds 已触发');
+            bindBtn('btnFilmRename', '/api/triggers/film/rename', '影片重命名 已触发');
+            bindBtn('btnFilmProcess', '/api/triggers/film/process', '影片处理 已触发');
 
-            // === 影片：RenameFilm ===
-            document.getElementById('btnFilmRename').onclick = function () {
-                post('/api/triggers/film/rename');
-            };
+            // === SC Move ===
+            const formMove = document.getElementById('formScMove');
+            formMove.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!formMove.checkValidity()) {
+                    formMove.classList.add('was-validated');
+                    return;
+                }
+                const scName = document.getElementById('scMoveName').value.trim();
+                post('/api/triggers/sc/move', { scName })
+                    .then(r => r.ok ? showMsg('MoveScFilm 已触发') : showMsg('触发失败(' + r.status + ')', false))
+                    .catch(e => showMsg('异常：' + e, false));
+            });
 
-            // === 影片：ProcessFilm ===
-            document.getElementById('btnFilmProcess').onclick = function () {
-                post('/api/triggers/film/process');
-            };
+            // === SC Add ===
+            const formAdd = document.getElementById('formScAdd');
+            formAdd.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!formAdd.checkValidity()) {
+                    formAdd.classList.add('was-validated');
+                    return;
+                }
+                const dir = document.getElementById('scAddDir').value.trim();
+                post('/api/triggers/sc/add', { dir })
+                    .then(r => r.ok ? showMsg('AddSc 已触发') : showMsg('触发失败(' + r.status + ')', false))
+                    .catch(e => showMsg('异常：' + e, false));
+            });
         })();
     </script>
 

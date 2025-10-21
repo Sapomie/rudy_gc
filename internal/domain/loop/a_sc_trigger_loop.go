@@ -32,6 +32,7 @@ func (l *FetchLoopService) ScTriggerLoop(ctx context.Context, ch <-chan contract
 					log.Warn("ScTriggerLoop: empty scName, skip")
 					continue
 				}
+
 				log.Infof("ScTriggerLoop: MoveScFilm(scName=%s) begin", scName)
 				if err := l.scSvc.MoveScFilm(ctx, scName); err != nil {
 					log.Errorf("ScTriggerLoop: MoveScFilm failed: %v", err)
@@ -46,6 +47,7 @@ func (l *FetchLoopService) ScTriggerLoop(ctx context.Context, ch <-chan contract
 					continue
 				}
 				log.Infof("ScTriggerLoop: AddSc(dir=%s) begin", dir)
+
 				if err := l.scSvc.AddSc(ctx, dir); err != nil {
 					log.Errorf("ScTriggerLoop: AddSc failed: %v", err)
 				} else {
