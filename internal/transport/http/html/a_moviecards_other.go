@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *MovieHTMLHandler) ListMovieCardRandom(c *gin.Context) {
+func (h *MovieHTMLHandler) ListMovieCardRandomPick(c *gin.Context) {
 	req := types.ListMovieFullRequest{
 		Owned:    3,
 		Page:     1,

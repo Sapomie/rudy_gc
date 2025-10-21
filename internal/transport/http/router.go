@@ -41,7 +41,8 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
-	r.GET("/cardsrandom", movieHTML.ListMovieCardRandom)
+	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)
+	r.GET("/cardsrandompick", movieHTML.ListMovieCardRandomPick)
 
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
