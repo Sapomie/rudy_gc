@@ -2,13 +2,14 @@ package loop
 
 import (
 	"context"
+	"fmt"
 	"rudy_gc/internal/contracts"
+	"strings"
 	"time"
 )
 
-// ProcessionTriggerLoop
-// 监听 trigger 通道，根据触发类型执行相应流程（DailyBest / Seeds）
-// 不再支持 StopCurrentProcess。
+// package loop
+
 func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-chan contracts.TriggerMsg) {
 	log := l.deps.Log.WithContext(ctx)
 	log.Info("ProcessionTriggerLoop: started")
@@ -18,15 +19,13 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 		select {
 		case <-ctx.Done():
 			return
-
 		case msg, ok := <-trigger:
 			if !ok {
 				return
 			}
 
 			switch msg.Kind {
-			case contracts.ProcDailyBest, contracts.ProcSeeds:
-				// 尝试登记一个新流程（已在跑就跳过）
+			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName: // ✅ 加入新类型
 				procCtx, ok := l.tryBeginProcess(ctx)
 				if !ok {
 					log.Warn("ProcessionTriggerLoop: still running, skip trigger")
@@ -37,8 +36,6 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 					defer l.endProcess()
 
 					start := time.Now()
-
-					// 暂停详情抓取
 					log.Info("ProcessionTriggerLoop: stopping Detail loop...")
 					l.StopDetailLoop()
 
@@ -49,8 +46,16 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 						err = l.crawlLogic.CrawlDailyBestProcession(procCtx)
 
 					case contracts.ProcSeeds:
-						log.Info("ProcessionTriggerLoop: running CrawlBySeedsProcession")
-						err = l.crawlLogic.CrawlBySeedsProcession(procCtx)
+						log.Info("ProcessionTriggerLoop: running CrawlBySeedsActiveProcession")
+						err = l.crawlLogic.CrawlBySeedsActiveProcession(procCtx)
+
+					case contracts.ProcSeedByName: // ✅ 新增分支
+						if strings.TrimSpace(m.Name) == "" {
+							err = fmt.Errorf("empty seed name")
+							break
+						}
+						log.Infof("ProcessionTriggerLoop: running CrawlBySeedName(%s)", m.Name)
+						err = l.crawlLogic.CrawlBySeedName(procCtx, m.Name)
 					}
 
 					if err != nil {
@@ -59,7 +64,6 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 						log.Infof("ProcessionTriggerLoop: done in %v", time.Since(start))
 					}
 
-					// 恢复详情抓取
 					log.Info("ProcessionTriggerLoop: restarting Detail loop...")
 					l.StartDetailLoop(ctx, 10*time.Second, 100)
 				}(msg)

@@ -113,6 +113,14 @@ func (r *SeedRepoSqlx) Upsert(ctx context.Context, s *types.Seed) (int64, error)
 	}
 }
 
+func (r *SeedRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.Seed, error) {
+	row, err := r.m.FindOneByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return toSeed(row), nil
+}
+
 func toSeed(row *spiderx.DSeed) *types.Seed {
 	return &types.Seed{
 		Id:            row.Id,

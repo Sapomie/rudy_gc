@@ -28,11 +28,6 @@ const (
 
 var ErrBlankPage = errors.New("blank page")
 
-// FetchInventoriesBySeedActive
-// - 读取启用的 seed 列表（prefix/label）
-// - 依据断点(pageNow/start-end/offset)分页请求
-// - 保存至 raw_inventory（落库见 fetchAndSaveInventory）
-// - 成功页推进断点；空页/异常的退避与记录
 func (l *CrawlLogic) FetchInventoriesBySeedActive(ctx context.Context) error {
 	l.deps.Log.Info("FetchInventoriesBySeedActive: begin")
 
@@ -46,6 +41,18 @@ func (l *CrawlLogic) FetchInventoriesBySeedActive(ctx context.Context) error {
 	}
 
 	l.deps.Log.Info("FetchInventoriesBySeedActive: done")
+	return nil
+}
+
+func (l *CrawlLogic) FetchInventoriesBySeedName(ctx context.Context, seedName string) error {
+	seed, err := l.deps.SeedRepo.FindOneByName(ctx, seedName)
+	if err != nil {
+		return errors.New("seed not found " + seedName)
+	}
+
+	if err := l.handleSeed(ctx, seed); err != nil {
+		return fmt.Errorf("handleSeed(name=%s): %w", seed.Name, err)
+	}
 	return nil
 }
 

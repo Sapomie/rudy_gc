@@ -48,6 +48,7 @@ func (l *CrawlLogic) HandleFetchDetailsById(ctx context.Context, javIds []string
 		if !l.shouldSkipUpdate(ctx, it.LastQueryDetailTime, releasingDate, it.Name) {
 			items = append(items, it)
 		}
+
 	}
 
 	total, err := l.handleFetchAndParseDetails(ctx, items)

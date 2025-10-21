@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -17,22 +18,45 @@ func NewTriggerAPI(deps *svc.Deps) *TriggerAPI {
 	return &TriggerAPI{ch: deps.BestTrigger}
 }
 
-// 管理页（按钮页）
+// 管理页
 func (h *TriggerAPI) Page(c *gin.Context) {
 	c.HTML(http.StatusOK, "page.admin_triggers", gin.H{})
 }
 
-// === 触发：DailyBest ===
+// === DailyBest ===
 func (h *TriggerAPI) DailyBest(c *gin.Context) {
 	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcDailyBest})
 }
 
-// === 触发：Seeds ===
+// === Seeds ===
 func (h *TriggerAPI) Seeds(c *gin.Context) {
 	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcSeeds})
 }
 
-// --- 内部统一入队 ---
+// === Seed By Name ===
+type seedNameReq struct {
+	Name string `json:"name"`
+}
+
+func (h *TriggerAPI) SeedByName(c *gin.Context) {
+	var req seedNameReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+
+	h.enqueue(c, contracts.TriggerMsg{
+		Kind: contracts.ProcSeedByName,
+		Name: name,
+	})
+}
+
+// === 内部通用投递 ===
 func (h *TriggerAPI) enqueue(c *gin.Context, msg contracts.TriggerMsg) {
 	select {
 	case h.ch <- msg:

@@ -8,16 +8,15 @@
         <link href="/static/css/bootstrap.min.css" rel="stylesheet">
         <link href="/static/css/icons.min.css" rel="stylesheet">
         <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/dataTables.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/buttons.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
         <style>
-            .trigger-input {
-                max-width: 360px;
-            }
+            .trigger-input { max-width: 360px; }
             #msgArea {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 2000;
-                display: none;
+                position: fixed; bottom: 20px; right: 20px;
+                z-index: 2000; display: none;
             }
         </style>
     </head>
@@ -35,76 +34,131 @@
 
                 <div class="row g-4">
                     <!-- 左：爬虫触发 -->
-                    <div class="col-xl-6">
+                    <div class="col-xl-12">
                         <div class="card">
                             <div class="card-body">
                                 <h4 class="card-title">爬虫任务</h4>
-                                <p class="card-title-desc">点击按钮触发相应的爬虫流程。</p>
+                                <p class="card-title-desc">点击按钮触发相应的爬虫流程，或按名称精确触发某个 Seed。</p>
 
-                                <div class="button-items">
-                                    <button id="btnDailyBest" type="button"
-                                            class="btn btn-primary me-2 mb-2">触发 DailyBest</button>
-                                    <button id="btnSeeds" type="button"
-                                            class="btn btn-success me-2 mb-2">触发 Seeds</button>
+                                <div class="row g-3">
+                                    <!-- DailyBest -->
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-primary">DailyBest 抓取</h6>
+                                            <p class="text-muted small mb-3">抓取每日榜单及影片详情。</p>
+                                            <button id="btnDailyBest" type="button" class="btn btn-primary w-100">
+                                                触发 DailyBest
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Seeds -->
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-success">活跃 Seeds 抓取</h6>
+                                            <p class="text-muted small mb-3">根据活跃种子抓取影片信息。</p>
+                                            <button id="btnSeeds" type="button" class="btn btn-success w-100">
+                                                触发 Seeds
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Seed By Name -->
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-info">按名称抓取</h6>
+                                            <p class="text-muted small mb-2">输入 Seed 名称进行定向抓取。</p>
+                                            <form id="formSeedByName" class="needs-validation" novalidate>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="seedByName"
+                                                           placeholder="" required>
+                                                    <button type="submit" class="btn btn-outline-info">执行</button>
+                                                    <div class="invalid-tooltip">请输入 Seed 名称</div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
                                 </div>
+
                             </div>
                         </div>
                     </div>
 
-                    <!-- 右：影片触发 -->
-                    <div class="col-xl-6">
+                    <!-- 影片任务 -->
+                    <div class="col-xl-12">
                         <div class="card">
                             <div class="card-body">
                                 <h4 class="card-title">影片任务</h4>
                                 <p class="card-title-desc">点击按钮执行影片相关任务（重命名或处理）。</p>
 
-                                <div class="button-items">
-                                    <button id="btnFilmRename" type="button"
-                                            class="btn btn-info me-2 mb-2">触发 影片重命名</button>
-                                    <button id="btnFilmProcess" type="button"
-                                            class="btn btn-warning me-2 mb-2">触发 影片处理</button>
+                                <div class="row g-3">
+                                    <!-- 重命名 -->
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-info">影片重命名</h6>
+                                            <p class="text-muted small mb-3">扫描指定目录，自动重命名影片文件。</p>
+                                            <button id="btnFilmRename" type="button" class="btn btn-info w-100">
+                                                执行 影片重命名
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 影片处理 -->
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-warning">影片处理</h6>
+                                            <p class="text-muted small mb-3">执行影片解析、匹配与元数据整理。</p>
+                                            <button id="btnFilmProcess" type="button" class="btn btn-warning w-100">
+                                                执行 影片处理
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
+
                             </div>
                         </div>
                     </div>
 
-                    <!-- 下：SC 任务 -->
+                    <!-- SC 任务 -->
                     <div class="col-xl-12">
                         <div class="card">
                             <div class="card-body">
                                 <h4 class="card-title">SC 任务</h4>
                                 <p class="card-title-desc">填写参数后触发 SC 相关流程。</p>
 
-                                <!-- 一行排列 -->
-                                <form id="formScMove" class="row align-items-center g-2 mb-3 needs-validation" novalidate>
-                                    <div class="col-auto">
-                                        <label for="scMoveName" class="col-form-label">SC 名称：</label>
+                                <div class="row g-3">
+                                    <!-- Move SC -->
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-primary">移动 SC 影片</h6>
+                                            <p class="text-muted small mb-2">输入 SC 名称，将对应影片移动到指定目录。</p>
+                                            <form id="formScMove" class="needs-validation" novalidate>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="scMoveName"
+                                                           placeholder="" required>
+                                                    <button type="submit" class="btn btn-outline-primary">执行</button>
+                                                    <div class="invalid-tooltip">请输入 SC 名称</div>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
-                                    <div class="col-auto trigger-input">
-                                        <input type="text" class="form-control" id="scMoveName" placeholder="例如：睡前" required>
-                                        <div class="invalid-tooltip">请输入 SC 名称</div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <button type="submit" class="btn btn-outline-primary">
-                                            移动 SC 影片
-                                        </button>
-                                    </div>
-                                </form>
 
-                                <form id="formScAdd" class="row align-items-center g-2 needs-validation" novalidate>
-                                    <div class="col-auto">
-                                        <label for="scAddDir" class="col-form-label">目录路径：</label>
+                                    <!-- Add SC -->
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-success">添加 SC 目录</h6>
+                                            <p class="text-muted small mb-2">输入目录路径，扫描并添加新的 SC 影片。</p>
+                                            <form id="formScAdd" class="needs-validation" novalidate>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="scAddDir"
+                                                           placeholder="" required>
+                                                    <button type="submit" class="btn btn-outline-success">执行</button>
+                                                    <div class="invalid-tooltip">请输入目录路径</div>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
-                                    <div class="col-auto trigger-input">
-                                        <input type="text" class="form-control" id="scAddDir" placeholder="/path/to/scan" required>
-                                        <div class="invalid-tooltip">请输入目录路径</div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <button type="submit" class="btn btn-outline-success">
-                                            添加 SC 目录
-                                        </button>
-                                    </div>
-                                </form>
+                                </div>
 
                             </div>
                         </div>
@@ -119,7 +173,21 @@
     <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
 
     <!-- JS -->
+    <!-- JS -->
+    <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/dataTables.buttons.min.js"></script>
+    <script src="/static/js/buttons.bootstrap4.min.js"></script>
+    <script src="/static/js/jszip.min.js"></script>
+    <script src="/static/js/buttons.html5.min.js"></script>
+    <script src="/static/js/buttons.print.min.js"></script>
+    <script src="/static/js/buttons.colVis.min.js"></script>
+    <script src="/static/js/dashboard.init.js"></script>
+    <script src="/static/js/app.js"></script>
     <script>
         (function () {
             const msgArea = document.getElementById('msgArea');
@@ -141,21 +209,35 @@
                 });
             }
 
-            // 通用绑定
-            function bindBtn(id, url, msg) {
+            // 通用按钮绑定
+            function bindBtn(id, url, okMsg) {
                 document.getElementById(id).onclick = function () {
                     post(url)
-                        .then(r => r.ok ? showMsg(msg) : showMsg('触发失败(' + r.status + ')', false))
+                        .then(r => r.ok ? showMsg(okMsg) : showMsg('触发失败(' + r.status + ')', false))
                         .catch(e => showMsg('异常：' + e, false));
                 };
             }
 
-            bindBtn('btnDailyBest', '/api/triggers/daily-best', 'DailyBest 已触发');
-            bindBtn('btnSeeds', '/api/triggers/seeds', 'Seeds 已触发');
-            bindBtn('btnFilmRename', '/api/triggers/film/rename', '影片重命名 已触发');
+            bindBtn('btnDailyBest',   '/api/triggers/daily-best',   'DailyBest 已触发');
+            bindBtn('btnSeeds',       '/api/triggers/seeds',        'Seeds 已触发');
+            bindBtn('btnFilmRename',  '/api/triggers/film/rename',  '影片重命名 已触发');
             bindBtn('btnFilmProcess', '/api/triggers/film/process', '影片处理 已触发');
 
-            // === SC Move ===
+            // 按 Seed 名称触发
+            const formSeedByName = document.getElementById('formSeedByName');
+            formSeedByName.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!formSeedByName.checkValidity()) {
+                    formSeedByName.classList.add('was-validated');
+                    return;
+                }
+                const name = document.getElementById('seedByName').value.trim();
+                post('/api/triggers/seed-by-name', { name })
+                    .then(r => r.ok ? showMsg('SeedByName 已触发') : showMsg('触发失败(' + r.status + ')', false))
+                    .catch(e => showMsg('异常：' + e, false));
+            });
+
+            // SC Move
             const formMove = document.getElementById('formScMove');
             formMove.addEventListener('submit', function (e) {
                 e.preventDefault();
@@ -169,7 +251,7 @@
                     .catch(e => showMsg('异常：' + e, false));
             });
 
-            // === SC Add ===
+            // SC Add
             const formAdd = document.getElementById('formScAdd');
             formAdd.addEventListener('submit', function (e) {
                 e.preventDefault();

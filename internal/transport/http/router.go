@@ -27,6 +27,8 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.Static("/Volumes/Getea", "/Volumes/Getea")
 	r.Static("/Volumes/T7/data", "/Volumes/T7/data")
 
+	r.Static("/text", "z_text")
+
 	// ====== 实例化服务与 handler ======
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
 	trig := api2.NewTriggerAPI(deps) //
@@ -47,9 +49,10 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	// ====== API 路由 ======
 	api := r.Group("/api")
 	{
-		movieDownload := api2.NewAPI(deps)
-		api.POST("/movie/:movie/downloadlater", movieDownload.Add)
-		api.DELETE("/movie/:movie/downloadlater", movieDownload.Remove)
+		movieDownload := api2.NewMovieAPI(deps)
+		api.POST("/movie/:movie/downloadlater", movieDownload.AddToDownloadLater)
+		api.DELETE("/movie/:movie/downloadlater", movieDownload.RemoveFromDownloadLater)
+		api.POST("/movie/:movie/download-cover", movieDownload.DownloadCoverNow)
 
 		api.POST("/open-finder", movieDownload.OpenFinderHandler([]string{
 			"/Volumes/Getea",
@@ -59,6 +62,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		// === triggers ===
 		api.POST("/triggers/daily-best", trig.DailyBest)
 		api.POST("/triggers/seeds", trig.Seeds)
+		api.POST("/triggers/seed-by-name", trig.SeedByName)
 
 		// 新增：影片触发
 		filmTrig := api2.NewFilmTriggerAPI(deps)

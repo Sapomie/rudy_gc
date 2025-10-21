@@ -42,6 +42,15 @@ func (l *CrawlLogic) DownLoadAllPicture(ctx context.Context) error {
 	return nil
 }
 
+func (l *CrawlLogic) DownloadPictureOfMovieByJavId(ctx context.Context, javId string) error {
+	item, err := l.deps.ItemRepo.FindOneByJavId(ctx, javId)
+	if err != nil {
+		return fmt.Errorf("FindOneByJavId: %w", err)
+	}
+
+	return l.DownloadPictureOfMovie(ctx, item)
+}
+
 func (l *CrawlLogic) DownloadPictureOfMovie(ctx context.Context, item *types.Item) error {
 	// 1) 查 Movie
 	movie, err := l.deps.MovieRepo.FindOneByJavId(ctx, item.JavId)

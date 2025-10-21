@@ -26,7 +26,15 @@
                 {{.movieType.Length}}
                 {{ if or (eq .movieType.Owned 3) (eq .movieType.Owned 2) }}
                     <a href="/copyfilm/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Copy</a>
-                {{ end}}
+                {{ end }}
+
+                <!-- ✅ 新增：下载封面按钮 -->
+                <button id="btnDownloadCover"
+                        class="btn btn-sm btn-outline-info ml-2"
+                        data-jav="{{.movieType.JavId}}">
+                    <i class="mdi mdi-image-outline"></i>
+                    <span class="ms-1">下载封面</span>
+                </button>
             </td>
         </tr>
 
@@ -82,12 +90,6 @@
                     <i class="mdi mdi-download{{ if ne .movieType.NeedDownload 2 }}-outline{{ end }}"></i>
                     <span class="ms-1">{{ if eq .movieType.NeedDownload 2 }}已添加{{ else }}稍后下载{{ end }}</span>
                 </button>
-
-                {{/*            {{if ne .movieType.NeedDownload 2}}*/}}
-                {{/*            <a href="/downloadlater/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Add</a>*/}}
-                {{/*            {{else}}*/}}
-                {{/*            <a href="/removedownloadlater/{{.movieType.Name}}" class="btn btn-sm btn-pink ml-2">Remove</a>*/}}
-                {{/*            {{ end}}*/}}
             </td>
         </tr>
 

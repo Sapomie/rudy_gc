@@ -63,7 +63,7 @@ func main() {
 	//deps.Log.Info("movieType", movieType.Name)
 
 	//l :=
-	//err = l.FetchAndParseInventoryBySeed()
+	//err = l.FetchAndParseInventoryBySeedActive()
 	//if err != nil {
 	//	panic(err)
 	//}
