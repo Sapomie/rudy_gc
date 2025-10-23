@@ -273,7 +273,7 @@ func needAMovie(req *types.ListMovieFullRequest) bool {
 	if req.DirectorName != "" || req.PrefixName != "" || req.MakerName != "" || req.LabelName != "" {
 		return true
 	}
-	if req.CastAgeMin > 0 || req.CastAgeMax > 0 {
+	if req.CastAgeMin > 0 || req.CastAgeMax > 0 || req.ScoreMin > 0 || req.ScoreMax > 0 || req.ViewWatchedMin > 0 || req.ViewWatchedMax > 0 {
 		return true
 	}
 
@@ -311,7 +311,7 @@ func needVFilm(req *types.ListMovieFullRequest) bool {
 		return false
 	}
 	if req.Owned > consts.MovieAll ||
-		req.ComeTimesMin > 0 || req.ComeTimesMax > 0 ||
+		req.ComeTimesMin > 0 || req.ComeTimesMax != nil ||
 		req.LastScTimeMin != "" || req.LastScTimeMax != "" ||
 		req.ScTimesMin > 0 || req.ScTimesMax != nil ||
 		req.FilmBirthTimeStart != "" || req.FilmBirthTimeEnd != "" ||
@@ -353,6 +353,29 @@ func amovieBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 			squirrel.NotEq{"cast_average_age": 0},
 		})
 	}
+
+	if req.ScoreMin > 0 {
+		w = append(w, squirrel.And{
+			squirrel.GtOrEq{"score": int64(req.ScoreMin*10.0 + 0.5)},
+		})
+	}
+	if req.ScoreMax > 0 {
+		w = append(w, squirrel.And{
+			squirrel.LtOrEq{"score": int64(req.ScoreMax*10.0 + 0.5)},
+		})
+	}
+
+	if req.ViewWatchedMin > 0 {
+		w = append(w, squirrel.And{
+			squirrel.GtOrEq{"viewers_number_watched": req.ViewWatchedMin},
+		})
+	}
+	if req.ViewWatchedMax > 0 {
+		w = append(w, squirrel.And{
+			squirrel.LtOrEq{"viewers_number_watched": req.ViewWatchedMax},
+		})
+	}
+
 	return w
 }
 
@@ -430,6 +453,12 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 	}
 	if req.ScTimesMax != nil {
 		w = append(w, squirrel.LtOrEq{"sc_times": *req.ScTimesMax})
+	}
+	if req.ComeTimesMin > 0 {
+		w = append(w, squirrel.GtOrEq{"come_times": req.ComeTimesMin})
+	}
+	if req.ComeTimesMax != nil {
+		w = append(w, squirrel.LtOrEq{"come_times": *req.ComeTimesMax})
 	}
 	if req.FilmBirthTimeStart != "" {
 		if ts, ok := parseYMD(req.FilmBirthTimeStart); ok {

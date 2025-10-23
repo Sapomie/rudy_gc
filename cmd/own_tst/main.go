@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/vfilm"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/redis"
 
@@ -34,10 +33,10 @@ func main() {
 	//	panic(err)
 	//}
 
-	err = vfilm.NewFilmService(deps).ProcessFilm(ctx)
-	if err != nil {
-		panic(err)
-	}
+	//err = vfilm.NewFilmService(deps).ProcessFilm(ctx)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = logic.NewCrawlLogic(ctx, deps).ParseDetails()
 	//if err != nil {

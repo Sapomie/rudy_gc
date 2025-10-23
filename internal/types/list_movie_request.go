@@ -27,13 +27,18 @@ type ListMovieFullRequest struct {
 	NeedDownload  int64  `form:"nd"`
 	Word          string `form:"wd"`
 	Owned         int64  `form:"owned"`
-	ComeTimesMin  int64  `form:"comin"`
-	ComeTimesMax  int64  `form:"comax"`
+
+	ViewWatchedMin int64   `form:"vwmin"`
+	ViewWatchedMax int64   `form:"vwmax"`
+	ScoreMin       float64 `form:"smin"`
+	ScoreMax       float64 `form:"smax"`
 
 	LastScTimeMin      string `form:"lsctmin"`
 	LastScTimeMax      string `form:"lsctmax"`
 	ScTimesMin         int64  `form:"scmin"`
 	ScTimesMax         *int64 `form:"scmax"`
+	ComeTimesMin       int64  `form:"comin"`
+	ComeTimesMax       *int64 `form:"comax"`
 	FilmBirthTimeStart string `form:"bs"`
 	FilmBirthTimeEnd   string `form:"be"`
 

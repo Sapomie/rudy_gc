@@ -2,9 +2,9 @@ package movie
 
 import (
 	"context"
-	"math"
 	"math/rand"
 	"rudy_gc/internal/types"
+	"sort"
 	"time"
 )
 
@@ -36,48 +36,94 @@ func (s *MovieService) ListMovieFull(ctx context.Context, r *types.ListMovieFull
 }
 
 // in: internal/service/movie_service.go  (或你现有的 service 文件里)
-
 func (s *MovieService) ListMovieFullRandom(ctx context.Context, r *types.ListMovieFullRequest, n int64) (*types.ListMovieResponse, error) {
-	if n <= 0 {
-		n = 18
-	}
-	if n > 200 {
-		n = 200
-	}
 
-	// 先探测总量：取 1 条即可拿到 total
+	// 1) 先探测总量
 	probe := *r
-	probe.Page = 1
-	probe.PageSize = 1
+	probe.Page, probe.PageSize = 1, 1
 
 	_, total, err := s.deps.MovieListRepo.ListFull(ctx, &probe)
 	if err != nil {
 		return nil, err
 	}
 	if total == 0 {
-		return &types.ListMovieResponse{
-			List:   []*types.MovieType{},
-			Total:  0,
-			JavIds: []string{},
-		}, nil
+		return &types.ListMovieResponse{List: []*types.MovieType{}, Total: 0, JavIds: []string{}}, nil
 	}
-
-	// 如果总量不超过 n，就直接取第一页 n 条；否则随机选一“页块”
-	target := *r
-	target.PageSize = n
-
 	if total <= n {
-		target.Page = 1
-	} else {
-		// 以“页大小 = n”为步长，随机挑一个页码
-		pages := int64(math.Ceil(float64(total) / float64(n)))
-		if pages < 1 {
-			pages = 1
-		}
-		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-		target.Page = rnd.Int63n(pages) + 1 // [1, pages]
+		// 候选不足 n：直接取前 n 条（保持与原逻辑一致）
+		target := *r
+		target.Page, target.PageSize = 1, n
+		return s.ListMovieFull(ctx, &target)
 	}
 
-	// 复用已有聚合逻辑
-	return s.ListMovieFull(ctx, &target)
+	// 2) 在 [1..total] 中随机选择 n 个不重复位置
+	//    用 map 去重，再排序
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	posSet := make(map[int64]struct{}, n)
+	for int64(len(posSet)) < n {
+		// positions are 1-based
+		p := rng.Int63n(total) + 1
+		posSet[p] = struct{}{}
+	}
+	positions := make([]int64, 0, n)
+	for p := range posSet {
+		positions = append(positions, p)
+	}
+	sort.Slice(positions, func(i, j int) bool { return positions[i] < positions[j] })
+
+	// 3) 把离散位置合并为少量“连续区间”
+	type seg struct{ start, length int64 } // 1-based page, length items
+	segs := make([]seg, 0, n)
+	start := positions[0]
+	prev := positions[0]
+	for i := 1; i < len(positions); i++ {
+		if positions[i] == prev+1 {
+			prev = positions[i]
+			continue
+		}
+		segs = append(segs, seg{start: start, length: prev - start + 1})
+		start, prev = positions[i], positions[i]
+	}
+	segs = append(segs, seg{start: start, length: prev - start + 1})
+
+	// 4) 分批查询（每段 1 次），聚合结果
+	//    这里利用已有 ListMovieFull 的分页语义：Page = start, PageSize = length
+	allItems := make([]*types.MovieType, 0, n)
+	allIDs := make([]string, 0, n)
+	collected := int64(0)
+
+	for _, g := range segs {
+		if collected >= n {
+			break
+		}
+		// 对于超大 total，极端情况下段会很散；这里每段只取需要的长度，不额外放大
+		target := *r
+		target.Page = g.start
+		target.PageSize = g.length
+
+		resp, err := s.ListMovieFull(ctx, &target)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.List) == 0 {
+			continue
+		}
+		for i := 0; i < len(resp.List) && collected < n; i++ {
+			allItems = append(allItems, resp.List[i])
+			allIDs = append(allIDs, resp.JavIds[i])
+			collected++
+		}
+	}
+
+	// 5) 打散顺序（避免还带有原排序的“局部性”）
+	rng.Shuffle(len(allItems), func(i, j int) {
+		allItems[i], allItems[j] = allItems[j], allItems[i]
+		allIDs[i], allIDs[j] = allIDs[j], allIDs[i]
+	})
+
+	return &types.ListMovieResponse{
+		List:   allItems,
+		Total:  total, // 返回候选全集大小
+		JavIds: allIDs,
+	}, nil
 }
