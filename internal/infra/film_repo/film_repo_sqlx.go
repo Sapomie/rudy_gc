@@ -212,6 +212,18 @@ func (r *FilmRepoSqlx) FindAll(ctx context.Context, removedStatus int64) ([]*typ
 	return list, nil
 }
 
+func (r *FilmRepoSqlx) ListByDirectories(ctx context.Context, dirIDs []int64, page, size int, sortField string, asc bool) ([]*types.Film, int64, error) {
+	rows, total, err := r.m.ListByDirectoryIDs(ctx, dirIDs, page, size, sortField, asc)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]*types.Film, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, mapModelxToTypes(v)) // 你已有的转换函数
+	}
+	return out, total, nil
+}
+
 /* ---------------- helpers ---------------- */
 
 func mapTypesToModelx(in *types.Film) *moviex.VFilm {

@@ -1,8 +1,10 @@
 package http
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -15,8 +17,29 @@ import (
 func NewEngine(deps *svc.Deps) *gin.Engine {
 	r := gin.Default()
 
+	// 模板函数
+	funcMap := template.FuncMap{
+		"sub": func(a, b int) int { return a - b },
+		"add": func(a, b int) int { return a + b },
+		"humanSize": func(bytes int64) string {
+			if bytes < 1024 {
+				return fmt.Sprintf("%d B", bytes)
+			} else if bytes < 1024*1024 {
+				return fmt.Sprintf("%.1f KB", float64(bytes)/1024)
+			} else if bytes < 1024*1024*1024 {
+				return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
+			}
+			return fmt.Sprintf("%.1f GB", float64(bytes)/(1024*1024*1024))
+		},
+		"humanTime": func(ts int64) string {
+			if ts == 0 {
+				return "-"
+			}
+			return time.Unix(ts, 0).Format("2006-01-02")
+		},
+	}
 	// 模板
-	tpl := template.New("")
+	tpl := template.New("").Funcs(funcMap)
 	tpl = template.Must(tpl.ParseGlob("ui/templates/partials/*.html"))
 	tpl = template.Must(tpl.ParseGlob("ui/templates/pages/*.html"))
 	r.SetHTMLTemplate(tpl)
@@ -31,6 +54,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 
 	// ====== 实例化服务与 handler ======
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
+	dirHTML := htmlHandlers.NewDirectoryHTMLHandler(deps)
 	trig := api2.NewTriggerAPI(deps) //
 
 	// ====== HTML 页面路由 ======
@@ -44,6 +68,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)
 	r.GET("/cardsrandompick", movieHTML.ListMovieCardRandomPick)
 
+	r.GET("/dir/:id", dirHTML.DirDetail)
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
 
@@ -61,19 +86,24 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		}))
 
 		// === triggers ===
+		trig := api2.NewTriggerAPI(deps)
 		api.POST("/triggers/daily-best", trig.DailyBest)
 		api.POST("/triggers/seeds", trig.Seeds)
 		api.POST("/triggers/seed-by-name", trig.SeedByName)
 
-		// 新增：影片触发
+		// === 影片触发 ===
 		filmTrig := api2.NewFilmTriggerAPI(deps)
 		api.POST("/triggers/film/rename", filmTrig.Rename)
 		api.POST("/triggers/film/process", filmTrig.Process)
 
-		// ✅ 新增 SC 触发
+		// === SC 触发 ===
 		scTrig := api2.NewScTriggerAPI(deps)
-		api.POST("/triggers/sc/move", scTrig.Move) // 带 scName
-		api.POST("/triggers/sc/add", scTrig.Add)   // 带 dir
+		api.POST("/triggers/sc/move", scTrig.Move)
+		api.POST("/triggers/sc/add", scTrig.Add)
+
+		// === ✅ 新增：目录浏览 API ===
+		dirAPI := api2.NewDirectoryAPI(deps)
+		dirAPI.RegisterRoutes(r) // 注册 /api/dirs/*
 	}
 
 	return r

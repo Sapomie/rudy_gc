@@ -1,0 +1,30 @@
+{{ define "dir_stats" }}
+{{ if .Stats }}
+<div class="row g-2">
+    <div class="col-6 col-md-3">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">影片数</div>
+            <div class="h4 mb-0">{{ .Stats.FilmCount }}</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">总大小</div>
+            <div class="h4 mb-0">{{ humanSize .Stats.TotalSize }}</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">最近拍摄时间</div>
+            <div class="h6 mb-0">{{ humanTime .Stats.LastFilmBirth }}</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <div class="text-muted small">最近更新</div>
+            <div class="h6 mb-0">{{ humanTime .Stats.LastUpdatedOn }}</div>
+        </div></div>
+    </div>
+</div>
+{{ end }}
+{{ end }}

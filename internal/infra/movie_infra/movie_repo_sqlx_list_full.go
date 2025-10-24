@@ -430,8 +430,9 @@ func vfilmBaseFilters(ctx context.Context, r *MovieListRepoSqlx, req *types.List
 		w = append(w, squirrel.Eq{"is_removed": consts.FilmIsRemoved})
 	case consts.OwnedAll:
 		w = append(w, squirrel.Expr("1=1"))
-	case consts.MovieAll, 0:
+	case consts.MovieAll:
 		return squirrel.And{}
+	case 0:
 	}
 
 	if req.ComeTimesMin > 0 {

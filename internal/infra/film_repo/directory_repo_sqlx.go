@@ -4,14 +4,13 @@ package film_infra
 import (
 	"context"
 	"crypto/md5"
+	"database/sql"
 	"rudy_gc/internal/types"
 	"strings"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/film_repo"
-
-	"github.com/zeromicro/go-zero/core/stores/sqlc"
 )
 
 var _ film_repo.DirectoryRepo = (*DirectoryRepoSqlx)(nil)
@@ -103,9 +102,6 @@ func (r *DirectoryRepoSqlx) GetOrCreateChainWithLevels(ctx context.Context, part
 func (r *DirectoryRepoSqlx) FindOneByID(ctx context.Context, id int64) (*types.Directory, error) {
 	v, err := r.m.FindOne(ctx, id)
 	if err != nil {
-		if err == sqlc.ErrNotFound {
-			return nil, nil
-		}
 		return nil, err
 	}
 	return toTypesDirectory(v), nil
@@ -114,9 +110,6 @@ func (r *DirectoryRepoSqlx) FindOneByID(ctx context.Context, id int64) (*types.D
 func (r *DirectoryRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.Directory, error) {
 	v, err := r.m.FindOneByName(ctx, name)
 	if err != nil {
-		if err == sqlc.ErrNotFound {
-			return nil, nil
-		}
 		return nil, err
 	}
 	return toTypesDirectory(v), nil
@@ -135,4 +128,216 @@ func toTypesDirectory(v *moviex.VDirectory) *types.Directory {
 		CreatedOn: v.CreatedOn,
 		UpdatedOn: v.UpdatedOn,
 	}
+}
+
+func (r *DirectoryRepoSqlx) ListSubtreeIDs(ctx context.Context, id int64) ([]int64, error) {
+	// 先查到这个目录，拿到它的 path
+	d, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		if err == moviex.ErrNotFound {
+			return []int64{}, nil
+		}
+		return nil, err
+	}
+	if d == nil {
+		return []int64{}, nil
+	}
+
+	// 再用 path 前缀在 modelx 层拉整棵子树
+	ids, err := r.m.ListSubtreeIDsByPath(ctx, d.Path)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		// 至少返回自身
+		return []int64{id}, nil
+	}
+	return ids, nil
+}
+
+func (r *DirectoryRepoSqlx) FindOneByPath(ctx context.Context, path string) (*types.Directory, error) {
+	row, err := r.m.FindOneByPath(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	return toTypesDirectory(row), nil
+}
+
+// ====== 列表（根/子） ======
+func (r *DirectoryRepoSqlx) ListRoots(ctx context.Context, page, size int, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
+	return r.listByParent(ctx, 0, page, size, sort, asc, withAgg)
+}
+
+func (r *DirectoryRepoSqlx) ListChildren(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
+	return r.listByParent(ctx, parentID, page, size, sort, asc, withAgg)
+}
+
+func (r *DirectoryRepoSqlx) listByParent(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
+	sortStr := "name"
+	if sort == film_repo.DirSortUpdatedOn {
+		sortStr = "updated_on"
+	}
+
+	if withAgg {
+		rows, total, err := r.m.ListByParentWithAgg(ctx, parentID, page, size, sortStr, asc)
+		if err != nil {
+			return nil, 0, err
+		}
+		out := make([]*types.DirSummary, 0, len(rows))
+		for _, it := range rows {
+			var (
+				fc *int64
+				ts *int64
+				lb *int64
+				lu *int64
+			)
+			if it.FilmCount.Valid {
+				v := it.FilmCount.Int64
+				fc = &v
+			}
+			if it.TotalSize.Valid {
+				v := it.TotalSize.Int64
+				ts = &v
+			}
+			if it.LastFilmBirth.Valid {
+				v := it.LastFilmBirth.Int64
+				lb = &v
+			}
+			if it.LastUpdatedOn.Valid {
+				v := it.LastUpdatedOn.Int64
+				lu = &v
+			}
+			out = append(out, &types.DirSummary{
+				Id: it.Id, ParentId: it.ParentId, Name: it.Name, Depth: it.Depth, Path: it.Path, UpdatedOn: it.UpdatedOn,
+				FilmCount:     fc,
+				TotalSize:     ts,
+				LastFilmBirth: lb,
+				LastUpdatedOn: lu,
+			})
+		}
+		return out, total, nil
+	}
+
+	rows, total, err := r.m.ListByParent(ctx, parentID, page, size, sortStr, asc)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]*types.DirSummary, 0, len(rows))
+	for _, it := range rows {
+		out = append(out, &types.DirSummary{
+			Id: it.Id, ParentId: it.ParentId, Name: it.Name, Depth: it.Depth, Path: it.Path, UpdatedOn: it.UpdatedOn,
+		})
+	}
+	return out, total, nil
+}
+
+// ====== 同级 / 面包屑 ======
+func (r *DirectoryRepoSqlx) ListSiblings(ctx context.Context, id int64) ([]*types.DirSummary, error) {
+	cur, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if cur == nil {
+		return []*types.DirSummary{}, nil
+	}
+	rows, err := r.m.ListSiblings(ctx, cur.ParentId, 300)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.DirSummary, 0, len(rows))
+	for _, it := range rows {
+		out = append(out, &types.DirSummary{
+			Id: it.Id, ParentId: it.ParentId, Name: it.Name, Depth: it.Depth, Path: it.Path, UpdatedOn: it.UpdatedOn,
+		})
+	}
+	return out, nil
+}
+
+func (r *DirectoryRepoSqlx) BuildBreadcrumbs(ctx context.Context, id int64) ([]types.Breadcrumb, error) {
+	cur, err := r.m.FindOne(ctx, id)
+	if err != nil || cur == nil {
+		return []types.Breadcrumb{}, err
+	}
+	// 通过 path 逐级查 (parent_id,name)
+	parts := stringsSplitPath(cur.Path)
+	var parentID int64
+	var out []types.Breadcrumb
+	for _, name := range parts {
+		row, err := r.m.FindOneByParentIdName(ctx, parentID, name)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, types.Breadcrumb{Id: row.Id, Name: row.Name, Path: row.Path})
+		parentID = row.Id
+	}
+	return out, nil
+}
+
+func stringsSplitPath(p string) []string {
+	p = strings.TrimPrefix(p, "/")
+	if p == "" {
+		return nil
+	}
+	return strings.Split(p, "/")
+}
+
+// ====== 统计 ======
+func (r *DirectoryRepoSqlx) AggregateStats(ctx context.Context, id int64, recursive bool, bucket film_repo.BucketKind) (*types.DirStats, error) {
+	var stats *types.DirStats
+	//cur, err := r.m.FindOne(ctx, id)
+	//if err != nil || cur == nil {
+	//	return &types.DirStats{Recursive: recursive}, err
+	//}
+	//
+	//// 目录ID集合
+	//dirIDs := []int64{id}
+	//if recursive {
+	//	if ids, err := r.m.ListSubtreeIDsByPath(ctx, cur.Path); err == nil && len(ids) > 0 {
+	//		dirIDs = ids
+	//	}
+	//}
+	//
+	//// 汇总
+	//agg, err := r.mFilm.AggStatsByDirIDs(ctx, dirIDs)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//stats := &types.DirStats{
+	//	Recursive:     recursive,
+	//	FilmCount:     agg.FilmCount,
+	//	TotalSize:     nullI64(agg.TotalSize),
+	//	LastFilmBirth: nullI64(agg.LastFilmBirth),
+	//	LastUpdatedOn: nullI64(agg.LastUpdatedOn),
+	//}
+	//
+	//// 分桶
+	//switch bucket {
+	//case film_repo.BucketMonth:
+	//	rows, err := r.mFilm.BucketsByDirIDsMonth(ctx, dirIDs, 120)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	for _, r := range rows {
+	//		stats.Buckets = append(stats.Buckets, types.TimeBucket{Key: r.Key, Count: r.Count, Size: nullI64(r.Size)})
+	//	}
+	//case film_repo.BucketYear:
+	//	rows, err := r.mFilm.BucketsByDirIDsYear(ctx, dirIDs, 30)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	for _, r := range rows {
+	//		stats.Buckets = append(stats.Buckets, types.TimeBucket{Key: r.Key, Count: r.Count, Size: nullI64(r.Size)})
+	//	}
+	//default:
+	//	// no-op
+	//}
+
+	return stats, nil
+}
+
+func nullI64(v sql.NullInt64) int64 {
+	if v.Valid {
+		return v.Int64
+	}
+	return 0
 }

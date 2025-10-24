@@ -19,3 +19,10 @@ const (
 	OrderByComeTimes  = "co"   // 按出现次数
 	OrderByLastScTime = "lsct" // 按最后评分时间
 )
+
+// 允许的排序字段枚举（防止前端乱传）
+const (
+	SortByUpdatedOn = "updated_on"
+	SortByName      = "name"
+	SortByCreatedOn = "created_on"
+)

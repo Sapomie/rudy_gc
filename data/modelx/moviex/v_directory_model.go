@@ -1,9 +1,12 @@
-// data/modelx/moviex/vdirectory_model_custom.go
+// data/modelx/moviex/v_directory_model_custom.go
 package moviex
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
@@ -13,16 +16,46 @@ import (
 var _ VDirectoryModel = (*customVDirectoryModel)(nil)
 
 type (
-	// VDirectoryModel is an interface to be customized, add more methods here,
-	// and implement the added methods in customVDirectoryModel.
+	// VDirectoryModel: 在 goctl 生成的 vDirectoryModel 基础上扩展
 	VDirectoryModel interface {
 		vDirectoryModel
-		// 新增：按名称精确查找一条目录记录（和以前一样用 squirrel 构造 SQL）
+
+		// 已有你贴的：
 		FindOneByName(ctx context.Context, name string) (*VDirectory, error)
+
+		// 新增：按 path 精确查
+		FindOneByPath(ctx context.Context, path string) (*VDirectory, error)
+
+		// 新增：根/子目录分页（基础字段）
+		ListByParent(ctx context.Context, parentID int64, page, size int, sort string, asc bool) (rows []*VDirectory, total int64, err error)
+
+		// 新增：根/子目录分页（携带聚合）
+		ListByParentWithAgg(ctx context.Context, parentID int64, page, size int, sort string, asc bool) (rows []*VDirWithAgg, total int64, err error)
+
+		// 新增：同级目录
+		ListSiblings(ctx context.Context, parentID int64, limit int) ([]*VDirectory, error)
+
+		// 新增：通过 base path 取子树所有目录 id（含自身）
+		ListSubtreeIDsByPath(ctx context.Context, basePath string) ([]int64, error)
 	}
 
 	customVDirectoryModel struct {
 		*defaultVDirectoryModel
+	}
+
+	// 目录 + 聚合结果
+	VDirWithAgg struct {
+		Id        int64  `db:"id"`
+		ParentId  int64  `db:"parent_id"`
+		Name      string `db:"name"`
+		Depth     int64  `db:"depth"`
+		Path      string `db:"path"`
+		UpdatedOn int64  `db:"updated_on"`
+
+		FilmCount     sql.NullInt64 `db:"film_count"`
+		TotalSize     sql.NullInt64 `db:"total_size"`
+		LastFilmBirth sql.NullInt64 `db:"last_film_birth"`
+		LastUpdatedOn sql.NullInt64 `db:"last_updated_on"`
 	}
 )
 
@@ -33,7 +66,24 @@ func NewVDirectoryModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Opti
 	}
 }
 
-// FindOneByName 按目录名称精确查找一条记录（不走缓存）
+// ---------- helpers ----------
+func orderDir(asc bool) string {
+	if asc {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+func sortColumn(col string) string {
+	switch strings.ToLower(col) {
+	case "updated_on":
+		return "d.updated_on"
+	default:
+		return "d.name"
+	}
+}
+
+// ---------- 单条查询 ----------
 func (m *customVDirectoryModel) FindOneByName(ctx context.Context, name string) (*VDirectory, error) {
 	query, args, err := squirrel.
 		Select(vDirectoryRows).
@@ -44,14 +94,183 @@ func (m *customVDirectoryModel) FindOneByName(ctx context.Context, name string) 
 	if err != nil {
 		return nil, err
 	}
-
 	var resp VDirectory
 	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, args...); err != nil {
-		// 和 goctl 生成代码保持一致的错误处理
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func (m *customVDirectoryModel) FindOneByPath(ctx context.Context, path string) (*VDirectory, error) {
+	query, args, err := squirrel.
+		Select(vDirectoryRows).
+		From(m.table + " AS d").
+		Where(squirrel.Eq{"d.path": path}).
+		Limit(1).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var resp VDirectory
+	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ---------- 列表（基础） ----------
+func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64, page, size int, sort string, asc bool) ([]*VDirectory, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 24
+	}
+	offset := (page - 1) * size
+
+	// total
+	countQ, countArgs, err := squirrel.
+		Select("COUNT(*)").
+		From(m.table + " AS d").
+		Where(squirrel.Eq{"d.parent_id": parentID}).
+		ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
+	var total int64
+	if err := m.QueryRowNoCacheCtx(ctx, &total, countQ, countArgs...); err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*VDirectory{}, 0, nil
+	}
+
+	// list
+	q, args, err := squirrel.
+		Select(vDirectoryRows).
+		From(m.table + " AS d").
+		Where(squirrel.Eq{"d.parent_id": parentID}).
+		OrderBy(fmt.Sprintf("%s %s", sortColumn(sort), orderDir(asc))).
+		Limit(uint64(size)).
+		Offset(uint64(offset)).
+		ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
+	var rows []*VDirectory
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, q, args...); err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
+// ---------- 列表（带聚合） ----------
+func (m *customVDirectoryModel) ListByParentWithAgg(ctx context.Context, parentID int64, page, size int, sort string, asc bool) ([]*VDirWithAgg, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 24
+	}
+	offset := (page - 1) * size
+
+	// total
+	countQ, countArgs, err := squirrel.
+		Select("COUNT(*)").
+		From(m.table + " AS d").
+		Where(squirrel.Eq{"d.parent_id": parentID}).
+		ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
+	var total int64
+	if err := m.QueryRowNoCacheCtx(ctx, &total, countQ, countArgs...); err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*VDirWithAgg{}, 0, nil
+	}
+
+	// list + agg (LEFT JOIN v_film)
+	// 注意：这里假设 v_film 表名是 "v_film"
+	qb := squirrel.
+		Select(
+			"d.id", "d.parent_id", "d.name", "d.depth", "d.path", "d.updated_on",
+			"COUNT(f.id) AS film_count",
+			"COALESCE(SUM(f.size),0) AS total_size",
+			"COALESCE(MAX(f.birth_time),0) AS last_film_birth",
+			"COALESCE(MAX(f.updated_on),0) AS last_updated_on",
+		).
+		From(m.table+" AS d").
+		LeftJoin("v_film AS f ON f.directory_id = d.id AND f.is_removed = 0").
+		Where(squirrel.Eq{"d.parent_id": parentID}).
+		GroupBy("d.id", "d.parent_id", "d.name", "d.depth", "d.path", "d.updated_on").
+		OrderBy(fmt.Sprintf("%s %s", sortColumn(sort), orderDir(asc))).
+		Limit(uint64(size)).
+		Offset(uint64(offset))
+
+	q, args, err := qb.ToSql()
+	if err != nil {
+		return nil, 0, err
+	}
+	var rows []*VDirWithAgg
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, q, args...); err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
+// ---------- 同级 ----------
+func (m *customVDirectoryModel) ListSiblings(ctx context.Context, parentID int64, limit int) ([]*VDirectory, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 300
+	}
+	q, args, err := squirrel.
+		Select(vDirectoryRows).
+		From(m.table + " AS d").
+		Where(squirrel.Eq{"d.parent_id": parentID}).
+		OrderBy("d.name ASC").
+		Limit(uint64(limit)).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*VDirectory
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, q, args...); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ---------- 子树 ID 列表 ----------
+func (m *customVDirectoryModel) ListSubtreeIDsByPath(ctx context.Context, basePath string) ([]int64, error) {
+	// path = basePath OR path LIKE basePath + '/%'
+	q, args, err := squirrel.
+		Select("d.id").
+		From(m.table + " AS d").
+		Where(squirrel.Or{
+			squirrel.Eq{"d.path": basePath},
+			squirrel.Like{"d.path": basePath + "/%"},
+		}).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		Id int64 `db:"id"`
+	}
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, q, args...); err != nil {
+		return nil, err
+	}
+	out := make([]int64, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, r.Id)
+	}
+	return out, nil
 }
