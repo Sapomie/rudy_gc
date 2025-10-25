@@ -32,7 +32,6 @@ type DirectoryRepo interface {
 	ListChildren(ctx context.Context, parentID int64, page, size int, sort DirSort, asc bool, withAgg bool) (items []*types.DirSummary, total int64, err error)
 	ListSiblings(ctx context.Context, id int64) ([]*types.DirSummary, error)
 	BuildBreadcrumbs(ctx context.Context, id int64) ([]types.Breadcrumb, error)
-	AggregateStats(ctx context.Context, id int64, recursive bool, bucket BucketKind) (*types.DirStats, error)
 
 	ListSubtreeIDs(ctx context.Context, id int64) ([]int64, error)
 }

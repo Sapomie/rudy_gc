@@ -34,6 +34,6 @@ Film:
   RenamePath: "/Volumes/Getea/x_process/rename/"
   Pairs:
     - RootDir: "/Volumes/Expansion/v3/"
-      MoveFilmDestination: "/Volumes/Getea/goingon/"
-    - RootDir: "/Volumes/Getea/vx/"
       MoveFilmDestination: "/Volumes/Expansion/goingon/"
+    - RootDir: "/Volumes/Getea/vx/"
+      MoveFilmDestination: "/Volumes/Getea/goingon/"

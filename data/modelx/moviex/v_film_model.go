@@ -3,7 +3,6 @@ package moviex
 import (
 	"context"
 	"errors"
-	"fmt"
 	"rudy_gc/internal/consts"
 	"strings"
 
@@ -24,7 +23,7 @@ type (
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 
 		// ✅ 新增：按目录ID集合分页查询（仅 is_removed=0），返回 rows + total
-		ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, sortField string, asc bool) (rows []*VFilm, total int64, err error)
+		ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*VFilm, total int64, err error)
 	}
 
 	customVFilmModel struct {
@@ -67,10 +66,10 @@ func (m *customVFilmModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, qu
 	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
 }
 
-// ------- ✅ 新增的分页查询 -------
-func (m *customVFilmModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, sortField string, asc bool) ([]*VFilm, int64, error) {
+func (m *customVFilmModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*VFilm, total int64, err error) {
+
 	if len(dirIDs) == 0 {
-		return []*VFilm{}, 0, nil
+		return []*VFilm{}, []*VFilm{}, 0, nil
 	}
 	if page <= 0 {
 		page = 1
@@ -78,75 +77,58 @@ func (m *customVFilmModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int6
 	if size <= 0 {
 		size = 24
 	}
-	offset := (page - 1) * size
 
-	// 只允许白名单字段参与排序，避免 SQL 注入
-	col := normalizeFilmSort(sortField)
-	order := "DESC"
-	if asc {
-		order = "ASC"
+	// ✅ 直接使用上层传入的 orderBy
+	orderParts := splitOrder(orderBy)
+	if len(orderParts) == 0 {
+		orderParts = []string{"birth_time DESC"} // 兜底，防止为空
 	}
 
-	// total
-	countQ, countArgs, err := squirrel.
-		Select("COUNT(*)").
-		From(m.table + " AS f").
-		Where(squirrel.Eq{"f.is_removed": consts.FilmIsNotRemoved}).
-		Where(squirrel.Eq{"f.directory_id": dirIDs}).
-		ToSql()
-	if err != nil {
-		return nil, 0, err
-	}
-	var total int64
-	if err := m.QueryRowNoCacheCtx(ctx, &total, countQ, countArgs...); err != nil {
-		return nil, 0, err
-	}
-	if total == 0 {
-		return []*VFilm{}, 0, nil
-	}
-
-	// list
-	qb := squirrel.
+	// 拉取全部匹配（仅 is_removed=0）
+	qAll, argsAll, e := squirrel.
 		Select(vFilmRows).
 		From(m.table + " AS f").
 		Where(squirrel.Eq{"f.is_removed": consts.FilmIsNotRemoved}).
 		Where(squirrel.Eq{"f.directory_id": dirIDs}).
-		OrderBy(fmt.Sprintf("%s %s", col, order)).
-		Limit(uint64(size)).
-		Offset(uint64(offset))
+		OrderBy(orderParts...).
+		ToSql()
+	if e != nil {
+		return nil, nil, 0, e
+	}
 
-	listQ, listArgs, err := qb.ToSql()
-	if err != nil {
-		return nil, 0, err
-	}
 	var rows []*VFilm
-	if err := m.QueryRowsNoCacheCtx(ctx, &rows, listQ, listArgs...); err != nil {
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, qAll, argsAll...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			return []*VFilm{}, 0, nil
+			return []*VFilm{}, []*VFilm{}, 0, nil
 		}
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
-	return rows, total, nil
+
+	// 内存分页
+	total = int64(len(rows))
+	if total == 0 {
+		return []*VFilm{}, []*VFilm{}, 0, nil
+	}
+	start := (page - 1) * size
+	if start >= len(rows) {
+		return rows, []*VFilm{}, total, nil
+	}
+	end := start + size
+	if end > len(rows) {
+		end = len(rows)
+	}
+	paged = rows[start:end]
+	return rows, paged, total, nil
 }
 
-// 只允许这些字段排序
-func normalizeFilmSort(in string) string {
-	switch strings.ToLower(in) {
-	case "updated_on":
-		return "f.updated_on"
-	case "created_on":
-		return "f.created_on"
-	case "birth_time", "releasing_date":
-		return "f.birth_time"
-	case "size":
-		return "f.size"
-	case "movie_name":
-		return "f.movie_name"
-	case "file_name":
-		return "f.file_name"
-	case "duration":
-		return "f.duration"
-	default:
-		return "f.updated_on"
+// "a DESC,b DESC" -> []{"a DESC","b DESC"}
+func splitOrder(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
 	}
+	return out
 }

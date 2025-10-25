@@ -25,8 +25,7 @@ func NewDirectoryAPI(deps *svc.Deps) *DirectoryAPI {
 // GET /api/dirs/root?recursive=1
 // 你的根只有一个：直接返回根目录详情（含统计），而不是列表。
 func (h *DirectoryAPI) GetRootDetail(c *gin.Context) {
-	recursive := c.DefaultQuery("recursive", "1") == "1"
-	detail, err := h.dirSvc.GetRootDetail(c.Request.Context(), recursive)
+	detail, err := h.dirSvc.GetRootDetail(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
@@ -41,9 +40,8 @@ func (h *DirectoryAPI) GetDirDetail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "非法的目录ID"})
 		return
 	}
-	recursive := c.DefaultQuery("recursive", "1") == "1"
 
-	detail, err := h.dirSvc.GetDirDetail(c.Request.Context(), id, recursive)
+	detail, err := h.dirSvc.GetDirDetail(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
@@ -71,7 +69,7 @@ func (h *DirectoryAPI) ListChildren(c *gin.Context) {
 	asc := strings.ToLower(c.DefaultQuery("order", "asc")) == "asc"
 	withAgg := c.DefaultQuery("agg", "1") == "1"
 
-	items, total, err := h.dirSvc.ListChildren(c.Request.Context(), id, page, size, sort, asc, withAgg)
+	items, total, err := h.dirSvc.ListChildren(c.Request.Context(), id, int64(page), int64(size), sort, asc, withAgg)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
@@ -117,32 +115,6 @@ func (h *DirectoryAPI) GetBreadcrumbs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true, "items": items})
 }
 
-// GET /api/dirs/:id/stats?recursive=1&bucket=none|month|year
-func (h *DirectoryAPI) GetDirStats(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "非法的目录ID"})
-		return
-	}
-	recursive := c.DefaultQuery("recursive", "1") == "1"
-	var bucket film_repo.BucketKind
-	switch strings.ToLower(c.DefaultQuery("bucket", "none")) {
-	case "month":
-		bucket = film_repo.BucketMonth
-	case "year":
-		bucket = film_repo.BucketYear
-	default:
-		bucket = film_repo.BucketNone
-	}
-
-	stats, err := h.dirSvc.GetDirStats(c.Request.Context(), id, recursive, bucket)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"ok": true, "data": stats})
-}
-
 // 路由注册（放到 router 里调用）
 func (h *DirectoryAPI) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/api/dirs")
@@ -152,7 +124,6 @@ func (h *DirectoryAPI) RegisterRoutes(r *gin.Engine) {
 		g.GET("/:id/children", h.ListChildren)
 		g.GET("/:id/siblings", h.ListSiblings)
 		g.GET("/:id/breadcrumbs", h.GetBreadcrumbs)
-		g.GET("/:id/stats", h.GetDirStats)
 	}
 }
 

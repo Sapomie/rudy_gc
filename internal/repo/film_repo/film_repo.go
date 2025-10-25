@@ -13,5 +13,5 @@ type FilmRepo interface {
 	FindOne(ctx context.Context, id int64) (*types.Film, error)
 	FindOneByMovieJavId(ctx context.Context, javId string) (*types.Film, error)
 	FindOneByMovieName(ctx context.Context, name string) (*types.Film, error)
-	ListByDirectories(ctx context.Context, dirIDs []int64, page, size int, sortField string, asc bool) ([]*types.Film, int64, error)
+	ListByDirectories(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*types.Film, total int64, err error)
 }

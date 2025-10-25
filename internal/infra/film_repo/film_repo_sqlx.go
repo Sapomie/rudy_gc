@@ -212,16 +212,27 @@ func (r *FilmRepoSqlx) FindAll(ctx context.Context, removedStatus int64) ([]*typ
 	return list, nil
 }
 
-func (r *FilmRepoSqlx) ListByDirectories(ctx context.Context, dirIDs []int64, page, size int, sortField string, asc bool) ([]*types.Film, int64, error) {
-	rows, total, err := r.m.ListByDirectoryIDs(ctx, dirIDs, page, size, sortField, asc)
+func (r *FilmRepoSqlx) ListByDirectories(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*types.Film, total int64, err error) {
+	if len(dirIDs) == 0 {
+		return []*types.Film{}, []*types.Film{}, 0, nil
+	}
+
+	order := mapOrderBy(orderBy)
+
+	rowsAll, rowsPaged, total, err := r.m.ListByDirectoryIDs(ctx, dirIDs, page, size, order)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
-	out := make([]*types.Film, 0, len(rows))
-	for _, v := range rows {
-		out = append(out, mapModelxToTypes(v)) // 你已有的转换函数
+
+	all = make([]*types.Film, 0, len(rowsAll))
+	for _, v := range rowsAll {
+		all = append(all, mapModelxToTypes(v))
 	}
-	return out, total, nil
+	paged = make([]*types.Film, 0, len(rowsPaged))
+	for _, v := range rowsPaged {
+		paged = append(paged, mapModelxToTypes(v))
+	}
+	return all, paged, total, nil
 }
 
 /* ---------------- helpers ---------------- */
@@ -308,4 +319,22 @@ func mapModelxToTypes(mv *moviex.VFilm) *types.Film {
 		CreatedOn: mv.CreatedOn,
 		UpdatedOn: mv.UpdatedOn,
 	}
+}
+
+// 单独的排序映射函数
+func mapOrderBy(orderBy string) string {
+	order := "birth_time DESC"
+	switch orderBy {
+	case consts.OrderByBirthTime:
+		order = "birth_time DESC,movie_name DESC"
+	case consts.OrderByScTimes:
+		order = "sc_times DESC,last_sc_time DESC,movie_name DESC"
+	case consts.OrderByComeTimes:
+		order = "come_times DESC,last_sc_time DESC,movie_name DESC"
+	case consts.OrderByLastScTime:
+		order = "last_sc_time DESC,movie_name DESC"
+	case consts.OrderByReleasingDate:
+		order = "releasing_date DESC,movie_name DESC"
+	}
+	return order
 }

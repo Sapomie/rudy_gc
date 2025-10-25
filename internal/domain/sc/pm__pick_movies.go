@@ -30,7 +30,7 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 16,
+			w: 15,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
@@ -43,7 +43,7 @@ func (l *ScService) PickProcession() error {
 	}
 
 	// 例如抽取 20 个
-	movieTypes, err := l.PickFromSources(ctx, reqs, 30)
+	movieTypes, err := l.PickFromSources(ctx, reqs, 5)
 	if err != nil {
 		return err
 	}

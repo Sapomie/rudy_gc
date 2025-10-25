@@ -38,6 +38,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 			return time.Unix(ts, 0).Format("2006-01-02")
 		},
 	}
+
 	// 模板
 	tpl := template.New("").Funcs(funcMap)
 	tpl = template.Must(tpl.ParseGlob("ui/templates/partials/*.html"))

@@ -4,11 +4,11 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
+	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/redis"
 
 	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var configFile = flag.String("f", "cmd/api/config.yaml", "the config file")
@@ -17,7 +17,7 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	logx.Disable()
+	//logx.Disable()
 
 	var err error
 	ctx := context.Background()
@@ -28,10 +28,10 @@ func main() {
 
 	//flushDb()
 
-	//err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	//err = vfilm.NewFilmService(deps).ProcessFilm(ctx)
 	//if err != nil {

@@ -181,7 +181,7 @@ func (s *FilmService) walkOneRoot(
 
 		// 6) 处理单个视频
 		if _, err := s.handleOneVideo(ctx, root, p, fctx, info); err != nil {
-			return err
+			return errors.New("handleOneVideo err: " + err.Error() + "----" + p)
 		}
 
 		// 7) 进度日志

@@ -281,60 +281,6 @@ func stringsSplitPath(p string) []string {
 	return strings.Split(p, "/")
 }
 
-// ====== 统计 ======
-func (r *DirectoryRepoSqlx) AggregateStats(ctx context.Context, id int64, recursive bool, bucket film_repo.BucketKind) (*types.DirStats, error) {
-	var stats *types.DirStats
-	//cur, err := r.m.FindOne(ctx, id)
-	//if err != nil || cur == nil {
-	//	return &types.DirStats{Recursive: recursive}, err
-	//}
-	//
-	//// 目录ID集合
-	//dirIDs := []int64{id}
-	//if recursive {
-	//	if ids, err := r.m.ListSubtreeIDsByPath(ctx, cur.Path); err == nil && len(ids) > 0 {
-	//		dirIDs = ids
-	//	}
-	//}
-	//
-	//// 汇总
-	//agg, err := r.mFilm.AggStatsByDirIDs(ctx, dirIDs)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//stats := &types.DirStats{
-	//	Recursive:     recursive,
-	//	FilmCount:     agg.FilmCount,
-	//	TotalSize:     nullI64(agg.TotalSize),
-	//	LastFilmBirth: nullI64(agg.LastFilmBirth),
-	//	LastUpdatedOn: nullI64(agg.LastUpdatedOn),
-	//}
-	//
-	//// 分桶
-	//switch bucket {
-	//case film_repo.BucketMonth:
-	//	rows, err := r.mFilm.BucketsByDirIDsMonth(ctx, dirIDs, 120)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	for _, r := range rows {
-	//		stats.Buckets = append(stats.Buckets, types.TimeBucket{Key: r.Key, Count: r.Count, Size: nullI64(r.Size)})
-	//	}
-	//case film_repo.BucketYear:
-	//	rows, err := r.mFilm.BucketsByDirIDsYear(ctx, dirIDs, 30)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	for _, r := range rows {
-	//		stats.Buckets = append(stats.Buckets, types.TimeBucket{Key: r.Key, Count: r.Count, Size: nullI64(r.Size)})
-	//	}
-	//default:
-	//	// no-op
-	//}
-
-	return stats, nil
-}
-
 func nullI64(v sql.NullInt64) int64 {
 	if v.Valid {
 		return v.Int64
