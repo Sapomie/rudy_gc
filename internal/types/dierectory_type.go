@@ -69,7 +69,6 @@ type DirPageRequest struct {
 	Page      int64  `form:"p"`
 	PageSize  int64  `form:"ps"`
 	SortField string `form:"od"` // 对齐现有参数命名
-	Asc       bool   `form:"asc"`
 
 	ChildrenPage int64 `form:"cp"`
 	ChildrenSize int64 `form:"cs"`

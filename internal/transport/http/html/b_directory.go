@@ -22,7 +22,7 @@ func NewDirectoryHTMLHandler(deps *svc.Deps) *DirectoryHTML {
 }
 
 func (h *DirectoryHTML) DirDetail(c *gin.Context) {
-	// 1) 构造请求并绑定 query
+	// 1) 绑定查询参数
 	var req types.DirPageRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
@@ -33,11 +33,12 @@ func (h *DirectoryHTML) DirDetail(c *gin.Context) {
 	if c.Param("id") == "root" || c.Param("id") == "" {
 		req.UseRoot = true
 	} else {
-		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		req.DirID = id
+		if id, err := strconv.ParseInt(c.Param("id"), 10, 64); err == nil {
+			req.DirID = id
+		}
 	}
 
-	// 3) 设置默认值（一次即可）
+	// 3) 默认值（仅此一处）
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -66,27 +67,29 @@ func (h *DirectoryHTML) DirDetail(c *gin.Context) {
 		return
 	}
 
-	// 5) 模板上下文
+	// 5) 分页信息（⚠️ 用 int64 形参）
+	pi := BuildPageInfo(c, out.Total, req.Page, req.PageSize, pageWindow)
+
+	// 6) 模板上下文
 	q := buildQueryKeep(c, []string{"od", "asc", "p", "ps"})
-	dirID := out.Detail.Directory.Id
-	orderStr := "desc"
-	if req.Asc {
-		orderStr = "asc"
-	}
+	// 🔹 新增：目录页排序栏对象（基于当前 od）
+	sortQ := buildDirSortQuery(c, req.SortField)
 
 	ctx := gin.H{
 		"Title":       out.Detail.Directory.Name,
 		"Detail":      out.Detail,
 		"Recursive":   req.Recursive,
 		"CurrentSort": req.SortField,
-		"sortQuery":   gin.H{"sort": req.SortField, "order": orderStr},
+		"sortQuery":   gin.H{"sort": req.SortField},
+
+		// 供 pagination partial 使用
+		"PageInfo": pi,
+		"pageInfo": pi,
 		"Pagination": gin.H{
-			"page":      req.Page,
-			"page_size": req.PageSize,
-			"total":     out.Total,
-			"base_path": "/dir/" + strconv.FormatInt(dirID, 10),
-			"query":     q,
+			"PageInfo": pi,
 		},
+		"Sort": sortQ,
+
 		"Query": q,
 		"Children": gin.H{
 			"Items":   out.Children,

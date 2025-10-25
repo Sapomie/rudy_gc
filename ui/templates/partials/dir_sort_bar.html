@@ -1,0 +1,9 @@
+{{ define "dir_sort_bar" }}
+<div class="btn-group btn-group-sm" role="group" aria-label="Dir Sort Options">
+    <a href="{{ .ByBirthTime.Href }}" class="btn btn-outline-primary {{ if .ByBirthTime.Active }}active disabled{{ end }}">下载时间</a>
+    <a href="{{ .ByLastScTime.Href }}" class="btn btn-outline-primary {{ if .ByLastScTime.Active }}active disabled{{ end }}">最后sc</a>
+    <a href="{{ .ByScTimes.Href }}" class="btn btn-outline-primary {{ if .ByScTimes.Active }}active disabled{{ end }}">sc次数</a>
+    <a href="{{ .ByComeTimes.Href }}" class="btn btn-outline-primary {{ if .ByComeTimes.Active }}active disabled{{ end }}">co次数</a>
+    <a href="{{ .ByReleasing.Href }}" class="btn btn-outline-primary {{ if .ByReleasing.Active }}active disabled{{ end }}">上映日期</a>
+</div>
+{{ end }}
