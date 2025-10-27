@@ -53,38 +53,6 @@ func (h *DirectoryAPI) GetDirDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true, "data": detail})
 }
 
-// GET /api/dirs/:id/children?agg=1&page=1&page_size=24&sort=name&order=asc
-func (h *DirectoryAPI) ListChildren(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "非法的目录ID"})
-		return
-	}
-	page := atoiDefault(c.DefaultQuery("page", "1"), 1)
-	size := atoiDefault(c.DefaultQuery("page_size", "24"), 24)
-	if size <= 0 || size > 200 {
-		size = 24
-	}
-	sort := toDirSort(c.DefaultQuery("sort", "name"))
-	asc := strings.ToLower(c.DefaultQuery("order", "asc")) == "asc"
-	withAgg := c.DefaultQuery("agg", "1") == "1"
-
-	items, total, err := h.dirSvc.ListChildren(c.Request.Context(), id, int64(page), int64(size), sort, asc, withAgg)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
-		return
-	}
-	totalPages := int((total + int64(size) - 1) / int64(size))
-	c.JSON(http.StatusOK, gin.H{
-		"ok":          true,
-		"page":        page,
-		"page_size":   size,
-		"total":       total,
-		"total_pages": totalPages,
-		"items":       items,
-	})
-}
-
 // GET /api/dirs/:id/siblings
 func (h *DirectoryAPI) ListSiblings(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -121,7 +89,7 @@ func (h *DirectoryAPI) RegisterRoutes(r *gin.Engine) {
 	{
 		g.GET("/root", h.GetRootDetail) // 单根：直接返回根详情
 		g.GET("/:id", h.GetDirDetail)
-		g.GET("/:id/children", h.ListChildren)
+		//g.GET("/:id/children", h.ListChildren)
 		g.GET("/:id/siblings", h.ListSiblings)
 		g.GET("/:id/breadcrumbs", h.GetBreadcrumbs)
 	}

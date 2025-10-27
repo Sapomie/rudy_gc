@@ -164,61 +164,21 @@ func (r *DirectoryRepoSqlx) FindOneByPath(ctx context.Context, path string) (*ty
 }
 
 // ====== 列表（根/子） ======
-func (r *DirectoryRepoSqlx) ListRoots(ctx context.Context, page, size int, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
-	return r.listByParent(ctx, 0, page, size, sort, asc, withAgg)
+func (r *DirectoryRepoSqlx) ListRoots(ctx context.Context, page, size int, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
+	return r.listByParent(ctx, 0, page, size, sort)
 }
 
-func (r *DirectoryRepoSqlx) ListChildren(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
-	return r.listByParent(ctx, parentID, page, size, sort, asc, withAgg)
+func (r *DirectoryRepoSqlx) ListChildren(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
+	return r.listByParent(ctx, parentID, page, size, sort)
 }
 
-func (r *DirectoryRepoSqlx) listByParent(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
+func (r *DirectoryRepoSqlx) listByParent(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
 	sortStr := "name"
 	if sort == film_repo.DirSortUpdatedOn {
 		sortStr = "updated_on"
 	}
 
-	if withAgg {
-		rows, total, err := r.m.ListByParentWithAgg(ctx, parentID, page, size, sortStr, asc)
-		if err != nil {
-			return nil, 0, err
-		}
-		out := make([]*types.DirSummary, 0, len(rows))
-		for _, it := range rows {
-			var (
-				fc *int64
-				ts *int64
-				lb *int64
-				lu *int64
-			)
-			if it.FilmCount.Valid {
-				v := it.FilmCount.Int64
-				fc = &v
-			}
-			if it.TotalSize.Valid {
-				v := it.TotalSize.Int64
-				ts = &v
-			}
-			if it.LastFilmBirth.Valid {
-				v := it.LastFilmBirth.Int64
-				lb = &v
-			}
-			if it.LastUpdatedOn.Valid {
-				v := it.LastUpdatedOn.Int64
-				lu = &v
-			}
-			out = append(out, &types.DirSummary{
-				Id: it.Id, ParentId: it.ParentId, Name: it.Name, Depth: it.Depth, Path: it.Path, UpdatedOn: it.UpdatedOn,
-				FilmCount:     fc,
-				TotalSize:     ts,
-				LastFilmBirth: lb,
-				LastUpdatedOn: lu,
-			})
-		}
-		return out, total, nil
-	}
-
-	rows, total, err := r.m.ListByParent(ctx, parentID, page, size, sortStr, asc)
+	rows, total, err := r.m.ListByParent(ctx, parentID, page, size, sortStr)
 	if err != nil {
 		return nil, 0, err
 	}

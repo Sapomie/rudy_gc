@@ -23,7 +23,7 @@ func NewDirectoryService(deps *svc.Deps) *DirectoryService {
 // 单根场景：直接返回根目录详情（可递归统计）
 func (s *DirectoryService) GetRootDetail(ctx context.Context) (*types.DirDetail, error) {
 	// 若根ID固定，可以直接 FindOneByID(ctx, 1)
-	items, _, err := s.deps.DirectoryRepo.ListRoots(ctx, 1, 1, film_repo.DirSortName, true, true)
+	items, _, err := s.deps.DirectoryRepo.ListRoots(ctx, 1, 1, film_repo.DirSortName)
 	if err != nil {
 		return nil, err
 	}
@@ -55,39 +55,43 @@ func (s *DirectoryService) GetDirDetail(ctx context.Context, id int64) (*types.D
 }
 
 // 子目录列表（支持分页/排序/是否聚合）
-func (s *DirectoryService) ListChildren(ctx context.Context, parentID int64, page, size int64, sort film_repo.DirSort, asc bool, withAgg bool) ([]*types.DirSummary, int64, error) {
-	return s.deps.DirectoryRepo.ListChildren(ctx, parentID, int(page), int(size), sort, asc, withAgg)
+func (s *DirectoryService) ListChildren(ctx context.Context, parentID int64, page, size int64, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
+	return s.deps.DirectoryRepo.ListChildren(ctx, parentID, int(page), int(size), sort)
 }
 
-func (s *DirectoryService) ListFilmsForDirPage(ctx context.Context, req *types.ListDirFilmsRequest) ([]*types.MovieType, *types.DirStats, int64, error) {
-	// 1) 目录ID集合
+func (s *DirectoryService) ListFilmsForDirPage(
+	ctx context.Context, req *types.ListDirFilmsRequest,
+) (mts []*types.MovieType, stats *types.DirStats, allFilms []*types.Film, total int64, err error) {
+
+	// 目录集合（是否递归）
 	dirIDs := []int64{req.DirID}
 	if req.Recursive {
-		if subIDs, err := s.deps.DirectoryRepo.ListSubtreeIDs(ctx, req.DirID); err == nil && len(subIDs) > 0 {
+		if subIDs, e := s.deps.DirectoryRepo.ListSubtreeIDs(ctx, req.DirID); e == nil && len(subIDs) > 0 {
 			dirIDs = append(dirIDs, subIDs...)
 		}
 	}
 
-	// 2) 查询：all = 全量，list = 当前页
-	all, list, total, err := s.deps.FilmRepo.ListByDirectories(ctx, dirIDs, int(req.Page), int(req.PageSize), req.OrderBy)
+	// 只查一次库：all = 全量，vfilms = 当前页
+	all, vfilms, total, err := s.deps.FilmRepo.ListByDirectories(ctx, dirIDs, int(req.Page), int(req.PageSize), req.OrderBy)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, nil, 0, err
 	}
 
-	// 3) 当前页转 MovieType（按你现有逻辑）
-	mts := make([]*types.MovieType, len(list))
-	for i, vf := range list {
-		mt, err := s.movieSvc.GetMovieType(ctx, vf.MovieJavId)
-		if err != nil {
-			return nil, nil, 0, err
+	// 当前页 -> MovieType
+	mts = make([]*types.MovieType, len(vfilms))
+	for i, vf := range vfilms {
+		mt, e := s.movieSvc.GetMovieType(ctx, vf.MovieJavId)
+		if e != nil {
+			return nil, nil, nil, 0, e
 		}
 		mts[i] = mt
 	}
 
-	// 4) 基于 all 聚合目录统计
-	stats := buildDirStatsFromAll(all, req.Recursive)
+	// 顶部统计：对 all 做（递归与否由上面 dirIDs 决定）
+	stats = buildDirStatsFromAll(all, req.Recursive)
 
-	return mts, stats, total, nil
+	// 返回 all 给上层，避免任何重复查询
+	return mts, stats, all, total, nil
 }
 
 // 基于全量影片聚合目录统计

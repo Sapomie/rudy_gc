@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
@@ -27,10 +26,7 @@ type (
 		FindOneByPath(ctx context.Context, path string) (*VDirectory, error)
 
 		// 新增：根/子目录分页（基础字段）
-		ListByParent(ctx context.Context, parentID int64, page, size int, sort string, asc bool) (rows []*VDirectory, total int64, err error)
-
-		// 新增：根/子目录分页（携带聚合）
-		ListByParentWithAgg(ctx context.Context, parentID int64, page, size int, sort string, asc bool) (rows []*VDirWithAgg, total int64, err error)
+		ListByParent(ctx context.Context, parentID int64, page, size int, sort string) (rows []*VDirectory, total int64, err error)
 
 		// 新增：同级目录
 		ListSiblings(ctx context.Context, parentID int64, limit int) ([]*VDirectory, error)
@@ -63,23 +59,6 @@ type (
 func NewVDirectoryModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) VDirectoryModel {
 	return &customVDirectoryModel{
 		defaultVDirectoryModel: newVDirectoryModel(conn, c, opts...),
-	}
-}
-
-// ---------- helpers ----------
-func orderDir(asc bool) string {
-	if asc {
-		return "ASC"
-	}
-	return "DESC"
-}
-
-func sortColumn(col string) string {
-	switch strings.ToLower(col) {
-	case "updated_on":
-		return "d.updated_on"
-	default:
-		return "d.name"
 	}
 }
 
@@ -125,7 +104,7 @@ func (m *customVDirectoryModel) FindOneByPath(ctx context.Context, path string) 
 }
 
 // ---------- 列表（基础） ----------
-func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64, page, size int, sort string, asc bool) ([]*VDirectory, int64, error) {
+func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64, page, size int, sort string) ([]*VDirectory, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -156,7 +135,7 @@ func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64
 		Select(vDirectoryRows).
 		From(m.table + " AS d").
 		Where(squirrel.Eq{"d.parent_id": parentID}).
-		OrderBy(fmt.Sprintf("%s %s", sortColumn(sort), orderDir(asc))).
+		//OrderBy(fmt.Sprintf("%s %s", sortColumn(sort))).
 		Limit(uint64(size)).
 		Offset(uint64(offset)).
 		ToSql()
@@ -170,60 +149,13 @@ func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64
 	return rows, total, nil
 }
 
-// ---------- 列表（带聚合） ----------
-func (m *customVDirectoryModel) ListByParentWithAgg(ctx context.Context, parentID int64, page, size int, sort string, asc bool) ([]*VDirWithAgg, int64, error) {
-	if page <= 0 {
-		page = 1
+func sortColumn(col string) string {
+	switch strings.ToLower(col) {
+	case "updated_on":
+		return "d.updated_on"
+	default:
+		return "d.name"
 	}
-	if size <= 0 {
-		size = 24
-	}
-	offset := (page - 1) * size
-
-	// total
-	countQ, countArgs, err := squirrel.
-		Select("COUNT(*)").
-		From(m.table + " AS d").
-		Where(squirrel.Eq{"d.parent_id": parentID}).
-		ToSql()
-	if err != nil {
-		return nil, 0, err
-	}
-	var total int64
-	if err := m.QueryRowNoCacheCtx(ctx, &total, countQ, countArgs...); err != nil {
-		return nil, 0, err
-	}
-	if total == 0 {
-		return []*VDirWithAgg{}, 0, nil
-	}
-
-	// list + agg (LEFT JOIN v_film)
-	// 注意：这里假设 v_film 表名是 "v_film"
-	qb := squirrel.
-		Select(
-			"d.id", "d.parent_id", "d.name", "d.depth", "d.path", "d.updated_on",
-			"COUNT(f.id) AS film_count",
-			"COALESCE(SUM(f.size),0) AS total_size",
-			"COALESCE(MAX(f.birth_time),0) AS last_film_birth",
-			"COALESCE(MAX(f.updated_on),0) AS last_updated_on",
-		).
-		From(m.table+" AS d").
-		LeftJoin("v_film AS f ON f.directory_id = d.id AND f.is_removed = 0").
-		Where(squirrel.Eq{"d.parent_id": parentID}).
-		GroupBy("d.id", "d.parent_id", "d.name", "d.depth", "d.path", "d.updated_on").
-		OrderBy(fmt.Sprintf("%s %s", sortColumn(sort), orderDir(asc))).
-		Limit(uint64(size)).
-		Offset(uint64(offset))
-
-	q, args, err := qb.ToSql()
-	if err != nil {
-		return nil, 0, err
-	}
-	var rows []*VDirWithAgg
-	if err := m.QueryRowsNoCacheCtx(ctx, &rows, q, args...); err != nil {
-		return nil, 0, err
-	}
-	return rows, total, nil
 }
 
 // ---------- 同级 ----------

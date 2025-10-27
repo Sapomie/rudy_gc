@@ -28,8 +28,8 @@ type DirectoryRepo interface {
 
 	// 新增（仅目录浏览所需）
 	FindOneByPath(ctx context.Context, path string) (*types.Directory, error)
-	ListRoots(ctx context.Context, page, size int, sort DirSort, asc bool, withAgg bool) (items []*types.DirSummary, total int64, err error)
-	ListChildren(ctx context.Context, parentID int64, page, size int, sort DirSort, asc bool, withAgg bool) (items []*types.DirSummary, total int64, err error)
+	ListRoots(ctx context.Context, page, size int, sort DirSort) (items []*types.DirSummary, total int64, err error)
+	ListChildren(ctx context.Context, parentID int64, page, size int, sort DirSort) ([]*types.DirSummary, int64, error)
 	ListSiblings(ctx context.Context, id int64) ([]*types.DirSummary, error)
 	BuildBreadcrumbs(ctx context.Context, id int64) ([]types.Breadcrumb, error)
 

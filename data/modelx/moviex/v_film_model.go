@@ -71,12 +71,6 @@ func (m *customVFilmModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int6
 	if len(dirIDs) == 0 {
 		return []*VFilm{}, []*VFilm{}, 0, nil
 	}
-	if page <= 0 {
-		page = 1
-	}
-	if size <= 0 {
-		size = 24
-	}
 
 	// ✅ 直接使用上层传入的 orderBy
 	orderParts := splitOrder(orderBy)

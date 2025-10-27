@@ -16,6 +16,7 @@ import (
 	http2 "rudy_gc/internal/transport/http"
 
 	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var configFile = flag.String("f", "cmd/api/config.yaml", "the config file")
@@ -28,7 +29,7 @@ func main() {
 	conf.MustLoad(*configFile, &c)
 
 	// 2) 关闭 go-zero 自带日志（你已有）
-	//logx.Disable()
+	logx.Disable()
 
 	// 3) 构建依赖
 	deps, err := svc.NewDeps(c)

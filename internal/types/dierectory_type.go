@@ -7,13 +7,20 @@ type DirSummary struct {
 	Depth     int64  `json:"depth"`
 	Path      string `json:"path"`
 	UpdatedOn int64  `json:"updated_on"`
+}
 
-	// 可选聚合
-	FilmCount     *int64  `json:"film_count,omitempty"`
-	TotalSize     *int64  `json:"total_size,omitempty"`
-	LastFilmBirth *int64  `json:"last_film_birth,omitempty"`
-	LastUpdatedOn *int64  `json:"last_updated_on,omitempty"`
-	CoverURL      *string `json:"cover_url,omitempty"` // 目录代表封面（可选）
+type DirSummaryWithStats struct {
+	Summary *DirSummary
+	Stats   []*DirStats
+}
+
+type DirStats struct {
+	Recursive     bool         `json:"recursive"`
+	FilmCount     int64        `json:"film_count"`
+	TotalSize     int64        `json:"total_size"`
+	LastFilmBirth int64        `json:"last_film_birth"`
+	LastUpdatedOn int64        `json:"last_updated_on"`
+	Buckets       []TimeBucket `json:"buckets,omitempty"` // 按月/年聚合时返回
 }
 
 type DirDetail struct {
@@ -27,15 +34,6 @@ type Breadcrumb struct {
 	Id   int64  `json:"id"`
 	Name string `json:"name"`
 	Path string `json:"path"`
-}
-
-type DirStats struct {
-	Recursive     bool         `json:"recursive"`
-	FilmCount     int64        `json:"film_count"`
-	TotalSize     int64        `json:"total_size"`
-	LastFilmBirth int64        `json:"last_film_birth"`
-	LastUpdatedOn int64        `json:"last_updated_on"`
-	Buckets       []TimeBucket `json:"buckets,omitempty"` // 按月/年聚合时返回
 }
 
 type TimeBucket struct {
@@ -76,7 +74,7 @@ type DirPageRequest struct {
 
 // DirPageResult 统一返回页面渲染所需数据
 type DirPageResult struct {
-	Detail   *DirDetail    `json:"detail"`   // {Directory, Breadcrumbs, Stats, MovieTypes(Film)}
-	Children []*DirSummary `json:"children"` // 子目录卡片
-	Total    int64         `json:"total"`    // 影片总数（用于分页）
+	Detail   *DirDetail             `json:"detail"`   // {Directory, Breadcrumbs, Stats, MovieTypes(Film)}
+	Children []*DirSummaryWithStats `json:"children"` // 子目录卡片
+	Total    int64                  `json:"total"`    // 影片总数（用于分页）
 }
