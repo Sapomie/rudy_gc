@@ -19,10 +19,11 @@ func (l *ScService) PickProcession() error {
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
 				ScTimesMin: 1,
+				ScTimesMax: ptr.Int64(1),
 				//ReleasingDateEnd: "2025-01-01",
 				//FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 3,
+			w: 0,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
@@ -30,7 +31,7 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 15,
+			w: 0,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
@@ -38,7 +39,7 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeStart: "2025-10-01",
 			},
-			w: 12,
+			w: 22,
 		},
 	}
 

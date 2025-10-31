@@ -57,6 +57,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	movieHTML := htmlHandlers.NewMovieHTMLHandler(deps)
 	dirHTML := htmlHandlers.NewDirectoryHTMLHandler(deps)
 	trig := api2.NewTriggerAPI(deps) //
+	aggHTML := htmlHandlers.NewMovieAggHTMLHandler(deps)
 
 	// ====== HTML 页面路由 ======
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })
@@ -66,12 +67,23 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
+
 	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)
 	r.GET("/cardsrandompick", movieHTML.ListMovieCardRandomPick)
 
 	r.GET("/dir/:id", dirHTML.DirDetail)
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
+
+	// 上映日（release）
+	r.GET("/movie-agg/release", aggHTML.MovieAggReleaseYears)
+	r.GET("/movie-agg/release/:year", aggHTML.MovieAggReleaseMonths)
+	r.GET("/movie-agg/release/:year/:month", aggHTML.MovieAggReleaseMonth)
+
+	// 拍摄日（birth）
+	r.GET("/movie-agg/birth", aggHTML.MovieAggBirthYears)
+	r.GET("/movie-agg/birth/:year", aggHTML.MovieAggBirthMonths)
+	r.GET("/movie-agg/birth/:year/:month", aggHTML.MovieAggBirthMonth)
 
 	// ====== API 路由 ======
 	api := r.Group("/api")
@@ -89,6 +101,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		// === triggers ===
 		trig := api2.NewTriggerAPI(deps)
 		api.POST("/triggers/daily-best", trig.DailyBest)
+		api.POST("/triggers/daily-best-sync", trig.DailyBestSync)
 		api.POST("/triggers/seeds", trig.Seeds)
 		api.POST("/triggers/seed-by-name", trig.SeedByName)
 
@@ -101,10 +114,6 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		scTrig := api2.NewScTriggerAPI(deps)
 		api.POST("/triggers/sc/move", scTrig.Move)
 		api.POST("/triggers/sc/add", scTrig.Add)
-
-		// === ✅ 新增：目录浏览 API ===
-		dirAPI := api2.NewDirectoryAPI(deps)
-		dirAPI.RegisterRoutes(r) // 注册 /api/dirs/*
 	}
 
 	return r

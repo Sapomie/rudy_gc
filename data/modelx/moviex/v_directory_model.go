@@ -4,8 +4,6 @@ package moviex
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
@@ -18,20 +16,11 @@ type (
 	// VDirectoryModel: 在 goctl 生成的 vDirectoryModel 基础上扩展
 	VDirectoryModel interface {
 		vDirectoryModel
-
 		// 已有你贴的：
 		FindOneByName(ctx context.Context, name string) (*VDirectory, error)
 
-		// 新增：按 path 精确查
-		FindOneByPath(ctx context.Context, path string) (*VDirectory, error)
-
-		// 新增：根/子目录分页（基础字段）
-		ListByParent(ctx context.Context, parentID int64, page, size int, sort string) (rows []*VDirectory, total int64, err error)
-
-		// 新增：同级目录
+		ListByParent(ctx context.Context, parentID int64, page, size int) (rows []*VDirectory, total int64, err error)
 		ListSiblings(ctx context.Context, parentID int64, limit int) ([]*VDirectory, error)
-
-		// 新增：通过 base path 取子树所有目录 id（含自身）
 		ListSubtreeIDsByPath(ctx context.Context, basePath string) ([]int64, error)
 	}
 
@@ -62,55 +51,8 @@ func NewVDirectoryModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Opti
 	}
 }
 
-// ---------- 单条查询 ----------
-func (m *customVDirectoryModel) FindOneByName(ctx context.Context, name string) (*VDirectory, error) {
-	query, args, err := squirrel.
-		Select(vDirectoryRows).
-		From(m.table).
-		Where(squirrel.Eq{"name": name}).
-		Limit(1).
-		ToSql()
-	if err != nil {
-		return nil, err
-	}
-	var resp VDirectory
-	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, args...); err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	return &resp, nil
-}
-
-func (m *customVDirectoryModel) FindOneByPath(ctx context.Context, path string) (*VDirectory, error) {
-	query, args, err := squirrel.
-		Select(vDirectoryRows).
-		From(m.table + " AS d").
-		Where(squirrel.Eq{"d.path": path}).
-		Limit(1).
-		ToSql()
-	if err != nil {
-		return nil, err
-	}
-	var resp VDirectory
-	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, args...); err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	return &resp, nil
-}
-
 // ---------- 列表（基础） ----------
-func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64, page, size int, sort string) ([]*VDirectory, int64, error) {
-	if page <= 0 {
-		page = 1
-	}
-	if size <= 0 {
-		size = 24
-	}
+func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64, page, size int) ([]*VDirectory, int64, error) {
 	offset := (page - 1) * size
 
 	// total
@@ -135,7 +77,6 @@ func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64
 		Select(vDirectoryRows).
 		From(m.table + " AS d").
 		Where(squirrel.Eq{"d.parent_id": parentID}).
-		//OrderBy(fmt.Sprintf("%s %s", sortColumn(sort))).
 		Limit(uint64(size)).
 		Offset(uint64(offset)).
 		ToSql()
@@ -147,15 +88,6 @@ func (m *customVDirectoryModel) ListByParent(ctx context.Context, parentID int64
 		return nil, 0, err
 	}
 	return rows, total, nil
-}
-
-func sortColumn(col string) string {
-	switch strings.ToLower(col) {
-	case "updated_on":
-		return "d.updated_on"
-	default:
-		return "d.name"
-	}
 }
 
 // ---------- 同级 ----------

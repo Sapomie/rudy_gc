@@ -155,30 +155,18 @@ func (r *DirectoryRepoSqlx) ListSubtreeIDs(ctx context.Context, id int64) ([]int
 	return ids, nil
 }
 
-func (r *DirectoryRepoSqlx) FindOneByPath(ctx context.Context, path string) (*types.Directory, error) {
-	row, err := r.m.FindOneByPath(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-	return toTypesDirectory(row), nil
-}
-
 // ====== 列表（根/子） ======
-func (r *DirectoryRepoSqlx) ListRoots(ctx context.Context, page, size int, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
-	return r.listByParent(ctx, 0, page, size, sort)
+func (r *DirectoryRepoSqlx) ListRoots(ctx context.Context, page, size int) ([]*types.DirSummary, int64, error) {
+	return r.listByParent(ctx, 0, page, size)
 }
 
-func (r *DirectoryRepoSqlx) ListChildren(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
-	return r.listByParent(ctx, parentID, page, size, sort)
+func (r *DirectoryRepoSqlx) ListChildren(ctx context.Context, parentID int64, page, size int) ([]*types.DirSummary, int64, error) {
+	return r.listByParent(ctx, parentID, page, size)
 }
 
-func (r *DirectoryRepoSqlx) listByParent(ctx context.Context, parentID int64, page, size int, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
-	sortStr := "name"
-	if sort == film_repo.DirSortUpdatedOn {
-		sortStr = "updated_on"
-	}
+func (r *DirectoryRepoSqlx) listByParent(ctx context.Context, parentID int64, page, size int) ([]*types.DirSummary, int64, error) {
 
-	rows, total, err := r.m.ListByParent(ctx, parentID, page, size, sortStr)
+	rows, total, err := r.m.ListByParent(ctx, parentID, page, size)
 	if err != nil {
 		return nil, 0, err
 	}

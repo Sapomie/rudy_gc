@@ -2,6 +2,7 @@ package spiderx
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -18,6 +19,7 @@ type (
 
 		ListNeedScanIDs(ctx context.Context, flag int64, limit int64) ([]int64, error)
 		ListIDsByRankCheck(ctx context.Context, flag int64, limit int64) ([]int64, error)
+		LatestDayNumber(ctx context.Context) (int64, error)
 	}
 
 	customDBestinvModel struct {
@@ -80,4 +82,22 @@ func (m *customDBestinvModel) ListIDsByRankCheck(ctx context.Context, flag int64
 		return nil, err
 	}
 	return ids, nil
+}
+
+func (m *customDBestinvModel) LatestDayNumber(ctx context.Context) (int64, error) {
+	query, values, err := squirrel.Select("`day_number`").
+		From(m.tableName()).
+		OrderBy("day_number desc").
+		Limit(1).
+		ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	var result int64
+	if err = m.conn.QueryRowCtx(ctx, &result, query, values...); err != nil {
+		return 0, err
+	}
+
+	return result, nil
 }

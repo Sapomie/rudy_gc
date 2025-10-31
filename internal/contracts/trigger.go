@@ -1,3 +1,4 @@
+// internal/contracts/trigger.go
 package contracts
 
 type TriggerKind int
@@ -5,10 +6,11 @@ type TriggerKind int
 const (
 	ProcDailyBest TriggerKind = iota + 1
 	ProcSeeds
-	ProcSeedByName // ✅ 新增：按 Seed 名称触发
+	ProcSeedByName
+	ProcSyncBest // ✅ 新增：同步每日榜
 )
 
 type TriggerMsg struct {
 	Kind TriggerKind
-	Name string // ✅ 新增：携带 seed 名称
+	Name string // 给 ProcSeedByName 用
 }

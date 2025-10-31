@@ -3,7 +3,6 @@ package vfilm
 import (
 	"context"
 	"rudy_gc/internal/domain/movie"
-	"rudy_gc/internal/repo/film_repo"
 	"rudy_gc/internal/svc"
 	"rudy_gc/internal/types"
 )
@@ -23,7 +22,7 @@ func NewDirectoryService(deps *svc.Deps) *DirectoryService {
 // 单根场景：直接返回根目录详情（可递归统计）
 func (s *DirectoryService) GetRootDetail(ctx context.Context) (*types.DirDetail, error) {
 	// 若根ID固定，可以直接 FindOneByID(ctx, 1)
-	items, _, err := s.deps.DirectoryRepo.ListRoots(ctx, 1, 1, film_repo.DirSortName)
+	items, _, err := s.deps.DirectoryRepo.ListRoots(ctx, 1, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +51,6 @@ func (s *DirectoryService) GetDirDetail(ctx context.Context, id int64) (*types.D
 	}
 	crumbs, _ := s.deps.DirectoryRepo.BuildBreadcrumbs(ctx, id)
 	return &types.DirDetail{Directory: dir, Breadcrumbs: crumbs}, nil
-}
-
-// 子目录列表（支持分页/排序/是否聚合）
-func (s *DirectoryService) ListChildren(ctx context.Context, parentID int64, page, size int64, sort film_repo.DirSort) ([]*types.DirSummary, int64, error) {
-	return s.deps.DirectoryRepo.ListChildren(ctx, parentID, int(page), int(size), sort)
 }
 
 func (s *DirectoryService) ListFilmsForDirPage(
@@ -122,14 +116,4 @@ func buildDirStatsFromAll(all []*types.Film, recursive bool) *types.DirStats {
 	st.LastUpdatedOn = maxUpdatedOn
 	// 如果后续需要时间分桶（Buckets），在这里追加即可
 	return st
-}
-
-// 同级目录（便于前端做快速切换）
-func (s *DirectoryService) ListSiblings(ctx context.Context, id int64) ([]*types.DirSummary, error) {
-	return s.deps.DirectoryRepo.ListSiblings(ctx, id)
-}
-
-// 面包屑
-func (s *DirectoryService) GetBreadcrumbs(ctx context.Context, id int64) ([]types.Breadcrumb, error) {
-	return s.deps.DirectoryRepo.BuildBreadcrumbs(ctx, id)
 }

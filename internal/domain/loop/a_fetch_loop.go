@@ -1,14 +1,14 @@
+// internal/domain/loop/a_daily_best_loop.go
 package loop
 
 import (
 	"context"
 	"fmt"
-	"rudy_gc/internal/contracts"
 	"strings"
 	"time"
-)
 
-// package loop
+	"rudy_gc/internal/contracts"
+)
 
 func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-chan contracts.TriggerMsg) {
 	log := l.deps.Log.WithContext(ctx)
@@ -25,7 +25,7 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 			}
 
 			switch msg.Kind {
-			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName: // ✅ 加入新类型
+			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName, contracts.ProcSyncBest:
 				procCtx, ok := l.tryBeginProcess(ctx)
 				if !ok {
 					log.Warn("ProcessionTriggerLoop: still running, skip trigger")
@@ -42,20 +42,25 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 					var err error
 					switch m.Kind {
 					case contracts.ProcDailyBest:
-						log.Info("ProcessionTriggerLoop: running CrawlDailyBestProcession")
-						err = l.crawlLogic.CrawlDailyBestProcession(procCtx)
+						log.Info("ProcessionTriggerLoop: running CrawlDailyBestProcession(isSync=false)")
+						err = l.crawlLogic.CrawlDailyBestProcession(procCtx, false)
+
+					case contracts.ProcSyncBest: // ✅ 新增分支
+						log.Info("ProcessionTriggerLoop: running CrawlDailyBestProcession(isSync=true)")
+						err = l.crawlLogic.CrawlDailyBestProcession(procCtx, true)
 
 					case contracts.ProcSeeds:
 						log.Info("ProcessionTriggerLoop: running CrawlBySeedsActiveProcession")
 						err = l.crawlLogic.CrawlBySeedsActiveProcession(procCtx)
 
-					case contracts.ProcSeedByName: // ✅ 新增分支
-						if strings.TrimSpace(m.Name) == "" {
+					case contracts.ProcSeedByName:
+						name := strings.TrimSpace(m.Name)
+						if name == "" {
 							err = fmt.Errorf("empty seed name")
 							break
 						}
-						log.Infof("ProcessionTriggerLoop: running CrawlBySeedName(%s)", m.Name)
-						err = l.crawlLogic.CrawlBySeedName(procCtx, m.Name)
+						log.Infof("ProcessionTriggerLoop: running CrawlBySeedName(%s)", name)
+						err = l.crawlLogic.CrawlBySeedName(procCtx, name)
 					}
 
 					if err != nil {

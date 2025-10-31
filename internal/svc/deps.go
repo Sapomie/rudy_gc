@@ -62,9 +62,7 @@ type Deps struct {
 	FilmRepo       film_repo.FilmRepo
 	GListRepo      film_repo.GListRepo
 	ScRepo         film_repo.ScRepo
-
-	// ✅ 新增：记录表仓库（ERecord）
-	RecordRepo movie_repo.RecordRepo
+	RecordRepo     movie_repo.RecordRepo
 
 	MovieTypeCache movie_repo.MovieTypeCache
 

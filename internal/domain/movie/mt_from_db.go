@@ -16,8 +16,8 @@ import (
 	"rudy_gc/internal/types"
 )
 
-// buildMovieTypeFromRepos 聚合多个表，生成用于前端展示的 MovieType
-func (s *MovieService) buildMovieTypeFromRepos(ctx context.Context, javId string) (*types.MovieType, error) {
+// BuildMovieTypeFromRepos 聚合多个表，生成用于前端展示的 MovieType
+func (s *MovieService) BuildMovieTypeFromRepos(ctx context.Context, javId string) (*types.MovieType, error) {
 	// 0) 基础 Movie
 	mv, err := s.deps.MovieRepo.FindOneByJavId(ctx, javId)
 	if err != nil {
@@ -99,6 +99,9 @@ func (s *MovieService) buildMovieTypeFromRepos(ctx context.Context, javId string
 		Owned:                consts.MovieAll,
 		NeedDownload:         minfo.NeedDownload,
 		EncodeName:           mv.EncodeName,
+		AMovie:               mv,
+		BmMinfo:              minfo,
+		BmMurl:               murl,
 	}
 
 	film, err := s.deps.FilmRepo.FindOneByMovieJavId(ctx, mv.JavId)
@@ -107,6 +110,7 @@ func (s *MovieService) buildMovieTypeFromRepos(ctx context.Context, javId string
 	}
 
 	if film != nil {
+		out.VFilm = film
 		out.FilmBirthDate = tsToDate(film.BirthTime)
 		out.VideoUrl = film.FullDir + string(filepath.Separator) + film.FileName
 		out.ScTimes = film.ScTimes

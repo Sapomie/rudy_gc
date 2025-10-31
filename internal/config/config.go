@@ -9,14 +9,15 @@ import (
 )
 
 type Config struct {
-	DataSource     string
-	Port           string
-	Cache          cache.CacheConf // go-zero 生成代码那套用这个
-	BizRedis       redis.RedisConf
-	Fetcher        FetcherConf
-	MovieTypeCache MovieTypeCacheConf
-	Film           Film
-	LogursLevel    string
+	DataSource       string
+	DataSourceRemote string
+	Port             string
+	Cache            cache.CacheConf // go-zero 生成代码那套用这个
+	BizRedis         redis.RedisConf
+	Fetcher          FetcherConf
+	MovieTypeCache   MovieTypeCacheConf
+	Film             Film
+	LogursLevel      string
 }
 
 type Film struct {

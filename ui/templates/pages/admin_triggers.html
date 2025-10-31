@@ -13,10 +13,16 @@
         <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
         <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
         <style>
-            .trigger-input { max-width: 360px; }
+            .trigger-input {
+                max-width: 360px;
+            }
+
             #msgArea {
-                position: fixed; bottom: 20px; right: 20px;
-                z-index: 2000; display: none;
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2000;
+                display: none;
             }
         </style>
     </head>
@@ -33,7 +39,7 @@
                 </div>
 
                 <div class="row g-4">
-                    <!-- 左：爬虫触发 -->
+                    <!-- 爬虫触发 -->
                     <div class="col-xl-12">
                         <div class="card">
                             <div class="card-body">
@@ -41,7 +47,7 @@
                                 <p class="card-title-desc">点击按钮触发相应的爬虫流程，或按名称精确触发某个 Seed。</p>
 
                                 <div class="row g-3">
-                                    <!-- DailyBest -->
+                                    <!-- DailyBest 抓取 -->
                                     <div class="col-md-4">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-primary">DailyBest 抓取</h6>
@@ -52,7 +58,18 @@
                                         </div>
                                     </div>
 
-                                    <!-- Seeds -->
+                                    <!-- ✅ DailyBest 同步（新增，位于两者之间） -->
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-secondary">DailyBest 同步</h6>
+                                            <p class="text-muted small mb-3">仅同步榜单（SyncBestinv），再解析并入库。</p>
+                                            <button id="btnDailyBestSync" type="button" class="btn btn-secondary w-100">
+                                                触发 DailyBest 同步
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 活跃 Seeds 抓取 -->
                                     <div class="col-md-4">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-success">活跃 Seeds 抓取</h6>
@@ -63,15 +80,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Seed By Name -->
-                                    <div class="col-md-4">
+                                    <!-- 按名称抓取 Seed -->
+                                    <div class="col-md-12">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-info">按名称抓取</h6>
                                             <p class="text-muted small mb-2">输入 Seed 名称进行定向抓取。</p>
                                             <form id="formSeedByName" class="needs-validation" novalidate>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="seedByName"
-                                                           placeholder="" required>
+                                                           placeholder="例如：ABP-123 或 某标签" required>
                                                     <button type="submit" class="btn btn-outline-info">执行</button>
                                                     <div class="invalid-tooltip">请输入 Seed 名称</div>
                                                 </div>
@@ -92,7 +109,6 @@
                                 <p class="card-title-desc">点击按钮执行影片相关任务（重命名或处理）。</p>
 
                                 <div class="row g-3">
-                                    <!-- 重命名 -->
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-info">影片重命名</h6>
@@ -103,7 +119,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- 影片处理 -->
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-warning">影片处理</h6>
@@ -127,7 +142,6 @@
                                 <p class="card-title-desc">填写参数后触发 SC 相关流程。</p>
 
                                 <div class="row g-3">
-                                    <!-- Move SC -->
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-primary">移动 SC 影片</h6>
@@ -135,7 +149,7 @@
                                             <form id="formScMove" class="needs-validation" novalidate>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="scMoveName"
-                                                           placeholder="" required>
+                                                           placeholder="例如：睡前" required>
                                                     <button type="submit" class="btn btn-outline-primary">执行</button>
                                                     <div class="invalid-tooltip">请输入 SC 名称</div>
                                                 </div>
@@ -143,7 +157,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Add SC -->
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-success">添加 SC 目录</h6>
@@ -151,7 +164,7 @@
                                             <form id="formScAdd" class="needs-validation" novalidate>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="scAddDir"
-                                                           placeholder="" required>
+                                                           placeholder="/path/to/scan" required>
                                                     <button type="submit" class="btn btn-outline-success">执行</button>
                                                     <div class="invalid-tooltip">请输入目录路径</div>
                                                 </div>
@@ -172,9 +185,10 @@
     <!-- 浮动提示 -->
     <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
 
-    <!-- JS -->
+    <!-- 业务脚本（已包含 SyncBest 绑定） -->
     <script src="/static/customer/admin_triggers.js"></script>
-    <!-- JS -->
+
+    <!-- 基础脚本 -->
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/metisMenu.min.js"></script>
@@ -189,8 +203,6 @@
     <script src="/static/js/buttons.colVis.min.js"></script>
     <script src="/static/js/dashboard.init.js"></script>
     <script src="/static/js/app.js"></script>
-
-
     </body>
     </html>
 {{ end }}

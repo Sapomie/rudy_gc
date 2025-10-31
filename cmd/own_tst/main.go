@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 	"rudy_gc/pkg/redis"
 
@@ -24,16 +23,17 @@ func main() {
 	deps, err := svc.NewDeps(c)
 	if err != nil {
 		panic(err)
+		deps.Log.Error(ctx, "NewDeps err:", err)
 	}
 
 	//flushDb()
 
-	err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
-	if err != nil {
-		panic(err)
-	}
+	//err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	//err = vfilm.NewFilmService(deps).ProcessFilm(ctx)
+	//err = vfilm.NewFilmService(deps).PrepareFilmCache(ctx)
 	//if err != nil {
 	//	panic(err)
 	//}

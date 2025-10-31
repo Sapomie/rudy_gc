@@ -37,3 +37,5 @@ Film:
       MoveFilmDestination: "/Volumes/Expansion/goingon/"
     - RootDir: "/Volumes/Getea/vx/"
       MoveFilmDestination: "/Volumes/Getea/goingon/"
+
+DataSourceRemote: root:12345678@tcp(8.134.149.91:5306)/zero_gc_v2?charset=utf8mb4

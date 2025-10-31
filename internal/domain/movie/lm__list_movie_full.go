@@ -3,6 +3,7 @@ package movie
 import (
 	"context"
 	"math/rand"
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"sort"
 	"time"
@@ -126,4 +127,20 @@ func (s *MovieService) ListMovieFullRandom(ctx context.Context, r *types.ListMov
 		Total:  total, // 返回候选全集大小
 		JavIds: allIDs,
 	}, nil
+}
+
+func (s *MovieService) ListMovieOwned(ctx context.Context) ([]*types.MovieType, error) {
+	all, err := s.deps.FilmRepo.FindAll(ctx, consts.FilmIsNotRemoved)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.MovieType, 0, len(all))
+	for _, f := range all {
+		mt, err := s.GetMovieType(ctx, f.MovieJavId)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, mt)
+	}
+	return out, nil
 }

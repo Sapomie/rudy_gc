@@ -33,6 +33,10 @@ type MovieType struct {
 	ComeTimes            int64       `json:"come_times"`
 	HighestRank          int64       `json:"highest_rank"`
 	FirstRankingDay      string      `json:"first_ranking_day"`
+	AMovie               *Movie      `json:"a_movie"`
+	BmMinfo              *Minfo      `json:"bm_minfo"`
+	BmMurl               *Murl       `json:"bm_murl"`
+	VFilm                *Film       `json:"v_film"`
 }
 
 type CastInfo struct {

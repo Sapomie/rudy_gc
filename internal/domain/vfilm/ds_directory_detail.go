@@ -2,7 +2,6 @@ package vfilm
 
 import (
 	"context"
-	"rudy_gc/internal/repo/film_repo"
 	"rudy_gc/internal/types"
 )
 
@@ -33,7 +32,7 @@ func (s *DirectoryService) GetDirectoryPage(ctx context.Context, in *types.DirPa
 	}
 
 	// 2) 子目录 summary（不带聚合）
-	summarys, _, _ := s.deps.DirectoryRepo.ListChildren(ctx, dirID, int(in.ChildrenPage), int(in.ChildrenSize), film_repo.DirSortName)
+	summarys, _, _ := s.deps.DirectoryRepo.ListChildren(ctx, dirID, int(in.ChildrenPage), int(in.ChildrenSize))
 
 	// 3) 影片列表（只查一次；返回 allFilms 给我们聚合子目录）
 	listReq := &types.ListDirFilmsRequest{

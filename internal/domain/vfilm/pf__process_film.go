@@ -12,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/zeromicro/go-zero/core/threading"
 )
 
 /* =========================
@@ -78,6 +80,14 @@ func (s *FilmService) ProcessFilm(ctx context.Context) error {
 	if err := s.removeMissingFilmFiles(ctx, fctx); err != nil {
 		return err
 	}
+
+	threading.GoSafe(func() {
+		err := s.PrepareFilmCache(ctx)
+		if err != nil {
+			s.deps.Log.Errorf("PrepareFilmCache: %v", err)
+		}
+	})
+
 	return nil
 }
 
@@ -453,9 +463,7 @@ func (s *FilmService) scanAndAttachMetadata(f *types.Film, filmPath string) erro
 	return nil
 }
 
-/* =========================
-   注意：以下外部依赖
-   - processFilmDirectory(ctx, fullPath) (*processFilmDirectorResponse, error)
-   - processFilmDirectorResponse{ DirectoryID, Dir1Id..Dir4Id }
-   以上函数/结构体在你现有工程的目录模块中
-========================= */
+func (s *FilmService) PrepareFilmCache(ctx context.Context) error {
+	_, err := s.movieSvc.ListMovieOwned(ctx)
+	return err
+}

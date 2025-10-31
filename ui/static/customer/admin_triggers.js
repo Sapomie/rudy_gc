@@ -34,6 +34,8 @@
     bindBtn('btnSeeds', '/api/triggers/seeds', 'Seeds 已触发');
     bindBtn('btnFilmRename', '/api/triggers/film/rename', '影片重命名 已触发');
     bindBtn('btnFilmProcess', '/api/triggers/film/process', '影片处理 已触发');
+    // /static/customer/admin_triggers.js 里新增一行绑定
+    bindBtn('btnDailyBestSync', '/api/triggers/daily-best-sync', 'DailyBest 同步 已触发');
 
     // === 按 Seed 名称触发 ===
     const formSeedByName = document.getElementById('formSeedByName');

@@ -23,4 +23,6 @@ type BestinvRepo interface {
 
 	// 已有：按 need_rank_check 筛 ID
 	ListIDsByRankCheck(ctx context.Context, flag int64, limit int64) ([]int64, error)
+
+	LatestDayNumber(ctx context.Context) (int64, error)
 }

@@ -28,6 +28,10 @@ func (h *TriggerAPI) DailyBest(c *gin.Context) {
 	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcDailyBest})
 }
 
+func (h *TriggerAPI) DailyBestSync(c *gin.Context) { // ✅ 新增
+	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcSyncBest})
+}
+
 // === Seeds ===
 func (h *TriggerAPI) Seeds(c *gin.Context) {
 	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcSeeds})

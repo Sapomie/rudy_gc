@@ -129,3 +129,7 @@ func (r *BestinvRepoSqlx) MarkRankChecked(ctx context.Context, id int64, ts int6
 	}
 	return nil
 }
+
+func (r *BestinvRepoSqlx) LatestDayNumber(ctx context.Context) (int64, error) {
+	return r.m.LatestDayNumber(ctx)
+}

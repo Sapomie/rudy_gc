@@ -21,7 +21,7 @@ func (s *MovieService) GetMovieType(ctx context.Context, javId string) (*types.M
 	}
 
 	// 2) 回源：用你现有 repo 聚合拼装 MovieType（略）
-	mt, err := s.buildMovieTypeFromRepos(ctx, javId)
+	mt, err := s.BuildMovieTypeFromRepos(ctx, javId)
 	if err != nil || mt == nil {
 		return mt, err
 	}

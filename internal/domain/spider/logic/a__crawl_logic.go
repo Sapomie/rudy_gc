@@ -26,13 +26,13 @@ func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 
 /* ========= 具体流程 ========= */
 
-// 每日榜流程：Best → FetchDetails → 并行（ProcessBestinvRank / DownLoadAllPicture / TranslateTitle）
-func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context) error {
+func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool) error {
 	return l.runPipeline(
 		ctx,
 		"DailyBest",
 		func(ctx context.Context) (int64, error) {
-			if err := l.FetchAndParseDailyBestinv(ctx); err != nil {
+			// ✅ 传入 isSync
+			if err := l.FetchAndParseDailyBestinv(ctx, isSync); err != nil {
 				return 0, err
 			}
 			return l.FetchAndParseDetails(ctx)
