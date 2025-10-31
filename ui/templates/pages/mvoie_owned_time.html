@@ -13,26 +13,11 @@
         <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
         <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
         <style>
-            .toolbar-gap > * {
-                margin-right: .5rem;
-                margin-bottom: .5rem;
-            }
-
-            .bucket-card .count {
-                font-weight: 600;
-            }
-
-            .bucket-card .sizegb {
-                color: #6c757d;
-            }
-
-            .table-topcasts td, .table-topcasts th {
-                vertical-align: middle;
-            }
-
-            .breadcrumbs a {
-                text-decoration: none;
-            }
+            .toolbar-gap > * { margin-right: .5rem; margin-bottom: .5rem; }
+            .bucket-card .count { font-weight: 600; }
+            .bucket-card .sizegb { color: #6c757d; }
+            .table-topcasts td, .table-topcasts th { vertical-align: middle; }
+            .breadcrumbs a { text-decoration: none; }
         </style>
     </head>
 
@@ -56,11 +41,9 @@
                                         {{ if .Breadcrumbs }}
                                             {{ range .Breadcrumbs }}
                                                 {{ if .Href }}
-                                                    <li class="breadcrumb-item"><a href="{{ .Href }}">{{ .Title }}</a>
-                                                    </li>
+                                                    <li class="breadcrumb-item"><a href="{{ .Href }}">{{ .Title }}</a></li>
                                                 {{ else }}
-                                                    <li class="breadcrumb-item active"
-                                                        aria-current="page">{{ .Title }}</li>
+                                                    <li class="breadcrumb-item active" aria-current="page">{{ .Title }}</li>
                                                 {{ end }}
                                             {{ end }}
                                         {{ end }}
@@ -126,36 +109,80 @@
                             {{ end }}
                         </div>
 
-
-
+                        <!-- Top 演员：卡片可点击跳转到 /cards?cn=...&owned=3&{rs/re 或 bs/be}=range -->
                         {{ if .TopCasts }}
                             <section class="mt-4" aria-label="Top Actors">
                                 <h5 class="mb-2 fw-bold text-dark">Top 演员</h5>
-
                                 <div class="d-flex flex-wrap gap-2 justify-content-start">
                                     {{ range $i, $c := .TopCasts }}
-                                        <div class="card shadow-sm" style="flex: 0 0 calc(10% - 8px); min-width: 120px; background-color: #f8f9fa;">
-                                            <div class="card-body p-2 text-center">
-                                                <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                    <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                    <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
+                                        {{ $base := (print "/cards?owned=3&cn=" (urlquery $c.Name)) }}
+                                        {{ if and $.RangeStart $.RangeEnd }}
+                                            {{ if eq $.Mode "birth" }}
+                                                {{ $href := (print $base "&bs=" $.RangeStart "&be=" $.RangeEnd) }}
+                                                <a href="{{ $href }}" class="text-decoration-none" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
+                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                        <div class="card-body p-2 text-center">
+                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                                <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                                    出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
+                                                                </span>
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                                    ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {{ else }}
+                                                {{ $href := (print $base "&rs=" $.RangeStart "&re=" $.RangeEnd) }}
+                                                <a href="{{ $href }}" class="text-decoration-none" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
+                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                        <div class="card-body p-2 text-center">
+                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                                <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                                    出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
+                                                                </span>
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                                    ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {{ end }}
+                                        {{ else }}
+                                            <!-- 没有时间范围（顶层页）：仅带演员名与 owned -->
+                                            <a href="{{ $base }}" class="text-decoration-none" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
+                                                <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                            <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                            <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
+                                                        </div>
+                                                        <div class="d-flex flex-column align-items-center gap-1">
+                                                            <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                                出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
+                                                            </span>
+                                                            <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                                ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div class="d-flex flex-column align-items-center gap-1">
-          <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-            出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
-          </span>
-                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-            ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
-          </span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            </a>
+                                        {{ end }}
                                     {{ end }}
                                 </div>
                             </section>
                         {{ end }}
-
-                        <!-- /Sticky 工具栏 -->
 
                         <!-- 电影网格（复用 card） -->
                         <section aria-label="Movies">
@@ -179,7 +206,7 @@
                 </div>
     </main>
 
-    <!-- JS（与其它页保持一致，不缺） -->
+    <!-- JS -->
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/metisMenu.min.js"></script>
@@ -194,7 +221,6 @@
     <script src="/static/js/buttons.colVis.min.js"></script>
     <script src="/static/js/dashboard.init.js"></script>
     <script src="/static/js/app.js"></script>
-
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {

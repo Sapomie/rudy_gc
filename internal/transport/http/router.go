@@ -80,7 +80,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/movie-agg/release/:year", aggHTML.MovieAggReleaseMonths)
 	r.GET("/movie-agg/release/:year/:month", aggHTML.MovieAggReleaseMonth)
 
-	// 拍摄日（birth）
+	// 下载日（birth）
 	r.GET("/movie-agg/birth", aggHTML.MovieAggBirthYears)
 	r.GET("/movie-agg/birth/:year", aggHTML.MovieAggBirthMonths)
 	r.GET("/movie-agg/birth/:year/:month", aggHTML.MovieAggBirthMonth)

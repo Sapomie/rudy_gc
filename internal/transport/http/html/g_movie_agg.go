@@ -132,7 +132,7 @@ type Breadcrumb struct {
 func buildAggBreadcrumbs(mode string, year, month int) []Breadcrumb {
 	var rootTitle, rootHref string
 	if mode == "birth" {
-		rootTitle = "拍摄日"
+		rootTitle = "下载日"
 		rootHref = "/movie-agg/birth"
 	} else {
 		rootTitle = "上映日"
@@ -224,10 +224,10 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context) {
 	}
 	sort.Slice(years, func(i, j int) bool { return years[i].Year > years[j].Year })
 
-	// 顶层 Top 演员：✅ 改为基于“全量 allResp.List”
+	// 顶层 Top 演员：全量
 	topCasts := buildTopCasts(allResp.List, 20)
 
-	// 顶层卡片（保持现状：展示按当前排序的分页列表）
+	// 顶层卡片（当前排序分页）
 	listReq := &types.ListMovieFullRequest{
 		Owned:    consts.OwnedAllNotRemoved,
 		OrderBy:  curOD,
@@ -251,6 +251,7 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context) {
 		"TopCasts": topCasts,
 		"Movies":   listResp.List, "Total": listResp.Total,
 		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+		// 顶层不限定日期 → 不传 RangeStart/RangeEnd
 	})
 }
 
@@ -329,6 +330,9 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseMonths(c *gin.Context) {
 		"TopCasts": topCasts,
 		"Movies":   listResp.List, "Total": listResp.Total,
 		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+		// 用于 TopCasts 的时间范围（整年）
+		"RangeStart": fmt.Sprintf("%04d-01-01", year),
+		"RangeEnd":   fmt.Sprintf("%04d-12-31", year),
 	})
 }
 
@@ -373,10 +377,13 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseMonth(c *gin.Context) {
 		"TopCasts": topCasts,
 		"Movies":   resp.List, "Total": resp.Total,
 		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+		// 用于 TopCasts 的时间范围（该月）
+		"RangeStart": start,
+		"RangeEnd":   end,
 	})
 }
 
-/* ------------------------- 拍摄日（birth）------------------------- */
+/* ------------------------- 下载日（birth）------------------------- */
 
 // /movie-agg/birth
 func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
@@ -385,7 +392,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByBirthTime), consts.OrderByBirthTime)
 	sq := buildSortQuery(c, curOD)
 
-	// 全量一次性拉取（既用于年桶，也用于顶层 TopCasts）✅ 修正：TopCasts 用全量
+	// 全量一次性拉取（既用于年桶，也用于顶层 TopCasts）
 	allReq := &types.ListMovieFullRequest{
 		Owned:    consts.OwnedAllNotRemoved,
 		Page:     1,
@@ -397,7 +404,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 		return
 	}
 
-	// 年桶（按拍摄日）
+	// 年桶（按下载日）
 	type aggY struct {
 		n     int
 		bytes int64
@@ -430,10 +437,10 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 	}
 	sort.Slice(years, func(i, j int) bool { return years[i].Year > years[j].Year })
 
-	// 顶层 Top 演员：✅ 改为基于“全量 allResp.List”（修复你指出的问题）
+	// 顶层 Top 演员：全量
 	topCasts := buildTopCasts(allResp.List, 20)
 
-	// 顶层卡片（保持现状：展示按当前排序的分页列表）
+	// 顶层卡片（当前排序分页）
 	listReq := &types.ListMovieFullRequest{
 		Owned:    consts.OwnedAllNotRemoved,
 		OrderBy:  curOD,
@@ -449,7 +456,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 	bcs := buildAggBreadcrumbs("birth", 0, 0)
 
 	c.HTML(200, "page.movie_agg_time", gin.H{
-		"Title": "电影聚合 · 拍摄日",
+		"Title": "电影聚合 · 下载日",
 		"Mode":  "birth",
 		"Year":  0, "Month": 0,
 		"Breadcrumbs": bcs,
@@ -457,6 +464,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 		"TopCasts": topCasts,
 		"Movies":   listResp.List, "Total": listResp.Total,
 		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+		// 顶层不限定日期 → 不传 RangeStart/RangeEnd
 	})
 }
 
@@ -527,13 +535,16 @@ func (h *MovieAggHTMLHandler) MovieAggBirthMonths(c *gin.Context) {
 	bcs := buildAggBreadcrumbs("birth", year, 0)
 
 	c.HTML(200, "page.movie_agg_time", gin.H{
-		"Title": fmt.Sprintf("拍摄日 · %d 年", year),
+		"Title": fmt.Sprintf("下载日 · %d 年", year),
 		"Mode":  "birth", "Year": year, "Month": 0,
 		"Breadcrumbs": bcs,
 		"BucketsY":    nil, "BucketsM": months,
 		"TopCasts": topCasts,
 		"Movies":   listResp.List, "Total": listResp.Total,
 		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+		// 用于 TopCasts 的时间范围（整年）
+		"RangeStart": fmt.Sprintf("%04d-01-01", year),
+		"RangeEnd":   fmt.Sprintf("%04d-12-31", year),
 	})
 }
 
@@ -571,12 +582,15 @@ func (h *MovieAggHTMLHandler) MovieAggBirthMonth(c *gin.Context) {
 	bcs := buildAggBreadcrumbs("birth", year, month)
 
 	c.HTML(200, "page.movie_agg_time", gin.H{
-		"Title": fmt.Sprintf("拍摄日 · %d 年 %02d 月", year, month),
+		"Title": fmt.Sprintf("下载日 · %d 年 %02d 月", year, month),
 		"Mode":  "birth", "Year": year, "Month": month,
 		"Breadcrumbs": bcs,
 		"BucketsY":    nil, "BucketsM": nil,
 		"TopCasts": topCasts,
 		"Movies":   resp.List, "Total": resp.Total,
 		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+		// 用于 TopCasts 的时间范围（该月）
+		"RangeStart": start,
+		"RangeEnd":   end,
 	})
 }
