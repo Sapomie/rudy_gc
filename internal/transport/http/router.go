@@ -78,11 +78,14 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	// 上映日（release）
 	r.GET("/movie-agg/release", aggHTML.MovieAggReleaseYears)
 	r.GET("/movie-agg/release/:year", aggHTML.MovieAggReleaseMonths)
+	// 季（新增）
+	r.GET("/movie-agg/release/:year/q/:q", aggHTML.MovieAggReleaseQuarter)
 	r.GET("/movie-agg/release/:year/:month", aggHTML.MovieAggReleaseMonth)
-
 	// 下载日（birth）
 	r.GET("/movie-agg/birth", aggHTML.MovieAggBirthYears)
 	r.GET("/movie-agg/birth/:year", aggHTML.MovieAggBirthMonths)
+	// 季（新增）
+	r.GET("/movie-agg/birth/:year/q/:q", aggHTML.MovieAggBirthQuarter)
 	r.GET("/movie-agg/birth/:year/:month", aggHTML.MovieAggBirthMonth)
 
 	// ====== API 路由 ======

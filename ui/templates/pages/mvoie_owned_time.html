@@ -58,12 +58,36 @@
                             </div>
                         </div>
 
-                        <!-- 年/月份桶 -->
+                        <!-- 年/季/月 桶 -->
                         <div class="mt-2">
                             {{ if .BucketsY }}
                                 <section class="mb-2" aria-label="Years">
-                                    <div class="row row-cols-6 g-3">
+                                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
                                         {{ range .BucketsY }}
+                                            <div class="col">
+                                                <a href="{{ .Href }}" class="text-decoration-none">
+                                                    <div class="card bucket-card h-100 shadow-sm">
+                                                        <div class="card-body py-2">
+                                                            <div class="d-flex flex-column">
+                                                                <div class="fw-semibold">{{ .Label }}</div>
+                                                                <div class="text-muted small">
+                                                                    <span class="count">{{ .Count }}</span> 部，
+                                                                    <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        {{ end }}
+                                    </div>
+                                </section>
+                            {{ end }}
+
+                            {{ if .BucketsQ }}
+                                <section class="mb-2" aria-label="Quarters">
+                                    <div class="row row-cols-2 row-cols-sm-2 row-cols-lg-4 g-3">
+                                        {{ range .BucketsQ }}
                                             <div class="col">
                                                 <a href="{{ .Href }}" class="text-decoration-none">
                                                     <div class="card bucket-card h-100 shadow-sm">
@@ -86,7 +110,7 @@
 
                             {{ if .BucketsM }}
                                 <section class="mb-2" aria-label="Months">
-                                    <div class="row row-cols-6 g-3">
+                                    <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
                                         {{ range .BucketsM }}
                                             <div class="col">
                                                 <a href="{{ .Href }}" class="text-decoration-none">
@@ -109,82 +133,47 @@
                             {{ end }}
                         </div>
 
-                        <!-- Top 演员：卡片可点击跳转到 /cards?cn=...&owned=3&{rs/re 或 bs/be}=range -->
+                        <!-- Top 演员（卡片 10/行的样式保持不变） -->
                         {{ if .TopCasts }}
                             <section class="mt-4" aria-label="Top Actors">
                                 <h5 class="mb-2 fw-bold text-dark">Top 演员</h5>
                                 <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                    {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
                                     {{ range $i, $c := .TopCasts }}
-                                        {{ $base := (print "/cards?owned=3&cn=" (urlquery $c.Name)) }}
-                                        {{ if and $.RangeStart $.RangeEnd }}
-                                            {{ if eq $.Mode "birth" }}
-                                                {{ $href := (print $base "&bs=" $.RangeStart "&be=" $.RangeEnd) }}
-                                                <a href="{{ $href }}" class="text-decoration-none" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
-                                                        <div class="card-body p-2 text-center">
-                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                                <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
-                                                            </div>
-                                                            <div class="d-flex flex-column align-items-center gap-1">
-                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                                    出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
-                                                                </span>
-                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                                    ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            {{ else }}
-                                                {{ $href := (print $base "&rs=" $.RangeStart "&re=" $.RangeEnd) }}
-                                                <a href="{{ $href }}" class="text-decoration-none" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
-                                                        <div class="card-body p-2 text-center">
-                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                                <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
-                                                            </div>
-                                                            <div class="d-flex flex-column align-items-center gap-1">
-                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                                    出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
-                                                                </span>
-                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                                    ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            {{ end }}
+                                        {{/* 生成跳转链接：按模式决定使用 rs/re 还是 bs/be */}}
+                                        {{ $u := (printf "/cards?cn=%s&owned=3" (urlquery $c.Name)) }}
+                                        {{ if eq $mode "release" }}
+                                            {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
+                                            {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                         {{ else }}
-                                            <!-- 没有时间范围（顶层页）：仅带演员名与 owned -->
-                                            <a href="{{ $base }}" class="text-decoration-none" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                <div class="card shadow-sm" style="background-color:#f8f9fa;">
-                                                    <div class="card-body p-2 text-center">
-                                                        <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                            <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                            <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
-                                                        </div>
-                                                        <div class="d-flex flex-column align-items-center gap-1">
-                                                            <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                                出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
-                                                            </span>
-                                                            <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                                ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
-                                                            </span>
-                                                        </div>
+                                            {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                            {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
+                                        {{ end }}
+
+                                        <a href="{{ $u }}" class="text-decoration-none" title="{{ $c.Name }}" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
+                                            <div class="card shadow-sm" style="background-color: #f8f9fa;">
+                                                <div class="card-body p-2 text-center">
+                                                    <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                        <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                        <span class="text-primary fw-semibold text-truncate">{{ $c.Name }}</span>
+                                                    </div>
+                                                    <div class="d-flex flex-column align-items-center gap-1">
+                                                        <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                            出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
+                                                        </span>
+                                                        <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                            ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            </a>
-                                        {{ end }}
+                                            </div>
+                                        </a>
                                     {{ end }}
                                 </div>
                             </section>
                         {{ end }}
 
-                        <!-- 电影网格（复用 card） -->
+                        <!-- 电影网格 -->
                         <section aria-label="Movies">
                             <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
                                 {{ range .Movies }}
