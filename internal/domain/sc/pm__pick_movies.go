@@ -23,7 +23,7 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateEnd: "2025-01-01",
 				//FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 0,
+			w: 3,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
@@ -31,7 +31,7 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 0,
+			w: 14,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
@@ -39,12 +39,12 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeStart: "2025-10-01",
 			},
-			w: 22,
+			w: 16,
 		},
 	}
 
 	// 例如抽取 20 个
-	movieTypes, err := l.PickFromSources(ctx, reqs, 5)
+	movieTypes, err := l.PickFromSources(ctx, reqs, 36)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,6 @@ func (l *ScService) copyFileToDestination(srcFilePath string) error {
 	}
 	return nil
 }
-
 func (l *ScService) LogPicks(mts []*types.MovieType) {
 	if len(mts) == 0 {
 		l.deps.Log.Info("没有可打印的 picks")
@@ -98,6 +97,7 @@ func (l *ScService) LogPicks(mts []*types.MovieType) {
 	l.deps.Log.Info(strings.Repeat("-", 100))
 
 	// ---------- 打印每行 ----------
+	var totalSize int64
 	for _, mt := range mts {
 		if mt == nil {
 			continue
@@ -123,9 +123,18 @@ func (l *ScService) LogPicks(mts []*types.MovieType) {
 		releasingDate := mt.ReleasingDate
 		scTimes := mt.ScTimes
 
+		// 累加 Size
+		if mt.VFilm != nil {
+			totalSize += mt.VFilm.Size
+		}
+
 		l.deps.Log.Infof("%-25s | %-15s | %-12s | %-8d | %-12s | %-19s",
 			name, cast0, filmDate, scTimes, releasingDate, castLastSc)
 	}
+
+	// ---------- 打印总大小 ----------
+	gb := float64(totalSize) / (1024 * 1024 * 1024)
+	l.deps.Log.Infof("总文件大小: %.2f GB", gb)
 }
 
 // 辅助：解析日期字符串（支持 "2006-01-02" / "20060102"）

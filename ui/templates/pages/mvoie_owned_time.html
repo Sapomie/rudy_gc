@@ -62,7 +62,7 @@
                         <div class="mt-2">
                             {{ if .BucketsY }}
                                 <section class="mb-2" aria-label="Years">
-                                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
+                                    <div class="row row-cols-6 g-3">
                                         {{ range .BucketsY }}
                                             <div class="col">
                                                 <a href="{{ .Href }}" class="text-decoration-none">
@@ -86,7 +86,7 @@
 
                             {{ if .BucketsM }}
                                 <section class="mb-2" aria-label="Months">
-                                    <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-8 g-3">
+                                    <div class="row row-cols-6 g-3">
                                         {{ range .BucketsM }}
                                             <div class="col">
                                                 <a href="{{ .Href }}" class="text-decoration-none">

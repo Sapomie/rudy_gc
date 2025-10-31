@@ -45,6 +45,29 @@ func parseYMD(s string) (time.Time, bool) {
 	return t, true
 }
 
+/************ TopN 读取（从外部传入） ************/
+
+func clampTopN(n int) int {
+	if n < 1 {
+		return 1
+	}
+	if n > 200 {
+		return 200
+	}
+	return n
+}
+
+// 支持 tn、top、topn、tc 这几个 query 键，默认 20
+func readTopN(c *gin.Context) int {
+	keys := []string{"tn", "top", "topn", "tc"}
+	for _, k := range keys {
+		if v := c.Query(k); v != "" {
+			return clampTopN(atoiDef(v, 30))
+		}
+	}
+	return 30
+}
+
 /************ 分桶结构（含总大小） ************/
 
 type YearBucket struct {
@@ -174,6 +197,8 @@ func NewMovieAggHTMLHandler(deps *svc.Deps) *MovieAggHTMLHandler {
 
 // /movie-agg/release
 func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context) {
+	topN := readTopN(c)
+
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
 	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
 	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByReleasingDate), consts.OrderByReleasingDate)
@@ -225,7 +250,7 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context) {
 	sort.Slice(years, func(i, j int) bool { return years[i].Year > years[j].Year })
 
 	// 顶层 Top 演员：全量
-	topCasts := buildTopCasts(allResp.List, 20)
+	topCasts := buildTopCasts(allResp.List, topN)
 
 	// 顶层卡片（当前排序分页）
 	listReq := &types.ListMovieFullRequest{
@@ -257,6 +282,8 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context) {
 
 // /movie-agg/release/:year
 func (h *MovieAggHTMLHandler) MovieAggReleaseMonths(c *gin.Context) {
+	topN := readTopN(c)
+
 	year, _ := strconv.Atoi(c.Param("year"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
 	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
@@ -306,7 +333,7 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseMonths(c *gin.Context) {
 	}
 	sort.Slice(months, func(i, j int) bool { return months[i].Month < months[j].Month })
 
-	topCasts := buildTopCasts(rResp.List, 20)
+	topCasts := buildTopCasts(rResp.List, topN)
 
 	listReq := &types.ListMovieFullRequest{
 		Owned:              consts.OwnedAllNotRemoved,
@@ -338,6 +365,8 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseMonths(c *gin.Context) {
 
 // /movie-agg/release/:year/:month
 func (h *MovieAggHTMLHandler) MovieAggReleaseMonth(c *gin.Context) {
+	topN := readTopN(c)
+
 	year, _ := strconv.Atoi(c.Param("year"))
 	month, _ := strconv.Atoi(c.Param("month"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
@@ -354,7 +383,7 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseMonth(c *gin.Context) {
 		Page: 1, PageSize: 999999,
 	}
 	allResp, _ := h.movieSvc.ListMovieFull(c.Request.Context(), allReq)
-	topCasts := buildTopCasts(allResp.List, 20)
+	topCasts := buildTopCasts(allResp.List, topN)
 
 	req := &types.ListMovieFullRequest{
 		Owned:              consts.OwnedAllNotRemoved,
@@ -387,6 +416,8 @@ func (h *MovieAggHTMLHandler) MovieAggReleaseMonth(c *gin.Context) {
 
 // /movie-agg/birth
 func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
+	topN := readTopN(c)
+
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
 	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
 	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByBirthTime), consts.OrderByBirthTime)
@@ -438,7 +469,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 	sort.Slice(years, func(i, j int) bool { return years[i].Year > years[j].Year })
 
 	// 顶层 Top 演员：全量
-	topCasts := buildTopCasts(allResp.List, 20)
+	topCasts := buildTopCasts(allResp.List, topN)
 
 	// 顶层卡片（当前排序分页）
 	listReq := &types.ListMovieFullRequest{
@@ -470,6 +501,8 @@ func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
 
 // /movie-agg/birth/:year
 func (h *MovieAggHTMLHandler) MovieAggBirthMonths(c *gin.Context) {
+	topN := readTopN(c)
+
 	year, _ := strconv.Atoi(c.Param("year"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
 	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
@@ -518,7 +551,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthMonths(c *gin.Context) {
 	}
 	sort.Slice(months, func(i, j int) bool { return months[i].Month < months[j].Month })
 
-	topCasts := buildTopCasts(rResp.List, 20)
+	topCasts := buildTopCasts(rResp.List, topN)
 
 	listReq := &types.ListMovieFullRequest{
 		Owned:              consts.OwnedAllNotRemoved,
@@ -550,6 +583,8 @@ func (h *MovieAggHTMLHandler) MovieAggBirthMonths(c *gin.Context) {
 
 // /movie-agg/birth/:year/:month
 func (h *MovieAggHTMLHandler) MovieAggBirthMonth(c *gin.Context) {
+	topN := readTopN(c)
+
 	year, _ := strconv.Atoi(c.Param("year"))
 	month, _ := strconv.Atoi(c.Param("month"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
@@ -566,7 +601,7 @@ func (h *MovieAggHTMLHandler) MovieAggBirthMonth(c *gin.Context) {
 		Page: 1, PageSize: 999999,
 	}
 	allResp, _ := h.movieSvc.ListMovieFull(c.Request.Context(), allReq)
-	topCasts := buildTopCasts(allResp.List, 20)
+	topCasts := buildTopCasts(allResp.List, topN)
 
 	req := &types.ListMovieFullRequest{
 		Owned:              consts.OwnedAllNotRemoved,
