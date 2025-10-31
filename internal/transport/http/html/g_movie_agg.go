@@ -14,9 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-/************ 本文件内使用的默认值 ************/
-const defaultPS = 18 // 统一把默认页面大小改为 18
-
 /************ 基础工具 ************/
 
 func atoiDef(s string, def int) int {
@@ -27,12 +24,12 @@ func atoiDef(s string, def int) int {
 	return v
 }
 
-func clampPageSize(ps, def, max int) int {
+func clampPageSize(ps int) int {
 	if ps <= 0 {
-		return def
+		return defaultPageSize
 	}
-	if max > 0 && ps > max {
-		return max
+	if ps > maxPageSize {
+		return maxPageSize
 	}
 	return ps
 }
@@ -48,7 +45,7 @@ func parseYMD(s string) (time.Time, bool) {
 	return t, true
 }
 
-/************ 分桶结构（含总大小 GB） ************/
+/************ 分桶结构（含总大小） ************/
 
 type YearBucket struct {
 	Year   int
@@ -66,6 +63,65 @@ type MonthBucket struct {
 	Label  string
 }
 
+/************ 演员 Top 结构 ************/
+
+type CastStat struct {
+	Name  string
+	Count int   // 出现次数（影片数）
+	ScSum int64 // 该演员出现的影片的 ScTimes 求和
+}
+
+func buildTopCasts(movies []*types.MovieType, topN int) []CastStat {
+	if topN <= 0 {
+		topN = 20
+	}
+	type agg struct {
+		n     int
+		scsum int64
+	}
+	mp := make(map[string]*agg, 1024)
+
+	for _, m := range movies {
+		sc := m.ScTimes
+		for _, c := range m.Cast {
+			if c == nil || c.Name == "" {
+				continue
+			}
+			a := mp[c.Name]
+			if a == nil {
+				a = &agg{}
+				mp[c.Name] = a
+			}
+			a.n++
+			a.scsum += sc
+		}
+	}
+
+	out := make([]CastStat, 0, len(mp))
+	for name, a := range mp {
+		out = append(out, CastStat{
+			Name:  name,
+			Count: a.n,
+			ScSum: a.scsum,
+		})
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		if out[i].ScSum != out[j].ScSum {
+			return out[i].ScSum > out[j].ScSum
+		}
+		return out[i].Name < out[j].Name
+	})
+
+	if len(out) > topN {
+		out = out[:topN]
+	}
+	return out
+}
+
 /************ 面包屑 ************/
 
 type Breadcrumb struct {
@@ -76,7 +132,7 @@ type Breadcrumb struct {
 func buildAggBreadcrumbs(mode string, year, month int) []Breadcrumb {
 	var rootTitle, rootHref string
 	if mode == "birth" {
-		rootTitle = "下载日"
+		rootTitle = "拍摄日"
 		rootHref = "/movie-agg/birth"
 	} else {
 		rootTitle = "上映日"
@@ -85,55 +141,19 @@ func buildAggBreadcrumbs(mode string, year, month int) []Breadcrumb {
 	bcs := []Breadcrumb{{Title: rootTitle, Href: rootHref}}
 
 	if year > 0 && month <= 0 {
-		// 年层
-		bcs = append(bcs, Breadcrumb{
-			Title: fmt.Sprintf("%d 年", year),
-			Href:  "", // 当前
-		})
+		bcs = append(bcs, Breadcrumb{Title: fmt.Sprintf("%d 年", year), Href: ""})
 		return bcs
 	}
 	if year > 0 && month > 0 {
-		// 月层
 		yearHref := fmt.Sprintf("%s/%d", rootHref, year)
-		bcs = append(bcs, Breadcrumb{
-			Title: fmt.Sprintf("%d 年", year),
-			Href:  yearHref,
-		})
-		bcs = append(bcs, Breadcrumb{
-			Title: fmt.Sprintf("%02d 月", month),
-			Href:  "", // 当前
-		})
+		bcs = append(bcs,
+			Breadcrumb{Title: fmt.Sprintf("%d 年", year), Href: yearHref},
+			Breadcrumb{Title: fmt.Sprintf("%02d 月", month), Href: ""},
+		)
 		return bcs
 	}
-	// 根层：只有根节点，当前页
-	bcs[0].Href = "" // 当前页不跳转
+	bcs[0].Href = "" // 根层当前页
 	return bcs
-}
-
-/************ 日期字段选择：release vs birth ************/
-
-// 返回：默认排序键、提取 MovieType 日期字符串的函数、设置请求日期范围的函数
-func pickDateOps(mode string) (
-	defaultOD string,
-	getDate func(*types.MovieType) string,
-	applyRange func(req *types.ListMovieFullRequest, start, end string),
-) {
-	if mode == "birth" {
-		defaultOD = consts.OrderByBirthTime
-		getDate = func(m *types.MovieType) string { return m.FilmBirthDate }
-		applyRange = func(req *types.ListMovieFullRequest, start, end string) {
-			req.FilmBirthTimeStart = start
-			req.FilmBirthTimeEnd = end
-		}
-	} else {
-		defaultOD = consts.OrderByReleasingDate
-		getDate = func(m *types.MovieType) string { return m.ReleasingDate }
-		applyRange = func(req *types.ListMovieFullRequest, start, end string) {
-			req.ReleasingDateStart = start
-			req.ReleasingDateEnd = end
-		}
-	}
-	return
 }
 
 /************ Handler ************/
@@ -150,30 +170,16 @@ func NewMovieAggHTMLHandler(deps *svc.Deps) *MovieAggHTMLHandler {
 	}
 }
 
-/* ------------------------- 对外路由包装（保持你现有的 6 个路由） ------------------------- */
+/* ------------------------- 上映日（release） ------------------------- */
 
-// 上映日（release）
-func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context)  { h.aggYears(c, "release") }
-func (h *MovieAggHTMLHandler) MovieAggReleaseMonths(c *gin.Context) { h.aggMonths(c, "release") }
-func (h *MovieAggHTMLHandler) MovieAggReleaseMonth(c *gin.Context)  { h.aggMonth(c, "release") }
-
-// 下载日（birth）
-func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context)  { h.aggYears(c, "birth") }
-func (h *MovieAggHTMLHandler) MovieAggBirthMonths(c *gin.Context) { h.aggMonths(c, "birth") }
-func (h *MovieAggHTMLHandler) MovieAggBirthMonth(c *gin.Context)  { h.aggMonth(c, "birth") }
-
-/* ------------------------- 公共实现：年层 / 月层 / 某月卡片 ------------------------- */
-
-// 顶层“年聚合”页：展示所有年份桶 + “最新年份”的卡片
-func (h *MovieAggHTMLHandler) aggYears(c *gin.Context, mode string) {
+// /movie-agg/release
+func (h *MovieAggHTMLHandler) MovieAggReleaseYears(c *gin.Context) {
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
-	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPS)), defaultPS), defaultPS, maxPageSize)
-
-	defOD, getDate, applyRange := pickDateOps(mode)
-	curOD := normalizeOrderBy(c.DefaultQuery("od", defOD), defOD)
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByReleasingDate), consts.OrderByReleasingDate)
 	sq := buildSortQuery(c, curOD)
 
-	// 拉全量聚合 “年桶”
+	// 全量一次性拉取（既用于年桶，也用于顶层 TopCasts）
 	allReq := &types.ListMovieFullRequest{
 		Owned:    consts.OwnedAllNotRemoved,
 		Page:     1,
@@ -185,55 +191,48 @@ func (h *MovieAggHTMLHandler) aggYears(c *gin.Context, mode string) {
 		return
 	}
 
-	type agg struct {
+	// 年桶
+	type aggY struct {
 		n     int
 		bytes int64
 	}
-	yearAgg := map[int]*agg{}
-	maxYear := 0
+	yearAgg := map[int]*aggY{}
 	for _, m := range allResp.List {
-		if t, ok := parseYMD(getDate(m)); ok {
-			y := t.Year()
-			if y > maxYear {
-				maxYear = y
-			}
-			if yearAgg[y] == nil {
-				yearAgg[y] = &agg{}
-			}
-			yearAgg[y].n++
-			if m.VFilm != nil {
-				yearAgg[y].bytes += m.VFilm.Size
-			}
+		t, ok := parseYMD(m.ReleasingDate)
+		if !ok {
+			continue
+		}
+		y := t.Year()
+		if yearAgg[y] == nil {
+			yearAgg[y] = &aggY{}
+		}
+		yearAgg[y].n++
+		if m.VFilm != nil {
+			yearAgg[y].bytes += m.VFilm.Size
 		}
 	}
 	years := make([]YearBucket, 0, len(yearAgg))
-	root := "/movie-agg/release"
-	if mode == "birth" {
-		root = "/movie-agg/birth"
-	}
 	for y, a := range yearAgg {
 		gb := float64(a.bytes) / (1024.0 * 1024.0 * 1024.0)
 		years = append(years, YearBucket{
 			Year:   y,
 			Count:  a.n,
 			SizeGB: gb,
-			Href:   fmt.Sprintf("%s/%d", root, y),
+			Href:   fmt.Sprintf("/movie-agg/release/%d", y),
 			Label:  fmt.Sprintf("%d 年", y),
 		})
 	}
 	sort.Slice(years, func(i, j int) bool { return years[i].Year > years[j].Year })
 
-	// 顶层卡片：展示“最新年份”的片子（避免与聚合语义不一致）
+	// 顶层 Top 演员：✅ 改为基于“全量 allResp.List”
+	topCasts := buildTopCasts(allResp.List, 20)
+
+	// 顶层卡片（保持现状：展示按当前排序的分页列表）
 	listReq := &types.ListMovieFullRequest{
 		Owned:    consts.OwnedAllNotRemoved,
 		OrderBy:  curOD,
 		Page:     int64(page),
 		PageSize: int64(size),
-	}
-	if maxYear > 0 {
-		start := fmt.Sprintf("%04d-01-01", maxYear)
-		end := fmt.Sprintf("%04d-12-31", maxYear)
-		applyRange(listReq, start, end)
 	}
 	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), listReq)
 	if err != nil {
@@ -241,160 +240,343 @@ func (h *MovieAggHTMLHandler) aggYears(c *gin.Context, mode string) {
 		return
 	}
 	pi := BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
-	bcs := buildAggBreadcrumbs(mode, 0, 0)
+	bcs := buildAggBreadcrumbs("release", 0, 0)
 
 	c.HTML(200, "page.movie_agg_time", gin.H{
-		"Title":       "电影聚合 · " + map[string]string{"release": "上映日", "birth": "下载日"}[mode],
-		"Mode":        mode,
-		"Year":        0,
-		"Month":       0,
+		"Title": "电影聚合 · 上映日",
+		"Mode":  "release",
+		"Year":  0, "Month": 0,
 		"Breadcrumbs": bcs,
-		"BucketsY":    years,
-		"BucketsM":    nil,
-		"Movies":      listResp.List,
-		"Total":       listResp.Total,
-		"PageInfo":    pi,
-		"sortQuery":   sq, // 兼容你的 sort_bar
-		"SortQuery":   sq, // 有的模板用了 SortQuery，有的用了 sortQuery，两个都给
-		"CurrentSort": curOD,
+		"BucketsY":    years, "BucketsM": nil,
+		"TopCasts": topCasts,
+		"Movies":   listResp.List, "Total": listResp.Total,
+		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
 	})
 }
 
-// 某“年聚合”页：展示 12 个月桶 + 当年的卡片
-func (h *MovieAggHTMLHandler) aggMonths(c *gin.Context, mode string) {
+// /movie-agg/release/:year
+func (h *MovieAggHTMLHandler) MovieAggReleaseMonths(c *gin.Context) {
 	year, _ := strconv.Atoi(c.Param("year"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
-	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPS)), defaultPS), defaultPS, maxPageSize)
-
-	defOD, getDate, applyRange := pickDateOps(mode)
-	curOD := normalizeOrderBy(c.DefaultQuery("od", defOD), defOD)
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByReleasingDate), consts.OrderByReleasingDate)
 	sq := buildSortQuery(c, curOD)
 
-	// 该年的月桶
+	// 该年全量（用于月份桶 + TopCasts）
 	rReq := &types.ListMovieFullRequest{
-		Owned:    consts.OwnedAllNotRemoved,
-		Page:     1,
-		PageSize: 999999,
+		Owned:              consts.OwnedAllNotRemoved,
+		ReleasingDateStart: fmt.Sprintf("%04d-01-01", year),
+		ReleasingDateEnd:   fmt.Sprintf("%04d-12-31", year),
+		Page:               1, PageSize: 999999,
 	}
-	applyRange(rReq, fmt.Sprintf("%04d-01-01", year), fmt.Sprintf("%04d-12-31", year))
-
 	rResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), rReq)
 	if err != nil {
 		c.String(500, "加载失败: %v", err)
 		return
 	}
 
-	type agg struct {
+	type aggM struct {
 		n     int
 		bytes int64
 	}
-	monAgg := map[int]*agg{}
+	monAgg := map[int]*aggM{}
 	for _, m := range rResp.List {
-		if t, ok := parseYMD(getDate(m)); ok {
-			mm := int(t.Month())
-			if monAgg[mm] == nil {
-				monAgg[mm] = &agg{}
-			}
-			monAgg[mm].n++
-			if m.VFilm != nil {
-				monAgg[mm].bytes += m.VFilm.Size
-			}
+		t, ok := parseYMD(m.ReleasingDate)
+		if !ok {
+			continue
+		}
+		mm := int(t.Month())
+		if monAgg[mm] == nil {
+			monAgg[mm] = &aggM{}
+		}
+		monAgg[mm].n++
+		if m.VFilm != nil {
+			monAgg[mm].bytes += m.VFilm.Size
 		}
 	}
 	months := make([]MonthBucket, 0, len(monAgg))
-	root := "/movie-agg/release"
-	if mode == "birth" {
-		root = "/movie-agg/birth"
-	}
 	for m, a := range monAgg {
 		gb := float64(a.bytes) / (1024.0 * 1024.0 * 1024.0)
 		months = append(months, MonthBucket{
-			Month:  m,
-			Count:  a.n,
-			SizeGB: gb,
-			Href:   fmt.Sprintf("%s/%d/%02d", root, year, m),
-			Label:  fmt.Sprintf("%02d 月", m),
+			Month: m, Count: a.n, SizeGB: gb,
+			Href:  fmt.Sprintf("/movie-agg/release/%d/%02d", year, m),
+			Label: fmt.Sprintf("%02d 月", m),
 		})
 	}
 	sort.Slice(months, func(i, j int) bool { return months[i].Month < months[j].Month })
 
-	// 当年卡片（带排序/分页）
-	listReq := &types.ListMovieFullRequest{
-		Owned:    consts.OwnedAllNotRemoved,
-		OrderBy:  curOD,
-		Page:     int64(page),
-		PageSize: int64(size),
-	}
-	applyRange(listReq, fmt.Sprintf("%04d-01-01", year), fmt.Sprintf("%04d-12-31", year))
+	topCasts := buildTopCasts(rResp.List, 20)
 
+	listReq := &types.ListMovieFullRequest{
+		Owned:              consts.OwnedAllNotRemoved,
+		ReleasingDateStart: fmt.Sprintf("%04d-01-01", year),
+		ReleasingDateEnd:   fmt.Sprintf("%04d-12-31", year),
+		OrderBy:            curOD, Page: int64(page), PageSize: int64(size),
+	}
 	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), listReq)
 	if err != nil {
 		c.String(500, "加载失败: %v", err)
 		return
 	}
 	pi := BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
-	bcs := buildAggBreadcrumbs(mode, year, 0)
+	bcs := buildAggBreadcrumbs("release", year, 0)
 
 	c.HTML(200, "page.movie_agg_time", gin.H{
-		"Title":       fmt.Sprintf("%s · %d 年", map[string]string{"release": "上映日", "birth": "下载日"}[mode], year),
-		"Mode":        mode,
-		"Year":        year,
-		"Month":       0,
+		"Title": fmt.Sprintf("上映日 · %d 年", year),
+		"Mode":  "release", "Year": year, "Month": 0,
 		"Breadcrumbs": bcs,
-		"BucketsY":    nil,
-		"BucketsM":    months,
-		"Movies":      listResp.List,
-		"Total":       listResp.Total,
-		"PageInfo":    pi,
-		"sortQuery":   sq,
-		"SortQuery":   sq,
-		"CurrentSort": curOD,
+		"BucketsY":    nil, "BucketsM": months,
+		"TopCasts": topCasts,
+		"Movies":   listResp.List, "Total": listResp.Total,
+		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
 	})
 }
 
-// 某“年-月”卡片页：只展示该月的影片卡片
-func (h *MovieAggHTMLHandler) aggMonth(c *gin.Context, mode string) {
+// /movie-agg/release/:year/:month
+func (h *MovieAggHTMLHandler) MovieAggReleaseMonth(c *gin.Context) {
 	year, _ := strconv.Atoi(c.Param("year"))
 	month, _ := strconv.Atoi(c.Param("month"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
-	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPS)), defaultPS), defaultPS, maxPageSize)
-
-	defOD, _, applyRange := pickDateOps(mode)
-	curOD := normalizeOrderBy(c.DefaultQuery("od", defOD), defOD)
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByReleasingDate), consts.OrderByReleasingDate)
 	sq := buildSortQuery(c, curOD)
 
 	start := fmt.Sprintf("%04d-%02d-01", year, month)
-	end := fmt.Sprintf("%04d-%02d-31", year, month)
+	end := time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Format("2006-01-02")
+
+	allReq := &types.ListMovieFullRequest{
+		Owned:              consts.OwnedAllNotRemoved,
+		ReleasingDateStart: start, ReleasingDateEnd: end,
+		Page: 1, PageSize: 999999,
+	}
+	allResp, _ := h.movieSvc.ListMovieFull(c.Request.Context(), allReq)
+	topCasts := buildTopCasts(allResp.List, 20)
 
 	req := &types.ListMovieFullRequest{
-		Owned:    consts.OwnedAllNotRemoved,
-		OrderBy:  curOD,
-		Page:     int64(page),
-		PageSize: int64(size),
+		Owned:              consts.OwnedAllNotRemoved,
+		ReleasingDateStart: start, ReleasingDateEnd: end,
+		OrderBy: curOD, Page: int64(page), PageSize: int64(size),
 	}
-	applyRange(req, start, end)
-
 	resp, err := h.movieSvc.ListMovieFull(c.Request.Context(), req)
 	if err != nil {
 		c.String(500, "加载失败: %v", err)
 		return
 	}
 	pi := BuildPageInfo(c, resp.Total, int64(page), int64(size), pageWindow)
-	bcs := buildAggBreadcrumbs(mode, year, month)
+	bcs := buildAggBreadcrumbs("release", year, month)
 
 	c.HTML(200, "page.movie_agg_time", gin.H{
-		"Title":       fmt.Sprintf("%s · %d 年 %02d 月", map[string]string{"release": "上映日", "birth": "下载日"}[mode], year, month),
-		"Mode":        mode,
-		"Year":        year,
-		"Month":       month,
+		"Title": fmt.Sprintf("上映日 · %d 年 %02d 月", year, month),
+		"Mode":  "release", "Year": year, "Month": month,
 		"Breadcrumbs": bcs,
-		"BucketsY":    nil,
-		"BucketsM":    nil,
-		"Movies":      resp.List,
-		"Total":       resp.Total,
-		"PageInfo":    pi,
-		"sortQuery":   sq,
-		"SortQuery":   sq,
-		"CurrentSort": curOD,
+		"BucketsY":    nil, "BucketsM": nil,
+		"TopCasts": topCasts,
+		"Movies":   resp.List, "Total": resp.Total,
+		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+	})
+}
+
+/* ------------------------- 拍摄日（birth）------------------------- */
+
+// /movie-agg/birth
+func (h *MovieAggHTMLHandler) MovieAggBirthYears(c *gin.Context) {
+	page := atoiDef(c.DefaultQuery("p", "1"), 1)
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByBirthTime), consts.OrderByBirthTime)
+	sq := buildSortQuery(c, curOD)
+
+	// 全量一次性拉取（既用于年桶，也用于顶层 TopCasts）✅ 修正：TopCasts 用全量
+	allReq := &types.ListMovieFullRequest{
+		Owned:    consts.OwnedAllNotRemoved,
+		Page:     1,
+		PageSize: 999999,
+	}
+	allResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), allReq)
+	if err != nil {
+		c.String(500, "加载失败: %v", err)
+		return
+	}
+
+	// 年桶（按拍摄日）
+	type aggY struct {
+		n     int
+		bytes int64
+	}
+	yearAgg := map[int]*aggY{}
+	for _, m := range allResp.List {
+		t, ok := parseYMD(m.FilmBirthDate)
+		if !ok {
+			continue
+		}
+		y := t.Year()
+		if yearAgg[y] == nil {
+			yearAgg[y] = &aggY{}
+		}
+		yearAgg[y].n++
+		if m.VFilm != nil {
+			yearAgg[y].bytes += m.VFilm.Size
+		}
+	}
+	years := make([]YearBucket, 0, len(yearAgg))
+	for y, a := range yearAgg {
+		gb := float64(a.bytes) / (1024.0 * 1024.0 * 1024.0)
+		years = append(years, YearBucket{
+			Year:   y,
+			Count:  a.n,
+			SizeGB: gb,
+			Href:   fmt.Sprintf("/movie-agg/birth/%d", y),
+			Label:  fmt.Sprintf("%d 年", y),
+		})
+	}
+	sort.Slice(years, func(i, j int) bool { return years[i].Year > years[j].Year })
+
+	// 顶层 Top 演员：✅ 改为基于“全量 allResp.List”（修复你指出的问题）
+	topCasts := buildTopCasts(allResp.List, 20)
+
+	// 顶层卡片（保持现状：展示按当前排序的分页列表）
+	listReq := &types.ListMovieFullRequest{
+		Owned:    consts.OwnedAllNotRemoved,
+		OrderBy:  curOD,
+		Page:     int64(page),
+		PageSize: int64(size),
+	}
+	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), listReq)
+	if err != nil {
+		c.String(500, "加载失败: %v", err)
+		return
+	}
+	pi := BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
+	bcs := buildAggBreadcrumbs("birth", 0, 0)
+
+	c.HTML(200, "page.movie_agg_time", gin.H{
+		"Title": "电影聚合 · 拍摄日",
+		"Mode":  "birth",
+		"Year":  0, "Month": 0,
+		"Breadcrumbs": bcs,
+		"BucketsY":    years, "BucketsM": nil,
+		"TopCasts": topCasts,
+		"Movies":   listResp.List, "Total": listResp.Total,
+		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+	})
+}
+
+// /movie-agg/birth/:year
+func (h *MovieAggHTMLHandler) MovieAggBirthMonths(c *gin.Context) {
+	year, _ := strconv.Atoi(c.Param("year"))
+	page := atoiDef(c.DefaultQuery("p", "1"), 1)
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByBirthTime), consts.OrderByBirthTime)
+	sq := buildSortQuery(c, curOD)
+
+	// 该年全量（用于月份桶 + TopCasts）
+	rReq := &types.ListMovieFullRequest{
+		Owned:              consts.OwnedAllNotRemoved,
+		FilmBirthTimeStart: fmt.Sprintf("%04d-01-01", year),
+		FilmBirthTimeEnd:   fmt.Sprintf("%04d-12-31", year),
+		Page:               1, PageSize: 999999,
+	}
+	rResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), rReq)
+	if err != nil {
+		c.String(500, "加载失败: %v", err)
+		return
+	}
+	type aggM struct {
+		n     int
+		bytes int64
+	}
+	monAgg := map[int]*aggM{}
+	for _, m := range rResp.List {
+		t, ok := parseYMD(m.FilmBirthDate)
+		if !ok {
+			continue
+		}
+		mm := int(t.Month())
+		if monAgg[mm] == nil {
+			monAgg[mm] = &aggM{}
+		}
+		monAgg[mm].n++
+		if m.VFilm != nil {
+			monAgg[mm].bytes += m.VFilm.Size
+		}
+	}
+	months := make([]MonthBucket, 0, len(monAgg))
+	for m, a := range monAgg {
+		gb := float64(a.bytes) / (1024.0 * 1024.0 * 1024.0)
+		months = append(months, MonthBucket{
+			Month: m, Count: a.n, SizeGB: gb,
+			Href:  fmt.Sprintf("/movie-agg/birth/%d/%02d", year, m),
+			Label: fmt.Sprintf("%02d 月", m),
+		})
+	}
+	sort.Slice(months, func(i, j int) bool { return months[i].Month < months[j].Month })
+
+	topCasts := buildTopCasts(rResp.List, 20)
+
+	listReq := &types.ListMovieFullRequest{
+		Owned:              consts.OwnedAllNotRemoved,
+		FilmBirthTimeStart: fmt.Sprintf("%04d-01-01", year),
+		FilmBirthTimeEnd:   fmt.Sprintf("%04d-12-31", year),
+		OrderBy:            curOD, Page: int64(page), PageSize: int64(size),
+	}
+	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), listReq)
+	if err != nil {
+		c.String(500, "加载失败: %v", err)
+		return
+	}
+	pi := BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
+	bcs := buildAggBreadcrumbs("birth", year, 0)
+
+	c.HTML(200, "page.movie_agg_time", gin.H{
+		"Title": fmt.Sprintf("拍摄日 · %d 年", year),
+		"Mode":  "birth", "Year": year, "Month": 0,
+		"Breadcrumbs": bcs,
+		"BucketsY":    nil, "BucketsM": months,
+		"TopCasts": topCasts,
+		"Movies":   listResp.List, "Total": listResp.Total,
+		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
+	})
+}
+
+// /movie-agg/birth/:year/:month
+func (h *MovieAggHTMLHandler) MovieAggBirthMonth(c *gin.Context) {
+	year, _ := strconv.Atoi(c.Param("year"))
+	month, _ := strconv.Atoi(c.Param("month"))
+	page := atoiDef(c.DefaultQuery("p", "1"), 1)
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	curOD := normalizeOrderBy(c.DefaultQuery("od", consts.OrderByBirthTime), consts.OrderByBirthTime)
+	sq := buildSortQuery(c, curOD)
+
+	start := fmt.Sprintf("%04d-%02d-01", year, month)
+	end := time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Format("2006-01-02")
+
+	allReq := &types.ListMovieFullRequest{
+		Owned:              consts.OwnedAllNotRemoved,
+		FilmBirthTimeStart: start, FilmBirthTimeEnd: end,
+		Page: 1, PageSize: 999999,
+	}
+	allResp, _ := h.movieSvc.ListMovieFull(c.Request.Context(), allReq)
+	topCasts := buildTopCasts(allResp.List, 20)
+
+	req := &types.ListMovieFullRequest{
+		Owned:              consts.OwnedAllNotRemoved,
+		FilmBirthTimeStart: start, FilmBirthTimeEnd: end,
+		OrderBy: curOD, Page: int64(page), PageSize: int64(size),
+	}
+	resp, err := h.movieSvc.ListMovieFull(c.Request.Context(), req)
+	if err != nil {
+		c.String(500, "加载失败: %v", err)
+		return
+	}
+	pi := BuildPageInfo(c, resp.Total, int64(page), int64(size), pageWindow)
+	bcs := buildAggBreadcrumbs("birth", year, month)
+
+	c.HTML(200, "page.movie_agg_time", gin.H{
+		"Title": fmt.Sprintf("拍摄日 · %d 年 %02d 月", year, month),
+		"Mode":  "birth", "Year": year, "Month": month,
+		"Breadcrumbs": bcs,
+		"BucketsY":    nil, "BucketsM": nil,
+		"TopCasts": topCasts,
+		"Movies":   resp.List, "Total": resp.Total,
+		"PageInfo": pi, "sortQuery": sq, "SortQuery": sq, "CurrentSort": curOD,
 	})
 }

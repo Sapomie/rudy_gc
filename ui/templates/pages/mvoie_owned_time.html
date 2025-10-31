@@ -5,7 +5,6 @@
         <meta charset="utf-8">
         <title>{{ .Title }} - Rudy-GC</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-
         <link href="/static/css/bootstrap.min.css" rel="stylesheet">
         <link href="/static/css/icons.min.css" rel="stylesheet">
         <link href="/static/css/app.min.css" rel="stylesheet">
@@ -13,6 +12,28 @@
         <link href="/static/css/buttons.bootstrap4.min.css" rel="stylesheet">
         <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
         <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+        <style>
+            .toolbar-gap > * {
+                margin-right: .5rem;
+                margin-bottom: .5rem;
+            }
+
+            .bucket-card .count {
+                font-weight: 600;
+            }
+
+            .bucket-card .sizegb {
+                color: #6c757d;
+            }
+
+            .table-topcasts td, .table-topcasts th {
+                vertical-align: middle;
+            }
+
+            .breadcrumbs a {
+                text-decoration: none;
+            }
+        </style>
     </head>
 
     <body data-sidebar="dark">
@@ -22,128 +43,143 @@
         <div class="page-content">
             <div class="container-fluid">
 
-                <!-- 顶部工具栏：面包屑 + 模式切换 + 排序 + 顶部分页 -->
+                <!-- Sticky 工具栏 -->
                 <div class="position-sticky pb-2 pt-2 mb-3 border-bottom"
                      style="top:0; z-index:1030; background:rgba(255,255,255,.9); backdrop-filter: blur(6px);">
                     <div class="container-fluid px-0">
-                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
 
-                            <!-- 左：面包屑 + 标题 + 模式切换 -->
+                        <!-- 面包屑 + 标题 -->
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
                             <div class="flex-grow-1">
-                                <!-- 面包屑（可点） -->
-                                {{ if .Breadcrumbs }}
-                                    <nav aria-label="breadcrumb" class="mb-1">
-                                        <ol class="breadcrumb mb-1">
-                                            {{ $last := sub (len .Breadcrumbs) 1 }}
-                                            {{ range $i, $b := .Breadcrumbs }}
-                                                {{ if and (ne $b.Href "") (lt $i $last) }}
-                                                    <li class="breadcrumb-item"><a href="{{ $b.Href }}">{{ $b.Title }}</a></li>
+                                <nav class="breadcrumbs mb-1" aria-label="breadcrumb">
+                                    <ol class="breadcrumb mb-1">
+                                        {{ if .Breadcrumbs }}
+                                            {{ range .Breadcrumbs }}
+                                                {{ if .Href }}
+                                                    <li class="breadcrumb-item"><a href="{{ .Href }}">{{ .Title }}</a>
+                                                    </li>
                                                 {{ else }}
-                                                    <li class="breadcrumb-item active" aria-current="page">{{ $b.Title }}</li>
+                                                    <li class="breadcrumb-item active"
+                                                        aria-current="page">{{ .Title }}</li>
                                                 {{ end }}
                                             {{ end }}
-                                        </ol>
-                                    </nav>
-                                {{ end }}
+                                        {{ end }}
+                                    </ol>
+                                </nav>
+                                <h3 class="mb-0">{{ .Title }}</h3>
+                            </div>
 
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <h3 class="mb-0">{{ .Title }}</h3>
-                                    <div class="ms-2">
-                                        <div class="btn-group btn-group-sm" role="group" aria-label="Mode">
-                                            <a class="btn btn-outline-secondary {{ if eq .Mode "release" }}active disabled{{ end }}" href="/movie-agg/release">上映日</a>
-                                            <a class="btn btn-outline-secondary {{ if eq .Mode "birth" }}active disabled{{ end }}" href="/movie-agg/birth">下载日</a>
-                                        </div>
+                            <!-- 排序条 -->
+                            <div class="d-flex flex-wrap align-items-center toolbar-gap">
+                                {{ template "sort_bar" . }}
+                            </div>
+                        </div>
+
+                        <!-- 年/月份桶 -->
+                        <div class="mt-2">
+                            {{ if .BucketsY }}
+                                <section class="mb-2" aria-label="Years">
+                                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
+                                        {{ range .BucketsY }}
+                                            <div class="col">
+                                                <a href="{{ .Href }}" class="text-decoration-none">
+                                                    <div class="card bucket-card h-100 shadow-sm">
+                                                        <div class="card-body py-2">
+                                                            <div class="d-flex flex-column">
+                                                                <div class="fw-semibold">{{ .Label }}</div>
+                                                                <div class="text-muted small">
+                                                                    <span class="count">{{ .Count }}</span> 部，
+                                                                    <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        {{ end }}
                                     </div>
-                                </div>
-                            </div>
+                                </section>
+                            {{ end }}
 
-                            <!-- 右：排序 + 顶部分页 -->
-                            <div class="d-flex flex-wrap align-items-center">
-                                <div class="me-2">
-                                    {{ template "sort_bar" . }}
-                                </div>
-                                <div>
-                                    {{ template "pagination" . }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 年分桶 -->
-                {{ if .BucketsY }}
-                    <section class="mt-2" aria-label="年份聚合">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h5 class="mb-0">年份</h5>
-                        </div>
-                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3">
-                            {{ range .BucketsY }}
-                                <div class="col">
-                                    <a href="{{ .Href }}" class="text-decoration-none">
-                                        <div class="card h-100 shadow-sm">
-                                            <div class="card-body py-2">
-                                                <div class="fw-semibold text-truncate" title="{{ .Label }}">{{ .Label }}</div>
-                                                <div class="text-muted small">{{ .Count }} 部</div>
-                                                <div class="text-muted small">{{ printf "%.2f" .SizeGB }} GB</div>
+                            {{ if .BucketsM }}
+                                <section class="mb-2" aria-label="Months">
+                                    <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-8 g-3">
+                                        {{ range .BucketsM }}
+                                            <div class="col">
+                                                <a href="{{ .Href }}" class="text-decoration-none">
+                                                    <div class="card bucket-card h-100 shadow-sm">
+                                                        <div class="card-body py-2">
+                                                            <div class="d-flex flex-column">
+                                                                <div class="fw-semibold">{{ .Label }}</div>
+                                                                <div class="text-muted small">
+                                                                    <span class="count">{{ .Count }}</span> 部，
+                                                                    <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
                                             </div>
-                                        </div>
-                                    </a>
-                                </div>
+                                        {{ end }}
+                                    </div>
+                                </section>
                             {{ end }}
                         </div>
-                    </section>
-                {{ end }}
 
-                <!-- 月分桶 -->
-                {{ if .BucketsM }}
-                    <section class="mt-3" aria-label="月份聚合">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h5 class="mb-0">月份</h5>
-                        </div>
-                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3">
-                            {{ range .BucketsM }}
-                                <div class="col">
-                                    <a href="{{ .Href }}" class="text-decoration-none">
-                                        <div class="card h-100 shadow-sm">
-                                            <div class="card-body py-2">
-                                                <div class="fw-semibold text-truncate" title="{{ .Label }}">{{ .Label }}</div>
-                                                <div class="text-muted small">{{ .Count }} 部</div>
-                                                <div class="text-muted small">{{ printf "%.2f" .SizeGB }} GB</div>
+
+
+                        {{ if .TopCasts }}
+                            <section class="mt-4" aria-label="Top Actors">
+                                <h5 class="mb-2 fw-bold text-dark">Top 演员</h5>
+
+                                <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                    {{ range $i, $c := .TopCasts }}
+                                        <div class="card shadow-sm" style="flex: 0 0 calc(10% - 8px); min-width: 120px; background-color: #f8f9fa;">
+                                            <div class="card-body p-2 text-center">
+                                                <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                    <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                    <span class="text-primary fw-semibold text-truncate" title="{{ $c.Name }}">{{ $c.Name }}</span>
+                                                </div>
+                                                <div class="d-flex flex-column align-items-center gap-1">
+          <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+            出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
+          </span>
+                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+            ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
+          </span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </a>
+                                    {{ end }}
                                 </div>
-                            {{ end }}
-                        </div>
-                    </section>
-                {{ end }}
-
-                <!-- 电影网格（总是存在） -->
-                <section class="mt-3" aria-label="Movies">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <h5 class="mb-0">影片</h5>
-                    </div>
-                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
-                        {{ range .Movies }}
-                            {{ template "card" . }}
-                        {{ else }}
-                            <div class="col-12">
-                                <div class="alert alert-info mb-0">暂无影片。</div>
-                            </div>
+                            </section>
                         {{ end }}
+
+                        <!-- /Sticky 工具栏 -->
+
+                        <!-- 电影网格（复用 card） -->
+                        <section aria-label="Movies">
+                            <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
+                                {{ range .Movies }}
+                                    {{ template "card" . }}
+                                {{ else }}
+                                    <div class="col-12">
+                                        <div class="alert alert-info mb-0">暂无影片。</div>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </section>
+
+                        <!-- 底部分页 -->
+                        <div class="mt-3">
+                            {{ template "pagination" . }}
+                        </div>
+
                     </div>
-                </section>
-
-                <!-- 底部分页 -->
-                <div class="mt-3">
-                    {{ template "pagination" . }}
                 </div>
-
-            </div>
-        </div>
     </main>
 
-    <!-- JS（完整） -->
+    <!-- JS（与其它页保持一致，不缺） -->
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/metisMenu.min.js"></script>
@@ -158,6 +194,7 @@
     <script src="/static/js/buttons.colVis.min.js"></script>
     <script src="/static/js/dashboard.init.js"></script>
     <script src="/static/js/app.js"></script>
+
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
