@@ -335,7 +335,12 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		buckets = aggMonths(fullResp.List, dateFn, year, quarter, mode)
 	}
 
+	//topCasts := buildTopCasts(fullResp.List, topN)
+	// 计算 Top 列表（基于 fullResp.List）
 	topCasts := buildTopCasts(fullResp.List, topN)
+	topDirectors := buildTopDirectors(fullResp.List, topN)
+	topLabels := buildTopLabels(fullResp.List, topN)
+	topPrefixes := buildTopPrefixes(fullResp.List, topN)
 
 	// 分页列表
 	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), req)
@@ -348,18 +353,21 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 	bcs := buildAggBreadcrumbs(mode, year, quarter, month)
 
 	data := gin.H{
-		"Mode":        mode,
-		"Year":        year,
-		"Quarter":     quarter,
-		"Month":       month,
-		"Breadcrumbs": bcs,
-		"TopCasts":    topCasts,
-		"Movies":      listResp.List,
-		"Total":       listResp.Total,
-		"PageInfo":    pi,
-		"sortQuery":   sq,
-		"SortQuery":   sq,
-		"CurrentSort": curOD,
+		"Mode":         mode,
+		"Year":         year,
+		"Quarter":      quarter,
+		"Month":        month,
+		"Breadcrumbs":  bcs,
+		"TopCasts":     topCasts,
+		"TopDirectors": topDirectors,
+		"TopLabels":    topLabels,
+		"TopPrefixes":  topPrefixes,
+		"Movies":       listResp.List,
+		"Total":        listResp.Total,
+		"PageInfo":     pi,
+		"sortQuery":    sq,
+		"SortQuery":    sq,
+		"CurrentSort":  curOD,
 	}
 	if level != levelRoot {
 		data["RangeStart"] = start
@@ -381,7 +389,7 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		data["Quarter"] = q
 	}
 
-	c.HTML(200, "page.movie_agg_time", data)
+	c.HTML(200, "page.movie_agg_owned_time", data)
 }
 
 /* ---------- 聚合函数（数组版，性能高） ---------- */
@@ -492,4 +500,69 @@ func aggMonths(movies []*types.MovieType, dateFn func(*types.MovieType) string, 
 		})
 	}
 	return out
+}
+
+// --- 通用 Top 聚合（字符串字段） ---
+type TopStat struct {
+	Name  string
+	Count int
+	ScSum int64
+}
+
+// 复用 Cast 的排序逻辑：Count desc -> ScSum desc -> Name asc
+func sortTopStats(a []TopStat) {
+	sort.Slice(a, func(i, j int) bool {
+		if a[i].Count != a[j].Count {
+			return a[i].Count > a[j].Count
+		}
+		if a[i].ScSum != a[j].ScSum {
+			return a[i].ScSum > a[j].ScSum
+		}
+		return a[i].Name < a[j].Name
+	})
+}
+
+func buildTopByStringField(movies []*types.MovieType, pick func(*types.MovieType) string, topN int) []TopStat {
+	if topN <= 0 {
+		topN = 20
+	}
+	type agg struct {
+		n     int
+		scsum int64
+	}
+	mp := make(map[string]*agg, 1024)
+
+	for _, m := range movies {
+		name := pick(m)
+		if name == "" || name == "nil" {
+			continue
+		}
+		a := mp[name]
+		if a == nil {
+			a = &agg{}
+			mp[name] = a
+		}
+		a.n++
+		a.scsum += m.ScTimes
+	}
+	out := make([]TopStat, 0, len(mp))
+	for name, a := range mp {
+		out = append(out, TopStat{Name: name, Count: a.n, ScSum: a.scsum})
+	}
+	sortTopStats(out)
+	if len(out) > topN {
+		out = out[:topN]
+	}
+	return out
+}
+
+// --- 三个具体 Top（导演 / 厂牌Label / 前缀Prefix） ---
+func buildTopDirectors(movies []*types.MovieType, topN int) []TopStat {
+	return buildTopByStringField(movies, func(m *types.MovieType) string { return m.Director }, topN)
+}
+func buildTopLabels(movies []*types.MovieType, topN int) []TopStat {
+	return buildTopByStringField(movies, func(m *types.MovieType) string { return m.Label }, topN)
+}
+func buildTopPrefixes(movies []*types.MovieType, topN int) []TopStat {
+	return buildTopByStringField(movies, func(m *types.MovieType) string { return m.Prefix }, topN)
 }
