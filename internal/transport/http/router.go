@@ -75,18 +75,16 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
 
-	// 上映日（release）
-	r.GET("/movie-agg/release", aggHTML.MovieAggReleaseYears)
-	r.GET("/movie-agg/release/:year", aggHTML.MovieAggReleaseMonths)
-	// 季（新增）
-	r.GET("/movie-agg/release/:year/q/:q", aggHTML.MovieAggReleaseQuarter)
-	r.GET("/movie-agg/release/:year/:month", aggHTML.MovieAggReleaseMonth)
+	r.GET("/movie-agg-owned/release", aggHTML.MovieAggOwnedReleaseYears)
+	r.GET("/movie-agg-owned/release/:year", aggHTML.MovieAggOwnedReleaseMonths)
+	r.GET("/movie-agg-owned/release/:year/q/:q", aggHTML.MovieAggOwnedReleaseQuarter)
+	r.GET("/movie-agg-owned/release/:year/:month", aggHTML.MovieAggOwnedReleaseMonth)
+
 	// 下载日（birth）
-	r.GET("/movie-agg/birth", aggHTML.MovieAggBirthYears)
-	r.GET("/movie-agg/birth/:year", aggHTML.MovieAggBirthMonths)
-	// 季（新增）
-	r.GET("/movie-agg/birth/:year/q/:q", aggHTML.MovieAggBirthQuarter)
-	r.GET("/movie-agg/birth/:year/:month", aggHTML.MovieAggBirthMonth)
+	r.GET("/movie-agg-owned/birth", aggHTML.MovieAggOwnedBirthYears)
+	r.GET("/movie-agg-owned/birth/:year", aggHTML.MovieAggOwnedBirthMonths)
+	r.GET("/movie-agg-owned/birth/:year/q/:q", aggHTML.MovieAggOwnedBirthQuarter)
+	r.GET("/movie-agg-owned/birth/:year/:month", aggHTML.MovieAggOwnedBirthMonth)
 
 	// ====== API 路由 ======
 	api := r.Group("/api")

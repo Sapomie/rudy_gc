@@ -23,7 +23,7 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateEnd: "2025-01-01",
 				//FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 3,
+			w: 0,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
@@ -31,20 +31,21 @@ func (l *ScService) PickProcession() error {
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeEnd: "2025-10-01",
 			},
-			w: 14,
+			w: 0,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
 				ScTimesMax: ptr.Int64(0),
 				//ReleasingDateStart: "2025-06-01",
 				FilmBirthTimeStart: "2025-10-01",
+				ReleasingDateStart: "2025-09-01",
 			},
 			w: 16,
 		},
 	}
 
 	// 例如抽取 20 个
-	movieTypes, err := l.PickFromSources(ctx, reqs, 36)
+	movieTypes, err := l.PickFromSources(ctx, reqs, 10)
 	if err != nil {
 		return err
 	}

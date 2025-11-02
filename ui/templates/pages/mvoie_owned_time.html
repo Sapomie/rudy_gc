@@ -52,9 +52,11 @@
                                 <h3 class="mb-0">{{ .Title }}</h3>
                             </div>
 
-                            <!-- 排序条 -->
+                            <!-- 排序条（入口页可能没有 SortQuery，判空） -->
                             <div class="d-flex flex-wrap align-items-center toolbar-gap">
-                                {{ template "sort_bar" . }}
+                                {{ if .SortQuery }}
+                                    {{ template "sort_bar" . }}
+                                {{ end }}
                             </div>
                         </div>
 
@@ -133,7 +135,7 @@
                             {{ end }}
                         </div>
 
-                        <!-- Top 演员（卡片 10/行的样式保持不变） -->
+                        <!-- Top 演员（卡片 10/行；入口页可能没有 TopCasts，判空） -->
                         {{ if .TopCasts }}
                             <section class="mt-4" aria-label="Top Actors">
                                 <h5 class="mb-2 fw-bold text-dark">Top 演员</h5>
@@ -158,12 +160,12 @@
                                                         <span class="text-primary fw-semibold text-truncate">{{ $c.Name }}</span>
                                                     </div>
                                                     <div class="d-flex flex-column align-items-center gap-1">
+                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                                        出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
+                                                    </span>
                                                         <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                            出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
-                                                        </span>
-                                                        <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                                                            ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
-                                                        </span>
+                                                        ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
+                                                    </span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -173,23 +175,27 @@
                             </section>
                         {{ end }}
 
-                        <!-- 电影网格 -->
-                        <section aria-label="Movies">
-                            <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
-                                {{ range .Movies }}
-                                    {{ template "card" . }}
-                                {{ else }}
-                                    <div class="col-12">
-                                        <div class="alert alert-info mb-0">暂无影片。</div>
-                                    </div>
-                                {{ end }}
-                            </div>
-                        </section>
+                        <!-- 电影网格（入口页可能不展示 Movies，判空） -->
+                        {{ if .Movies }}
+                            <section aria-label="Movies">
+                                <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
+                                    {{ range .Movies }}
+                                        {{ template "card" . }}
+                                    {{ else }}
+                                        <div class="col-12">
+                                            <div class="alert alert-info mb-0">暂无影片。</div>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </section>
+                        {{ end }}
 
-                        <!-- 底部分页 -->
-                        <div class="mt-3">
-                            {{ template "pagination" . }}
-                        </div>
+                        <!-- 底部分页（入口页无 PageInfo 则不渲染，避免空指针） -->
+                        {{ if .PageInfo }}
+                            <div class="mt-3">
+                                {{ template "pagination" . }}
+                            </div>
+                        {{ end }}
 
                     </div>
                 </div>
@@ -226,4 +232,6 @@
     </script>
     </body>
     </html>
+
+
 {{ end }}

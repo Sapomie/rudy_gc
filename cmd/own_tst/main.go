@@ -26,7 +26,7 @@ func main() {
 		deps.Log.Error(ctx, "NewDeps err:", err)
 	}
 
-	//flushDb()
+	flushDb()
 
 	//err = logic.NewCrawlLogic(deps).CrawlDailyBestProcession(ctx)
 	//if err != nil {
@@ -88,5 +88,5 @@ func main() {
 
 func flushDb() {
 	redis.FlushDB("6378")
-	redis.FlushDB("63789")
+	redis.FlushDB("6379")
 }
