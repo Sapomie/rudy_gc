@@ -16,8 +16,32 @@
             .toolbar-gap > * { margin-right: .5rem; margin-bottom: .5rem; }
             .bucket-card .count { font-weight: 600; }
             .bucket-card .sizegb { color: #6c757d; }
-            .table-topcasts td, .table-topcasts th { vertical-align: middle; }
             .breadcrumbs a { text-decoration: none; }
+            /* 一行八列的自定义 col */
+            .col-lg-1-5 {
+                flex: 0 0 12.5%;
+                max-width: 12.5%;
+            }
+            /* 三大区块统一外观（与 all_time 保持一致） */
+            .section-card {
+                background: #fff;
+                border-radius: 1rem;
+                box-shadow: 0 2px 6px rgba(0,0,0,.06);
+                padding: 1.25rem 1.5rem;
+                margin-bottom: 1.25rem;
+            }
+            .section-title {
+                font-weight: 600;
+                font-size: 1.05rem;
+                color: #212529;
+                margin: 0 0 .75rem;
+                border-left: 4px solid #0dcaf0;
+                padding-left: .5rem;
+            }
+            .page-subtitle {
+                font-size: .95rem;
+                color: #6c757d;
+            }
         </style>
     </head>
 
@@ -28,338 +52,318 @@
         <div class="page-content">
             <div class="container-fluid">
 
-                <!-- Sticky 工具栏 -->
-                <div class="position-sticky pb-2 pt-2 mb-3 border-bottom"
-                     style="top:0; z-index:1030; background:rgba(255,255,255,.9); backdrop-filter: blur(6px);">
-                    <div class="container-fluid px-0">
-
-                        <!-- 面包屑 + 标题 -->
-                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                            <div class="flex-grow-1">
-                                <nav class="breadcrumbs mb-1" aria-label="breadcrumb">
-                                    <ol class="breadcrumb mb-1">
-                                        {{ if .Breadcrumbs }}
-                                            {{ range .Breadcrumbs }}
-                                                {{ if .Href }}
-                                                    <li class="breadcrumb-item"><a href="{{ .Href }}">{{ .Title }}</a></li>
-                                                {{ else }}
-                                                    <li class="breadcrumb-item active" aria-current="page">{{ .Title }}</li>
-                                                {{ end }}
-                                            {{ end }}
-                                        {{ end }}
-                                    </ol>
-                                </nav>
-                                <h3 class="mb-0">{{ .Title }}</h3>
+                <!-- ============== 区块 1：时间聚合（年/季/月） ============== -->
+                <div class="section-card">
+                    <!-- 面包屑做成次级标题（与 all_time 一致） -->
+                    <div class="mb-2">
+                        {{ if .Breadcrumbs }}
+                            <div class="page-subtitle">
+                                {{ range .Breadcrumbs }}
+                                    {{ if .Href }}
+                                        <a href="{{ .Href }}" class="text-muted text-decoration-none me-1">{{ .Title }}</a> /
+                                    {{ else }}
+                                        <span class="text-dark">{{ .Title }}</span>
+                                    {{ end }}
+                                {{ end }}
                             </div>
+                        {{ end }}
+                    </div>
+                    <h4 class="section-title">时间聚合</h4>
 
-                            <!-- 排序条（入口页可能没有 SortQuery，判空） -->
-                            <div class="d-flex flex-wrap align-items-center toolbar-gap">
-                                {{ if .SortQuery }}
-                                    {{ template "sort_bar" . }}
+                    <!-- 年/季/月 桶 -->
+                    <div class="mt-2">
+                        {{ if .BucketsY }}
+                            <section class="mb-2" aria-label="Years">
+                                <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
+                                    {{ range .BucketsY }}
+                                        <div class="col">
+                                            <a href="{{ .Href }}" class="text-decoration-none">
+                                                <div class="card bucket-card h-100 shadow-sm">
+                                                    <div class="card-body py-2">
+                                                        <div class="d-flex flex-column">
+                                                            <div class="fw-semibold">{{ .Label }}</div>
+                                                            <div class="text-muted small">
+                                                                <span class="count">{{ .Count }}</span> 部，
+                                                                <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </section>
+                        {{ end }}
+
+                        {{ if .BucketsQ }}
+                            <section class="mb-2" aria-label="Quarters">
+                                <div class="row row-cols-2 row-cols-sm-2 row-cols-lg-4 g-3">
+                                    {{ range .BucketsQ }}
+                                        <div class="col">
+                                            <a href="{{ .Href }}" class="text-decoration-none">
+                                                <div class="card bucket-card h-100 shadow-sm">
+                                                    <div class="card-body py-2">
+                                                        <div class="d-flex flex-column">
+                                                            <div class="fw-semibold">{{ .Label }}</div>
+                                                            <div class="text-muted small">
+                                                                <span class="count">{{ .Count }}</span> 部，
+                                                                <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </section>
+                        {{ end }}
+
+                        {{ if .BucketsM }}
+                            <section class="mb-2" aria-label="Months">
+                                <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
+                                    {{ range .BucketsM }}
+                                        <div class="col">
+                                            <a href="{{ .Href }}" class="text-decoration-none">
+                                                <div class="card bucket-card h-100 shadow-sm">
+                                                    <div class="card-body py-2">
+                                                        <div class="d-flex flex-column">
+                                                            <div class="fw-semibold">{{ .Label }}</div>
+                                                            <div class="text-muted small">
+                                                                <span class="count">{{ .Count }}</span> 部，
+                                                                <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </section>
+                        {{ end }}
+                    </div>
+                </div>
+
+                <!-- ============== 区块 2：Top 聚合（可折叠，默认收起） ============== -->
+                {{ $hasAny := or (or .TopCasts .TopDirectors) (or .TopLabels .TopPrefixes) }}
+                {{ if $hasAny }}
+                    <div class="section-card">
+                        <div class="d-flex align-items-center justify-content-start mb-2">
+                            <h4 class="section-title mb-0 me-3">Top 聚合</h4>
+                            <button id="toggleTopAgg"
+                                    type="button"
+                                    class="btn btn-outline-info waves-effect waves-light btn-sm"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#topAggCollapse"
+                                    aria-expanded="false"
+                                    aria-controls="topAggCollapse">展开
+                            </button>
+                        </div>
+
+                        <div class="collapse" id="topAggCollapse">
+                            <!-- Tabs -->
+                            <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                                {{ if .TopCasts }}
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-casts" role="tab">演员</a>
+                                    </li>
+                                {{ end }}
+                                {{ if .TopDirectors }}
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-directors" role="tab">导演</a>
+                                    </li>
+                                {{ end }}
+                                {{ if .TopLabels }}
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-labels" role="tab">Label</a>
+                                    </li>
+                                {{ end }}
+                                {{ if .TopPrefixes }}
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-prefixes" role="tab">Prefix</a>
+                                    </li>
+                                {{ end }}
+                            </ul>
+
+                            <!-- Tab panes -->
+                            <div class="tab-content pt-3">
+                                <!-- 演员 -->
+                                {{ if .TopCasts }}
+                                    <div class="tab-pane p-2" id="tab-agg-casts" role="tabpanel">
+                                        <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
+                                            {{ range $i, $c := .TopCasts }}
+                                                {{ $u := (printf "/cards?cn=%s&owned=3" (urlquery $c.Name)) }}
+                                                {{ if eq $mode "release" }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
+                                                {{ else }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
+                                                {{ end }}
+                                                <a href="{{ $u }}" class="text-decoration-none" title="{{ $c.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
+                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                        <div class="card-body p-2 text-center">
+                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                                <span class="text-primary fw-semibold text-truncate">{{ $c.Name }}</span>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span></span>
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                {{ end }}
+
+                                <!-- 导演 -->
+                                {{ if .TopDirectors }}
+                                    <div class="tab-pane p-2" id="tab-agg-directors" role="tabpanel">
+                                        <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
+                                            {{ range $i, $it := .TopDirectors }}
+                                                {{ $u := (printf "/cards?dn=%s&owned=3" (urlquery $it.Name)) }}
+                                                {{ if eq $mode "release" }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
+                                                {{ else }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
+                                                {{ end }}
+                                                <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
+                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                        <div class="card-body p-2 text-center">
+                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                                <span class="text-primary fw-semibold text-truncate">{{ $it.Name }}</span>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">出现：<span class="text-dark fw-semibold">{{ $it.Count }}</span></span>
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">ScTimes：<span class="text-dark fw-semibold">{{ $it.ScSum }}</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                {{ end }}
+
+                                <!-- Label -->
+                                {{ if .TopLabels }}
+                                    <div class="tab-pane p-2" id="tab-agg-labels" role="tabpanel">
+                                        <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
+                                            {{ range $i, $it := .TopLabels }}
+                                                {{ $u := (printf "/cards?ln=%s&owned=3" (urlquery $it.Name)) }}
+                                                {{ if eq $mode "release" }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
+                                                {{ else }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
+                                                {{ end }}
+                                                <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
+                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                        <div class="card-body p-2 text-center">
+                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                                <span class="text-primary fw-semibold text-truncate">{{ $it.Name }}</span>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">出现：<span class="text-dark fw-semibold">{{ $it.Count }}</span></span>
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">ScTimes：<span class="text-dark fw-semibold">{{ $it.ScSum }}</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                {{ end }}
+
+                                <!-- Prefix -->
+                                {{ if .TopPrefixes }}
+                                    <div class="tab-pane p-2" id="tab-agg-prefixes" role="tabpanel">
+                                        <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
+                                            {{ range $i, $it := .TopPrefixes }}
+                                                {{ $u := (printf "/cards?pn=%s&owned=3" (urlquery $it.Name)) }}
+                                                {{ if eq $mode "release" }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
+                                                {{ else }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
+                                                {{ end }}
+                                                <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
+                                                    <div class="card shadow-sm" style="background-color:#f8f9fa;">
+                                                        <div class="card-body p-2 text-center">
+                                                            <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
+                                                                <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
+                                                                <span class="text-primary fw-semibold text-truncate">{{ $it.Name }}</span>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">出现：<span class="text-dark fw-semibold">{{ $it.Count }}</span></span>
+                                                                <span class="badge bg-light text-muted border" style="font-size:.72rem;">ScTimes：<span class="text-dark fw-semibold">{{ $it.ScSum }}</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            {{ end }}
+                                        </div>
+                                    </div>
                                 {{ end }}
                             </div>
                         </div>
+                    </div>
+                {{ end }}
 
-                        <!-- 年/季/月 桶 -->
-                        <div class="mt-2">
-                            {{ if .BucketsY }}
-                                <section class="mb-2" aria-label="Years">
-                                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
-                                        {{ range .BucketsY }}
-                                            <div class="col">
-                                                <a href="{{ .Href }}" class="text-decoration-none">
-                                                    <div class="card bucket-card h-100 shadow-sm">
-                                                        <div class="card-body py-2">
-                                                            <div class="d-flex flex-column">
-                                                                <div class="fw-semibold">{{ .Label }}</div>
-                                                                <div class="text-muted small">
-                                                                    <span class="count">{{ .Count }}</span> 部，
-                                                                    <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        {{ end }}
-                                    </div>
-                                </section>
-                            {{ end }}
-
-                            {{ if .BucketsQ }}
-                                <section class="mb-2" aria-label="Quarters">
-                                    <div class="row row-cols-2 row-cols-sm-2 row-cols-lg-4 g-3">
-                                        {{ range .BucketsQ }}
-                                            <div class="col">
-                                                <a href="{{ .Href }}" class="text-decoration-none">
-                                                    <div class="card bucket-card h-100 shadow-sm">
-                                                        <div class="card-body py-2">
-                                                            <div class="d-flex flex-column">
-                                                                <div class="fw-semibold">{{ .Label }}</div>
-                                                                <div class="text-muted small">
-                                                                    <span class="count">{{ .Count }}</span> 部，
-                                                                    <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        {{ end }}
-                                    </div>
-                                </section>
-                            {{ end }}
-
-                            {{ if .BucketsM }}
-                                <section class="mb-2" aria-label="Months">
-                                    <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
-                                        {{ range .BucketsM }}
-                                            <div class="col">
-                                                <a href="{{ .Href }}" class="text-decoration-none">
-                                                    <div class="card bucket-card h-100 shadow-sm">
-                                                        <div class="card-body py-2">
-                                                            <div class="d-flex flex-column">
-                                                                <div class="fw-semibold">{{ .Label }}</div>
-                                                                <div class="text-muted small">
-                                                                    <span class="count">{{ .Count }}</span> 部，
-                                                                    <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        {{ end }}
-                                    </div>
-                                </section>
-                            {{ end }}
+                <!-- ============== 区块 3：电影列表（左 Sort，右 Pagination） ============== -->
+                {{ if .Movies }}
+                    <div class="section-card">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                            <div class="d-flex align-items-center toolbar-gap">
+                                {{ if .SortQuery }}{{ template "sort_bar" . }}{{ end }}
+                            </div>
+                            <div class="ms-auto">
+                                {{ if .PageInfo }}{{ template "pagination" . }}{{ end }}
+                            </div>
                         </div>
 
-                        <!-- ========== Top 聚合（Casts / Directors / Labels / Prefixes）Tabs ========== -->
-                        {{ $hasAny := or (or .TopCasts .TopDirectors) (or .TopLabels .TopPrefixes) }}
-                        {{ if $hasAny }}
-                            <section class="mt-4" aria-label="Top Aggregations">
-                                <h5 class="mb-2 fw-bold text-dark">Top 聚合</h5>
-
-                                <!-- Tabs -->
-                                <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
-                                    {{ if .TopCasts }}
-                                        <li class="nav-item">
-                                            <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-casts" role="tab">
-                                                <span class="d-none d-sm-block">演员</span>
-                                                <span class="d-block d-sm-none"><i class="mdi mdi-account"></i></span>
-                                            </a>
-                                        </li>
-                                    {{ end }}
-                                    {{ if .TopDirectors }}
-                                        <li class="nav-item">
-                                            <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-directors" role="tab">
-                                                <span class="d-none d-sm-block">导演</span>
-                                                <span class="d-block d-sm-none"><i class="mdi mdi-account-tie"></i></span>
-                                            </a>
-                                        </li>
-                                    {{ end }}
-                                    {{ if .TopLabels }}
-                                        <li class="nav-item">
-                                            <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-labels" role="tab">
-                                                <span class="d-none d-sm-block">Label</span>
-                                                <span class="d-block d-sm-none"><i class="mdi mdi-tag-multiple"></i></span>
-                                            </a>
-                                        </li>
-                                    {{ end }}
-                                    {{ if .TopPrefixes }}
-                                        <li class="nav-item">
-                                            <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-prefixes" role="tab">
-                                                <span class="d-none d-sm-block">Prefix</span>
-                                                <span class="d-block d-sm-none"><i class="mdi mdi-format-letter-matches"></i></span>
-                                            </a>
-                                        </li>
-                                    {{ end }}
-                                </ul>
-
-                                <!-- Tab panes -->
-                                <div class="tab-content pt-3">
-
-                                    <!-- 演员 -->
-                                    {{ if .TopCasts }}
-                                        <div class="tab-pane p-2" id="tab-agg-casts" role="tabpanel">
-                                            <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                                {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
-                                                {{ range $i, $c := .TopCasts }}
-                                                    {{ $u := (printf "/cards?cn=%s&owned=3" (urlquery $c.Name)) }}
-                                                    {{ if eq $mode "release" }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
-                                                    {{ else }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
-                                                    {{ end }}
-
-                                                    <a href="{{ $u }}" class="text-decoration-none" title="{{ $c.Name }}" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                        <div class="card shadow-sm" style="background-color: #f8f9fa;">
-                                                            <div class="card-body p-2 text-center">
-                                                                <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                                    <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                                    <span class="text-primary fw-semibold text-truncate">{{ $c.Name }}</span>
-                                                                </div>
-                                                                <div class="d-flex flex-column align-items-center gap-1">
-                  <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    出现：<span class="text-dark fw-semibold">{{ $c.Count }}</span>
-                  </span>
-                                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    ScTimes：<span class="text-dark fw-semibold">{{ $c.ScSum }}</span>
-                  </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                {{ end }}
-                                            </div>
-                                        </div>
-                                    {{ end }}
-
-                                    <!-- 导演 -->
-                                    {{ if .TopDirectors }}
-                                        <div class="tab-pane p-2" id="tab-agg-directors" role="tabpanel">
-                                            <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                                {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
-                                                {{ range $i, $it := .TopDirectors }}
-                                                    {{ $u := (printf "/cards?dn=%s&owned=3" (urlquery $it.Name)) }}
-                                                    {{ if eq $mode "release" }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
-                                                    {{ else }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
-                                                    {{ end }}
-                                                    <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                        <div class="card shadow-sm" style="background-color:#f8f9fa;">
-                                                            <div class="card-body p-2 text-center">
-                                                                <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                                    <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                                    <span class="text-primary fw-semibold text-truncate">{{ $it.Name }}</span>
-                                                                </div>
-                                                                <div class="d-flex flex-column align-items-center gap-1">
-                  <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    出现：<span class="text-dark fw-semibold">{{ $it.Count }}</span>
-                  </span>
-                                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    ScTimes：<span class="text-dark fw-semibold">{{ $it.ScSum }}</span>
-                  </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                {{ end }}
-                                            </div>
-                                        </div>
-                                    {{ end }}
-
-                                    <!-- Label -->
-                                    {{ if .TopLabels }}
-                                        <div class="tab-pane p-2" id="tab-agg-labels" role="tabpanel">
-                                            <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                                {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
-                                                {{ range $i, $it := .TopLabels }}
-                                                    {{ $u := (printf "/cards?ln=%s&owned=3" (urlquery $it.Name)) }}
-                                                    {{ if eq $mode "release" }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
-                                                    {{ else }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
-                                                    {{ end }}
-                                                    <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                        <div class="card shadow-sm" style="background-color:#f8f9fa;">
-                                                            <div class="card-body p-2 text-center">
-                                                                <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                                    <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                                    <span class="text-primary fw-semibold text-truncate">{{ $it.Name }}</span>
-                                                                </div>
-                                                                <div class="d-flex flex-column align-items-center gap-1">
-                  <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    出现：<span class="text-dark fw-semibold">{{ $it.Count }}</span>
-                  </span>
-                                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    ScTimes：<span class="text-dark fw-semibold">{{ $it.ScSum }}</span>
-                  </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                {{ end }}
-                                            </div>
-                                        </div>
-                                    {{ end }}
-
-                                    <!-- Prefix -->
-                                    {{ if .TopPrefixes }}
-                                        <div class="tab-pane p-2" id="tab-agg-prefixes" role="tabpanel">
-                                            <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                                {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
-                                                {{ range $i, $it := .TopPrefixes }}
-                                                    {{ $u := (printf "/cards?pn=%s&owned=3" (urlquery $it.Name)) }}
-                                                    {{ if eq $mode "release" }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
-                                                    {{ else }}
-                                                        {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
-                                                        {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
-                                                    {{ end }}
-                                                    <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex: 0 0 calc(10% - 8px); min-width: 120px;">
-                                                        <div class="card shadow-sm" style="background-color:#f8f9fa;">
-                                                            <div class="card-body p-2 text-center">
-                                                                <div class="d-flex justify-content-center align-items-center mb-1 gap-1">
-                                                                    <span class="badge bg-secondary text-white fw-normal" style="font-size:.7rem;">#{{ add $i 1 }}</span>
-                                                                    <span class="text-primary fw-semibold text-truncate">{{ $it.Name }}</span>
-                                                                </div>
-                                                                <div class="d-flex flex-column align-items-center gap-1">
-                  <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    出现：<span class="text-dark fw-semibold">{{ $it.Count }}</span>
-                  </span>
-                                                                    <span class="badge bg-light text-muted border" style="font-size:.72rem;">
-                    ScTimes：<span class="text-dark fw-semibold">{{ $it.ScSum }}</span>
-                  </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                {{ end }}
-                                            </div>
-                                        </div>
-                                    {{ end }}
-
+                        <!-- ✅ 强制一行 8 个卡片 -->
+                        <div class="row g-3" id="movie-grid">
+                            {{ range .Movies }}
+                                <div class="col-6 col-sm-3 col-md-2 col-lg-1-5">
+                                    {{ template "card" . }}
                                 </div>
-                            </section>
-                        {{ end }}
-
-                        <!-- 电影网格（入口页可能不展示 Movies，判空） -->
-                        {{ if .Movies }}
-                            <section aria-label="Movies">
-                                <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
-                                    {{ range .Movies }}
-                                        {{ template "card" . }}
-                                    {{ else }}
-                                        <div class="col-12">
-                                            <div class="alert alert-info mb-0">暂无影片。</div>
-                                        </div>
-                                    {{ end }}
+                            {{ else }}
+                                <div class="col-12">
+                                    <div class="alert alert-info mb-0">暂无影片。</div>
                                 </div>
-                            </section>
-                        {{ end }}
-
-                        <!-- 底部分页（入口页无 PageInfo 则不渲染，避免空指针） -->
-                        {{ if .PageInfo }}
-                            <div class="mt-3">
-                                {{ template "pagination" . }}
-                            </div>
-                        {{ end }}
-
+                            {{ end }}
+                        </div>
                     </div>
-                </div>
+                {{ end }}
+
+                <!-- 底部分页：如果你想只在顶部显示分页，可以删掉下面这段 -->
+                {{ if .PageInfo }}
+                    <div class="mt-3">
+                        {{ template "pagination" . }}
+                    </div>
+                {{ end }}
+
+            </div>
+        </div>
     </main>
 
-    <!-- JS -->
+    <!-- === 保持原版 script 全段（原样放回） === -->
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/metisMenu.min.js"></script>
@@ -377,6 +381,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // 启用 title 的 Tooltip（保持不变）
             var list = [].slice.call(document.querySelectorAll('[title]'));
             list.forEach(function (el) {
                 if (el.getAttribute('data-bs-toggle') !== 'tooltip') {
@@ -386,23 +391,32 @@
                     }
                 }
             });
-        });
-    </script>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // ...你现有的 tooltip 初始化...
+            // 逐组激活：每一组 .nav-tabs 各自激活第一个可见 tab（Top 区）
+            document.querySelectorAll('.nav.nav-tabs').forEach(function (group) {
+                var active = group.querySelector('.nav-link.active');
+                if (!active) {
+                    var first = group.querySelector('[data-bs-toggle="tab"]');
+                    if (first) {
+                        new bootstrap.Tab(first).show();
+                    }
+                }
+            });
 
-            // 自动激活第一个可见的 Top 聚合 Tab
-            var firstTab = document.querySelector('.nav-tabs [data-bs-toggle="tab"]');
-            if (firstTab && !firstTab.classList.contains('active')) {
-                // 触发一次点击来同步 .nav-link 与 .tab-pane 的 active 状态（Bootstrap 5）
-                firstTab.click();
+            // 折叠按钮文字切换（Top 聚合）
+            var toggleBtn = document.getElementById('toggleTopAgg');
+            var topCollapse = document.getElementById('topAggCollapse');
+            if (toggleBtn && topCollapse) {
+                topCollapse.addEventListener('shown.bs.collapse', function () {
+                    toggleBtn.textContent = '收起';
+                });
+                topCollapse.addEventListener('hide.bs.collapse', function () {
+                    toggleBtn.textContent = '展开';
+                });
             }
         });
     </script>
+
     </body>
     </html>
-
-
 {{ end }}

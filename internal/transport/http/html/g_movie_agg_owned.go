@@ -19,7 +19,6 @@ const (
 	minYear = 1900 // 聚合用数组下界
 	maxYear = 2100 // 聚合用数组上界
 
-	// 排序字段（不再依赖 consts.OrderBy*）
 	orderByRelease = "releasing_date"
 	orderByBirth   = "birth_time"
 )
@@ -250,6 +249,9 @@ const (
 	levelQuarter
 	levelMonth
 )
+const (
+	defaultAggPageSize = 24
+)
 
 func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 	mode string, // "release" or "birth"
@@ -261,7 +263,7 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 	if page < 1 {
 		page = 1
 	}
-	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultPageSize)), defaultPageSize))
+	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultAggPageSize)), defaultAggPageSize))
 	curOD := normalizeOrderBy(c.Query("od"), defaultOD)
 	sq := buildSortQuery(c, curOD)
 

@@ -86,6 +86,12 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/movie-agg-owned/birth/:year/q/:q", aggHTML.MovieAggOwnedBirthQuarter)
 	r.GET("/movie-agg-owned/birth/:year/:month", aggHTML.MovieAggOwnedBirthMonth)
 
+	aggAll := htmlHandlers.NewMovieAggAllHTMLHandler(deps)
+	r.GET("/movie-agg-all/release", aggAll.MovieAggAllReleaseYears)
+	r.GET("/movie-agg-all/release/:year", aggAll.MovieAggAllReleaseMonths)
+	r.GET("/movie-agg-all/release/:year/q/:q", aggAll.MovieAggAllReleaseQuarter)
+	r.GET("/movie-agg-all/release/:year/:month", aggAll.MovieAggAllReleaseMonth)
+
 	// ====== API 路由 ======
 	api := r.Group("/api")
 	{
