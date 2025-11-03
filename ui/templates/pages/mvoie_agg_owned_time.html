@@ -17,31 +17,21 @@
             .bucket-card .count { font-weight: 600; }
             .bucket-card .sizegb { color: #6c757d; }
             .breadcrumbs a { text-decoration: none; }
-            /* 一行八列的自定义 col */
-            .col-lg-1-5 {
-                flex: 0 0 12.5%;
-                max-width: 12.5%;
-            }
+
+            /* 一行八列的自定义 col（12.5%） */
+            .col-lg-1-5 { flex: 0 0 12.5%; max-width: 12.5%; }
+
             /* 三大区块统一外观（与 all_time 保持一致） */
             .section-card {
-                background: #fff;
-                border-radius: 1rem;
+                background: #fff; border-radius: 1rem;
                 box-shadow: 0 2px 6px rgba(0,0,0,.06);
-                padding: 1.25rem 1.5rem;
-                margin-bottom: 1.25rem;
+                padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
             }
             .section-title {
-                font-weight: 600;
-                font-size: 1.05rem;
-                color: #212529;
-                margin: 0 0 .75rem;
-                border-left: 4px solid #0dcaf0;
-                padding-left: .5rem;
+                font-weight: 600; font-size: 1.05rem; color: #212529;
+                margin: 0 0 .75rem; border-left: 4px solid #0dcaf0; padding-left: .5rem;
             }
-            .page-subtitle {
-                font-size: .95rem;
-                color: #6c757d;
-            }
+            .page-subtitle { font-size: .95rem; color: #6c757d; }
         </style>
     </head>
 
@@ -54,7 +44,7 @@
 
                 <!-- ============== 区块 1：时间聚合（年/季/月） ============== -->
                 <div class="section-card">
-                    <!-- 面包屑做成次级标题（与 all_time 一致） -->
+                    <!-- 面包屑次级标题 -->
                     <div class="mb-2">
                         {{ if .Breadcrumbs }}
                             <div class="page-subtitle">
@@ -70,8 +60,73 @@
                     </div>
                     <h4 class="section-title">时间聚合</h4>
 
-                    <!-- 年/季/月 桶 -->
-                    <div class="mt-2">
+                    <!-- 年页：同时提供 “季度 / 月份” Tab 切换 -->
+                    {{ $hasQ := .BucketsQ }}
+                    {{ $hasM := .BucketsM }}
+                    {{ if and (eq .Level "year") (or $hasQ $hasM) }}
+                        <!-- Tabs 条 -->
+                        <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                            {{ if $hasQ }}
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#tab-year-quarters" role="tab">季度</a>
+                                </li>
+                            {{ end }}
+                            {{ if $hasM }}
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#tab-year-months" role="tab">月份</a>
+                                </li>
+                            {{ end }}
+                        </ul>
+
+                        <!-- Tabs 内容 -->
+                        <div class="tab-content pt-3">
+                            {{ if $hasQ }}
+                                <div class="tab-pane p-2" id="tab-year-quarters" role="tabpanel">
+                                    <div class="row row-cols-2 row-cols-sm-2 row-cols-lg-4 g-3">
+                                        {{ range .BucketsQ }}
+                                            <div class="col">
+                                                <a href="{{ .Href }}" class="text-decoration-none">
+                                                    <div class="card bucket-card h-100 shadow-sm">
+                                                        <div class="card-body py-2">
+                                                            <div class="fw-semibold">{{ .Label }}</div>
+                                                            <div class="text-muted small">
+                                                                <span class="count">{{ .Count }}</span> 部，
+                                                                <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            {{ end }}
+
+                            {{ if $hasM }}
+                                <div class="tab-pane p-2" id="tab-year-months" role="tabpanel">
+                                    <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
+                                        {{ range .BucketsM }}
+                                            <div class="col">
+                                                <a href="{{ .Href }}" class="text-decoration-none">
+                                                    <div class="card bucket-card h-100 shadow-sm">
+                                                        <div class="card-body py-2">
+                                                            <div class="fw-semibold">{{ .Label }}</div>
+                                                            <div class="text-muted small">
+                                                                <span class="count">{{ .Count }}</span> 部，
+                                                                <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            {{ end }}
+                        </div>
+
+                    {{ else }}
+                        <!-- 非年页：沿用原有的单一分组渲染（根/季） -->
                         {{ if .BucketsY }}
                             <section class="mb-2" aria-label="Years">
                                 <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
@@ -143,7 +198,7 @@
                                 </div>
                             </section>
                         {{ end }}
-                    </div>
+                    {{ end }}
                 </div>
 
                 <!-- ============== 区块 2：Top 聚合（可折叠，默认收起） ============== -->
@@ -163,33 +218,14 @@
                         </div>
 
                         <div class="collapse" id="topAggCollapse">
-                            <!-- Tabs -->
                             <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
-                                {{ if .TopCasts }}
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-casts" role="tab">演员</a>
-                                    </li>
-                                {{ end }}
-                                {{ if .TopDirectors }}
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-directors" role="tab">导演</a>
-                                    </li>
-                                {{ end }}
-                                {{ if .TopLabels }}
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-labels" role="tab">Label</a>
-                                    </li>
-                                {{ end }}
-                                {{ if .TopPrefixes }}
-                                    <li class="nav-item">
-                                        <a class="nav-link" data-bs-toggle="tab" href="#tab-agg-prefixes" role="tab">Prefix</a>
-                                    </li>
-                                {{ end }}
+                                {{ if .TopCasts }}     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-agg-casts" role="tab">演员</a></li>{{ end }}
+                                {{ if .TopDirectors }} <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-agg-directors" role="tab">导演</a></li>{{ end }}
+                                {{ if .TopLabels }}    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-agg-labels" role="tab">Label</a></li>{{ end }}
+                                {{ if .TopPrefixes }}  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-agg-prefixes" role="tab">Prefix</a></li>{{ end }}
                             </ul>
 
-                            <!-- Tab panes -->
                             <div class="tab-content pt-3">
-                                <!-- 演员 -->
                                 {{ if .TopCasts }}
                                     <div class="tab-pane p-2" id="tab-agg-casts" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
@@ -222,7 +258,6 @@
                                     </div>
                                 {{ end }}
 
-                                <!-- 导演 -->
                                 {{ if .TopDirectors }}
                                     <div class="tab-pane p-2" id="tab-agg-directors" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
@@ -255,7 +290,6 @@
                                     </div>
                                 {{ end }}
 
-                                <!-- Label -->
                                 {{ if .TopLabels }}
                                     <div class="tab-pane p-2" id="tab-agg-labels" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
@@ -288,7 +322,6 @@
                                     </div>
                                 {{ end }}
 
-                                <!-- Prefix -->
                                 {{ if .TopPrefixes }}
                                     <div class="tab-pane p-2" id="tab-agg-prefixes" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
@@ -337,22 +370,20 @@
                             </div>
                         </div>
 
-                        <!-- ✅ 强制一行 8 个卡片 -->
+                        <!-- 一行 8 列 -->
                         <div class="row g-3" id="movie-grid">
                             {{ range .Movies }}
                                 <div class="col-6 col-sm-3 col-md-2 col-lg-1-5">
                                     {{ template "card" . }}
                                 </div>
                             {{ else }}
-                                <div class="col-12">
-                                    <div class="alert alert-info mb-0">暂无影片。</div>
-                                </div>
+                                <div class="col-12"><div class="alert alert-info mb-0">暂无影片。</div></div>
                             {{ end }}
                         </div>
                     </div>
                 {{ end }}
 
-                <!-- 底部分页：如果你想只在顶部显示分页，可以删掉下面这段 -->
+                <!-- 如需只在顶部显示分页，可移除此段 -->
                 {{ if .PageInfo }}
                     <div class="mt-3">
                         {{ template "pagination" . }}
@@ -363,7 +394,7 @@
         </div>
     </main>
 
-    <!-- === 保持原版 script 全段（原样放回） === -->
+    <!-- Scripts -->
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/metisMenu.min.js"></script>
@@ -381,7 +412,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // 启用 title 的 Tooltip（保持不变）
+            // tooltip
             var list = [].slice.call(document.querySelectorAll('[title]'));
             list.forEach(function (el) {
                 if (el.getAttribute('data-bs-toggle') !== 'tooltip') {
@@ -392,14 +423,12 @@
                 }
             });
 
-            // 逐组激活：每一组 .nav-tabs 各自激活第一个可见 tab（Top 区）
+            // 每一组 .nav-tabs 都激活其第一个可见 tab（年页 & Top 折叠区）
             document.querySelectorAll('.nav.nav-tabs').forEach(function (group) {
                 var active = group.querySelector('.nav-link.active');
                 if (!active) {
                     var first = group.querySelector('[data-bs-toggle="tab"]');
-                    if (first) {
-                        new bootstrap.Tab(first).show();
-                    }
+                    if (first) { new bootstrap.Tab(first).show(); }
                 }
             });
 
@@ -407,16 +436,11 @@
             var toggleBtn = document.getElementById('toggleTopAgg');
             var topCollapse = document.getElementById('topAggCollapse');
             if (toggleBtn && topCollapse) {
-                topCollapse.addEventListener('shown.bs.collapse', function () {
-                    toggleBtn.textContent = '收起';
-                });
-                topCollapse.addEventListener('hide.bs.collapse', function () {
-                    toggleBtn.textContent = '展开';
-                });
+                topCollapse.addEventListener('shown.bs.collapse', function () { toggleBtn.textContent = '收起'; });
+                topCollapse.addEventListener('hide.bs.collapse', function () { toggleBtn.textContent = '展开'; });
             }
         });
     </script>
-
     </body>
     </html>
 {{ end }}

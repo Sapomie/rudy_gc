@@ -253,10 +253,12 @@ const (
 	defaultAggPageSize = 24
 )
 
-func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
+func (h *MovieAggHTMLHandler) aggCommon(
+	c *gin.Context,
 	mode string, // "release" or "birth"
-	defaultOD string, // 排序字段字符串
+	defaultOD string, // 默认排序字段（orderByRelease / orderByBirth）
 ) {
+	// -------- 基本查询参数 --------
 	topN := readTopN(c)
 
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
@@ -264,15 +266,16 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		page = 1
 	}
 	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultAggPageSize)), defaultAggPageSize))
+
 	curOD := normalizeOrderBy(c.Query("od"), defaultOD)
 	sq := buildSortQuery(c, curOD)
 
-	// 解析路径参数
+	// -------- 路径参数：year / q / month --------
 	year, _ := strconv.Atoi(c.Param("year"))
 	quarter, _ := strconv.Atoi(c.Param("q"))
 	month, _ := strconv.Atoi(c.Param("month"))
 
-	// 确定层级
+	// -------- 层级判定 --------
 	var level aggLevel
 	switch {
 	case year == 0:
@@ -285,17 +288,19 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		level = levelMonth
 	}
 
-	// 构建请求
+	// -------- 列表请求（分页用） --------
 	req := &types.ListMovieFullRequest{
 		Owned:    consts.OwnedAllNotRemoved,
 		OrderBy:  curOD,
 		Page:     int64(page),
 		PageSize: int64(size),
 	}
+
+	// -------- 时间范围（按层级设定） --------
 	var start, end string
 	switch level {
 	case levelRoot:
-		// 全量
+		// 全量，不加范围
 	case levelYear:
 		start = fmt.Sprintf("%04d-01-01", year)
 		end = fmt.Sprintf("%04d-12-31", year)
@@ -303,7 +308,8 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		start, end = quarterRange(year, quarter)
 	case levelMonth:
 		start = fmt.Sprintf("%04d-%02d-01", year, month)
-		end = time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Format("2006-01-02")
+		end = time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.UTC).
+			Add(-24 * time.Hour).Format("2006-01-02")
 	}
 	if mode == "birth" {
 		req.FilmBirthTimeStart, req.FilmBirthTimeEnd = start, end
@@ -311,7 +317,7 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		req.ReleasingDateStart, req.ReleasingDateEnd = start, end
 	}
 
-	// 全量请求（聚合 + TopCasts）
+	// -------- 全量请求（用于聚合/Top）--------
 	fullReq := *req
 	fullReq.Page, fullReq.PageSize = 1, 999999
 	fullResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), &fullReq)
@@ -320,71 +326,127 @@ func (h *MovieAggHTMLHandler) aggCommon(c *gin.Context,
 		return
 	}
 
-	// 聚合桶
-	var buckets []Bucket
+	// -------- 计算 Top --------
+	topCasts := buildTopCasts(fullResp.List, topN)
+	topDirectors := buildTopDirectors(fullResp.List, topN)
+	topLabels := buildTopLabels(fullResp.List, topN)
+	topPrefixes := buildTopPrefixes(fullResp.List, topN)
+
+	// -------- 分页数据 --------
+	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), req)
+	if err != nil {
+		c.String(500, "加载失败: %v", err)
+		return
+	}
+	pi := BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
+
+	// -------- 面包屑 --------
+	bcs := buildAggBreadcrumbs(mode, year, quarter, month)
+
+	// -------- 日期字段选择器（聚合使用）--------
 	dateFn := func(m *types.MovieType) string {
 		if mode == "birth" {
 			return m.FilmBirthDate
 		}
 		return m.ReleasingDate
 	}
+
+	// =========================================
+	// 年层级：同时输出 “季度 BucketsQ + 全年 12 个月 BucketsM”，并直接渲染返回
+	// =========================================
+	if level == levelYear {
+		bq := aggQuarters(fullResp.List, dateFn, year, mode)        // Q1~Q4
+		bm := aggMonthsWholeYear(fullResp.List, dateFn, year, mode) // 01~12 月
+
+		data := gin.H{
+			"Mode":        mode,
+			"Level":       "year", // ★ 供模板判断是“年页”，显示 Tab 切换
+			"Year":        year,
+			"Quarter":     quarter,
+			"Month":       month,
+			"Breadcrumbs": bcs,
+			"Title":       fmt.Sprintf("%s · %d 年", map[string]string{"release": "上映日", "birth": "下载日"}[mode], year),
+			// 顶部 Top
+			"TopCasts":     topCasts,
+			"TopDirectors": topDirectors,
+			"TopLabels":    topLabels,
+			"TopPrefixes":  topPrefixes,
+
+			// 列表/分页/排序
+			"Movies":      listResp.List,
+			"Total":       listResp.Total,
+			"PageInfo":    pi,
+			"SortQuery":   sq,
+			"CurrentSort": curOD,
+
+			// 时间范围（用于下钻链接拼接）
+			"RangeStart": start,
+			"RangeEnd":   end,
+
+			// ★ 年页的两个桶：季度 + 全年12月
+			"BucketsQ": bq,
+			"BucketsM": bm,
+		}
+
+		c.HTML(200, "page.movie_agg_owned_time", data)
+		return
+	}
+
+	// =========================================
+	// 非年层级：按既有行为渲染（root: 年份；quarter: 该季 3 个月；month: 仅列表）
+	// =========================================
+	var buckets []Bucket
 	switch level {
 	case levelRoot:
 		buckets = aggYears(fullResp.List, dateFn, mode)
-	case levelYear:
-		buckets = aggQuarters(fullResp.List, dateFn, year, mode)
 	case levelQuarter:
 		buckets = aggMonths(fullResp.List, dateFn, year, quarter, mode)
 	}
 
-	//topCasts := buildTopCasts(fullResp.List, topN)
-	// 计算 Top 列表（基于 fullResp.List）
-	topCasts := buildTopCasts(fullResp.List, topN)
-	topDirectors := buildTopDirectors(fullResp.List, topN)
-	topLabels := buildTopLabels(fullResp.List, topN)
-	topPrefixes := buildTopPrefixes(fullResp.List, topN)
-
-	// 分页列表
-	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), req)
-	if err != nil {
-		c.String(500, "加载失败: %v", err)
-		return
-	}
-
-	pi := BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
-	bcs := buildAggBreadcrumbs(mode, year, quarter, month)
+	levelStr := map[aggLevel]string{
+		levelRoot:    "root",
+		levelQuarter: "quarter",
+		levelMonth:   "month",
+	}[level]
 
 	data := gin.H{
-		"Mode":         mode,
-		"Year":         year,
-		"Quarter":      quarter,
-		"Month":        month,
-		"Breadcrumbs":  bcs,
+		"Mode":    mode,
+		"Level":   levelStr,
+		"Year":    year,
+		"Quarter": quarter,
+		"Month":   month,
+
+		"Breadcrumbs": bcs,
+
+		// 顶部 Top
 		"TopCasts":     topCasts,
 		"TopDirectors": topDirectors,
 		"TopLabels":    topLabels,
 		"TopPrefixes":  topPrefixes,
-		"Movies":       listResp.List,
-		"Total":        listResp.Total,
-		"PageInfo":     pi,
-		"sortQuery":    sq,
-		"SortQuery":    sq,
-		"CurrentSort":  curOD,
+
+		// 列表/分页/排序
+		"Movies":      listResp.List,
+		"Total":       listResp.Total,
+		"PageInfo":    pi,
+		"SortQuery":   sq,
+		"CurrentSort": curOD,
 	}
+
+	// 范围（非 root 时用于拼链接）
 	if level != levelRoot {
 		data["RangeStart"] = start
 		data["RangeEnd"] = end
 	}
+
 	switch level {
 	case levelRoot:
 		data["Title"] = "电影聚合 · " + map[string]string{"release": "上映日", "birth": "下载日"}[mode]
 		data["BucketsY"] = buckets
-	case levelYear:
-		data["Title"] = fmt.Sprintf("%s · %d 年", map[string]string{"release": "上映日", "birth": "下载日"}[mode], year)
-		data["BucketsQ"] = buckets
+
 	case levelQuarter:
 		data["Title"] = fmt.Sprintf("%s · %d 年 Q%d", map[string]string{"release": "上映日", "birth": "下载日"}[mode], year, quarter)
 		data["BucketsM"] = buckets
+
 	case levelMonth:
 		q := monthToQuarter(month)
 		data["Title"] = fmt.Sprintf("%s · %d 年 %02d 月", map[string]string{"release": "上映日", "birth": "下载日"}[mode], year, month)
@@ -567,4 +629,39 @@ func buildTopLabels(movies []*types.MovieType, topN int) []TopStat {
 }
 func buildTopPrefixes(movies []*types.MovieType, topN int) []TopStat {
 	return buildTopByStringField(movies, func(m *types.MovieType) string { return m.Prefix }, topN)
+}
+
+// === 新增：整年 12 个月聚合（owned）===
+func aggMonthsWholeYear(movies []*types.MovieType, dateFn func(*types.MovieType) string, year int, mode string) []Bucket {
+	cnt := make([]int, 13)  // 1..12
+	sz := make([]int64, 13) // 1..12
+
+	for _, m := range movies {
+		if t, ok := parseYMD(dateFn(m)); ok && t.Year() == year {
+			mm := int(t.Month())
+			cnt[mm]++
+			if m.VFilm != nil {
+				sz[mm] += m.VFilm.Size
+			}
+		}
+	}
+	root := "/movie-agg-owned/release"
+	if mode == "birth" {
+		root = "/movie-agg-owned/birth"
+	}
+
+	out := make([]Bucket, 0, 12)
+	for mm := 1; mm <= 12; mm++ {
+		if cnt[mm] == 0 {
+			continue
+		}
+		gb := float64(sz[mm]) / (1024.0 * 1024.0 * 1024.0)
+		out = append(out, Bucket{
+			Label:  fmt.Sprintf("%02d 月", mm),
+			Href:   fmt.Sprintf("%s/%d/%02d", root, year, mm),
+			Count:  cnt[mm],
+			SizeGB: gb,
+		})
+	}
+	return out
 }
