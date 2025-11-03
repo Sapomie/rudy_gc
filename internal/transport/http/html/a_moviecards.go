@@ -21,14 +21,6 @@ const (
 
 /* ======================== 页面入口 ======================== */
 
-// /moviecard：按上映日倒序
-func (h *MovieHTMLHandler) ListMovieCardFull(c *gin.Context) {
-	h.renderMovieCard(c,
-		types.ListMovieFullRequest{OrderBy: consts.OrderByReleasingDate},
-		"MovieCard", "Movies",
-	)
-}
-
 // /moviecardtoday：只显示今天前上映
 func (h *MovieHTMLHandler) ListMovieCardToday(c *gin.Context) {
 	h.renderMovieCard(c,

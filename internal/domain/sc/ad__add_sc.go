@@ -87,7 +87,7 @@ func (l *ScService) AddSc(ctx context.Context, dir string) error {
 
 	mt, err := l.movieSvc.GetMovieType(ctx, comeMovieJavId)
 	if err != nil || mt == nil {
-		return fmt.Errorf("failed to get movie type: %w", err)
+		return fmt.Errorf("failed to get movie type: %w,%s", err, comeMovieJavId)
 	}
 	if len(mt.Cast) >= 1 {
 		sc.MovieCast = mt.Cast[0].Name

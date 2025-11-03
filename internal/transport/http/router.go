@@ -37,6 +37,33 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 			}
 			return time.Unix(ts, 0).Format("2006-01-02")
 		},
+		// ========= Record 页面需要 =========
+		"formatUnix": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("2006-01-02 15:04:05")
+		},
+		"minus": func(a, b int64) int64 {
+			return a - b
+		},
+		"humanDuration": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			d := time.Duration(sec) * time.Second
+			h := int(d.Hours())
+			m := int(d.Minutes()) % 60
+			s := int(d.Seconds()) % 60
+			switch {
+			case h > 0:
+				return fmt.Sprintf("%dh %dm %ds", h, m, s)
+			case m > 0:
+				return fmt.Sprintf("%dm %ds", m, s)
+			default:
+				return fmt.Sprintf("%ds", s)
+			}
+		},
 	}
 
 	// 模板
@@ -70,7 +97,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 
 	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)
 	r.GET("/cardsrandompick", movieHTML.ListMovieCardRandomPick)
-
+	r.GET("/records", movieHTML.ListRecordsPage)
 	r.GET("/dir/:id", dirHTML.DirDetail)
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
@@ -86,11 +113,10 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/movie-agg-owned/birth/:year/q/:q", aggHTML.MovieAggOwnedBirthQuarter)
 	r.GET("/movie-agg-owned/birth/:year/:month", aggHTML.MovieAggOwnedBirthMonth)
 
-	aggAll := htmlHandlers.NewMovieAggAllHTMLHandler(deps)
-	r.GET("/movie-agg-all/release", aggAll.MovieAggAllReleaseYears)
-	r.GET("/movie-agg-all/release/:year", aggAll.MovieAggAllReleaseMonths)
-	r.GET("/movie-agg-all/release/:year/q/:q", aggAll.MovieAggAllReleaseQuarter)
-	r.GET("/movie-agg-all/release/:year/:month", aggAll.MovieAggAllReleaseMonth)
+	r.GET("/movie-agg-all/release", aggHTML.MovieAggAllReleaseYears)
+	r.GET("/movie-agg-all/release/:year", aggHTML.MovieAggAllReleaseMonths)
+	r.GET("/movie-agg-all/release/:year/q/:q", aggHTML.MovieAggAllReleaseQuarter)
+	r.GET("/movie-agg-all/release/:year/:month", aggHTML.MovieAggAllReleaseMonth)
 
 	// ====== API 路由 ======
 	api := r.Group("/api")

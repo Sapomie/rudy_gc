@@ -23,8 +23,7 @@ func (l *FetchLoopService) FilmTriggerLoop(ctx context.Context, trigger <-chan c
 				return
 			}
 
-			// 尝试登记一次“触发式大流程”（互斥执行）
-			procCtx, ok := l.tryBeginProcess(ctx)
+			procCtx, ok := l.tryBeginFilmProcess(ctx)
 			if !ok {
 				log.Warn("FilmTriggerLoop: still running, skip trigger")
 				continue
@@ -64,4 +63,23 @@ func (l *FetchLoopService) FilmTriggerLoop(ctx context.Context, trigger <-chan c
 			}(msg)
 		}
 	}
+}
+
+// tryBeginProcess 登记新流程，返回 ctx 和是否成功（false 表示已有流程在跑）
+func (l *FetchLoopService) tryBeginFilmProcess(parent context.Context) (context.Context, bool) {
+	l.filmProcMu.Lock()
+	defer l.filmProcMu.Unlock()
+	if l.filmProcCtx != nil {
+		return nil, false
+	}
+	ctx, _ := context.WithCancel(parent)
+	l.filmProcCtx = ctx
+	return ctx, true
+}
+
+// endProcess 清理当前流程登记
+func (l *FetchLoopService) endFilmProcess() {
+	l.filmProcMu.Lock()
+	l.filmProcCtx = nil
+	l.filmProcMu.Unlock()
 }

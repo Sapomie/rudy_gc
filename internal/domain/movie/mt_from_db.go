@@ -21,7 +21,7 @@ func (s *MovieService) BuildMovieTypeFromRepos(ctx context.Context, javId string
 	// 0) 基础 Movie
 	mv, err := s.deps.MovieRepo.FindOneByJavId(ctx, javId)
 	if err != nil {
-		return nil, fmt.Errorf("FindOneByJavId failed: %w", err)
+		return nil, fmt.Errorf("FindOneByJavId failed: %s,%w", javId, err)
 	}
 
 	// 1) 扩展信息：图片/视频/编码

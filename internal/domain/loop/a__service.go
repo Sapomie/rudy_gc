@@ -28,8 +28,10 @@ type FetchLoopService struct {
 	detailWG     sync.WaitGroup
 
 	// ====== 当前“触发式大流程”控制（仅登记状态） ======
-	procMu  sync.Mutex
-	procCtx context.Context
+	procMu      sync.Mutex
+	procCtx     context.Context
+	filmProcMu  sync.Mutex
+	filmProcCtx context.Context
 }
 
 // NewFetchLoopService 构造函数

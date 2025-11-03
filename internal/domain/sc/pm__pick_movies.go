@@ -16,36 +16,37 @@ func (l *ScService) PickProcession() error {
 	ctx := context.Background()
 
 	reqs := []*requestWithWeight{
-		{
-			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-				ScTimesMin: 1,
-				ScTimesMax: ptr.Int64(1),
-				//ReleasingDateEnd: "2025-01-01",
-				//FilmBirthTimeEnd: "2025-10-01",
-			},
-			w: 0,
-		},
+		//{
+		//	req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
+		//		ScTimesMin: 1,
+		//		ScTimesMax: ptr.Int64(1),
+		//		//ReleasingDateEnd: "2025-01-01",
+		//		//FilmBirthTimeEnd: "2025-10-01",
+		//	},
+		//	w: 0,
+		//},
+		//{
+		//	req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
+		//		ScTimesMax: ptr.Int64(0),
+		//		//ReleasingDateStart: "2025-06-01",
+		//		FilmBirthTimeEnd: "2025-10-01",
+		//	},
+		//	w: 5,
+		//},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
 				ScTimesMax: ptr.Int64(0),
 				//ReleasingDateStart: "2025-06-01",
-				FilmBirthTimeEnd: "2025-10-01",
+				//FilmBirthTimeStart: "2025-10-01",
+				ReleasingDateStart: "2025-07-01",
+				ViewWatchedMin:     100,
 			},
-			w: 0,
-		},
-		{
-			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-				ScTimesMax: ptr.Int64(0),
-				//ReleasingDateStart: "2025-06-01",
-				FilmBirthTimeStart: "2025-10-01",
-				ReleasingDateStart: "2025-09-01",
-			},
-			w: 16,
+			w: 10,
 		},
 	}
 
 	// 例如抽取 20 个
-	movieTypes, err := l.PickFromSources(ctx, reqs, 10)
+	movieTypes, err := l.PickFromSources(ctx, reqs, 4)
 	if err != nil {
 		return err
 	}
