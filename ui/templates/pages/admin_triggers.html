@@ -58,7 +58,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- ✅ DailyBest 同步（新增，位于两者之间） -->
+                                    <!-- DailyBest 同步 -->
                                     <div class="col-md-4">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-secondary">DailyBest 同步</h6>
@@ -80,8 +80,35 @@
                                         </div>
                                     </div>
 
+                                    <!-- 🔁 刷新最久未更新详情 -->
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="fw-semibold mb-3 text-warning">刷新最久未更新的详情</h6>
+                                            <p class="text-muted small mb-2">
+                                                按 LastQueryDetailTime 从最早开始，批量刷新若干条详情。
+                                            </p>
+                                            <form id="formRefreshOldest" class="needs-validation" novalidate>
+                                                <div class="row g-2 align-items-center">
+                                                    <div class="col-auto">
+                                                        <label for="refreshNumber" class="col-form-label">刷新数量：</label>
+                                                    </div>
+                                                    <div class="col-auto trigger-input">
+                                                        <input type="number" min="1" class="form-control" id="refreshNumber"
+                                                               placeholder="例如：10" required>
+                                                        <div class="invalid-tooltip">请输入大于 0 的数字</div>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <button type="submit" class="btn btn-outline-warning">
+                                                            执行刷新
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
                                     <!-- 按名称抓取 Seed -->
-                                    <div class="col-md-12">
+                                    <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
                                             <h6 class="fw-semibold mb-3 text-info">按名称抓取</h6>
                                             <p class="text-muted small mb-2">输入 Seed 名称进行定向抓取。</p>

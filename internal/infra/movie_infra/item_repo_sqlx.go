@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"rudy_gc/internal/types"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 var _ spider_repo.ItemRepo = (*ItemRepoSqlx)(nil)
@@ -20,6 +22,23 @@ const defaultItemLimit int64 = 1_000_000
 
 func NewItemRepoSqlx(m moviex.EItemModel) spider_repo.ItemRepo {
 	return &ItemRepoSqlx{m: m}
+}
+
+// 按 LastQueryDetailTime 最早排序，取最前面的 num 条
+func (r *ItemRepoSqlx) FindOldestByLastQueryDetailTime(ctx context.Context, num int64) ([]*types.Item, error) {
+	if num <= 0 {
+		num = 1
+	}
+
+	rows, err := r.m.ListOldestByLastQueryDetailTime(ctx, num)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, sqlx.ErrNotFound
+	}
+
+	return mapItems(rows), nil
 }
 
 func (r *ItemRepoSqlx) TryInsert(ctx context.Context, it *types.Item) (bool, error) {

@@ -46,7 +46,7 @@ func DefaultPickConfig() PickConfig {
 		DiversityBeta:     100, // 你当前使用的默认
 		ActorPenaltyAlpha: 0.6,
 		HalfLifeActorDays: 50,
-		BlockActorDays:    20,
+		BlockActorDays:    30,
 		RandomSeed:        0,
 		MinWeight:         0,
 		BlockMovieDays:    0,

@@ -30,7 +30,7 @@ func (l *FetchLoopService) FilmTriggerLoop(ctx context.Context, trigger <-chan c
 			}
 
 			go func(m contracts.FilmTriggerMsg) {
-				defer l.endProcess()
+				defer l.endFilmProcess()
 
 				start := time.Now()
 

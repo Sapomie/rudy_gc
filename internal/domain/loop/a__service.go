@@ -116,10 +116,6 @@ func (l *FetchLoopService) RestartDetailLoop(parent context.Context, baseWindow 
 	l.StartDetailLoop(parent, baseWindow, maxBatch)
 }
 
-//
-// ====== 二、触发式大流程登记 ======
-//
-
 // tryBeginProcess 登记新流程，返回 ctx 和是否成功（false 表示已有流程在跑）
 func (l *FetchLoopService) tryBeginProcess(parent context.Context) (context.Context, bool) {
 	l.procMu.Lock()

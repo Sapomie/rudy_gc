@@ -23,30 +23,41 @@ func (l *ScService) PickProcession() error {
 		//		//ReleasingDateEnd: "2025-01-01",
 		//		//FilmBirthTimeEnd: "2025-10-01",
 		//	},
-		//	w: 0,
-		//},
-		//{
-		//	req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-		//		ScTimesMax: ptr.Int64(0),
-		//		//ReleasingDateStart: "2025-06-01",
-		//		FilmBirthTimeEnd: "2025-10-01",
-		//	},
-		//	w: 5,
+		//	w: 2,
 		//},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
 				ScTimesMax: ptr.Int64(0),
 				//ReleasingDateStart: "2025-06-01",
-				//FilmBirthTimeStart: "2025-10-01",
-				ReleasingDateStart: "2025-07-01",
-				ViewWatchedMin:     100,
+				FilmBirthTimeEnd: "2025-10-01",
 			},
 			w: 10,
+		},
+		{
+			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
+				ScTimesMax: ptr.Int64(0),
+				//ReleasingDateStart: "2025-06-01",
+				FilmBirthTimeStart: "2025-10-01",
+				FilmBirthTimeEnd:   "2025-11-01",
+				//ReleasingDateStart: "2025-10-01",
+				//ViewWatchedMin:     100,
+			},
+			w: 12,
+		},
+		{
+			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
+				ScTimesMax: ptr.Int64(0),
+				//ReleasingDateStart: "2025-06-01",
+				FilmBirthTimeStart: "2025-11-01",
+				//ReleasingDateStart: "2025-10-01",
+				//ViewWatchedMin:     100,
+			},
+			w: 12,
 		},
 	}
 
 	// 例如抽取 20 个
-	movieTypes, err := l.PickFromSources(ctx, reqs, 4)
+	movieTypes, err := l.PickFromSources(ctx, reqs, 2)
 	if err != nil {
 		return err
 	}

@@ -18,4 +18,6 @@ type ItemRepo interface {
 	FindByDetailNeedScan(ctx context.Context, needScan int64) ([]*types.Item, error)
 	FindByDownloadCoverStatus(ctx context.Context, downloadCoverStatus int64) ([]*types.Item, error)
 	FindByTranslateStatus(ctx context.Context, translateStatus int64) ([]*types.Item, error)
+
+	FindOldestByLastQueryDetailTime(ctx context.Context, num int64) ([]*types.Item, error)
 }

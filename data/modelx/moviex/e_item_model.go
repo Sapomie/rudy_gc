@@ -17,7 +17,7 @@ type EItemModel interface {
 	ListByDetailNeedScan(ctx context.Context, needScan int64, limit int64) ([]*EItem, error)
 	ListByDownloadCoverStatus(ctx context.Context, hasDownloadCover int64, limit int64) ([]*EItem, error)
 	ListByTranslateStatus(ctx context.Context, hasDownloadCover int64, limit int64) ([]*EItem, error)
-
+	ListOldestByLastQueryDetailTime(ctx context.Context, limit int64) ([]*EItem, error)
 	TableName() string
 	ExecNoCacheCtx(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
@@ -72,6 +72,32 @@ func (m *customEItemModel) listByIntFlag(ctx context.Context, col string, val, l
 	var rows []*EItem
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
 		// go-zero 的 sqlx.ErrNotFound 表示 0 行，按空切片返回即可
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*EItem{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customEItemModel) ListOldestByLastQueryDetailTime(ctx context.Context, limit int64) ([]*EItem, error) {
+	if limit <= 0 {
+		limit = 1
+	}
+
+	builder := squirrel.
+		Select(eItemRows).
+		From(m.tableName()).
+		OrderBy("`last_query_detail_time` ASC").
+		Limit(uint64(limit))
+
+	sqlStr, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*EItem
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return []*EItem{}, nil
 		}

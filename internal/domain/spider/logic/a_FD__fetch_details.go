@@ -2,10 +2,41 @@ package logic
 
 import (
 	"context"
+	"errors"
 	"rudy_gc/internal/types"
 	"strings"
 	"time"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
+
+func (l *CrawlLogic) RefreshOldestDetail(ctx context.Context, num int64) (int, error) {
+	if num <= 0 {
+		num = 1
+	}
+
+	items, err := l.deps.ItemRepo.FindOldestByLastQueryDetailTime(ctx, num)
+	if err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			l.deps.Log.WithContext(ctx).Info("RefreshOldestDetail: 没有可更新的 Item")
+			return 0, nil
+		}
+		return 0, err
+	}
+	if len(items) == 0 {
+		l.deps.Log.WithContext(ctx).Info("RefreshOldestDetail: Item 列表为空，跳过")
+		return 0, nil
+	}
+
+	first := items[0]
+	l.deps.Log.WithContext(ctx).Infof(
+		"RefreshOldestDetail: 准备更新 %d 条最久未查询的详情，first javId=%s, name=%s, lastQuery=%d",
+		len(items), first.JavId, first.Name, first.LastQueryDetailTime,
+	)
+
+	// 直接复用批量逻辑：按顺序刷新 num 条
+	return l.handleFetchAndParseDetails(ctx, items)
+}
 
 func (l *CrawlLogic) HandleFetchDetailsById(ctx context.Context, javIds []string) (int, error) {
 	if len(javIds) == 0 {
@@ -69,11 +100,11 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 	l.deps.Log.WithContext(ctx).Infof("有 %d 个详情需要抓取", total)
 
 	for i, it := range items {
+
 		if err := l.fetchAndSaveDetail(ctx, it); err != nil {
 			return 0, err
 		}
 
-		// 紧接解析与入库
 		item, err := l.deps.ItemRepo.FindOneByJavId(ctx, it.JavId)
 		if err != nil {
 			return 0, err
@@ -83,9 +114,7 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 			return 0, err
 		}
 
-		// 7) 进度日志（中文）
-		l.logItemProgress(i+1, total, it.Name, start)
-
+		l.logItemProgress(i+1, total, it.Name, it.LastQueryDetailTime, start)
 		time.Sleep(getRandomSleepDuration())
 	}
 
@@ -112,7 +141,7 @@ func (l *CrawlLogic) shouldSkipUpdate(ctx context.Context, lastQueryTime, releas
 
 	releasingFromNow := now - releasingDate
 	lastQueryFromNow := now - lastQueryTime
-	daysSinceLast := float64(lastQueryFromNow) / float64(oneDay)
+	//daysSinceLast := float64(lastQueryFromNow) / float64(oneDay)
 
 	var skip bool
 	switch {
@@ -130,10 +159,10 @@ func (l *CrawlLogic) shouldSkipUpdate(ctx context.Context, lastQueryTime, releas
 		skip = lastQueryFromNow <= 100*oneDay
 	}
 
-	if !skip {
-		// ✅ 需要更新时打印距离上次更新的天数
-		log.Infof("shouldSkipUpdate: 距上次更新 %.1f 天 → 需要更新 %s", daysSinceLast, name)
-	}
+	//if !skip {
+	//	// ✅ 需要更新时打印距离上次更新的天数
+	//	log.Infof("shouldSkipUpdate: 距上次更新 %.1f 天 → 需要更新 %s", daysSinceLast, name)
+	//}
 
 	return skip
 }

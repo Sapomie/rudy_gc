@@ -25,7 +25,7 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 			}
 
 			switch msg.Kind {
-			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName, contracts.ProcSyncBest:
+			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName, contracts.ProcSyncBest, contracts.ProcRefreshOldestDetail:
 				procCtx, ok := l.tryBeginProcess(ctx)
 				if !ok {
 					log.Warn("ProcessionTriggerLoop: still running, skip trigger")
@@ -61,6 +61,10 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 						}
 						log.Infof("ProcessionTriggerLoop: running CrawlBySeedName(%s)", name)
 						err = l.crawlLogic.CrawlBySeedName(procCtx, name)
+
+					case contracts.ProcRefreshOldestDetail: // ⭐ 新增分支
+						log.Infof("ProcessionTriggerLoop: RefreshOldestDetail(num=%d)", m.Number)
+						_, err = l.crawlLogic.RefreshOldestDetail(procCtx, m.Number)
 					}
 
 					if err != nil {

@@ -137,6 +137,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		api.POST("/triggers/daily-best-sync", trig.DailyBestSync)
 		api.POST("/triggers/seeds", trig.Seeds)
 		api.POST("/triggers/seed-by-name", trig.SeedByName)
+		api.POST("/triggers/refresh-oldest-detail", trig.RefreshOldestDetail)
 
 		// === 影片触发 ===
 		filmTrig := api2.NewFilmTriggerAPI(deps)

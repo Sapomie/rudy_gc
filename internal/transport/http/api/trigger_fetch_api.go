@@ -69,3 +69,20 @@ func (h *TriggerAPI) enqueue(c *gin.Context, msg contracts.TriggerMsg) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "trigger queue is full"})
 	}
 }
+
+type refreshOldestReq struct {
+	Number int64 `json:"number"`
+}
+
+func (h *TriggerAPI) RefreshOldestDetail(c *gin.Context) {
+	var req refreshOldestReq
+	if err := c.ShouldBindJSON(&req); err != nil || req.Number <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid number"})
+		return
+	}
+
+	h.enqueue(c, contracts.TriggerMsg{
+		Kind:   contracts.ProcRefreshOldestDetail,
+		Number: req.Number,
+	})
+}

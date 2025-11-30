@@ -7,10 +7,12 @@ const (
 	ProcDailyBest TriggerKind = iota + 1
 	ProcSeeds
 	ProcSeedByName
-	ProcSyncBest // ✅ 新增：同步每日榜
+	ProcSyncBest
+	ProcRefreshOldestDetail // ✅ 新增
 )
 
 type TriggerMsg struct {
-	Kind TriggerKind
-	Name string // 给 ProcSeedByName 用
+	Kind   TriggerKind
+	Name   string // 给 SeedByName 用
+	Number int64  // ✅ 给 RefreshOldestDetail 用
 }

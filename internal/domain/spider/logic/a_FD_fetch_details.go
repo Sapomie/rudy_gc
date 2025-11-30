@@ -40,7 +40,7 @@ func (l *CrawlLogic) handleFetchDetails(ctx context.Context, items []*types.Item
 			return 0, err
 		}
 		// 7) 进度日志（中文）
-		l.logItemProgress(i+1, total, it.Name, start)
+		l.logItemProgress(i+1, total, it.Name, it.LastQueryDetailTime, start)
 		time.Sleep(getRandomSleepDuration())
 	}
 
@@ -152,12 +152,18 @@ func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string)
 	return "", fmt.Errorf("达到最大重试次数，无法获取 URL: %s", url)
 }
 
-func (l *CrawlLogic) logItemProgress(done, total int, name string, start time.Time) {
+func (l *CrawlLogic) logItemProgress(done, total int, name string, lastQuery int64, start time.Time) {
+	now := time.Now().Unix()
+	days := float64(now-lastQuery) / 86400.0
+
 	elapsed := time.Since(start).Minutes()
 	etaTotal := (elapsed / float64(done)) * float64(total)
 	remain := etaTotal - elapsed
-	l.deps.Log.Infof("已完成 %d/%d: %s，用时 %.1f 分钟，预计剩余 %.1f 分钟",
-		done, total, name, elapsed, remain)
+
+	l.deps.Log.Infof(
+		"已完成 %d/%d: %s（距上次更新 %.1f 天），用时 %.1f 分钟，预计剩余 %.1f 分钟",
+		done, total, name, days, elapsed, remain,
+	)
 }
 
 // filterDetailContent 过滤掉 HTML 中无关部分，只保留电影详情相关节点
