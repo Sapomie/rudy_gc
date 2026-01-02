@@ -79,6 +79,77 @@ type scPickCopyReq struct {
 	Reqs  []scPickReq `json:"reqs"`
 }
 
+type scPickCopyCast struct {
+	Name     string `json:"name"`
+	NameShow string `json:"name_show"`
+}
+
+type scPickCopyMovie struct {
+	Name                 string           `json:"name"`
+	Title                string           `json:"title"`
+	ReleasingDate        string           `json:"releasing_date"`
+	FilmBirthDate        string           `json:"film_birth_date"`
+	Score                float64          `json:"score"`
+	ViewersNumberWatched int64            `json:"viewers_number_watched"`
+	Director             string           `json:"director"`
+	Genre                []string         `json:"genre"`
+	Cast                 []scPickCopyCast `json:"cast"`
+	JavUrl               string           `json:"jav_url"`
+	VideoUrl             string           `json:"video_url"`
+	SearchUrl            string           `json:"search_url"`
+	BusUrl               string           `json:"bus_url"`
+	JacketImg            string           `json:"jacket_img"`
+	Owned                int64            `json:"owned"`
+	Prefix               string           `json:"prefix"`
+	ScTimes              int64            `json:"sc_times"`
+	ComeTimes            int64            `json:"come_times"`
+	HighestRank          int64            `json:"highest_rank"`
+}
+
+func buildPickCopyMovies(movies []*types.MovieType) []scPickCopyMovie {
+	if len(movies) == 0 {
+		return nil
+	}
+	resp := make([]scPickCopyMovie, 0, len(movies))
+	for _, m := range movies {
+		if m == nil {
+			continue
+		}
+		casts := make([]scPickCopyCast, 0, len(m.Cast))
+		for _, c := range m.Cast {
+			if c == nil {
+				continue
+			}
+			casts = append(casts, scPickCopyCast{
+				Name:     c.Name,
+				NameShow: c.NameShow,
+			})
+		}
+		resp = append(resp, scPickCopyMovie{
+			Name:                 m.Name,
+			Title:                m.Title,
+			ReleasingDate:        m.ReleasingDate,
+			FilmBirthDate:        m.FilmBirthDate,
+			Score:                m.Score,
+			ViewersNumberWatched: m.ViewersNumberWatched,
+			Director:             m.Director,
+			Genre:                m.Genre,
+			Cast:                 casts,
+			JavUrl:               m.JavUrl,
+			VideoUrl:             m.VideoUrl,
+			SearchUrl:            m.SearchUrl,
+			BusUrl:               m.BusUrl,
+			JacketImg:            m.JacketImg,
+			Owned:                m.Owned,
+			Prefix:               m.Prefix,
+			ScTimes:              m.ScTimes,
+			ComeTimes:            m.ComeTimes,
+			HighestRank:          m.HighestRank,
+		})
+	}
+	return resp
+}
+
 // POST /api/triggers/sc/pick-copy
 func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
 	var req scPickCopyReq
@@ -104,5 +175,8 @@ func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"picked": len(movies)})
+	c.JSON(http.StatusOK, gin.H{
+		"picked": len(movies),
+		"movies": buildPickCopyMovies(movies),
+	})
 }

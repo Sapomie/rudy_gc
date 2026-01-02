@@ -59,6 +59,17 @@
                         </form>
                     </div>
                 </div>
+
+                <div class="card mt-3" id="pickedCard" style="display: none;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="mb-0">抽取结果</h5>
+                            <span class="text-muted small" id="pickedCount"></span>
+                        </div>
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3"
+                             id="pickedGrid"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -93,19 +104,27 @@
 
                     <div class="col-md-3">
                         <label class="form-label">放映日期起 (rs)</label>
-                        <input type="date" class="form-control" data-req-field="ReleasingDateStart">
+                        <input type="text" class="form-control" data-req-field="ReleasingDateStart"
+                               placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10"
+                               pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">放映日期止 (re)</label>
-                        <input type="date" class="form-control" data-req-field="ReleasingDateEnd">
+                        <input type="text" class="form-control" data-req-field="ReleasingDateEnd"
+                               placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10"
+                               pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">下载日期起 (bs)</label>
-                        <input type="date" class="form-control" data-req-field="FilmBirthTimeStart">
+                        <input type="text" class="form-control" data-req-field="FilmBirthTimeStart"
+                               placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10"
+                               pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">下载日期止 (be)</label>
-                        <input type="date" class="form-control" data-req-field="FilmBirthTimeEnd">
+                        <input type="text" class="form-control" data-req-field="FilmBirthTimeEnd"
+                               placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10"
+                               pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
 
                     <div class="col-md-3">
@@ -172,11 +191,15 @@
 
                             <div class="col-md-3">
                                 <label class="form-label">最后评分起 (lsctmin)</label>
-                                <input type="date" class="form-control" data-req-field="LastScTimeMin">
+                                <input type="text" class="form-control" data-req-field="LastScTimeMin"
+                                       placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10"
+                                       pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">最后评分止 (lsctmax)</label>
-                                <input type="date" class="form-control" data-req-field="LastScTimeMax">
+                                <input type="text" class="form-control" data-req-field="LastScTimeMax"
+                                       placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10"
+                                       pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Dir1 (d1)</label>
