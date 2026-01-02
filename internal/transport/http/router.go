@@ -150,6 +150,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		api.POST("/triggers/sc/move", scTrig.Move)
 		api.POST("/triggers/sc/add", scTrig.Add)
 		api.POST("/triggers/sc/pick-copy", scTrig.PickCopy)
+		api.POST("/triggers/sc/pick-only", scTrig.PickOnly)
 	}
 
 	return r

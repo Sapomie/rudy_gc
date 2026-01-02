@@ -60,6 +60,18 @@ func (l *ScService) PickProcession() error {
 }
 
 func (l *ScService) PickCopyFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int) ([]*types.MovieType, error) {
+	movieTypes, err := l.PickFromRequests(ctx, reqs, n)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := l.copyMovieRank(movieTypes); err != nil {
+		return nil, err
+	}
+	return movieTypes, nil
+}
+
+func (l *ScService) PickFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int) ([]*types.MovieType, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("reqs is empty")
 	}
@@ -82,9 +94,6 @@ func (l *ScService) PickCopyFromRequests(ctx context.Context, reqs []PickRequest
 	}
 
 	l.LogPicks(movieTypes)
-	//if err := l.copyMovieRank(movieTypes); err != nil {
-	//	return nil, err
-	//}
 	return movieTypes, nil
 }
 

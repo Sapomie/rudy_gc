@@ -25,6 +25,7 @@
     const groupWrap = document.getElementById('pickGroups');
     const groupTpl = document.getElementById('pickGroupTpl');
     const btnAdd = document.getElementById('btnAddGroup');
+    const btnPickOnly = document.getElementById('btnPickOnly');
     const pickedCard = document.getElementById('pickedCard');
     const pickedGrid = document.getElementById('pickedGrid');
     const pickedCount = document.getElementById('pickedCount');
@@ -269,7 +270,7 @@
         const req = {
             Owned: 3,
             Page: 1,
-            PageSize: 1000,
+            PageSize: 100000,
         };
 
         const inputs = group.querySelectorAll('[data-req-field]');
@@ -307,25 +308,23 @@
         return req;
     }
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-
+    function buildPayload() {
         if (!form.checkValidity()) {
             form.classList.add('was-validated');
-            return;
+            return null;
         }
 
         const rawN = document.getElementById('pickCount').value.trim();
         const n = parseInt(rawN, 10);
         if (!Number.isFinite(n) || n <= 0) {
             showMsg('请输入大于 0 的数量', false);
-            return;
+            return null;
         }
 
         const groups = groupWrap.querySelectorAll('.pick-group');
         if (groups.length === 0) {
             showMsg('请添加至少一组条件', false);
-            return;
+            return null;
         }
 
         const reqs = [];
@@ -334,7 +333,7 @@
             const w = weightEl ? parseInt(weightEl.value.trim(), 10) : 0;
             if (!Number.isFinite(w) || w <= 0) {
                 showMsg('权重需为正数', false);
-                return;
+                return null;
             }
             reqs.push({
                 weight: w,
@@ -342,7 +341,14 @@
             });
         }
 
-        post('/api/triggers/sc/pick-copy', {pickN: n, reqs})
+        return {pickN: n, reqs};
+    }
+
+    function runPick(url, actionLabel) {
+        const payload = buildPayload();
+        if (!payload) return;
+
+        post(url, payload)
             .then(async (r) => {
                 if (!r.ok) {
                     const data = await r.json().catch(() => ({}));
@@ -353,8 +359,20 @@
                 const data = await r.json().catch(() => ({}));
                 const picked = data.picked || 0;
                 renderMovies(data.movies || []);
-                showMsg('执行完成，已抽取 ' + picked + ' 部');
+                const label = actionLabel ? actionLabel + '完成' : '执行完成';
+                showMsg(label + '，已抽取 ' + picked + ' 部');
             })
             .catch((e) => showMsg('异常：' + e, false));
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        runPick('/api/triggers/sc/pick-copy', 'Pick + Copy');
     });
+
+    if (btnPickOnly) {
+        btnPickOnly.addEventListener('click', function () {
+            runPick('/api/triggers/sc/pick-only', '仅 Pick');
+        });
+    }
 })();

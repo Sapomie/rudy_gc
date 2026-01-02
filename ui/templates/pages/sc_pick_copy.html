@@ -33,7 +33,7 @@
                 <div class="card">
                     <div class="card-body">
                         <p class="text-muted mb-2">填写条件组，点击执行后按权重抽取并复制影片。</p>
-                        <p class="text-muted small mb-3">固定值：Owned=3，Page=1，PageSize=1000。</p>
+                        <p class="text-muted small mb-3">固定值：Owned=3，Page=1，PageSize=100000。</p>
 
                         <form id="formPickCopy" class="needs-validation" novalidate>
                             <div class="row g-3 align-items-center mb-3">
@@ -41,7 +41,7 @@
                                     <label for="pickCount" class="col-form-label">抽取数量：</label>
                                 </div>
                                 <div class="col-auto">
-                                    <input type="number" min="1" class="form-control" id="pickCount" value="25" required>
+                                    <input type="number" min="1" class="form-control" id="pickCount" value="6" required>
                                     <div class="invalid-tooltip">请输入大于 0 的数字</div>
                                 </div>
                                 <div class="col-auto">
@@ -55,6 +55,8 @@
 
                             <div class="mt-3">
                                 <button type="submit" class="btn btn-primary">执行 Pick + Copy</button>
+                                <button type="button" class="btn btn-outline-primary ms-2"
+                                        id="btnPickOnly">仅 Pick 不 Copy</button>
                             </div>
                         </form>
                     </div>
@@ -133,7 +135,8 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">ScTimes 最大 (scmax)</label>
-                        <input type="number" class="form-control" data-req-field="ScTimesMax" data-type="int-opt" placeholder="可为空">
+                        <input type="number" class="form-control" data-req-field="ScTimesMax" data-type="int-opt"
+                               placeholder="可为空" value="0">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">ComeTimes 最小 (comin)</label>

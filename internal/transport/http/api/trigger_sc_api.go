@@ -180,3 +180,34 @@ func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
 		"movies": buildPickCopyMovies(movies),
 	})
 }
+
+// POST /api/triggers/sc/pick-only
+func (h *ScTriggerAPI) PickOnly(c *gin.Context) {
+	var req scPickCopyReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if len(req.Reqs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
+		return
+	}
+
+	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
+	for _, r := range req.Reqs {
+		converted = append(converted, sc.PickRequestWithWeight{
+			Req:    r.Req,
+			Weight: r.Weight,
+		})
+	}
+
+	movies, err := h.scSvc.PickFromRequests(c.Request.Context(), converted, req.PickN)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"picked": len(movies),
+		"movies": buildPickCopyMovies(movies),
+	})
+}
