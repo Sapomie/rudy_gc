@@ -12,4 +12,7 @@ type RankRepo interface {
 	AggregateByJavId(ctx context.Context, javId string) (firstDay int64, bestRank int64, daysInRank int64, err error)
 	All(ctx context.Context) ([]*types.Rank, error)
 	FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*types.Rank, error)
+	ListByDayNumber(ctx context.Context, dayNumber int64) ([]*types.Rank, error)
+	FindEarliestDayNumber(ctx context.Context) (int64, error)
+	FindLatestDayNumber(ctx context.Context) (int64, error)
 }

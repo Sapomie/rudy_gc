@@ -20,6 +20,9 @@ type (
 		All(ctx context.Context) ([]*CRank, error)
 		AggregateByJavId(ctx context.Context, javId string) (firstDay int64, bestRank int64, daysInRank int64, err error)
 		FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*CRank, error)
+		FindByDayNumber(ctx context.Context, dayNumber int64) ([]*CRank, error)
+		FindEarliestDayNumber(ctx context.Context) (int64, error)
+		FindLatestDayNumber(ctx context.Context) (int64, error)
 	}
 
 	customCRankModel struct {
@@ -88,4 +91,38 @@ func (m *customCRankModel) All(ctx context.Context) ([]*CRank, error) {
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (m *customCRankModel) FindByDayNumber(ctx context.Context, dayNumber int64) ([]*CRank, error) {
+	query := fmt.Sprintf(`SELECT * FROM %s WHERE day_number = ? ORDER BY rank_pos ASC`, m.tableName())
+
+	var rows []*CRank
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, dayNumber); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customCRankModel) FindLatestDayNumber(ctx context.Context) (int64, error) {
+	query := fmt.Sprintf(`SELECT COALESCE(MAX(day_number), 0) AS latest_day FROM %s`, m.tableName())
+
+	var dst struct {
+		LatestDay int64 `db:"latest_day"`
+	}
+	if err := m.QueryRowNoCacheCtx(ctx, &dst, query); err != nil {
+		return 0, err
+	}
+	return dst.LatestDay, nil
+}
+
+func (m *customCRankModel) FindEarliestDayNumber(ctx context.Context) (int64, error) {
+	query := fmt.Sprintf(`SELECT COALESCE(MIN(day_number), 0) AS earliest_day FROM %s`, m.tableName())
+
+	var dst struct {
+		EarliestDay int64 `db:"earliest_day"`
+	}
+	if err := m.QueryRowNoCacheCtx(ctx, &dst, query); err != nil {
+		return 0, err
+	}
+	return dst.EarliestDay, nil
 }

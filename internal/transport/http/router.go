@@ -93,6 +93,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardshasrank", movieHTML.ListMovieCardHasRank)
 	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
+	r.GET("/moviecarddayrank", movieHTML.ListMovieCardDayRank)
 	r.GET("/movie/:movie", movieHTML.MovieDetail)
 
 	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)

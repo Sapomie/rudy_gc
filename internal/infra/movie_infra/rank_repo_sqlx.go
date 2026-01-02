@@ -82,6 +82,29 @@ func (r *RankRepoSqlx) FindHighestRank(ctx context.Context, movieJavId string, l
 	return out, nil
 }
 
+func (r *RankRepoSqlx) ListByDayNumber(ctx context.Context, dayNumber int64) ([]*types.Rank, error) {
+	rows, err := r.m.FindByDayNumber(ctx, dayNumber)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.Rank, 0, len(rows))
+	for _, v := range rows {
+		if v == nil {
+			continue
+		}
+		out = append(out, mapCRankToTypes(v))
+	}
+	return out, nil
+}
+
+func (r *RankRepoSqlx) FindEarliestDayNumber(ctx context.Context) (int64, error) {
+	return r.m.FindEarliestDayNumber(ctx)
+}
+
+func (r *RankRepoSqlx) FindLatestDayNumber(ctx context.Context) (int64, error) {
+	return r.m.FindLatestDayNumber(ctx)
+}
+
 func (r *RankRepoSqlx) AggregateByJavId(ctx context.Context, javId string) (int64, int64, int64, error) {
 	firstDay, bestRank, daysInRank, err := r.m.AggregateByJavId(ctx, javId)
 	if err != nil {
