@@ -7,9 +7,8 @@ type ListMovieResponse struct {
 }
 
 type ListMovieFullRequest struct {
-	CastNames  string `form:"cn"`
-	GenreNames string `form:"gn"`
-
+	CastNames    string `form:"cn"`
+	GenreNames   string `form:"gn"`
 	DirectorName string `form:"dn"`
 	PrefixName   string `form:"pn"`
 	MakerName    string `form:"mn"`
@@ -17,7 +16,6 @@ type ListMovieFullRequest struct {
 
 	ReleasingDateStart string `form:"rs"`
 	ReleasingDateEnd   string `form:"re"`
-
 	FilmBirthTimeStart string `form:"bs"`
 	FilmBirthTimeEnd   string `form:"be"`
 

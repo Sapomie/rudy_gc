@@ -98,23 +98,48 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 
 	start := time.Now()
 	l.deps.Log.WithContext(ctx).Infof("有 %d 个详情需要抓取", total)
-
 	for i, it := range items {
 
+		// -------------------------------
+		// 1) 抓详情（失败 → log + continue）
+		// -------------------------------
 		if err := l.fetchAndSaveDetail(ctx, it); err != nil {
-			return 0, err
+			l.deps.Log.WithContext(ctx).Errorf(
+				"[%d/%d] fetch 失败: %s (err=%v)",
+				i+1, total, it.Name, err,
+			)
+			time.Sleep(getRandomSleepDuration())
+			continue
 		}
 
+		// -------------------------------
+		// 2) 重新查 item
+		// -------------------------------
 		item, err := l.deps.ItemRepo.FindOneByJavId(ctx, it.JavId)
 		if err != nil {
-			return 0, err
+			l.deps.Log.WithContext(ctx).Errorf(
+				"[%d/%d] FindOneByJavId 失败: %s (err=%v)",
+				i+1, total, it.Name, err,
+			)
+			continue
 		}
 
+		// -------------------------------
+		// 3) 解析详情（失败 → log + continue）
+		// -------------------------------
 		if err := l.handleDetailParse(ctx, item); err != nil {
-			return 0, err
+			l.deps.Log.WithContext(ctx).Errorf(
+				"[%d/%d] parse 失败: %s (err=%v)",
+				i+1, total, it.Name, err,
+			)
+			continue
 		}
 
+		// -------------------------------
+		// 4) 进度日志
+		// -------------------------------
 		l.logItemProgress(i+1, total, it.Name, it.LastQueryDetailTime, start)
+
 		time.Sleep(getRandomSleepDuration())
 	}
 

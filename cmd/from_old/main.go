@@ -36,10 +36,10 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
-	//err = migrate.New(deps).AddScInfoToMinfo()
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = migrate.New(deps).AddScInfoToMinfo()
+	if err != nil {
+		panic(err)
+	}
 
 	//err = migrate.New(deps).MigrateFilm()
 	//err = migrate.New(deps).MigrateRank()
@@ -48,9 +48,9 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
-	err = migrate.New(deps).MigrateSeeds()
-	if err != nil {
-		panic(err)
-	}
+	//err = migrate.New(deps).MigrateSeeds()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 }

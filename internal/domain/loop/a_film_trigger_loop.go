@@ -36,7 +36,6 @@ func (l *FetchLoopService) FilmTriggerLoop(ctx context.Context, trigger <-chan c
 
 				// ✅ 暂停详情抓取（避免资源竞争）
 				log.Info("FilmTriggerLoop: stopping Detail loop...")
-				l.StopDetailLoop()
 
 				var err error
 				switch m.Kind {
@@ -59,7 +58,6 @@ func (l *FetchLoopService) FilmTriggerLoop(ctx context.Context, trigger <-chan c
 
 				// ✅ 恢复详情抓取
 				log.Info("FilmTriggerLoop: restarting Detail loop...")
-				l.StartDetailLoop(ctx, 10*time.Second, 100)
 			}(msg)
 		}
 	}
