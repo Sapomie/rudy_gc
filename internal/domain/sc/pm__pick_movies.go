@@ -2,6 +2,7 @@ package sc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"rudy_gc/internal/types"
@@ -12,52 +13,38 @@ import (
 	"time"
 )
 
+type PickRequestWithWeight struct {
+	Req    types.ListMovieFullRequest `json:"req"`
+	Weight int64                      `json:"weight"`
+}
+
 func (l *ScService) PickProcession() error {
 	ctx := context.Background()
 
 	reqs := []*requestWithWeight{
-		//{
-		//	req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-		//		ScTimesMin: 1,
-		//		ScTimesMax: ptr.Int64(1),
-		//		//ReleasingDateEnd: "2025-01-01",
-		//		//FilmBirthTimeEnd: "2025-10-01",
-		//	},
-		//	w: 2,
-		//},
+
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-				ScTimesMax: ptr.Int64(0),
-				//ReleasingDateStart: "2025-06-01",
-				FilmBirthTimeEnd: "2025-10-01",
-			},
-			w: 10,
-		},
-		{
-			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-				ScTimesMax: ptr.Int64(0),
-				//ReleasingDateStart: "2025-06-01",
+				ScTimesMax:         ptr.Int64(0),
 				FilmBirthTimeStart: "2025-10-01",
-				FilmBirthTimeEnd:   "2025-11-01",
-				//ReleasingDateStart: "2025-10-01",
-				//ViewWatchedMin:     100,
+				FilmBirthTimeEnd:   "2025-11-11",
+				Dir4:               "vx",
 			},
 			w: 12,
 		},
 		{
 			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
 				ScTimesMax: ptr.Int64(0),
-				//ReleasingDateStart: "2025-06-01",
-				FilmBirthTimeStart: "2025-11-01",
-				//ReleasingDateStart: "2025-10-01",
-				//ViewWatchedMin:     100,
+
+				FilmBirthTimeStart: "2025-12-01",
+				Dir4:               "vx",
 			},
 			w: 12,
 		},
 	}
 
 	// 例如抽取 20 个
-	movieTypes, err := l.PickFromSources(ctx, reqs, 2)
+	movieTypes, err := l.PickFromSources(ctx, reqs, 25)
 	if err != nil {
 		return err
 	}
@@ -70,6 +57,35 @@ func (l *ScService) PickProcession() error {
 	}
 
 	return nil
+}
+
+func (l *ScService) PickCopyFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int) ([]*types.MovieType, error) {
+	if len(reqs) == 0 {
+		return nil, errors.New("reqs is empty")
+	}
+	if n <= 0 {
+		n = 25
+	}
+
+	converted := make([]*requestWithWeight, 0, len(reqs))
+	for i := range reqs {
+		req := reqs[i].Req
+		converted = append(converted, &requestWithWeight{
+			req: &req,
+			w:   reqs[i].Weight,
+		})
+	}
+
+	movieTypes, err := l.PickFromSources(ctx, converted, n)
+	if err != nil {
+		return nil, err
+	}
+
+	l.LogPicks(movieTypes)
+	//if err := l.copyMovieRank(movieTypes); err != nil {
+	//	return nil, err
+	//}
+	return movieTypes, nil
 }
 
 func (l *ScService) copyMovieRank(mfs []*types.MovieType) error {

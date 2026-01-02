@@ -8,15 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/contracts"
+	"rudy_gc/internal/domain/sc"
 	"rudy_gc/internal/svc"
+	"rudy_gc/internal/types"
 )
 
 type ScTriggerAPI struct {
-	ch chan contracts.ScTriggerMsg
+	ch    chan contracts.ScTriggerMsg
+	scSvc *sc.ScService
 }
 
 func NewScTriggerAPI(deps *svc.Deps) *ScTriggerAPI {
-	return &ScTriggerAPI{ch: deps.ScTrigger}
+	return &ScTriggerAPI{
+		ch:    deps.ScTrigger,
+		scSvc: sc.NewScService(deps),
+	}
 }
 
 // POST /api/triggers/sc/move { "scName": "xxx" }
@@ -61,4 +67,42 @@ func (h *ScTriggerAPI) Add(c *gin.Context) {
 	default:
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "sc trigger queue is full"})
 	}
+}
+
+type scPickReq struct {
+	Weight int64                      `json:"weight"`
+	Req    types.ListMovieFullRequest `json:"req"`
+}
+
+type scPickCopyReq struct {
+	PickN int         `json:"pickN"`
+	Reqs  []scPickReq `json:"reqs"`
+}
+
+// POST /api/triggers/sc/pick-copy
+func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
+	var req scPickCopyReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if len(req.Reqs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
+		return
+	}
+
+	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
+	for _, r := range req.Reqs {
+		converted = append(converted, sc.PickRequestWithWeight{
+			Req:    r.Req,
+			Weight: r.Weight,
+		})
+	}
+
+	movies, err := h.scSvc.PickCopyFromRequests(c.Request.Context(), converted, req.PickN)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"picked": len(movies)})
 }

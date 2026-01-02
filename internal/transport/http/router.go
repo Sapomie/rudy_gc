@@ -101,6 +101,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/dir/:id", dirHTML.DirDetail)
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
+	r.GET("/sc/pick-copy", movieHTML.ScPickCopyPage)
 
 	r.GET("/movie-agg-owned/release", aggHTML.MovieAggOwnedReleaseYears)
 	r.GET("/movie-agg-owned/release/:year", aggHTML.MovieAggOwnedReleaseMonths)
@@ -148,6 +149,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		scTrig := api2.NewScTriggerAPI(deps)
 		api.POST("/triggers/sc/move", scTrig.Move)
 		api.POST("/triggers/sc/add", scTrig.Add)
+		api.POST("/triggers/sc/pick-copy", scTrig.PickCopy)
 	}
 
 	return r
