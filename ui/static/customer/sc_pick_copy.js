@@ -29,6 +29,12 @@
     const pickedCard = document.getElementById('pickedCard');
     const pickedGrid = document.getElementById('pickedGrid');
     const pickedCount = document.getElementById('pickedCount');
+    const copyCard = document.getElementById('copyCard');
+    const copyMeta = document.getElementById('copyMeta');
+    const copyProgress = document.getElementById('copyProgress');
+    const copyCurrent = document.getElementById('copyCurrent');
+    const copyError = document.getElementById('copyError');
+    const btnStopCopy = document.getElementById('btnStopCopy');
     if (!form || !groupWrap || !groupTpl || !btnAdd) return;
 
     function bindRemove(btn) {
@@ -266,6 +272,78 @@
         }
     }
 
+    let copyTimer = null;
+
+    function setCopyVisible(visible) {
+        if (!copyCard) return;
+        copyCard.style.display = visible ? 'block' : 'none';
+    }
+
+    function updateCopyStatus(status) {
+        if (!copyCard || !copyMeta || !copyProgress || !copyCurrent || !copyError || !btnStopCopy) return;
+        const st = status || {};
+        const total = Number.isFinite(st.total) ? st.total : 0;
+        const done = Number.isFinite(st.done) ? st.done : 0;
+        const running = !!st.running;
+        const stopped = !!st.stopped;
+        const startedAt = st.started_at || 0;
+        const finishedAt = st.finished_at || 0;
+        const current = st.current || '';
+        const lastErr = st.last_error || '';
+
+        if (!running && !stopped && !finishedAt && total === 0) {
+            setCopyVisible(false);
+            return;
+        }
+
+        setCopyVisible(true);
+        const percent = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+        copyProgress.style.width = percent + '%';
+        copyProgress.textContent = percent > 0 ? percent + '%' : '';
+
+        let stateText = '等待中';
+        if (running) stateText = '复制中';
+        else if (stopped) stateText = '已停止';
+        else if (finishedAt) stateText = '已完成';
+        copyMeta.textContent = stateText + ' · ' + done + '/' + total;
+
+        copyCurrent.textContent = current ? '当前：' + current : '';
+        if (lastErr) {
+            copyError.style.display = 'block';
+            copyError.textContent = lastErr;
+        } else {
+            copyError.style.display = 'none';
+            copyError.textContent = '';
+        }
+
+        btnStopCopy.disabled = !running;
+    }
+
+    function startCopyPolling() {
+        if (copyTimer) return;
+        copyTimer = setInterval(fetchCopyStatus, 2000);
+    }
+
+    function stopCopyPolling() {
+        if (!copyTimer) return;
+        clearInterval(copyTimer);
+        copyTimer = null;
+    }
+
+    function fetchCopyStatus() {
+        fetch('/api/triggers/sc/copy-status')
+            .then((r) => r.json())
+            .then((data) => {
+                updateCopyStatus(data || {});
+                if (data && data.running) {
+                    startCopyPolling();
+                } else {
+                    stopCopyPolling();
+                }
+            })
+            .catch(() => {});
+    }
+
     function buildReqFromGroup(group) {
         const req = {
             Owned: 3,
@@ -359,6 +437,15 @@
                 const data = await r.json().catch(() => ({}));
                 const picked = data.picked || 0;
                 renderMovies(data.movies || []);
+                if (data.copy_status) {
+                    updateCopyStatus(data.copy_status);
+                    if (data.copy_status.running) {
+                        startCopyPolling();
+                    }
+                }
+                if (data.copy_started === false && data.copy_status && data.copy_status.running) {
+                    showMsg('Copy 任务正在执行，本次不再启动', false);
+                }
                 const label = actionLabel ? actionLabel + '完成' : '执行完成';
                 showMsg(label + '，已抽取 ' + picked + ' 部');
             })
@@ -375,4 +462,19 @@
             runPick('/api/triggers/sc/pick-only', '仅 Pick');
         });
     }
+
+    if (btnStopCopy) {
+        btnStopCopy.addEventListener('click', function () {
+            post('/api/triggers/sc/copy-stop', {})
+                .then((r) => r.json().catch(() => ({})))
+                .then((data) => {
+                    updateCopyStatus(data.status || {});
+                    showMsg('已发送停止指令');
+                    stopCopyPolling();
+                })
+                .catch((e) => showMsg('停止失败：' + e, false));
+        });
+    }
+
+    fetchCopyStatus();
 })();

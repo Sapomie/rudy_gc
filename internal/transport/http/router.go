@@ -152,6 +152,8 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		api.POST("/triggers/sc/add", scTrig.Add)
 		api.POST("/triggers/sc/pick-copy", scTrig.PickCopy)
 		api.POST("/triggers/sc/pick-only", scTrig.PickOnly)
+		api.GET("/triggers/sc/copy-status", scTrig.CopyStatus)
+		api.POST("/triggers/sc/copy-stop", scTrig.CopyStop)
 	}
 
 	return r

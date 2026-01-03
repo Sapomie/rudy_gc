@@ -175,9 +175,12 @@ func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	started, status := h.scSvc.StartCopyAsync(movies)
 	c.JSON(http.StatusOK, gin.H{
-		"picked": len(movies),
-		"movies": buildPickCopyMovies(movies),
+		"picked":       len(movies),
+		"movies":       buildPickCopyMovies(movies),
+		"copy_started": started,
+		"copy_status":  status,
 	})
 }
 
@@ -209,5 +212,21 @@ func (h *ScTriggerAPI) PickOnly(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"picked": len(movies),
 		"movies": buildPickCopyMovies(movies),
+	})
+}
+
+// GET /api/triggers/sc/copy-status
+func (h *ScTriggerAPI) CopyStatus(c *gin.Context) {
+	status := h.scSvc.CopyStatus()
+	c.JSON(http.StatusOK, status)
+}
+
+// POST /api/triggers/sc/copy-stop
+func (h *ScTriggerAPI) CopyStop(c *gin.Context) {
+	stopped := h.scSvc.StopCopy()
+	status := h.scSvc.CopyStatus()
+	c.JSON(http.StatusOK, gin.H{
+		"stopped": stopped,
+		"status":  status,
 	})
 }

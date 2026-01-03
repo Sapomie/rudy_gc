@@ -65,9 +65,6 @@ func (l *ScService) PickCopyFromRequests(ctx context.Context, reqs []PickRequest
 		return nil, err
 	}
 
-	if err := l.copyMovieRank(movieTypes); err != nil {
-		return nil, err
-	}
 	return movieTypes, nil
 }
 
