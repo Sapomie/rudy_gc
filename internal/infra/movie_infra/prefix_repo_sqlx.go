@@ -51,3 +51,25 @@ var _ movie_repo.PrefixRepo = (*PrefixRepoSqlx)(nil)
 func (r *PrefixRepoSqlx) FindOne(ctx context.Context, id int64) (*moviex.AmPrefix, error) {
 	return r.m.FindOne(ctx, id)
 }
+
+func (r *PrefixRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64, now int64) error {
+	movieNumber, ownedMovieNumber, err := r.m.GetMovieNumbersByID(ctx, id, ownedRemovedStatus)
+	if err != nil {
+		return err
+	}
+
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if row.MovieNumber == movieNumber && row.OwnedMovieNumber == ownedMovieNumber {
+		return nil
+	}
+
+	row.MovieNumber = movieNumber
+	row.OwnedMovieNumber = ownedMovieNumber
+	row.UpdatedOn = now
+
+	return r.m.Update(ctx, row)
+}

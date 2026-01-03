@@ -162,3 +162,25 @@ func ifElseInt64(cond bool, a, b int64) int64 {
 	}
 	return b
 }
+
+func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64, now int64) error {
+	movieNumber, ownedMovieNumber, err := r.m.GetMovieNumbersByID(ctx, id, ownedRemovedStatus)
+	if err != nil {
+		return err
+	}
+
+	row, err := r.m.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if row.MovieNumber == movieNumber && row.OwnedMovieNumber == ownedMovieNumber {
+		return nil
+	}
+
+	row.MovieNumber = movieNumber
+	row.OwnedMovieNumber = ownedMovieNumber
+	row.UpdatedOn = now
+
+	return r.m.Update(ctx, row)
+}

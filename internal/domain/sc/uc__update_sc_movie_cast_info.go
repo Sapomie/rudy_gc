@@ -3,7 +3,7 @@ package sc
 import (
 	"context"
 	"fmt"
-	"rudy_gc/oldmodel/modelx"
+	"rudy_gc/internal/consts"
 )
 
 type movieScInfo struct {
@@ -51,7 +51,7 @@ func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map
 		// 2.2 聚合到 movie
 		agg := movieAgg[mid] // 值类型，取出来修改再写回
 		agg.ScTimes++
-		if gl.IsCome == modelx.GListIsCome {
+		if gl.IsCome == consts.GListIsCome {
 			agg.ComeTimes++
 		}
 		if scTime > agg.LastScTime {

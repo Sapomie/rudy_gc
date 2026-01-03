@@ -11,36 +11,40 @@ import (
 	"rudy_gc/internal/types"
 )
 
-func (l *CrawlLogic) ParseDetails(ctx context.Context) error {
+func (l *CrawlLogic) ParseDetails(ctx context.Context) (*affectedMovieNumbers, error) {
 	// 查找需要解析的 Item
 	items, err := l.deps.ItemRepo.FindByDetailNeedScan(ctx, consts.ItemDetailStatusNeedScan)
 	if err != nil {
-		return fmt.Errorf("查询待解析的 Item 失败: %w", err)
+		return nil, fmt.Errorf("查询待解析的 Item 失败: %w", err)
 	}
 
 	total := len(items)
 	if total == 0 {
 		l.deps.Log.WithContext(ctx).Info("没有需要解析的 Detail")
-		return nil
+		return newAffectedMovieNumbers(), nil
 	}
 	l.deps.Log.Infof("共有 %d 个 Item 需要解析 Detail", total)
 
+	affected := newAffectedMovieNumbers()
 	var done int
 	for _, it := range items {
-		if err := l.handleDetailParse(ctx, it); err != nil {
-			return err
+		resp, err := l.handleDetailParse(ctx, it)
+		if err != nil {
+			return nil, err
 		}
+		affected.addFromResponse(resp)
 		done++
 		l.deps.Log.Infof("%s 处理Detail，已完成 %d/%d", it.Name, done, total)
 	}
-	return nil
+	return affected, nil
 }
 
 // handleDetailParse: 负责解析详情并更新状态
-func (l *CrawlLogic) handleDetailParse(ctx context.Context, it *types.Item) error {
+func (l *CrawlLogic) handleDetailParse(ctx context.Context, it *types.Item) (*saveParsedMovieResponse, error) {
 	// 解析并入库
-	if err := l.parseDetailAndInsertMovie(ctx, it); err != nil {
-		return fmt.Errorf("解析并入库失败 %s(%s): %w", it.Name, it.JavId, err)
+	resp, err := l.parseDetailAndInsertMovie(ctx, it)
+	if err != nil {
+		return nil, fmt.Errorf("解析并入库失败 %s(%s): %w", it.Name, it.JavId, err)
 	}
 
 	// 更新 item.DetailNeedScan -> 已解析
@@ -50,22 +54,22 @@ func (l *CrawlLogic) handleDetailParse(ctx context.Context, it *types.Item) erro
 		UpdatedOn:      &now,
 	}
 	if err := l.deps.ItemRepo.UpdatePartialByJavId(ctx, it.JavId, patch); err != nil {
-		return fmt.Errorf("更新 Item 详情状态失败 %s: %w", it.Name, err)
+		return nil, fmt.Errorf("更新 Item 详情状态失败 %s: %w", it.Name, err)
 	}
 
-	return nil
+	return resp, nil
 }
-func (l *CrawlLogic) parseDetailAndInsertMovie(ctx context.Context, it *types.Item) error {
+func (l *CrawlLogic) parseDetailAndInsertMovie(ctx context.Context, it *types.Item) (*saveParsedMovieResponse, error) {
 	//build rawMovie
 	rawJavMovie, err := l.buildRawMovieByDetail(ctx, it)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//insert raw
-	_, err = l.saveParsedMovie(ctx, rawJavMovie)
+	resp, err := l.saveParsedMovie(ctx, rawJavMovie)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return resp, nil
 }

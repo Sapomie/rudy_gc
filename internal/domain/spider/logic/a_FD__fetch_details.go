@@ -127,7 +127,7 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 		// -------------------------------
 		// 3) 解析详情（失败 → log + continue）
 		// -------------------------------
-		if err := l.handleDetailParse(ctx, item); err != nil {
+		if _, err := l.handleDetailParse(ctx, item); err != nil {
 			l.deps.Log.WithContext(ctx).Errorf(
 				"[%d/%d] parse 失败: %s (err=%v)",
 				i+1, total, it.Name, err,

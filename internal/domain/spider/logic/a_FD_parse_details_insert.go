@@ -11,10 +11,16 @@ import (
 	"time"
 )
 
-// saveParsedMovieResponse 返回保存后的电影记录与演员 javId 集合（供后续统计/链路使用）
+// saveParsedMovieResponse 返回保存后的电影记录与关联实体信息（供后续统计/链路使用）
 type saveParsedMovieResponse struct {
 	movie        *types.Movie
 	castJavIdMap map[string]struct{}
+	castIDs      []int64
+	genreIDs     []int64
+	directorID   int64
+	makerID      int64
+	labelID      int64
+	prefixID     int64
 }
 
 // 弱信号：可筛掉的分类（与老项目保持一致）
@@ -193,6 +199,12 @@ func (l *CrawlLogic) saveParsedMovie(ctx context.Context, raw *RawJavMovie) (*sa
 	return &saveParsedMovieResponse{
 		movie:        mvSaved,
 		castJavIdMap: castJavIdMap,
+		castIDs:      castIDs,
+		genreIDs:     genreIDs,
+		directorID:   dirID,
+		makerID:      mkrID,
+		labelID:      labID,
+		prefixID:     pfxID,
 	}, nil
 }
 

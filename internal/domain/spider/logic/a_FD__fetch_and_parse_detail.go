@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"rudy_gc/internal/types"
 	"time"
+
+	"github.com/zeromicro/go-zero/core/threading"
 )
 
 func (l *CrawlLogic) FetchAndParseDetails(ctx context.Context) (int64, error) {
@@ -15,11 +17,18 @@ func (l *CrawlLogic) FetchAndParseDetails(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 
-	err = l.ParseDetails(ctx)
+	affected, err := l.ParseDetails(ctx)
 	if err != nil {
 		l.deps.Log.WithContext(ctx).Errorf("ParseDetails: %v", err)
 		return 0, err
 	}
+
+	threading.GoSafe(func() {
+		if err := l.updateMovieNumbers(ctx, affected); err != nil {
+			l.deps.Log.WithContext(ctx).Errorf("updateMovieNumbers: %v", err)
+		}
+	})
+
 	return detailNum, nil
 }
 

@@ -9,6 +9,8 @@ import (
 
 	"rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/svc"
+
+	"github.com/zeromicro/go-zero/core/threading"
 )
 
 /* ========= 常量定义 ========= */
@@ -97,14 +99,14 @@ func (l *CrawlLogic) runParallel(ctx context.Context, fns ...func(context.Contex
 	wg.Add(len(fns))
 	for _, fn := range fns {
 		fn := fn
-		go func() {
+		threading.GoSafe(func() {
 			defer wg.Done()
 			if err := fn(ctx); err != nil {
 				mu.Lock()
 				errs = append(errs, err)
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	if len(errs) > 0 {

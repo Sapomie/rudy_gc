@@ -42,29 +42,8 @@ func initializeDatabase(dns, logLevel string) (*gorm.DB, error) {
 // autoMigrateModels 自动迁移所有指定模型的数据库架构。
 func autoMigrateModels(db *gorm.DB) error {
 	models := []interface{}{
-		new(Movie),
-		new(Murl),
-		new(Item),
 		new(Inventory),
 		new(Bestinv),
-		new(Detail),
-		new(Rank),
-		new(Cafo),
-		new(Maker),
-		new(Label),
-		new(Director),
-		new(Cast),
-		new(Genre),
-		new(Prefix),
-		new(MovieGenre),
-		new(MovieCast),
-		new(Film),
-		new(Album),
-		new(Query),
-		new(Record),
-		new(List),
-		new(Sc),
-		new(Video),
 	}
 
 	for _, model := range models {

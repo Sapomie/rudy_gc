@@ -8,4 +8,6 @@ import (
 type PrefixRepo interface {
 	GetOrCreateByName(ctx context.Context, name string) (int64, error)
 	FindOne(ctx context.Context, id int64) (*moviex.AmPrefix, error)
+	// 更新统计字段（仅单行）
+	UpdateMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64, now int64) error
 }

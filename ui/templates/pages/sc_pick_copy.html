@@ -41,7 +41,7 @@
                                     <label for="pickCount" class="col-form-label">抽取数量：</label>
                                 </div>
                                 <div class="col-auto">
-                                    <input type="number" min="1" class="form-control" id="pickCount" value="6" required>
+                                    <input type="number" min="1" class="form-control" id="pickCount" value="8" required>
                                     <div class="invalid-tooltip">请输入大于 0 的数字</div>
                                 </div>
                                 <div class="col-auto">
@@ -61,14 +61,14 @@
                         </form>
                     </div>
                 </div>
-
+     
                 <div class="card mt-3" id="pickedCard" style="display: none;">
                     <div class="card-body">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <h5 class="mb-0">抽取结果</h5>
                             <span class="text-muted small" id="pickedCount"></span>
                         </div>
-                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3"
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-3 picked-grid-8"
                              id="pickedGrid"></div>
                     </div>
                 </div>

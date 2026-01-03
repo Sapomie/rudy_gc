@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"rudy_gc/internal/config"
-	migrate "rudy_gc/internal/domain/migrate_old"
-	"rudy_gc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -18,12 +16,12 @@ func main() {
 
 	logx.Disable()
 
-	var err error
+	//var err error
 	//ctx := context.Background()
-	deps, err := svc.NewDeps(c)
-	if err != nil {
-		panic(err)
-	}
+	//deps, err := svc.NewDeps(c)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = migrate.New(deps).MigrateLocalCover()
 
@@ -36,10 +34,10 @@ func main() {
 	//if err != nil {
 	//	panic(err)
 	//}
-	err = migrate.New(deps).AddScInfoToMinfo()
-	if err != nil {
-		panic(err)
-	}
+	//err = migrate.New(deps).AddScInfoToMinfo()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = migrate.New(deps).MigrateFilm()
 	//err = migrate.New(deps).MigrateRank()
