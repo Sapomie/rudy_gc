@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/sc"
+	"rudy_gc/internal/domain/spider/logic"
 	"rudy_gc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -28,9 +28,14 @@ func main() {
 		panic(err)
 	}
 
-	err = sc.NewScService(deps).PickProcession()
+	//err = sc.NewScService(deps).PickProcession()
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	err = logic.NewCrawlLogic(deps).UpdateAllMovieNumbers(ctx)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 }

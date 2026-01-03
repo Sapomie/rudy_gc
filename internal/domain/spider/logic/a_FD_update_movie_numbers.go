@@ -55,6 +55,46 @@ func (a *affectedMovieNumbers) addFromResponse(resp *saveParsedMovieResponse) {
 	}
 }
 
+func (a *affectedMovieNumbers) addIDs(
+	castIDs []int64,
+	genreIDs []int64,
+	directorIDs []int64,
+	labelIDs []int64,
+	makerIDs []int64,
+	prefixIDs []int64,
+) {
+	for _, id := range castIDs {
+		if id > 0 {
+			a.castIDs[id] = struct{}{}
+		}
+	}
+	for _, id := range genreIDs {
+		if id > 0 {
+			a.genreIDs[id] = struct{}{}
+		}
+	}
+	for _, id := range directorIDs {
+		if id > 0 {
+			a.directorIDs[id] = struct{}{}
+		}
+	}
+	for _, id := range labelIDs {
+		if id > 0 {
+			a.labelIDs[id] = struct{}{}
+		}
+	}
+	for _, id := range makerIDs {
+		if id > 0 {
+			a.makerIDs[id] = struct{}{}
+		}
+	}
+	for _, id := range prefixIDs {
+		if id > 0 {
+			a.prefixIDs[id] = struct{}{}
+		}
+	}
+}
+
 func (l *CrawlLogic) updateMovieNumbers(ctx context.Context, affected *affectedMovieNumbers) error {
 	if affected == nil {
 		return nil
@@ -70,6 +110,38 @@ func (l *CrawlLogic) updateMovieNumbers(ctx context.Context, affected *affectedM
 		func(ctx context.Context) error { return l.updateMakerMovieNumbers(ctx, affected.makerIDs, now) },
 		func(ctx context.Context) error { return l.updatePrefixMovieNumbers(ctx, affected.prefixIDs, now) },
 	)
+}
+
+func (l *CrawlLogic) UpdateAllMovieNumbers(ctx context.Context) error {
+	castIDs, err := l.deps.CastRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list am_cast ids: %w", err)
+	}
+	genreIDs, err := l.deps.GenreRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list am_genre ids: %w", err)
+	}
+	directorIDs, err := l.deps.DirectorRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list am_director ids: %w", err)
+	}
+	labelIDs, err := l.deps.LabelRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list am_label ids: %w", err)
+	}
+	makerIDs, err := l.deps.MakerRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list am_maker ids: %w", err)
+	}
+	prefixIDs, err := l.deps.PrefixRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("list am_prefix ids: %w", err)
+	}
+
+	affected := newAffectedMovieNumbers()
+	affected.addIDs(castIDs, genreIDs, directorIDs, labelIDs, makerIDs, prefixIDs)
+
+	return l.updateMovieNumbers(ctx, affected)
 }
 
 func (l *CrawlLogic) updateCastMovieNumbers(ctx context.Context, ids map[int64]struct{}, now int64) error {

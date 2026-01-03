@@ -11,4 +11,7 @@ type GenreRepo interface {
 	FindOne(ctx context.Context, id int64) (*moviex.AmGenre, error)
 	// 更新统计字段（仅单行）
 	UpdateMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64, now int64) error
+
+	// 全量 ID 列表
+	ListAllIDs(ctx context.Context) ([]int64, error)
 }

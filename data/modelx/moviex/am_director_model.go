@@ -2,6 +2,7 @@ package moviex
 
 import (
 	"context"
+	"errors"
 
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -16,6 +17,8 @@ type (
 		amDirectorModel
 		GetMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, error)
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
+		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
+		ListAllIDs(ctx context.Context) ([]int64, error)
 	}
 
 	customAmDirectorModel struct {
@@ -32,6 +35,10 @@ func NewAmDirectorModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Opti
 
 func (m *customAmDirectorModel) QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
 	return m.CachedConn.QueryRowNoCacheCtx(ctx, dest, query, args...)
+}
+
+func (m *customAmDirectorModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
+	return m.CachedConn.QueryRowsNoCacheCtx(ctx, dest, query, args...)
 }
 
 func (m *customAmDirectorModel) GetMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, error) {
@@ -51,4 +58,16 @@ SELECT
 		return 0, 0, err
 	}
 	return resp.MovieNumber, resp.OwnedMovieNumber, nil
+}
+
+func (m *customAmDirectorModel) ListAllIDs(ctx context.Context) ([]int64, error) {
+	const query = "SELECT id FROM am_director"
+	var ids []int64
+	if err := m.QueryRowsNoCacheCtx(ctx, &ids, query); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ids, nil
 }

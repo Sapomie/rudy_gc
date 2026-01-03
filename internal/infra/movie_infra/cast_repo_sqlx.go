@@ -184,3 +184,7 @@ func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, own
 
 	return r.m.Update(ctx, row)
 }
+
+func (r *CastRepoSqlx) ListAllIDs(ctx context.Context) ([]int64, error) {
+	return r.m.ListAllIDs(ctx)
+}

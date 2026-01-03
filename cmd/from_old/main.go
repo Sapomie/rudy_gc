@@ -16,13 +16,6 @@ func main() {
 
 	logx.Disable()
 
-	//var err error
-	//ctx := context.Background()
-	//deps, err := svc.NewDeps(c)
-	//if err != nil {
-	//	panic(err)
-	//}
-
 	//err = migrate.New(deps).MigrateLocalCover()
 
 	//err = migrate.New(deps).MigrateDetail()

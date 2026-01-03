@@ -73,3 +73,7 @@ func (r *DirectorRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64,
 
 	return r.m.Update(ctx, row)
 }
+
+func (r *DirectorRepoSqlx) ListAllIDs(ctx context.Context) ([]int64, error) {
+	return r.m.ListAllIDs(ctx)
+}

@@ -73,3 +73,7 @@ func (r *PrefixRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, o
 
 	return r.m.Update(ctx, row)
 }
+
+func (r *PrefixRepoSqlx) ListAllIDs(ctx context.Context) ([]int64, error) {
+	return r.m.ListAllIDs(ctx)
+}

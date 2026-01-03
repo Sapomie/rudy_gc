@@ -69,3 +69,7 @@ func (r *LabelRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, ow
 
 	return r.m.Update(ctx, row)
 }
+
+func (r *LabelRepoSqlx) ListAllIDs(ctx context.Context) ([]int64, error) {
+	return r.m.ListAllIDs(ctx)
+}
