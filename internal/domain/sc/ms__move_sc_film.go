@@ -65,10 +65,10 @@ func (l *ScService) MoveScFilm(ctx context.Context, scName string) error {
 		// 只允许同卷；跨卷(EXDEV)直接报错返回
 		if err := os.Rename(oldPath, newPath); err != nil {
 			if errors.Is(err, syscall.EXDEV) {
-				// 跨卷，按你的要求：失败返回
 				return errors.New("跨卷移动被禁止: " + oldPath + " => " + newPath)
 			}
-			return err
+			l.deps.Log.Errorf("移动Movie错误:%v", err.Error())
+			continue
 		}
 
 		l.deps.Log.Info("moved", oldPath, "=>", newPath)

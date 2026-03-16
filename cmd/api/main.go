@@ -29,8 +29,8 @@ func main() {
 	conf.MustLoad(*configFile, &c)
 
 	// 2) 关闭 go-zero 自带日志（你已有）
-	logx.DisableStat()
-	//logx.Disable()
+	//logx.DisableStat()
+	logx.Disable()
 
 	// 3) 构建依赖
 	deps, err := svc.NewDeps(c)

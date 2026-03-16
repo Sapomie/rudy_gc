@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"rudy_gc/internal/types"
-	"rudy_gc/pkg/mylog"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -116,40 +115,66 @@ func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string)
 	var err error
 
 	for attempts := 1; attempts <= maxRetries; attempts++ {
-
 		l.deps.Log.WithContext(ctx).Infof("第 %d 次尝试: %s", attempts, url)
 
 		resp, ferr := l.deps.Fetcher.Get(ctx, url)
-		if ferr == nil {
-			body = resp.Body
+		if ferr != nil {
+			// 记录详细错误信息
+			err = ferr
+			l.deps.Log.WithContext(ctx).Warnf(
+				"请求失败 - %s 第%d次尝试: %s, 错误: %v",
+				name, attempts, url, err,
+			)
 
-			// 调用过滤函数，裁剪掉无用的部分
-			content, ferr := filterDetailContent(body)
-			if ferr == nil {
-				if isValidDetail(string(body)) {
-					return content, nil
-				}
-				// 请求成功但页面无效/空白
-				return "", ErrBlankPage
+			if attempts%20 == 0 {
+				l.deps.Log.WithContext(ctx).Warnf(
+					"多次重试失败，10分钟后重试 - name: %s, attempts: %d, url: %s, last_error: %v",
+					name, attempts, url, err,
+				)
+				time.Sleep(10 * time.Minute)
+			} else {
+				l.deps.Log.WithContext(ctx).Warnf(
+					"请求错误，3秒后重试 - name: %s, attempts: %d, url: %s, error: %v",
+					name, attempts, url, err,
+				)
+				time.Sleep(3 * time.Second)
 			}
+			continue
+		}
+
+		// 获取成功，处理响应
+		body = resp.Body
+
+		// 调用过滤函数，裁剪掉无用的部分
+		content, ferr := filterDetailContent(body)
+		if ferr != nil {
+			// 记录过滤错误
+			l.deps.Log.WithContext(ctx).Warnf(
+				"过滤内容失败 - name: %s, url: %s, error: %v",
+				name, url, ferr,
+			)
 			// 如果过滤失败，仍然返回原始 HTML 作为兜底
 			return string(body), nil
 		}
-		err = ferr
 
-		l.deps.Log.WithContext(ctx).Infof("%s 第%d次尝试: %s", name, attempts, url)
-
-		if attempts%20 == 0 {
-			mylog.Warn(ctx, "多次重试失败，10分钟后重试",
-				"name", name, "attempts", attempts, "url", url)
-			time.Sleep(10 * time.Minute)
-		} else {
-			mylog.Warn(ctx, "请求错误，3秒后重试",
-				"name", name, "attempts", attempts, "url", url, "err", err.Error())
-			time.Sleep(3 * time.Second)
+		if isValidDetail(string(body)) {
+			return content, nil
 		}
+
+		// 请求成功但页面无效/空白
+		l.deps.Log.WithContext(ctx).Warnf(
+			"页面内容无效/空白 - name: %s, url: %s, attempts: %d",
+			name, url, attempts,
+		)
+		return "", ErrBlankPage
 	}
-	return "", fmt.Errorf("达到最大重试次数，无法获取 URL: %s", url)
+
+	// 达到最大重试次数
+	l.deps.Log.WithContext(ctx).Errorf(
+		"达到最大重试次数，无法获取 URL - name: %s, url: %s, max_retries: %d, last_error: %v",
+		name, url, maxRetries, err,
+	)
+	return "", fmt.Errorf("达到最大重试次数 %d，无法获取 URL %s: %v", maxRetries, url, err)
 }
 
 func (l *CrawlLogic) logItemProgress(done, total int, name string, lastQuery int64, start time.Time) {
