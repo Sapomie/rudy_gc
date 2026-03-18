@@ -3,6 +3,7 @@ package sc
 import (
 	"context"
 	"fmt"
+
 	"rudy_gc/internal/consts"
 )
 
@@ -13,112 +14,289 @@ type movieScInfo struct {
 }
 
 func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map[string]struct{}) error {
-	// 1) 拉取原始列表:
-
-	movieJavIdList := make([]string, len(movieJavIdMap))
-	for javid := range movieJavIdMap {
-		movieJavIdList = append(movieJavIdList, javid)
-	}
-
-	gls, err := l.deps.GListRepo.FindGListByMovieJavIds(ctx, movieJavIdList)
-	if err != nil {
-		return fmt.Errorf("find gList: %w", err)
-	}
-	if len(gls) == 0 {
+	movieJavIDs := mapMovieJavIDs(movieJavIdMap)
+	if len(movieJavIDs) == 0 {
 		return nil
 	}
 
-	// 2) 第一阶段：按 movie 聚合 + 缓存 scTime；同时收集唯一 movieIds
-	movieAgg := make(map[string]movieScInfo, len(gls)/2+1)
-	uniqueMovieIDs := make(map[string]struct{}, len(gls)/2+1)
-	scTimeCache := make(map[string]int64, 256) // ScName -> scTime
-
-	for _, gl := range gls {
-		mid := gl.MovieJavId
-		uniqueMovieIDs[mid] = struct{}{}
-
-		// 2.1 取 scTime（带缓存）
-		scTime, ok := scTimeCache[gl.ScName]
-		if !ok {
-			var err2 error
-			scTime, err2 = getScTime(gl.ScName)
-			if err2 != nil {
-				return fmt.Errorf("getScTime %q: %w", gl.ScName, err2)
-			}
-			scTimeCache[gl.ScName] = scTime
-		}
-
-		// 2.2 聚合到 movie
-		agg := movieAgg[mid] // 值类型，取出来修改再写回
-		agg.ScTimes++
-		if gl.IsCome == consts.GListIsCome {
-			agg.ComeTimes++
-		}
-		if scTime > agg.LastScTime {
-			agg.LastScTime = scTime
-		}
-		movieAgg[mid] = agg
+	if err := l.rebuildMovieScStatsByJavIDs(ctx, movieJavIDs); err != nil {
+		return fmt.Errorf("rebuild movie sc stats: %w", err)
 	}
 
-	// 3) 第二阶段：把 movie 的聚合结果摊到 cast
-	//    只对每个唯一电影查一次完整信息，避免循环内反复查
-	castAgg := make(map[string]movieScInfo, 1024)
-	for movieJavId := range uniqueMovieIDs {
-		// 3.1 查一次完整电影（只按唯一电影）
-		movieType, err := l.movieSvc.GetMovieType(ctx, movieJavId)
+	castIDs, err := l.collectCastIDsByMovieJavIDs(ctx, movieJavIDs)
+	if err != nil {
+		return fmt.Errorf("collect affected casts: %w", err)
+	}
+	if len(castIDs) == 0 {
+		return nil
+	}
+
+	if err := l.rebuildCastScStatsByIDs(ctx, castIDs); err != nil {
+		return fmt.Errorf("rebuild cast sc stats: %w", err)
+	}
+
+	return nil
+}
+
+func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs []string) error {
+	movieJavIDs = uniqueStrings(movieJavIDs)
+	if len(movieJavIDs) == 0 {
+		return nil
+	}
+
+	movieAgg, err := l.buildMovieScInfo(ctx, movieJavIDs)
+	if err != nil {
+		return err
+	}
+
+	for _, movieJavID := range movieJavIDs {
+		info := movieAgg[movieJavID]
+
+		vFilm, err := l.deps.FilmRepo.FindOneByMovieJavId(ctx, movieJavID)
 		if err != nil {
-			return fmt.Errorf("MovieTypeCache.GetMovieType err %s: %w", movieJavId, err)
+			return fmt.Errorf("FilmRepo.FindOneByMovieJavId %s: %w", movieJavID, err)
 		}
 
-		// 3.2 取该电影的聚合结果
-		mInfo, ok := movieAgg[movieJavId]
-		if !ok {
-			// 理论上不可能，如果出现说明上游数据不一致
+		if vFilm.ScTimes == info.ScTimes &&
+			vFilm.ComeTimes == info.ComeTimes &&
+			vFilm.LastScTime == info.LastScTime {
 			continue
 		}
 
-		// 3.3 把该电影的次数与时间摊到所有演职员
-		for _, c := range movieType.Cast {
-			ci := castAgg[c.Name]
-			ci.ScTimes += mInfo.ScTimes
-			ci.ComeTimes += mInfo.ComeTimes
-			if mInfo.LastScTime > ci.LastScTime {
-				ci.LastScTime = mInfo.LastScTime
-			}
-			castAgg[c.Name] = ci
-		}
-	}
-
-	// 4) 写回 cast
-	for castName, info := range castAgg {
-		bmCast, err := l.deps.CastRepo.FindOneByName(ctx, castName)
-		if err != nil {
-			return fmt.Errorf("cast FindOneByName %s: %w", castName, err)
-		}
-		bmCast.ScTimes = info.ScTimes
-		bmCast.ComeTimes = info.ComeTimes
-		bmCast.LastScTime = info.LastScTime
-
-		_, err = l.deps.CastRepo.Upsert(ctx, bmCast)
-		if err != nil {
-			return fmt.Errorf("upsert:%w", err)
-		}
-	}
-
-	// 5) 写回 movie
-	for movieJavId, info := range movieAgg {
-		vFilm, err := l.deps.FilmRepo.FindOneByMovieJavId(ctx, movieJavId)
-		if err != nil {
-			return fmt.Errorf("FilmRepo.FindOneByMovieJavId %s: %w", movieJavId, err)
-		}
 		vFilm.ScTimes = info.ScTimes
 		vFilm.ComeTimes = info.ComeTimes
 		vFilm.LastScTime = info.LastScTime
-		_, _, err = l.deps.FilmRepo.UpsertFilm(ctx, vFilm)
-		if err != nil {
-			return fmt.Errorf("FilmRepo.UpsertFilm %s: %w", movieJavId, err)
+		if _, _, err := l.deps.FilmRepo.UpsertFilm(ctx, vFilm); err != nil {
+			return fmt.Errorf("FilmRepo.UpsertFilm %s: %w", movieJavID, err)
 		}
-		l.movieSvc.InvalidateMovieType(ctx, movieJavId)
+		l.movieSvc.InvalidateMovieType(ctx, movieJavID)
+	}
+
+	return nil
+}
+
+func (l *ScService) rebuildCastScStatsByIDs(ctx context.Context, castIDs map[int64]struct{}) error {
+	for castID := range castIDs {
+		castRow, err := l.deps.CastRepo.FindOne(ctx, castID)
+		if err != nil {
+			return fmt.Errorf("CastRepo.FindOne %d: %w", castID, err)
+		}
+
+		movieJavIDs, err := l.deps.MovieCastRepo.ListMovieJavIDsByCastID(ctx, castID)
+		if err != nil {
+			return fmt.Errorf("MovieCastRepo.ListMovieJavIDsByCastID %d: %w", castID, err)
+		}
+
+		movieAgg, err := l.buildMovieScInfo(ctx, movieJavIDs)
+		if err != nil {
+			return fmt.Errorf("build movie sc info for cast %d: %w", castID, err)
+		}
+
+		info := sumMovieScInfo(movieAgg)
+		if castRow.ScTimes == info.ScTimes &&
+			castRow.ComeTimes == info.ComeTimes &&
+			castRow.LastScTime == info.LastScTime {
+			continue
+		}
+
+		castRow.ScTimes = info.ScTimes
+		castRow.ComeTimes = info.ComeTimes
+		castRow.LastScTime = info.LastScTime
+		if _, err := l.deps.CastRepo.Upsert(ctx, castRow); err != nil {
+			return fmt.Errorf("CastRepo.Upsert %s: %w", castRow.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (l *ScService) collectCastIDsByMovieJavIDs(ctx context.Context, movieJavIDs []string) (map[int64]struct{}, error) {
+	out := make(map[int64]struct{})
+	for _, movieJavID := range uniqueStrings(movieJavIDs) {
+		castIDs, err := l.deps.MovieCastRepo.ListCastIDsByMovieJavId(ctx, movieJavID)
+		if err != nil {
+			return nil, fmt.Errorf("MovieCastRepo.ListCastIDsByMovieJavId %s: %w", movieJavID, err)
+		}
+		for _, castID := range castIDs {
+			if castID > 0 {
+				out[castID] = struct{}{}
+			}
+		}
+	}
+	return out, nil
+}
+
+func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) (map[string]movieScInfo, error) {
+	result := make(map[string]movieScInfo)
+	movieJavIDs = uniqueStrings(movieJavIDs)
+	if len(movieJavIDs) == 0 {
+		return result, nil
+	}
+
+	gls, err := l.deps.GListRepo.FindGListByMovieJavIds(ctx, movieJavIDs)
+	if err != nil {
+		return nil, fmt.Errorf("find g_list by movies: %w", err)
+	}
+	if len(gls) == 0 {
+		return result, nil
+	}
+
+	pairs := make(map[string]int64, len(gls))
+	for _, gl := range gls {
+		if gl == nil || gl.MovieJavId == "" || gl.ScName == "" {
+			continue
+		}
+		key := gl.MovieJavId + "\x00" + gl.ScName
+		if old, ok := pairs[key]; ok {
+			if old == consts.GListIsCome || gl.IsCome != consts.GListIsCome {
+				continue
+			}
+		}
+		pairs[key] = gl.IsCome
+	}
+
+	scTimeMap, err := l.loadScTimes(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
+
+	for key, isCome := range pairs {
+		movieJavID, scName := splitMovieScPair(key)
+		info := result[movieJavID]
+		info.ScTimes++
+		if isCome == consts.GListIsCome {
+			info.ComeTimes++
+		}
+		if scTime := scTimeMap[scName]; scTime > info.LastScTime {
+			info.LastScTime = scTime
+		}
+		result[movieJavID] = info
+	}
+
+	return result, nil
+}
+
+func (l *ScService) loadScTimes(ctx context.Context, pairs map[string]int64) (map[string]int64, error) {
+	scNames := make(map[string]struct{}, len(pairs))
+	for key := range pairs {
+		_, scName := splitMovieScPair(key)
+		if scName != "" {
+			scNames[scName] = struct{}{}
+		}
+	}
+
+	names := make([]string, 0, len(scNames))
+	for scName := range scNames {
+		names = append(names, scName)
+	}
+
+	scRows, err := l.deps.ScRepo.FindByNames(ctx, names)
+	if err != nil {
+		return nil, fmt.Errorf("ScRepo.FindByNames: %w", err)
+	}
+
+	out := make(map[string]int64, len(names))
+	for _, row := range scRows {
+		if row == nil || row.Name == "" {
+			continue
+		}
+		out[row.Name] = row.ScTime
+	}
+
+	for _, name := range names {
+		if _, ok := out[name]; ok {
+			continue
+		}
+		scTime, err := getScTime(name)
+		if err != nil {
+			return nil, fmt.Errorf("getScTime %q: %w", name, err)
+		}
+		out[name] = scTime
+	}
+
+	return out, nil
+}
+
+func sumMovieScInfo(movieAgg map[string]movieScInfo) movieScInfo {
+	var out movieScInfo
+	for _, info := range movieAgg {
+		out.ScTimes += info.ScTimes
+		out.ComeTimes += info.ComeTimes
+		if info.LastScTime > out.LastScTime {
+			out.LastScTime = info.LastScTime
+		}
+	}
+	return out
+}
+
+func mapMovieJavIDs(movieJavIdMap map[string]struct{}) []string {
+	out := make([]string, 0, len(movieJavIdMap))
+	for movieJavID := range movieJavIdMap {
+		if movieJavID != "" {
+			out = append(out, movieJavID)
+		}
+	}
+	return out
+}
+
+func uniqueStrings(items []string) []string {
+	seen := make(map[string]struct{}, len(items))
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if item == "" {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		out = append(out, item)
+	}
+	return out
+}
+
+func splitMovieScPair(key string) (movieJavID string, scName string) {
+	for i := 0; i < len(key); i++ {
+		if key[i] != 0 {
+			continue
+		}
+		return key[:i], key[i+1:]
+	}
+	return key, ""
+}
+
+func (l *ScService) RebuildAllScStats(ctx context.Context) error {
+	films, err := l.deps.FilmRepo.FindAll(ctx, consts.OwnedAll)
+	if err != nil {
+		return fmt.Errorf("FilmRepo.FindAll: %w", err)
+	}
+
+	movieJavIDs := make([]string, 0, len(films))
+	for _, film := range films {
+		if film == nil || film.MovieJavId == "" {
+			continue
+		}
+		movieJavIDs = append(movieJavIDs, film.MovieJavId)
+	}
+
+	if err := l.rebuildMovieScStatsByJavIDs(ctx, movieJavIDs); err != nil {
+		return fmt.Errorf("rebuild movie sc stats: %w", err)
+	}
+
+	castIDs, err := l.deps.CastRepo.ListAllIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("CastRepo.ListAllIDs: %w", err)
+	}
+
+	castIDSet := make(map[int64]struct{}, len(castIDs))
+	for _, castID := range castIDs {
+		if castID > 0 {
+			castIDSet[castID] = struct{}{}
+		}
+	}
+
+	if err := l.rebuildCastScStatsByIDs(ctx, castIDSet); err != nil {
+		return fmt.Errorf("rebuild cast sc stats: %w", err)
 	}
 
 	return nil

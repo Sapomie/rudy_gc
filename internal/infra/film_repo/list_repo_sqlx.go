@@ -105,6 +105,19 @@ func (r *GListRepoSqlx) FindGList(ctx context.Context, scName string, isCome *in
 	return out, nil
 }
 
+func (r *GListRepoSqlx) FindByScName(ctx context.Context, scName string) ([]*types.GList, error) {
+	rows, err := r.m.ListByScName(ctx, scName)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*types.GList, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, glistMapModelxToTypes(v))
+	}
+	return out, nil
+}
+
 func (r *GListRepoSqlx) FindGListByMovieJavIds(ctx context.Context, movieJavIds []string) ([]*types.GList, error) {
 	rows, err := r.m.ListByMovieJavIds(ctx, movieJavIds)
 	if err != nil {

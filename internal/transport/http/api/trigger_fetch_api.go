@@ -11,16 +11,22 @@ import (
 )
 
 type TriggerAPI struct {
-	ch chan contracts.TriggerMsg
+	ch        chan contracts.TriggerMsg
+	scRootDir string
 }
 
 func NewTriggerAPI(deps *svc.Deps) *TriggerAPI {
-	return &TriggerAPI{ch: deps.BestTrigger}
+	return &TriggerAPI{
+		ch:        deps.BestTrigger,
+		scRootDir: deps.Config.Film.ScRootDir,
+	}
 }
 
 // 管理页
 func (h *TriggerAPI) Page(c *gin.Context) {
-	c.HTML(http.StatusOK, "page.admin_triggers", gin.H{})
+	c.HTML(http.StatusOK, "page.admin_triggers", gin.H{
+		"ScRootDir": h.scRootDir,
+	})
 }
 
 // === DailyBest ===
@@ -30,6 +36,33 @@ func (h *TriggerAPI) DailyBest(c *gin.Context) {
 
 func (h *TriggerAPI) DailyBestSync(c *gin.Context) { // ✅ 新增
 	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcSyncBest})
+}
+
+func (h *TriggerAPI) RebuildCastRank(c *gin.Context) {
+	h.enqueue(c, contracts.TriggerMsg{Kind: contracts.ProcRebuildCastRank})
+}
+
+type actorNameReq struct {
+	ActorName string `json:"actorName"`
+}
+
+func (h *TriggerAPI) RebuildActorRank(c *gin.Context) {
+	var req actorNameReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	actorName := strings.TrimSpace(req.ActorName)
+	if actorName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "actorName is required"})
+		return
+	}
+
+	h.enqueue(c, contracts.TriggerMsg{
+		Kind:      contracts.ProcRebuildActorRank,
+		ActorName: actorName,
+	})
 }
 
 // === Seeds ===

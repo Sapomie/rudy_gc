@@ -3,10 +3,12 @@ package film_infra
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+
 	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/repo/film_repo"
 	"rudy_gc/internal/types"
-	"time"
 )
 
 var _ film_repo.ScRepo = (*ScRepoSqlx)(nil)
@@ -24,6 +26,19 @@ func (r *ScRepoSqlx) FindAll(ctx context.Context) ([]*types.GSc, error) {
 	if err != nil {
 		return nil, err
 	}
+	out := make([]*types.GSc, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, mapModelToTypes(v))
+	}
+	return out, nil
+}
+
+func (r *ScRepoSqlx) FindByNames(ctx context.Context, names []string) ([]*types.GSc, error) {
+	rows, err := r.m.ListByNames(ctx, names)
+	if err != nil {
+		return nil, err
+	}
+
 	out := make([]*types.GSc, 0, len(rows))
 	for _, v := range rows {
 		out = append(out, mapModelToTypes(v))
@@ -77,6 +92,10 @@ func (r *ScRepoSqlx) Upsert(ctx context.Context, in *types.GSc) (*types.GSc, err
 			old.Remarks = in.Remarks
 			changed = true
 		}
+		if old.ImagePath != in.ImagePath {
+			old.ImagePath = in.ImagePath
+			changed = true
+		}
 		if changed {
 			old.UpdatedOn = now
 			if err := r.m.Update(ctx, old); err != nil {
@@ -98,6 +117,7 @@ func (r *ScRepoSqlx) Upsert(ctx context.Context, in *types.GSc) (*types.GSc, err
 		Vessel:        in.Vessel,
 		MovieCast:     in.MovieCast,
 		Remarks:       in.Remarks,
+		ImagePath:     in.ImagePath,
 		CreatedOn:     now,
 		UpdatedOn:     now,
 	}
@@ -142,6 +162,79 @@ func (r *ScRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.GSc
 	return mapModelToTypes(row), nil
 }
 
+func (r *ScRepoSqlx) ListPage(ctx context.Context, page, pageSize int, sortField, sortOrder string) ([]*types.GSc, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 200 {
+		pageSize = 20
+	}
+
+	total, err := r.m.CountAll(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*types.GSc{}, 0, nil
+	}
+
+	offset := int64((page - 1) * pageSize)
+	rows, err := r.m.ListPage(ctx, offset, int64(pageSize), buildScOrderBy(sortField, sortOrder))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	out := make([]*types.GSc, 0, len(rows))
+	for _, v := range rows {
+		out = append(out, mapModelToTypes(v))
+	}
+	return out, total, nil
+}
+
+func buildScOrderBy(sortField, sortOrder string) string {
+	field := normalizeScSortField(sortField)
+	order := normalizeScSortOrder(sortOrder)
+
+	column := "sc_time"
+	switch field {
+	case "movie_number":
+		column = "movie_number"
+	case "come_movie_name":
+		column = "come_movie_name"
+	case "cooldown":
+		column = "cooldown"
+	case "movie_cast":
+		column = "movie_cast"
+	case "vessel":
+		column = "vessel"
+	case "fg":
+		column = "fg"
+	default:
+		column = "sc_time"
+	}
+
+	if column == "sc_time" {
+		return column + " " + order + ", id DESC"
+	}
+	return column + " " + order + ", sc_time DESC, id DESC"
+}
+
+func normalizeScSortField(sortField string) string {
+	switch strings.ToLower(strings.TrimSpace(sortField)) {
+	case "movie_number", "come_movie_name", "cooldown", "movie_cast", "vessel", "fg", "sc_time":
+		return strings.ToLower(strings.TrimSpace(sortField))
+	default:
+		return "sc_time"
+	}
+}
+
+func normalizeScSortOrder(sortOrder string) string {
+	if strings.EqualFold(strings.TrimSpace(sortOrder), "asc") {
+		return "ASC"
+	}
+	return "DESC"
+}
+
 /******** helpers ********/
 
 func mapModelToTypes(v *moviex.GSc) *types.GSc {
@@ -157,6 +250,7 @@ func mapModelToTypes(v *moviex.GSc) *types.GSc {
 		Vessel:        v.Vessel,
 		MovieCast:     v.MovieCast,
 		Remarks:       v.Remarks,
+		ImagePath:     v.ImagePath,
 		CreatedOn:     v.CreatedOn,
 		UpdatedOn:     v.UpdatedOn,
 	}

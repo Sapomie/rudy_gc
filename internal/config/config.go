@@ -23,6 +23,7 @@ type Config struct {
 type Film struct {
 	Pairs               []FilmDirPair
 	CopyDestinationPath string
+	ScRootDir           string
 	RenamePath          string
 }
 

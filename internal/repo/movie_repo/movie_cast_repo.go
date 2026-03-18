@@ -6,4 +6,5 @@ import "context"
 type MovieCastRepo interface {
 	TryLink(ctx context.Context, movieJavId string, castId, ts int64) error
 	ListCastIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error)
+	ListMovieJavIDsByCastID(ctx context.Context, castId int64) ([]string, error)
 }

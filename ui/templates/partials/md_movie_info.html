@@ -69,9 +69,18 @@
         <tr class="table-light">
             <th>演员</th>
             <td>
-                {{range .movieType.Cast}}
-                    <a class="tag" href="/{{.Url}}" title="{{.NameShow}}">{{.NameShow}}</a>
-                {{end}}
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    {{range .movieType.Cast}}
+                        <a class="tag" href="/{{.Url}}" title="{{.NameShow}}">{{.NameShow}}</a>
+                    {{end}}
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#addMovieCastModal"
+                            data-jav="{{.movieType.JavId}}">
+                        添加 Cast
+                    </button>
+                </div>
             </td>
         </tr>
 
@@ -110,10 +119,50 @@
         <tr class="table-light">
             <th>Sc</th>
             <td>
-                {{range .sc}}
-                    <a class="tag" href="/moviecardsc?sn={{.}}">{{.}}</a>
-                {{end}}
+                {{ if .sc }}
+                    <div class="d-flex flex-column gap-2">
+                        {{ range .sc }}
+                            <div class="d-flex flex-wrap align-items-center">
+                                <a class="tag" href="{{ .Href }}">{{ .ScName }}</a>
+                                <small class="text-muted ms-2">{{ formatUnix .ScTime }}</small>
+                                {{ if .IsCome }}
+                                    <span class="badge bg-danger ms-2">COME</span>
+                                {{ end }}
+                                {{ if gt .Cooldown 0 }}
+                                    <small class="text-muted ms-2">Cooldown {{ humanDays .Cooldown }}</small>
+                                {{ end }}
+                            </div>
+                        {{ end }}
+                    </div>
+                {{ else }}
+                    <span class="text-muted">-</span>
+                {{ end }}
             </td>
         </tr>
     </table>
+
+    <div class="modal fade" id="addMovieCastModal" tabindex="-1" aria-labelledby="addMovieCastModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formAddMovieCast" data-jav="{{.movieType.JavId}}">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addMovieCastModalLabel">添加已有演员</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="movieCastName" class="form-label">演员名</label>
+                            <input type="text" class="form-control" id="movieCastName" placeholder="输入已存在演员名">
+                            <div class="form-text">只支持绑定已存在演员；不存在时会失败。</div>
+                        </div>
+                        <div id="movieCastMsg" class="small" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">添加 Cast</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {{ end }}

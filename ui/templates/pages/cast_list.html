@@ -1,0 +1,220 @@
+{{ define "page.cast_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <style>
+            .sc-sort-link {
+                color: inherit;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .sc-sort-link.active {
+                color: #0d6efd;
+            }
+        </style>
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">Casts</h4>
+                        <p class="text-muted mb-0">浏览演员统计，并进入详情页查看该演员的 SC 历史和代表影片。</p>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="sc-page-summary">
+                        <span class="sc-page-summary-label">Total Casts</span>
+                        <span class="sc-page-summary-value">{{ .Total }}</span>
+                    </div>
+                    {{ if .Items }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" method="get" action="/casts">
+                            {{ if gt .Query.PageSize 0 }}<input type="hidden" name="ps" value="{{ .Query.PageSize }}">{{ end }}
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">Owned Range</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input id="casts-owned-min" class="form-control" type="number" min="0" name="owned_min" placeholder="Min" value="{{ .Query.OwnedMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="casts-owned-max" class="form-control" type="number" min="0" name="owned_max" placeholder="Max" value="{{ .Query.OwnedMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">SC Times Range</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input id="casts-sc-times-min" class="form-control" type="number" min="0" name="sc_times_min" placeholder="Min" value="{{ .Query.ScTimesMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="casts-sc-times-max" class="form-control" type="number" min="0" name="sc_times_max" placeholder="Max" value="{{ .Query.ScTimesMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">Come Times Range</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input id="casts-come-times-min" class="form-control" type="number" min="0" name="come_times_min" placeholder="Min" value="{{ .Query.ComeTimesMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="casts-come-times-max" class="form-control" type="number" min="0" name="come_times_max" placeholder="Max" value="{{ .Query.ComeTimesMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">Last SC Range</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input id="casts-last-sc-from" class="form-control" type="date" name="last_sc_from" value="{{ .Query.LastScFrom }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input id="casts-last-sc-to" class="form-control" type="date" name="last_sc_to" value="{{ .Query.LastScTo }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">Apply</button>
+                                <a class="btn btn-outline-secondary" href="/casts">Clear</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByName.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByName.Href }}">
+                                            Name{{ if .CastSortQuery.ByName.Active }}{{ if .CastSortQuery.ByName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByChinese.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByChinese.Href }}">
+                                            Chinese{{ if .CastSortQuery.ByChinese.Active }}{{ if .CastSortQuery.ByChinese.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByAge.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByAge.Href }}">
+                                            Age{{ if .CastSortQuery.ByAge.Active }}{{ if .CastSortQuery.ByAge.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByHeight.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByHeight.Href }}">
+                                            Height{{ if .CastSortQuery.ByHeight.Active }}{{ if .CastSortQuery.ByHeight.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByMovieNumber.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByMovieNumber.Href }}">
+                                            Movies{{ if .CastSortQuery.ByMovieNumber.Active }}{{ if .CastSortQuery.ByMovieNumber.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByOwned.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByOwned.Href }}">
+                                            Owned{{ if .CastSortQuery.ByOwned.Active }}{{ if .CastSortQuery.ByOwned.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByScTimes.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByScTimes.Href }}">
+                                            SC Times{{ if .CastSortQuery.ByScTimes.Active }}{{ if .CastSortQuery.ByScTimes.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByComeTimes.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByComeTimes.Href }}">
+                                            Come Times{{ if .CastSortQuery.ByComeTimes.Active }}{{ if .CastSortQuery.ByComeTimes.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByLastSc.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByLastSc.Href }}">
+                                            Last SC{{ if .CastSortQuery.ByLastSc.Active }}{{ if .CastSortQuery.ByLastSc.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByHighestRank.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByHighestRank.Href }}">
+                                            Highest Rank{{ if .CastSortQuery.ByHighestRank.Active }}{{ if .CastSortQuery.ByHighestRank.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Items }}
+                                    {{ range .Items }}
+                                        <tr>
+                                            <td>
+                                                <a class="sc-event-link" href="/cast?name={{ urlquery .Name }}">{{ .Name }}</a>
+                                            </td>
+                                            <td>{{ if .Chinese }}{{ .Chinese }}{{ else }}-{{ end }}</td>
+                                            <td>{{ humanAgeFromBirth .BirthDay }}</td>
+                                            <td>{{ if gt .Height 0 }}{{ .Height }} cm{{ else }}-{{ end }}</td>
+                                            <td>{{ .MovieNumber }}</td>
+                                            <td>{{ .OwnedMovieNumber }}</td>
+                                            <td>{{ .ScTimes }}</td>
+                                            <td>{{ .ComeTimes }}</td>
+                                            <td>{{ humanTime .LastScTime }}</td>
+                                            <td>{{ if gt .HighestRank 0 }}#{{ .HighestRank }}{{ else }}-{{ end }}</td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="sc-empty-state">还没有可展示的演员。</div>
+                                        </td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    </body>
+    </html>
+{{ end }}

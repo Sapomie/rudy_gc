@@ -17,8 +17,11 @@ type (
 	GScModel interface {
 		gScModel
 		FindAll(ctx context.Context) ([]*GSc, error)
+		ListByNames(ctx context.Context, names []string) ([]*GSc, error)
 		ListTopNByScTime(ctx context.Context, n uint64) ([]*GSc, error)
 		FindNearest(ctx context.Context, t int64) (*GSc, error)
+		ListPage(ctx context.Context, offset, limit int64, orderBy string) ([]*GSc, error)
+		CountAll(ctx context.Context) (int64, error)
 	}
 
 	customGScModel struct {
@@ -72,6 +75,30 @@ func (m *customGScModel) FindAll(ctx context.Context) ([]*GSc, error) {
 	return rows, nil
 }
 
+func (m *customGScModel) ListByNames(ctx context.Context, names []string) ([]*GSc, error) {
+	if len(names) == 0 {
+		return []*GSc{}, nil
+	}
+
+	sqlStr, args, err := squirrel.
+		Select(gScRows).
+		From(m.table).
+		Where(squirrel.Eq{"name": names}).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*GSc
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GSc{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (m *customGScModel) FindNearest(ctx context.Context, t int64) (*GSc, error) {
 	sqlStr, args, err := squirrel.
 		Select(gScRows).
@@ -92,4 +119,46 @@ func (m *customGScModel) FindNearest(ctx context.Context, t int64) (*GSc, error)
 		return nil, err
 	}
 	return &row, nil
+}
+
+func (m *customGScModel) ListPage(ctx context.Context, offset, limit int64, orderBy string) ([]*GSc, error) {
+	if orderBy == "" {
+		orderBy = "sc_time DESC"
+	}
+
+	sqlStr, args, err := squirrel.
+		Select(gScRows).
+		From(m.table).
+		OrderBy(orderBy).
+		Offset(uint64(offset)).
+		Limit(uint64(limit)).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*GSc
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GSc{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGScModel) CountAll(ctx context.Context) (int64, error) {
+	sqlStr, args, err := squirrel.
+		Select("COUNT(*)").
+		From(m.table).
+		ToSql()
+	if err != nil {
+		return 0, err
+	}
+
+	var total int64
+	if err := m.QueryRowNoCacheCtx(ctx, &total, sqlStr, args...); err != nil {
+		return 0, err
+	}
+	return total, nil
 }

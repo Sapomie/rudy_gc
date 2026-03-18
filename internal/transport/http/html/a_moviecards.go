@@ -2,6 +2,7 @@
 package html
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -89,6 +90,12 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 		return
 	}
 
+	actorSummary, err := h.buildActorSummary(c, req.CastNames)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "演员 SC 摘要加载失败: %v", err)
+		return
+	}
+
 	// 异步投递 javIds（非阻塞 + 去重）
 	h.enqueueJavIDsNonBlocking(resp.JavIds)
 
@@ -97,15 +104,32 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 	sortQ := buildSortQuery(c, curOD)
 
 	c.HTML(http.StatusOK, "page.list_movie_card", gin.H{
-		"Title":       title,
-		"movies":      resp.List,
-		"total":       resp.Total,
-		"PageInfo":    pi,
-		"pageInfo":    pi,
-		"ownedQuery":  ownedQ,
-		"sortQuery":   sortQ,
-		"CurrentSort": curOD,
+		"Title":        title,
+		"movies":       resp.List,
+		"total":        resp.Total,
+		"PageInfo":     pi,
+		"pageInfo":     pi,
+		"ownedQuery":   ownedQ,
+		"sortQuery":    sortQ,
+		"CurrentSort":  curOD,
+		"ActorSummary": actorSummary,
 	})
+}
+
+func (h *MovieHTMLHandler) buildActorSummary(c *gin.Context, castNames string) (*types.ActorScSummary, error) {
+	name := singleActorFilterName(castNames)
+	if name == "" {
+		return nil, nil
+	}
+
+	summary, err := h.scSvc.BuildActorScSummary(c.Request.Context(), name, 5)
+	if err != nil {
+		if errors.Is(err, types.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return summary, nil
 }
 
 /* ======================== 工具函数 ======================== */

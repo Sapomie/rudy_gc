@@ -3,6 +3,7 @@ package sc
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"rudy_gc/internal/consts"
@@ -11,59 +12,68 @@ import (
 	"time"
 )
 
-func (l *ScService) AddSc(ctx context.Context, dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("failed to read directory %s: %w", dir, err)
+type AddScInput struct {
+	Dir            string
+	ComeMovieJavId string
+	MovieCast      string
+	Duration       int64
+	Fg             string
+	Vessel         string
+	Remarks        string
+}
+
+type AddScPreview struct {
+	Dir        string
+	ScName     string
+	ScTime     int64
+	MovieCount int64
+	ImageFound bool
+	ImageName  string
+	Movies     []*AddScPreviewMovie
+}
+
+type AddScPreviewMovie struct {
+	MovieName  string
+	MovieJavId string
+	Casts      []string
+}
+
+func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
+	dir := strings.TrimSpace(in.Dir)
+	if dir == "" {
+		return fmt.Errorf("dir is required")
 	}
 
-	scName := filepath.Base(dir)
-	if len(scName) != 16 {
-		l.deps.Log.Error("Invalid directory name length")
-		return fmt.Errorf("directory name %s does not have the expected length of 16 characters", scName)
+	preview, imageFilePath, err := l.buildAddScPreview(ctx, dir)
+	if err != nil {
+		return err
+	}
+	if preview == nil {
+		return fmt.Errorf("empty sc preview")
 	}
 
-	scTime, err := getScTime(scName)
-	if err != nil {
-		return fmt.Errorf("failed to parse SC time from %s: %w", scName, err)
+	comeMovieJavId := strings.TrimSpace(in.ComeMovieJavId)
+	if comeMovieJavId == "" {
+		return fmt.Errorf("come movie is required")
 	}
 
 	var (
-		count          int64
-		comeMovie      string
-		comeMovieJavId string
-		movieJavIdMap  = make(map[string]struct{})
+		count         int64
+		comeMovie     string
+		movieJavIdMap = make(map[string]struct{})
+		comeFound     bool
 	)
-
-	var data scJsonData
-	for _, entry := range entries {
-		info, err := entry.Info()
-		if err != nil {
-			return fmt.Errorf("failed to get info for entry %s: %w", entry.Name(), err)
+	for _, movie := range preview.Movies {
+		if movie == nil {
+			continue
 		}
+		movieJavIdMap[movie.MovieJavId] = struct{}{}
 
-		if !isMp4File(info) {
-			if isDataJsonFile(info.Name()) {
-				path := filepath.Join(dir, entry.Name())
-				data, err = getJsonData(path)
-				if err != nil {
-					return fmt.Errorf("failed to get json data for entry %s: %w", entry.Name(), err)
-				}
-			}
-			continue // 过滤不符合条件的文件
-		}
-
-		movieName := extractMovieName(info.Name())
-		vf, err := l.deps.FilmRepo.FindOneByMovieName(ctx, movieName)
-		if err != nil {
-			return fmt.Errorf("failed to find film by name %s: %w", movieName, err)
-		}
-		movieJavIdMap[vf.MovieJavId] = struct{}{}
-
-		gl := createGList(scName, movieName, vf.MovieJavId, info.Name())
-		if gl.IsCome == consts.GListIsCome {
-			comeMovie = vf.MovieName
-			comeMovieJavId = vf.MovieJavId
+		isCome := movie.MovieJavId == comeMovieJavId
+		gl := createGList(preview.ScName, movie.MovieName, movie.MovieJavId, isCome)
+		if isCome {
+			comeMovie = movie.MovieName
+			comeFound = true
 		}
 
 		_, err = l.deps.GListRepo.Upsert(ctx, gl)
@@ -72,32 +82,45 @@ func (l *ScService) AddSc(ctx context.Context, dir string) error {
 		}
 		count++
 	}
+	if !comeFound {
+		return fmt.Errorf("selected come movie not found in preview movies")
+	}
+
+	scName := preview.ScName
+	if len(scName) != 16 {
+		l.deps.Log.Error("Invalid directory name length")
+		return fmt.Errorf("directory name %s does not have the expected length of 16 characters", scName)
+	}
 
 	sc := &types.GSc{
 		Name:          scName,
-		ScTime:        scTime,
+		ScTime:        preview.ScTime,
 		ComeMovieName: comeMovie,
 		MovieNumber:   count,
 		Cooldown:      0,
-		Duration:      data.Duration,
-		Fg:            data.Fg,
-		Vessel:        data.Vessel,
-		Remarks:       data.Remarks,
+		Duration:      in.Duration,
+		Fg:            strings.TrimSpace(in.Fg),
+		Vessel:        strings.TrimSpace(in.Vessel),
+		Remarks:       strings.TrimSpace(in.Remarks),
+		MovieCast:     strings.TrimSpace(in.MovieCast),
+	}
+	if imageFilePath != "" {
+		imagePath, err := l.copyScImage(imageFilePath, scName)
+		if err != nil {
+			return fmt.Errorf("failed to copy sc image: %w", err)
+		}
+		sc.ImagePath = imagePath
 	}
 
-	mt, err := l.movieSvc.GetMovieType(ctx, comeMovieJavId)
-	if err != nil || mt == nil {
-		return fmt.Errorf("failed to get movie type: %w,%s", err, comeMovieJavId)
-	}
-	if len(mt.Cast) >= 1 {
-		sc.MovieCast = mt.Cast[0].Name
+	if sc.MovieCast == "" {
+		return fmt.Errorf("movie cast is required")
 	}
 
-	prev, err := l.deps.ScRepo.FindNearest(ctx, scTime)
+	prev, err := l.deps.ScRepo.FindNearest(ctx, preview.ScTime)
 	if err != nil {
 		return fmt.Errorf("failed to find previous sc: %w", err)
 	}
-	sc.Cooldown = scTime - prev.ScTime
+	sc.Cooldown = preview.ScTime - prev.ScTime
 
 	_, err = l.deps.ScRepo.Upsert(ctx, sc)
 	if err != nil {
@@ -112,16 +135,93 @@ func (l *ScService) AddSc(ctx context.Context, dir string) error {
 	return nil
 }
 
-func createGList(scName, movieName, movieJavId, fileName string) *types.GList {
-	isCome := consts.GListIsNotCome
-	if hasComeMark(fileName) {
-		isCome = consts.GListIsCome
+func (l *ScService) BuildAddScPreview(ctx context.Context, dir string) (*AddScPreview, error) {
+	preview, _, err := l.buildAddScPreview(ctx, dir)
+	return preview, err
+}
+
+func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPreview, string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read directory %s: %w", dir, err)
+	}
+
+	scName := filepath.Base(dir)
+	if len(scName) != 16 {
+		l.deps.Log.Error("Invalid directory name length")
+		return nil, "", fmt.Errorf("directory name %s does not have the expected length of 16 characters", scName)
+	}
+
+	scTime, err := getScTime(scName)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to parse SC time from %s: %w", scName, err)
+	}
+
+	preview := &AddScPreview{
+		Dir:    dir,
+		ScName: scName,
+		ScTime: scTime,
+		Movies: make([]*AddScPreviewMovie, 0),
+	}
+
+	var imageFilePath string
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to get info for entry %s: %w", entry.Name(), err)
+		}
+
+		if isScImageFile(info) {
+			if imageFilePath != "" {
+				return nil, "", fmt.Errorf("multiple image files found in %s", dir)
+			}
+			imageFilePath = filepath.Join(dir, entry.Name())
+			preview.ImageFound = true
+			preview.ImageName = entry.Name()
+			continue
+		}
+
+		if !isMp4File(info) {
+			continue
+		}
+
+		movieName := extractMovieName(info.Name())
+		vf, err := l.deps.FilmRepo.FindOneByMovieName(ctx, movieName)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to find film by name %s: %w", movieName, err)
+		}
+
+		mt, err := l.movieSvc.GetMovieType(ctx, vf.MovieJavId)
+		if err != nil || mt == nil {
+			return nil, "", fmt.Errorf("failed to get movie type: %w,%s", err, vf.MovieJavId)
+		}
+
+		previewMovie := &AddScPreviewMovie{
+			MovieName:  vf.MovieName,
+			MovieJavId: vf.MovieJavId,
+			Casts:      collectCastNames(mt),
+		}
+		preview.Movies = append(preview.Movies, previewMovie)
+		preview.MovieCount++
+	}
+
+	if preview.MovieCount == 0 {
+		return nil, "", fmt.Errorf("no movies found in sc dir %s", dir)
+	}
+
+	return preview, imageFilePath, nil
+}
+
+func createGList(scName, movieName, movieJavId string, isCome bool) *types.GList {
+	comeFlag := consts.GListIsNotCome
+	if isCome {
+		comeFlag = consts.GListIsCome
 	}
 	return &types.GList{
 		Name:       fmt.Sprintf("%s__%s", scName, movieName),
 		ScName:     scName,
 		MovieJavId: movieJavId,
-		IsCome:     isCome,
+		IsCome:     comeFlag,
 	}
 }
 
@@ -141,12 +241,70 @@ func isMp4File(info os.FileInfo) bool {
 	return strings.HasSuffix(info.Name(), ".mp4") && info.Size() >= 20000
 }
 
-func hasComeMark(fullName string) bool {
-	if strings.Contains(fullName, "__come__") {
-		return true
-	} else {
+func isScImageFile(info os.FileInfo) bool {
+	if info == nil || info.IsDir() {
 		return false
 	}
+	switch strings.ToLower(filepath.Ext(info.Name())) {
+	case ".jpg", ".jpeg", ".png", ".webp":
+		return true
+	default:
+		return false
+	}
+}
+
+func (l *ScService) copyScImage(srcPath, scName string) (string, error) {
+	baseDir := strings.TrimSpace(l.deps.Config.Fetcher.LocalImageDir)
+	if baseDir == "" {
+		return "", fmt.Errorf("fetcher.local_image_dir is empty")
+	}
+
+	ext := strings.ToLower(filepath.Ext(srcPath))
+	if ext == "" {
+		return "", fmt.Errorf("image file has no extension: %s", srcPath)
+	}
+
+	dstDir := filepath.Join(baseDir, "sc_event")
+	if err := os.MkdirAll(dstDir, 0o744); err != nil {
+		return "", fmt.Errorf("mkdir %s: %w", dstDir, err)
+	}
+
+	dstPath := filepath.Join(dstDir, scName+ext)
+	if err := copyFile(srcPath, dstPath); err != nil {
+		return "", err
+	}
+
+	return filepath.ToSlash(dstPath), nil
+}
+
+func copyFile(srcPath, dstPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("open src %s: %w", srcPath, err)
+	}
+	defer src.Close()
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return fmt.Errorf("create dst %s: %w", dstPath, err)
+	}
+
+	if _, err := io.Copy(dst, src); err != nil {
+		_ = dst.Close()
+		_ = os.Remove(dstPath)
+		return fmt.Errorf("copy %s -> %s: %w", srcPath, dstPath, err)
+	}
+	if err := dst.Sync(); err != nil {
+		_ = dst.Close()
+		_ = os.Remove(dstPath)
+		return fmt.Errorf("sync dst %s: %w", dstPath, err)
+	}
+	if err := dst.Close(); err != nil {
+		_ = os.Remove(dstPath)
+		return fmt.Errorf("close dst %s: %w", dstPath, err)
+	}
+
+	return nil
 }
 
 func extractMovieName(fileName string) string {

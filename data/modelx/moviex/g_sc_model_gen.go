@@ -55,6 +55,7 @@ type (
 		Remarks       string `db:"remarks"`
 		CreatedOn     int64  `db:"created_on"`
 		UpdatedOn     int64  `db:"updated_on"`
+		ImagePath     string `db:"image_path"`
 	}
 )
 
@@ -121,8 +122,8 @@ func (m *defaultGScModel) Insert(ctx context.Context, data *GSc) (sql.Result, er
 	rudyGcGScIdKey := fmt.Sprintf("%s%v", cacheRudyGcGScIdPrefix, data.Id)
 	rudyGcGScNameKey := fmt.Sprintf("%s%v", cacheRudyGcGScNamePrefix, data.Name)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, gScRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Name, data.MovieNumber, data.ScTime, data.ComeMovieName, data.Cooldown, data.Duration, data.Fg, data.Vessel, data.MovieCast, data.Remarks, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, gScRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Name, data.MovieNumber, data.ScTime, data.ComeMovieName, data.Cooldown, data.Duration, data.Fg, data.Vessel, data.MovieCast, data.Remarks, data.CreatedOn, data.UpdatedOn, data.ImagePath)
 	}, rudyGcGScIdKey, rudyGcGScNameKey)
 	return ret, err
 }
@@ -137,7 +138,7 @@ func (m *defaultGScModel) Update(ctx context.Context, newData *GSc) error {
 	rudyGcGScNameKey := fmt.Sprintf("%s%v", cacheRudyGcGScNamePrefix, data.Name)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, gScRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.Name, newData.MovieNumber, newData.ScTime, newData.ComeMovieName, newData.Cooldown, newData.Duration, newData.Fg, newData.Vessel, newData.MovieCast, newData.Remarks, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.Name, newData.MovieNumber, newData.ScTime, newData.ComeMovieName, newData.Cooldown, newData.Duration, newData.Fg, newData.Vessel, newData.MovieCast, newData.Remarks, newData.CreatedOn, newData.UpdatedOn, newData.ImagePath, newData.Id)
 	}, rudyGcGScIdKey, rudyGcGScNameKey)
 	return err
 }

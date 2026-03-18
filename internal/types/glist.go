@@ -23,6 +23,7 @@ type GSc struct {
 	Vessel        string
 	MovieCast     string
 	Remarks       string
+	ImagePath     string
 	CreatedOn     int64
 	UpdatedOn     int64
 }

@@ -20,6 +20,7 @@ type (
 		// 便于外层使用的扩展
 		FindAll(ctx context.Context) ([]*GList, error)
 		ListByFilters(ctx context.Context, scName string, isCome *int64, offset, limit int64) ([]*GList, error)
+		ListByScName(ctx context.Context, scName string) ([]*GList, error)
 
 		// 暴露只读能力，供 infra 构造 SQL（避免直接依赖未导出字段）
 		TableName() string
@@ -128,6 +129,27 @@ func (m *customGListModel) ListByMovieJavId(ctx context.Context, javId string) (
 	if err != nil {
 		return nil, err
 	}
+	var rows []*GList
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGListModel) ListByScName(ctx context.Context, scName string) ([]*GList, error) {
+	sqlStr, args, err := squirrel.
+		Select(gListRows).
+		From(m.table).
+		Where(squirrel.Eq{"sc_name": scName}).
+		OrderBy("is_come DESC", "updated_on DESC", "id ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
 	var rows []*GList
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {

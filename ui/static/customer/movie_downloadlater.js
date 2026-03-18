@@ -54,3 +54,72 @@ document.addEventListener('click', async function (e) {
         }
     }
 });
+
+document.addEventListener('submit', async function (e) {
+    const formAddCast = e.target.closest('#formAddMovieCast');
+    if (!formAddCast) return;
+    e.preventDefault();
+
+    const javId = (formAddCast.dataset.jav || '').trim();
+    const input = formAddCast.querySelector('#movieCastName');
+    const msg = formAddCast.querySelector('#movieCastMsg');
+    const btn = formAddCast.querySelector('button[type="submit"]');
+    const name = input ? input.value.trim() : '';
+    const modalEl = document.getElementById('addMovieCastModal');
+
+    function showMsg(text, ok) {
+        if (!msg) return;
+        msg.textContent = text;
+        msg.className = (ok ? 'text-success' : 'text-danger') + ' small';
+        msg.style.display = 'block';
+    }
+
+    if (!javId) {
+        showMsg('缺少影片参数', false);
+        return;
+    }
+    if (!name) {
+        showMsg('演员名不能为空', false);
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch(`/api/movie/${encodeURIComponent(javId)}/add-cast`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name}),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+            throw new Error(data.error || '添加失败');
+        }
+        showMsg('添加成功，正在刷新...', true);
+        window.setTimeout(function () {
+            if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+                const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.hide();
+            }
+            window.location.reload();
+        }, 300);
+    } catch (err) {
+        showMsg(err.message || '网络错误，请稍后重试', false);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+});
+
+document.addEventListener('shown.bs.modal', function (e) {
+    const modal = e.target.closest('#addMovieCastModal');
+    if (!modal) return;
+    const input = modal.querySelector('#movieCastName');
+    const msg = modal.querySelector('#movieCastMsg');
+    if (msg) {
+        msg.style.display = 'none';
+        msg.textContent = '';
+    }
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+});

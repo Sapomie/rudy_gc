@@ -1,0 +1,182 @@
+{{ define "page.cast_detail" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ .Title }} - Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <style>
+            .cast-section-card {
+                background: #fff;
+                border-radius: 1rem;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+                padding: 1.25rem 1.5rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .cast-section-title {
+                font-weight: 600;
+                font-size: 1.05rem;
+                color: #212529;
+                margin: 0 0 .75rem;
+                border-left: 4px solid #0dcaf0;
+                padding-left: .5rem;
+            }
+
+            #castMsgArea {
+                display: none;
+            }
+        </style>
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-2">
+                    <div>
+                        <h4 class="mb-1">{{ .Page.Actor.Name }}</h4>
+                        <div class="text-muted">查看演员概览、最近参与的 SC 历史，以及代表影片。</div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button id="btnRebuildActorRank" type="button" class="btn btn-outline-warning" data-actor-name="{{ .Page.Actor.Name }}">回填该演员 Rank</button>
+                        <a href="{{ .Page.CardsHref }}" class="btn btn-outline-primary">Cards</a>
+                        <a href="{{ .Page.ScAggHref }}" class="btn btn-outline-secondary">SC 统计</a>
+                    </div>
+                </div>
+
+                <div id="castMsgArea" class="alert alert-success small py-2 px-3 mb-3"></div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4 col-xl-2">
+                        <div class="sc-metric-card">
+                            <div class="sc-metric-label">Movies</div>
+                            <div class="sc-metric-value">{{ .Page.Actor.MovieNumber }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <div class="sc-metric-card">
+                            <div class="sc-metric-label">Owned</div>
+                            <div class="sc-metric-value">{{ .Page.Actor.OwnedMovieNumber }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <div class="sc-metric-card">
+                            <div class="sc-metric-label">SC Times</div>
+                            <div class="sc-metric-value">{{ .Page.Actor.ScTimes }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <div class="sc-metric-card">
+                            <div class="sc-metric-label">Come Times</div>
+                            <div class="sc-metric-value">{{ .Page.Actor.ComeTimes }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <div class="sc-metric-card">
+                            <div class="sc-metric-label">Last SC</div>
+                            <div class="sc-metric-value">{{ humanTime .Page.Actor.LastScTime }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <div class="sc-metric-card">
+                            <div class="sc-metric-label">Highest Rank</div>
+                            <div class="sc-metric-value">{{ if gt .Page.Actor.HighestRank 0 }}#{{ .Page.Actor.HighestRank }}{{ else }}-{{ end }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-xl-6">
+                        <section class="cast-section-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="cast-section-title mb-0">SC 历史</h5>
+                                <span class="text-muted small">{{ len .Page.RecentEvents }} 条</span>
+                            </div>
+                            {{ if .Page.RecentEvents }}
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead>
+                                        <tr>
+                                            <th>时间</th>
+                                            <th>影片数</th>
+                                            <th>Movies</th>
+                                            <th>Cooldown</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {{ range .Page.RecentEvents }}
+                                            <tr>
+                                                <td><a href="{{ .Href }}">{{ formatUnixMinute .ScTime }}</a></td>
+                                                <td>{{ .MovieCount }}</td>
+                                                <td>
+                                                    {{ if .Movies }}
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            {{ range .Movies }}
+                                                                {{ if .Href }}
+                                                                    <a href="{{ .Href }}" class="badge bg-light text-dark border text-decoration-none px-2 py-2">
+                                                                        {{ .Name }}
+                                                                        {{ if .IsCome }}<span class="text-danger ms-1">COME</span>{{ end }}
+                                                                    </a>
+                                                                {{ else }}
+                                                                    <span class="badge bg-light text-dark border px-2 py-2">
+                                                                        {{ .Name }}
+                                                                        {{ if .IsCome }}<span class="text-danger ms-1">COME</span>{{ end }}
+                                                                    </span>
+                                                                {{ end }}
+                                                            {{ end }}
+                                                        </div>
+                                                    {{ else }}
+                                                        <span class="text-muted">-</span>
+                                                    {{ end }}
+                                                </td>
+                                                <td>{{ if gt .Cooldown 0 }}{{ humanDays .Cooldown }}{{ else }}-{{ end }}</td>
+                                            </tr>
+                                        {{ end }}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {{ else }}
+                                <div class="sc-empty-state">这个演员还没有关联的 SC 记录。</div>
+                            {{ end }}
+                        </section>
+                    </div>
+                </div>
+
+                <section class="cast-section-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="cast-section-title mb-0">代表影片</h5>
+                        <span class="text-muted small">展示 {{ len .Page.Movies }} / {{ .Page.TotalMovies }}</span>
+                    </div>
+                    {{ if .Page.Movies }}
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3">
+                            {{ range .Page.Movies }}
+                                {{ template "card" . }}
+                            {{ end }}
+                        </div>
+                    {{ else }}
+                        <div class="sc-empty-state">暂时没有可展示的影片。</div>
+                    {{ end }}
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/customer/cast_detail.js"></script>
+    <script src="/static/js/app.js"></script>
+    </body>
+    </html>
+{{ end }}

@@ -3,6 +3,7 @@ package movie_infra
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"rudy_gc/data/modelx/moviex"
@@ -61,6 +62,14 @@ func (r *CastRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.C
 		return nil, err
 	}
 	return mapAmCastToTypes(row), nil
+}
+
+func (r *CastRepoSqlx) FindByNames(ctx context.Context, names []string) ([]*types.Cast, error) {
+	return r.m.FindByNames(ctx, names)
+}
+
+func (r *CastRepoSqlx) CountOwnedScMovieNumbersByNames(ctx context.Context, names []string) (map[string]int64, error) {
+	return r.m.CountOwnedScMovieNumbersByNames(ctx, names)
 }
 
 // ====== 新增：Upsert（以 name 作为幂等键）
@@ -141,6 +150,9 @@ func mapAmCastToTypes(v *moviex.AmCast) *types.Cast {
 		Id:                 v.Id,
 		Name:               v.Name,
 		JavId:              v.JavId,
+		Chinese:            "",
+		BirthDay:           0,
+		Height:             0,
 		MovieNumber:        v.MovieNumber,
 		OwnedMovieNumber:   v.OwnedMovieNumber,
 		ScTimes:            v.ScTimes,
@@ -187,4 +199,87 @@ func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, own
 
 func (r *CastRepoSqlx) ListAllIDs(ctx context.Context) ([]int64, error) {
 	return r.m.ListAllIDs(ctx)
+}
+
+func (r *CastRepoSqlx) ListPage(ctx context.Context, page, pageSize int, sortField, sortOrder string, filter types.CastListFilter) ([]*types.Cast, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 200 {
+		pageSize = 24
+	}
+
+	total, err := r.m.CountAll(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*types.Cast{}, 0, nil
+	}
+
+	offset := int64((page - 1) * pageSize)
+	rows, err := r.m.ListPage(ctx, offset, int64(pageSize), buildCastOrderBy(sortField, sortOrder), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
+func buildCastOrderBy(sortField, sortOrder string) string {
+	field := normalizeCastSortField(sortField)
+	order := normalizeCastSortOrder(sortOrder)
+
+	column := "ac.owned_movie_number"
+	switch field {
+	case "name":
+		column = "ac.name"
+	case "chinese":
+		column = "cc.chinese"
+	case "age":
+		if order == "ASC" {
+			return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day DESC, ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+		}
+		return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day ASC, ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	case "height":
+		return "CASE WHEN cc.height > 0 THEN 0 ELSE 1 END ASC, cc.height " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	case "movie_number":
+		column = "ac.movie_number"
+	case "owned_movie_number":
+		column = "ac.owned_movie_number"
+	case "sc_times":
+		column = "ac.sc_times"
+	case "come_times":
+		column = "ac.come_times"
+	case "last_sc_time":
+		column = "ac.last_sc_time"
+	case "highest_rank":
+		column = "ac.highest_rank"
+	}
+
+	if column == "ac.owned_movie_number" {
+		return column + " " + order + ", ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	}
+	if column == "ac.name" {
+		return column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.id DESC"
+	}
+	if column == "cc.chinese" {
+		return "CASE WHEN cc.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	}
+	return column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+}
+
+func normalizeCastSortField(sortField string) string {
+	switch strings.ToLower(strings.TrimSpace(sortField)) {
+	case "name", "chinese", "age", "height", "movie_number", "owned_movie_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
+		return strings.ToLower(strings.TrimSpace(sortField))
+	default:
+		return "owned_movie_number"
+	}
+}
+
+func normalizeCastSortOrder(sortOrder string) string {
+	if strings.EqualFold(strings.TrimSpace(sortOrder), "asc") {
+		return "ASC"
+	}
+	return "DESC"
 }

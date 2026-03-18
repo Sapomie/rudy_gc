@@ -43,6 +43,47 @@
                 </div>
                 <!-- /Sticky 工具栏 -->
 
+                {{ if .ActorSummary }}
+                    <section class="card shadow-sm border-0 mb-3">
+                        <div class="card-body">
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+                                <div>
+                                    <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                                        <h5 class="mb-0">{{ .ActorSummary.Actor.Name }}</h5>
+                                        <a href="{{ .ActorSummary.ActorPageHref }}" class="btn btn-sm btn-outline-primary">演员页</a>
+                                        <a href="{{ .ActorSummary.ScAggHref }}" class="btn btn-sm btn-outline-secondary">SC 统计</a>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 small text-muted">
+                                        <span class="badge bg-light text-dark border">Movie {{ .ActorSummary.Actor.MovieNumber }}</span>
+                                        <span class="badge bg-light text-dark border">Owned {{ .ActorSummary.Actor.OwnedMovieNumber }}</span>
+                                        <span class="badge bg-light text-dark border">SC {{ .ActorSummary.Actor.ScTimes }}</span>
+                                        <span class="badge bg-light text-dark border">Come {{ .ActorSummary.Actor.ComeTimes }}</span>
+                                        <span class="badge bg-light text-dark border">Last {{ humanTime .ActorSummary.Actor.LastScTime }}</span>
+                                        <span class="badge bg-light text-dark border">Top Rank {{ if gt .ActorSummary.Actor.HighestRank 0 }}#{{ .ActorSummary.Actor.HighestRank }}{{ else }}-{{ end }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="small text-uppercase text-muted mb-2">Recent SC</div>
+                                    {{ if .ActorSummary.RecentEvents }}
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {{ range .ActorSummary.RecentEvents }}
+                                                <a href="{{ .Href }}" class="badge bg-light text-dark border text-decoration-none px-3 py-2">
+                                                    {{ .ScName }}
+                                                    <span class="text-muted ms-1">{{ humanTime .ScTime }}</span>
+                                                    <span class="ms-1">x{{ .MovieCount }}</span>
+                                                    {{ if .IsCome }}<span class="text-danger ms-1">COME</span>{{ end }}
+                                                </a>
+                                            {{ end }}
+                                        </div>
+                                    {{ else }}
+                                        <div class="text-muted small">还没有相关 SC 记录。</div>
+                                    {{ end }}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                {{ end }}
+
                 <!-- movie card grid -->
                 <section aria-label="Movies">
                     <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">

@@ -5,6 +5,9 @@ type Cast struct {
 	Id                 int64
 	Name               string
 	JavId              string
+	Chinese            string
+	BirthDay           int64
+	Height             int64
 	MovieNumber        int64
 	OwnedMovieNumber   int64
 	ScTimes            int64
@@ -17,4 +20,23 @@ type Cast struct {
 	RankTimes          int64
 	CreatedOn          int64
 	UpdatedOn          int64
+}
+
+type CastListFilter struct {
+	OwnedMin        int64
+	HasOwnedMin     bool
+	OwnedMax        int64
+	HasOwnedMax     bool
+	ScTimesMin      int64
+	HasScTimesMin   bool
+	ScTimesMax      int64
+	HasScTimesMax   bool
+	ComeTimesMin    int64
+	HasComeTimesMin bool
+	ComeTimesMax    int64
+	HasComeTimesMax bool
+	LastScFrom      int64
+	HasLastScFrom   bool
+	LastScTo        int64
+	HasLastScTo     bool
 }

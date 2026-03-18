@@ -17,5 +17,7 @@
 # Dependencies
 vendor/
 
+
 z_text/*
 cmd/own_tst/*
+z_reference/

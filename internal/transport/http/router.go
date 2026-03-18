@@ -44,6 +44,33 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 			}
 			return time.Unix(sec, 0).Format("2006-01-02 15:04:05")
 		},
+		"formatUnixMinute": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("2006-01-02 15:04")
+		},
+		"formatUnixDate": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("2006-01-02")
+		},
+		"formatUnixHm": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("15:04")
+		},
+		"monthParityClass": func(sec int64) string {
+			if sec <= 0 {
+				return "sc-month-even"
+			}
+			if int(time.Unix(sec, 0).Month())%2 == 1 {
+				return "sc-month-odd"
+			}
+			return "sc-month-even"
+		},
 		"minus": func(a, b int64) int64 {
 			return a - b
 		},
@@ -63,6 +90,27 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 			default:
 				return fmt.Sprintf("%ds", s)
 			}
+		},
+		"humanDays": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return fmt.Sprintf("%.2f 天", float64(sec)/86400.0)
+		},
+		"humanAgeFromBirth": func(birth int64) string {
+			if birth <= 0 {
+				return "-"
+			}
+			now := time.Now().In(time.Local)
+			bd := time.Unix(birth, 0).In(time.Local)
+			age := now.Year() - bd.Year()
+			if now.Month() < bd.Month() || (now.Month() == bd.Month() && now.Day() < bd.Day()) {
+				age--
+			}
+			if age < 0 {
+				return "-"
+			}
+			return fmt.Sprintf("%d", age)
 		},
 	}
 
@@ -99,10 +147,21 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)
 	r.GET("/cardsrandompick", movieHTML.ListMovieCardRandomPick)
 	r.GET("/records", movieHTML.ListRecordsPage)
+	r.GET("/sc-events", movieHTML.ListScEventsPage)
+	r.GET("/sc-events-cards", movieHTML.ListScEventsCardPage)
+	r.GET("/sc-events/:name", movieHTML.ScEventDetailPage)
+	r.GET("/sc-agg", movieHTML.ScAggPage)
+	r.GET("/sc-agg/:year", movieHTML.ScAggPage)
+	r.GET("/sc-agg/:year/q/:q", movieHTML.ScAggPage)
+	r.GET("/sc-agg/:year/:month", movieHTML.ScAggPage)
+	r.GET("/casts", movieHTML.CastListPage)
+	r.GET("/cast", movieHTML.CastDetailPage)
 	r.GET("/dir/:id", dirHTML.DirDetail)
 	// trigger 页面
 	r.GET("/triggers", trig.Page)
+	r.GET("/sc-triggers", movieHTML.ScTriggersPage)
 	r.GET("/sc/pick-copy", movieHTML.ScPickCopyPage)
+	r.GET("/sc-pick-smart", movieHTML.ScPickSmartPage)
 
 	r.GET("/movie-agg-owned/release", aggHTML.MovieAggOwnedReleaseYears)
 	r.GET("/movie-agg-owned/release/:year", aggHTML.MovieAggOwnedReleaseMonths)
@@ -127,6 +186,7 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		api.POST("/movie/:movie/downloadlater", movieDownload.AddToDownloadLater)
 		api.DELETE("/movie/:movie/downloadlater", movieDownload.RemoveFromDownloadLater)
 		api.POST("/movie/:movie/download-cover", movieDownload.DownloadCoverNow)
+		api.POST("/movie/:movie/add-cast", movieDownload.AddCast)
 
 		api.POST("/open-finder", movieDownload.OpenFinderHandler([]string{
 			"/Volumes/Getea",
@@ -137,6 +197,8 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		trig := api2.NewTriggerAPI(deps)
 		api.POST("/triggers/daily-best", trig.DailyBest)
 		api.POST("/triggers/daily-best-sync", trig.DailyBestSync)
+		api.POST("/triggers/rebuild-cast-rank", trig.RebuildCastRank)
+		api.POST("/triggers/cast/rebuild-rank", trig.RebuildActorRank)
 		api.POST("/triggers/seeds", trig.Seeds)
 		api.POST("/triggers/seed-by-name", trig.SeedByName)
 		api.POST("/triggers/refresh-oldest-detail", trig.RefreshOldestDetail)
@@ -149,9 +211,13 @@ func NewEngine(deps *svc.Deps) *gin.Engine {
 		// === SC 触发 ===
 		scTrig := api2.NewScTriggerAPI(deps)
 		api.POST("/triggers/sc/move", scTrig.Move)
+		api.POST("/triggers/sc/add-preview", scTrig.AddPreview)
 		api.POST("/triggers/sc/add", scTrig.Add)
+		api.POST("/triggers/sc/rebuild-stats", scTrig.RebuildStats)
 		api.POST("/triggers/sc/pick-copy", scTrig.PickCopy)
 		api.POST("/triggers/sc/pick-only", scTrig.PickOnly)
+		api.POST("/triggers/sc/pick-smart-copy", scTrig.PickSmartCopy)
+		api.POST("/triggers/sc/pick-smart-only", scTrig.PickSmartOnly)
 		api.GET("/triggers/sc/copy-status", scTrig.CopyStatus)
 		api.POST("/triggers/sc/copy-stop", scTrig.CopyStop)
 	}

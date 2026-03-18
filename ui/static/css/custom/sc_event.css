@@ -1,0 +1,266 @@
+.sc-metric-card {
+    border: 1px solid rgba(0, 0, 0, .06);
+    border-radius: .75rem;
+    padding: 1rem;
+    background: #fff;
+    height: 100%;
+}
+
+.sc-metric-label {
+    color: #6c757d;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: .35rem;
+}
+
+.sc-metric-value {
+    color: #212529;
+    font-size: 1.05rem;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.sc-page-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .45rem .75rem;
+    border-radius: 999px;
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, .06);
+}
+
+.sc-page-summary-label {
+    color: #6c757d;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.sc-page-summary-value {
+    color: #212529;
+    font-size: .92rem;
+    font-weight: 600;
+}
+
+.sc-event-link {
+    color: #495057;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.sc-event-link:hover {
+    color: #0d6efd;
+}
+
+.sc-movie-card {
+    height: 100%;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: .75rem;
+    overflow: hidden;
+}
+
+.sc-movie-body {
+    padding: 1rem;
+}
+
+.sc-muted {
+    color: #6c757d;
+    font-size: .85rem;
+}
+
+.sc-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #f1f3f5;
+    color: #495057;
+    padding: .2rem .55rem;
+    font-size: .75rem;
+    margin-right: .35rem;
+    margin-bottom: .35rem;
+}
+
+.sc-pill-come {
+    background: #fff0f6;
+    color: #c2255c;
+}
+
+.sc-action-row .btn {
+    margin-right: .35rem;
+    margin-bottom: .35rem;
+}
+
+.sc-empty-state {
+    border: 1px dashed rgba(0, 0, 0, .15);
+    border-radius: .75rem;
+    padding: 2rem 1rem;
+    color: #6c757d;
+    text-align: center;
+    background: #fff;
+}
+
+.sc-event-grid-card {
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.sc-event-cover {
+    position: relative;
+    background: #f1f3f5;
+    overflow: hidden;
+}
+
+.sc-event-cover-empty {
+    position: absolute;
+    inset: 0;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    gap: .35rem;
+    color: #212529;
+    background:
+        radial-gradient(circle at top right, rgba(13, 110, 253, .18), transparent 40%),
+        linear-gradient(160deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.sc-event-cover-kicker {
+    font-size: .72rem;
+    letter-spacing: .08em;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+.sc-event-cover-badge {
+    position: absolute;
+    top: .75rem;
+    right: .75rem;
+    background: rgba(255, 255, 255, .92);
+    color: #212529;
+    border-radius: 999px;
+    padding: .3rem .65rem;
+    font-size: .78rem;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+}
+
+.sc-event-card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.sc-event-come-link {
+    color: #212529;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.sc-event-come-link:hover {
+    color: #0d6efd;
+}
+
+.sc-event-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+.sc-event-sort-bar .btn {
+    border-radius: 999px;
+}
+
+.sc-event-time {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+}
+
+.sc-event-date {
+    font-weight: 600;
+    color: #34495e;
+}
+
+.sc-event-hour {
+    color: #8a5a44;
+    font-size: .92em;
+}
+
+tr.sc-month-odd > td {
+    background: #fcfdff;
+}
+
+tr.sc-month-even > td {
+    background: #fffaf5;
+}
+
+.sc-event-grid-card.sc-month-odd {
+    background: #fcfdff;
+}
+
+.sc-event-grid-card.sc-month-even {
+    background: #fffaf5;
+}
+
+.sc-detail-side-card {
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 1rem;
+}
+
+.sc-detail-image-wrap {
+    border-radius: .85rem;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.sc-detail-image {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.sc-detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem .9rem;
+}
+
+.sc-detail-info-item {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sc-detail-remarks {
+    grid-column: 1 / -1;
+}
+
+.sc-detail-remarks .sc-metric-value {
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.sc-detail-side-card .sc-metric-card {
+    padding: .75rem .85rem;
+    border-radius: .65rem;
+}
+
+.sc-detail-side-card .sc-metric-label {
+    font-size: .7rem;
+    margin-bottom: .25rem;
+}
+
+.sc-detail-side-card .sc-metric-value {
+    font-size: .95rem;
+    font-weight: 560;
+}
+
+@media (max-width: 767.98px) {
+    .sc-detail-info-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -29,6 +29,7 @@
     const pickedCard = document.getElementById('pickedCard');
     const pickedGrid = document.getElementById('pickedGrid');
     const pickedCount = document.getElementById('pickedCount');
+    const pickedSortBar = document.getElementById('pickedSortBar');
     const copyCard = document.getElementById('copyCard');
     const copyMeta = document.getElementById('copyMeta');
     const copyProgress = document.getElementById('copyProgress');
@@ -92,6 +93,109 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    let pickedMoviesCache = [];
+    let pickedTotalSizeGb = '';
+    let pickedSortBase = 'picked';
+    let pickedSortDir = 'desc';
+
+    function numberOrZero(v) {
+        return Number.isFinite(v) ? v : 0;
+    }
+
+    function parseDateValue(raw) {
+        if (!raw) return 0;
+        const ts = Date.parse(raw);
+        return Number.isFinite(ts) ? ts : 0;
+    }
+
+    function rankValue(movie) {
+        const v = Number.isFinite(movie && movie.highest_rank) ? movie.highest_rank : 0;
+        return v > 0 ? v : Number.MAX_SAFE_INTEGER;
+    }
+
+    function compareText(a, b) {
+        return String(a || '').localeCompare(String(b || ''), 'zh-Hans-CN', {
+            numeric: true,
+            sensitivity: 'base',
+        });
+    }
+
+    function comparePickedOrder(a, b) {
+        return numberOrZero(a && a._pickedOrder) - numberOrZero(b && b._pickedOrder);
+    }
+
+    function sortPickedMovies(list, sortKey) {
+        const sorted = list.slice();
+        switch (sortKey) {
+            case 'film_birth_desc':
+                sorted.sort((a, b) => parseDateValue(b.film_birth_date) - parseDateValue(a.film_birth_date) || comparePickedOrder(a, b));
+                break;
+            case 'film_birth_asc':
+                sorted.sort((a, b) => parseDateValue(a.film_birth_date) - parseDateValue(b.film_birth_date) || comparePickedOrder(a, b));
+                break;
+            case 'releasing_desc':
+                sorted.sort((a, b) => parseDateValue(b.releasing_date) - parseDateValue(a.releasing_date) || comparePickedOrder(a, b));
+                break;
+            case 'releasing_asc':
+                sorted.sort((a, b) => parseDateValue(a.releasing_date) - parseDateValue(b.releasing_date) || comparePickedOrder(a, b));
+                break;
+            case 'sc_desc':
+                sorted.sort((a, b) => numberOrZero(b.sc_times) - numberOrZero(a.sc_times) || comparePickedOrder(a, b));
+                break;
+            case 'sc_asc':
+                sorted.sort((a, b) => numberOrZero(a.sc_times) - numberOrZero(b.sc_times) || comparePickedOrder(a, b));
+                break;
+            case 'come_desc':
+                sorted.sort((a, b) => numberOrZero(b.come_times) - numberOrZero(a.come_times) || comparePickedOrder(a, b));
+                break;
+            case 'come_asc':
+                sorted.sort((a, b) => numberOrZero(a.come_times) - numberOrZero(b.come_times) || comparePickedOrder(a, b));
+                break;
+            case 'rank_best':
+                sorted.sort((a, b) => rankValue(a) - rankValue(b) || comparePickedOrder(a, b));
+                break;
+            case 'rank_worst':
+                sorted.sort((a, b) => rankValue(b) - rankValue(a) || comparePickedOrder(a, b));
+                break;
+            case 'score_desc':
+                sorted.sort((a, b) => numberOrZero(b.score) - numberOrZero(a.score) || comparePickedOrder(a, b));
+                break;
+            case 'score_asc':
+                sorted.sort((a, b) => numberOrZero(a.score) - numberOrZero(b.score) || comparePickedOrder(a, b));
+                break;
+            case 'name_asc':
+                sorted.sort((a, b) => compareText(a.name, b.name) || comparePickedOrder(a, b));
+                break;
+            default:
+                sorted.sort(comparePickedOrder);
+                break;
+        }
+        return sorted;
+    }
+
+    function currentSortKey() {
+        if (pickedSortBase === 'picked') return 'picked';
+        if (pickedSortBase === 'rank') return pickedSortDir === 'desc' ? 'rank_worst' : 'rank_best';
+        return pickedSortBase + '_' + pickedSortDir;
+    }
+
+    function updatePickedSortButtons() {
+        if (!pickedSortBar) return;
+        const buttons = pickedSortBar.querySelectorAll('[data-sort-base]');
+        buttons.forEach(function (btn) {
+            const base = btn.getAttribute('data-sort-base') || '';
+            const label = btn.getAttribute('data-label') || btn.textContent.replace(/\s[↑↓]$/, '');
+            btn.setAttribute('data-label', label);
+            const active = base === pickedSortBase;
+            btn.classList.toggle('active', active);
+            if (active && base !== 'picked') {
+                btn.textContent = label + ' ' + (pickedSortDir === 'asc' ? '↑' : '↓');
+            } else {
+                btn.textContent = label;
+            }
+        });
     }
 
     function renderCard(movie) {
@@ -261,15 +365,29 @@
         );
     }
 
-    function renderMovies(movies) {
+    function drawPickedMovies(list, totalSizeGb, shouldScroll) {
         if (!pickedCard || !pickedGrid || !pickedCount) return;
-        const list = Array.isArray(movies) ? movies : [];
         pickedGrid.innerHTML = list.map(renderCard).join('');
-        pickedCount.textContent = '共 ' + list.length + ' 部';
+        const sizeText = totalSizeGb ? ' · ' + totalSizeGb + ' GB' : '';
+        pickedCount.textContent = '共 ' + list.length + ' 部' + sizeText;
         pickedCard.style.display = list.length > 0 ? 'block' : 'none';
-        if (list.length > 0) {
+        if (shouldScroll && list.length > 0) {
             pickedCard.scrollIntoView({behavior: 'smooth', block: 'start'});
         }
+    }
+
+    function applyPickedSort(shouldScroll) {
+        drawPickedMovies(sortPickedMovies(pickedMoviesCache, currentSortKey()), pickedTotalSizeGb, shouldScroll);
+        updatePickedSortButtons();
+    }
+
+    function renderMovies(movies, totalSizeGb) {
+        const list = Array.isArray(movies) ? movies : [];
+        pickedMoviesCache = list.map(function (movie, idx) {
+            return Object.assign({_pickedOrder: idx}, movie);
+        });
+        pickedTotalSizeGb = totalSizeGb || '';
+        applyPickedSort(true);
     }
 
     let copyTimer = null;
@@ -436,7 +554,7 @@
                 }
                 const data = await r.json().catch(() => ({}));
                 const picked = data.picked || 0;
-                renderMovies(data.movies || []);
+                renderMovies(data.movies || [], data.total_size_gb || '');
                 if (data.copy_status) {
                     updateCopyStatus(data.copy_status);
                     if (data.copy_status.running) {
@@ -473,6 +591,24 @@
                     stopCopyPolling();
                 })
                 .catch((e) => showMsg('停止失败：' + e, false));
+        });
+    }
+
+    if (pickedSortBar) {
+        pickedSortBar.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-sort-base]');
+            if (!btn) return;
+            const base = btn.getAttribute('data-sort-base') || 'picked';
+            const defaultDir = btn.getAttribute('data-default-dir') || 'desc';
+            if (base === pickedSortBase) {
+                if (base !== 'picked') {
+                    pickedSortDir = pickedSortDir === 'asc' ? 'desc' : 'asc';
+                }
+            } else {
+                pickedSortBase = base;
+                pickedSortDir = defaultDir;
+            }
+            applyPickedSort(false);
         });
     }
 

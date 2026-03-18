@@ -9,10 +9,13 @@ const (
 	ProcSeedByName
 	ProcSyncBest
 	ProcRefreshOldestDetail // ✅ 新增
+	ProcRebuildCastRank
+	ProcRebuildActorRank
 )
 
 type TriggerMsg struct {
-	Kind   TriggerKind
-	Name   string // 给 SeedByName 用
-	Number int64  // ✅ 给 RefreshOldestDetail 用
+	Kind      TriggerKind
+	Name      string // 给 SeedByName 用
+	ActorName string // 给单演员 rank 回填用
+	Number    int64  // ✅ 给 RefreshOldestDetail 用
 }

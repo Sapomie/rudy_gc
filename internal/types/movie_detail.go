@@ -5,7 +5,7 @@ type MovieDetail struct {
 	FilmInfo  *FilmInfo
 	HasFilm   int64
 	RankInfos []*RankInfo
-	SC        []string
+	SC        []*MovieScEvent
 }
 
 type RankInfo struct {

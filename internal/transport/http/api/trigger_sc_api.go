@@ -2,8 +2,13 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,14 +19,16 @@ import (
 )
 
 type ScTriggerAPI struct {
-	ch    chan contracts.ScTriggerMsg
-	scSvc *sc.ScService
+	ch        chan contracts.ScTriggerMsg
+	scSvc     *sc.ScService
+	scRootDir string
 }
 
 func NewScTriggerAPI(deps *svc.Deps) *ScTriggerAPI {
 	return &ScTriggerAPI{
-		ch:    deps.ScTrigger,
-		scSvc: sc.NewScService(deps),
+		ch:        deps.ScTrigger,
+		scSvc:     sc.NewScService(deps),
+		scRootDir: deps.Config.Film.ScRootDir,
 	}
 }
 
@@ -47,20 +54,156 @@ func (h *ScTriggerAPI) Move(c *gin.Context) {
 	}
 }
 
-// POST /api/triggers/sc/add { "dir": "/path/to/scan" }
-type scAddReq struct {
-	Dir string `json:"dir" form:"dir"`
-}
-
 func (h *ScTriggerAPI) Add(c *gin.Context) {
 	var req scAddReq
-	_ = c.ShouldBind(&req)
-	dir := strings.TrimSpace(req.Dir)
-	if dir == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dir required"})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	msg := contracts.ScTriggerMsg{Kind: contracts.ScAdd, Dir: dir}
+
+	dir, err := resolveSingleScEventDir(h.scRootDir)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	msg := contracts.ScTriggerMsg{
+		Kind:           contracts.ScAdd,
+		Dir:            dir,
+		ComeMovieJavId: strings.TrimSpace(req.ComeMovieJavId),
+		MovieCast:      strings.TrimSpace(req.MovieCast),
+		Duration:       req.Duration,
+		Fg:             strings.TrimSpace(req.Fg),
+		Vessel:         strings.TrimSpace(req.Vessel),
+		Remarks:        strings.TrimSpace(req.Remarks),
+	}
+	select {
+	case h.ch <- msg:
+		c.Status(http.StatusAccepted)
+	default:
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "sc trigger queue is full"})
+	}
+}
+
+type scAddReq struct {
+	ComeMovieJavId string `json:"comeMovieJavId"`
+	MovieCast      string `json:"movieCast"`
+	Duration       int64  `json:"duration"`
+	Fg             string `json:"fg"`
+	Vessel         string `json:"vessel"`
+	Remarks        string `json:"remarks"`
+}
+
+type scAddPreviewMovieResp struct {
+	MovieName  string   `json:"movieName"`
+	MovieJavId string   `json:"movieJavId"`
+	Casts      []string `json:"casts"`
+}
+
+type scAddPreviewResp struct {
+	Dir        string                  `json:"dir"`
+	ScName     string                  `json:"scName"`
+	ScTime     int64                   `json:"scTime"`
+	MovieCount int64                   `json:"movieCount"`
+	ImageFound bool                    `json:"imageFound"`
+	ImageName  string                  `json:"imageName"`
+	Movies     []scAddPreviewMovieResp `json:"movies"`
+}
+
+func (h *ScTriggerAPI) AddPreview(c *gin.Context) {
+	dir, err := resolveSingleScEventDir(h.scRootDir)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	preview, err := h.scSvc.BuildAddScPreview(c.Request.Context(), dir)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp := scAddPreviewResp{
+		Dir:        preview.Dir,
+		ScName:     preview.ScName,
+		ScTime:     preview.ScTime,
+		MovieCount: preview.MovieCount,
+		ImageFound: preview.ImageFound,
+		ImageName:  preview.ImageName,
+		Movies:     make([]scAddPreviewMovieResp, 0, len(preview.Movies)),
+	}
+	for _, movie := range preview.Movies {
+		if movie == nil {
+			continue
+		}
+		resp.Movies = append(resp.Movies, scAddPreviewMovieResp{
+			MovieName:  movie.MovieName,
+			MovieJavId: movie.MovieJavId,
+			Casts:      movie.Casts,
+		})
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func resolveSingleScEventDir(root string) (string, error) {
+	dir := filepath.Clean(strings.TrimSpace(root))
+	if dir == "" {
+		return "", fmt.Errorf("film.scRootDir is empty")
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("read sc root dir failed: %w", err)
+	}
+
+	valid := make([]string, 0, 4)
+	for _, entry := range entries {
+		if entry == nil || !entry.IsDir() {
+			continue
+		}
+		name := strings.TrimSpace(entry.Name())
+		if !isValidScEventDirName(name) {
+			continue
+		}
+		valid = append(valid, name)
+	}
+	sort.Strings(valid)
+
+	if len(valid) == 0 {
+		return "", fmt.Errorf("no valid sc event dir found under %s", dir)
+	}
+	if len(valid) > 1 {
+		return "", fmt.Errorf("multiple valid sc event dirs found under %s: %s", dir, strings.Join(valid, ", "))
+	}
+
+	fullDir := filepath.Clean(filepath.Join(dir, valid[0]))
+	rel, err := filepath.Rel(dir, fullDir)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("resolved sc dir escapes root")
+	}
+	info, err := os.Stat(fullDir)
+	if err != nil {
+		return "", fmt.Errorf("stat sc event dir failed: %w", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("resolved sc event is not a directory")
+	}
+	return fullDir, nil
+}
+
+func isValidScEventDirName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, "\\") {
+		return false
+	}
+	_, err := time.Parse("2006-01-02-15-04", name)
+	return err == nil
+}
+
+func (h *ScTriggerAPI) RebuildStats(c *gin.Context) {
+	msg := contracts.ScTriggerMsg{Kind: contracts.ScRebuildStats}
 	select {
 	case h.ch <- msg:
 		c.Status(http.StatusAccepted)
@@ -77,6 +220,12 @@ type scPickReq struct {
 type scPickCopyReq struct {
 	PickN int         `json:"pickN"`
 	Reqs  []scPickReq `json:"reqs"`
+}
+
+type scSmartPickReq struct {
+	PickN   int                 `json:"pickN"`
+	Options sc.SmartPickOptions `json:"options"`
+	Reqs    []scPickReq         `json:"reqs"`
 }
 
 type scPickCopyCast struct {
@@ -150,6 +299,17 @@ func buildPickCopyMovies(movies []*types.MovieType) []scPickCopyMovie {
 	return resp
 }
 
+func buildPickedTotalSizeGB(movies []*types.MovieType) string {
+	var totalBytes int64
+	for _, m := range movies {
+		if m == nil || m.VFilm == nil {
+			continue
+		}
+		totalBytes += m.VFilm.Size
+	}
+	return fmt.Sprintf("%.2f", float64(totalBytes)/(1024*1024*1024))
+}
+
 // POST /api/triggers/sc/pick-copy
 func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
 	var req scPickCopyReq
@@ -177,10 +337,11 @@ func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
 	}
 	started, status := h.scSvc.StartCopyAsync(movies)
 	c.JSON(http.StatusOK, gin.H{
-		"picked":       len(movies),
-		"movies":       buildPickCopyMovies(movies),
-		"copy_started": started,
-		"copy_status":  status,
+		"picked":        len(movies),
+		"movies":        buildPickCopyMovies(movies),
+		"total_size_gb": buildPickedTotalSizeGB(movies),
+		"copy_started":  started,
+		"copy_status":   status,
 	})
 }
 
@@ -210,8 +371,76 @@ func (h *ScTriggerAPI) PickOnly(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"picked": len(movies),
-		"movies": buildPickCopyMovies(movies),
+		"picked":        len(movies),
+		"movies":        buildPickCopyMovies(movies),
+		"total_size_gb": buildPickedTotalSizeGB(movies),
+	})
+}
+
+// POST /api/triggers/sc/pick-smart-only
+func (h *ScTriggerAPI) PickSmartOnly(c *gin.Context) {
+	var req scSmartPickReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if len(req.Reqs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
+		return
+	}
+
+	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
+	for _, r := range req.Reqs {
+		converted = append(converted, sc.PickRequestWithWeight{
+			Req:    r.Req,
+			Weight: r.Weight,
+		})
+	}
+
+	movies, err := h.scSvc.SmartPickFromRequests(c.Request.Context(), converted, req.PickN, req.Options)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"picked":        len(movies),
+		"movies":        buildPickCopyMovies(movies),
+		"total_size_gb": buildPickedTotalSizeGB(movies),
+	})
+}
+
+// POST /api/triggers/sc/pick-smart-copy
+func (h *ScTriggerAPI) PickSmartCopy(c *gin.Context) {
+	var req scSmartPickReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if len(req.Reqs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
+		return
+	}
+
+	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
+	for _, r := range req.Reqs {
+		converted = append(converted, sc.PickRequestWithWeight{
+			Req:    r.Req,
+			Weight: r.Weight,
+		})
+	}
+
+	movies, err := h.scSvc.SmartPickCopyFromRequests(c.Request.Context(), converted, req.PickN, req.Options)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	started, status := h.scSvc.StartCopyAsync(movies)
+	c.JSON(http.StatusOK, gin.H{
+		"picked":        len(movies),
+		"movies":        buildPickCopyMovies(movies),
+		"total_size_gb": buildPickedTotalSizeGB(movies),
+		"copy_started":  started,
+		"copy_status":   status,
 	})
 }
 

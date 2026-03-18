@@ -25,7 +25,7 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 			}
 
 			switch msg.Kind {
-			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName, contracts.ProcSyncBest, contracts.ProcRefreshOldestDetail:
+			case contracts.ProcDailyBest, contracts.ProcSeeds, contracts.ProcSeedByName, contracts.ProcSyncBest, contracts.ProcRefreshOldestDetail, contracts.ProcRebuildCastRank, contracts.ProcRebuildActorRank:
 				procCtx, ok := l.tryBeginProcess(ctx)
 				if !ok {
 					log.Warn("ProcessionTriggerLoop: still running, skip trigger")
@@ -65,6 +65,19 @@ func (l *FetchLoopService) ProcessionTriggerLoop(ctx context.Context, trigger <-
 					case contracts.ProcRefreshOldestDetail: // ⭐ 新增分支
 						log.Infof("ProcessionTriggerLoop: RefreshOldestDetail(num=%d)", m.Number)
 						_, err = l.crawlLogic.RefreshOldestDetail(procCtx, m.Number)
+
+					case contracts.ProcRebuildCastRank:
+						log.Info("ProcessionTriggerLoop: RebuildAllCastRankStats")
+						err = l.crawlLogic.RebuildAllCastRankStats(procCtx)
+
+					case contracts.ProcRebuildActorRank:
+						name := strings.TrimSpace(m.ActorName)
+						if name == "" {
+							err = fmt.Errorf("empty actor name")
+							break
+						}
+						log.Infof("ProcessionTriggerLoop: RebuildCastRankStatsByName(%s)", name)
+						err = l.crawlLogic.RebuildCastRankStatsByName(procCtx, name)
 					}
 
 					if err != nil {

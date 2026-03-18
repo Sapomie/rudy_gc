@@ -1,0 +1,202 @@
+{{ define "page.sc_event_detail" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <style>
+            #msgArea {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2000;
+                display: none;
+            }
+        </style>
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">{{ .Event.Name }}</h4>
+                        <p class="text-muted mb-0">本次 SC 的基础信息、影片清单与快速操作入口。</p>
+                    </div>
+                    <div class="sc-action-row">
+                        <a href="/sc-events" class="btn btn-outline-secondary">返回列表</a>
+                        <a href="/triggers" class="btn btn-outline-secondary">触发台</a>
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-role="sc-move"
+                                data-sc-name="{{ .Event.Name }}">
+                            Move This SC
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    {{ if .Event.ImagePath }}
+                        <div class="col-12 col-xl-6">
+                            <div class="card h-100 sc-detail-side-card">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase mb-2">SC Image</div>
+                                    <div class="sc-detail-image-wrap">
+                                        <img src="{{ .Event.ImagePath }}" alt="{{ .Event.Name }} 图片" class="sc-detail-image">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {{ end }}
+                    <div class="col-12 {{ if .Event.ImagePath }}col-xl-6{{ end }}">
+                        <div class="card h-100 sc-detail-side-card">
+                            <div class="card-body">
+                                <div class="sc-detail-info-grid">
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Sc Time</div>
+                                        <div class="sc-metric-value">{{ formatUnix .Event.ScTime }}</div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Movie Count</div>
+                                        <div class="sc-metric-value">{{ .Event.MovieNumber }}</div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Cooldown</div>
+                                        <div class="sc-metric-value">
+                                            {{ if gt .Event.Cooldown 0 }}
+                                                {{ humanDays .Event.Cooldown }}
+                                            {{ else }}
+                                                -
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Come Movie</div>
+                                        <div class="sc-metric-value">
+                                            {{ if .Event.ComeMovieName }}
+                                                <a href="/movie/{{ .Event.ComeMovieName }}">{{ .Event.ComeMovieName }}</a>
+                                            {{ else }}
+                                                -
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Lead Cast</div>
+                                        <div class="sc-metric-value">
+                                            {{ if .Event.MovieCast }}
+                                                <a href="/cards?cn={{ .Event.MovieCast }}">{{ .Event.MovieCast }}</a>
+                                            {{ else }}
+                                                -
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Duration</div>
+                                        <div class="sc-metric-value">
+                                            {{ if gt .Event.Duration 0 }}
+                                                {{ .Event.Duration }} 分钟
+                                            {{ else }}
+                                                -
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">FG</div>
+                                        <div class="sc-metric-value">
+                                            {{ if .Event.Fg }}{{ .Event.Fg }}{{ else }}-{{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">Vessel</div>
+                                        <div class="sc-metric-value">
+                                            {{ if .Event.Vessel }}{{ .Event.Vessel }}{{ else }}-{{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card sc-detail-remarks">
+                                        <div class="sc-metric-label">Remarks</div>
+                                        <div class="sc-metric-value">
+                                            {{ if .Event.Remarks }}
+                                                {{ .Event.Remarks }}
+                                            {{ else }}
+                                                <span class="text-muted">暂无备注。</span>
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="mb-0">Movies</h5>
+                    <span class="text-muted small">{{ len .Items }} items</span>
+                </div>
+
+                {{ if .Items }}
+                    <section aria-label="SC Movies">
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
+                            {{ range .Items }}
+                                {{ with .MovieType }}
+                                    {{ template "card" . }}
+                                {{ end }}
+                            {{ end }}
+                        </div>
+                    </section>
+
+                    {{ if .FailedItems }}
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <h5 class="mb-3">Skipped / Error Items</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead>
+                                        <tr>
+                                            <th>Movie</th>
+                                            <th>JavId</th>
+                                            <th>Error</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {{ range .FailedItems }}
+                                            <tr>
+                                                <td>{{ .MovieName }}</td>
+                                                <td>{{ if .Entry }}{{ .Entry.MovieJavId }}{{ end }}</td>
+                                                <td class="text-danger small">{{ .LoadError }}</td>
+                                            </tr>
+                                        {{ end }}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {{ end }}
+                {{ else }}
+                    <div class="sc-empty-state">本次 SC 还没有影片明细。</div>
+                {{ end }}
+            </div>
+        </div>
+    </main>
+
+    <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
+
+    <script src="/static/customer/sc_events.js"></script>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    </body>
+    </html>
+{{ end }}

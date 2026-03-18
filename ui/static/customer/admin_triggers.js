@@ -35,11 +35,13 @@
     // 爬虫按钮
     bindBtn('btnDailyBest', '/api/triggers/daily-best', 'DailyBest 已触发');
     bindBtn('btnDailyBestSync', '/api/triggers/daily-best-sync', 'DailyBest 同步 已触发');
+    bindBtn('btnRebuildCastRank', '/api/triggers/rebuild-cast-rank', 'Rank 回填 已触发');
     bindBtn('btnSeeds', '/api/triggers/seeds', 'Seeds 已触发');
 
     // 影片按钮
     bindBtn('btnFilmRename', '/api/triggers/film/rename', '影片重命名 已触发');
     bindBtn('btnFilmProcess', '/api/triggers/film/process', '影片处理 已触发');
+    bindBtn('btnScRebuildStats', '/api/triggers/sc/rebuild-stats', 'SC 回填 已触发');
 
     // === 刷新最久未更新详情 ===
     const formRefreshOldest = document.getElementById('formRefreshOldest');
@@ -85,39 +87,4 @@
         });
     }
 
-    // === SC Move ===
-    const formMove = document.getElementById('formScMove');
-    if (formMove) {
-        formMove.addEventListener('submit', function (e) {
-            e.preventDefault();
-            if (!formMove.checkValidity()) {
-                formMove.classList.add('was-validated');
-                return;
-            }
-            const scName = document.getElementById('scMoveName').value.trim();
-            post('/api/triggers/sc/move', {scName})
-                .then((r) =>
-                    r.ok ? showMsg('MoveScFilm 已触发') : showMsg('触发失败(' + r.status + ')', false),
-                )
-                .catch((e) => showMsg('异常：' + e, false));
-        });
-    }
-
-    // === SC Add ===
-    const formAdd = document.getElementById('formScAdd');
-    if (formAdd) {
-        formAdd.addEventListener('submit', function (e) {
-            e.preventDefault();
-            if (!formAdd.checkValidity()) {
-                formAdd.classList.add('was-validated');
-                return;
-            }
-            const dir = document.getElementById('scAddDir').value.trim();
-            post('/api/triggers/sc/add', {dir})
-                .then((r) =>
-                    r.ok ? showMsg('AddSc 已触发') : showMsg('触发失败(' + r.status + ')', false),
-                )
-                .catch((e) => showMsg('异常：' + e, false));
-        });
-    }
 })();

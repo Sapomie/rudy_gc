@@ -1,0 +1,148 @@
+{{ define "page.sc_event_cards" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">SC Event Cards</h4>
+                        <p class="text-muted mb-0">以封面卡片的方式浏览 SC 事件，主图使用 come movie 的电影封面。</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="btn-group" role="group" aria-label="SC event view switch">
+                            <a href="{{ .ScViewQuery.ListHref }}" class="btn btn-outline-primary {{ if .ScViewQuery.IsList }}active disabled{{ end }}">列表视图</a>
+                            <a href="{{ .ScViewQuery.CardHref }}" class="btn btn-outline-primary {{ if .ScViewQuery.IsCard }}active disabled{{ end }}">卡片视图</a>
+                        </div>
+                        <a href="/triggers" class="btn btn-outline-secondary">触发台</a>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-start justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="sc-page-summary">
+                            <span class="sc-page-summary-label">Total Events</span>
+                            <span class="sc-page-summary-value">{{ .Total }}</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 sc-event-sort-bar">
+                            <a href="{{ .ScSortQuery.ByTime.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByTime.Active }}active disabled{{ end }}">
+                                时间{{ if .ScSortQuery.ByTime.Active }}{{ if .ScSortQuery.ByTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                            <a href="{{ .ScSortQuery.ByMovieCnt.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByMovieCnt.Active }}active disabled{{ end }}">
+                                片数{{ if .ScSortQuery.ByMovieCnt.Active }}{{ if .ScSortQuery.ByMovieCnt.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                            <a href="{{ .ScSortQuery.ByComeMovie.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByComeMovie.Active }}active disabled{{ end }}">
+                                Come 片{{ if .ScSortQuery.ByComeMovie.Active }}{{ if .ScSortQuery.ByComeMovie.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                            <a href="{{ .ScSortQuery.ByCooldown.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByCooldown.Active }}active disabled{{ end }}">
+                                Cooldown{{ if .ScSortQuery.ByCooldown.Active }}{{ if .ScSortQuery.ByCooldown.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                            <a href="{{ .ScSortQuery.ByMovieCast.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByMovieCast.Active }}active disabled{{ end }}">
+                                演员{{ if .ScSortQuery.ByMovieCast.Active }}{{ if .ScSortQuery.ByMovieCast.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                            <a href="{{ .ScSortQuery.ByVessel.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByVessel.Active }}active disabled{{ end }}">
+                                Vessel{{ if .ScSortQuery.ByVessel.Active }}{{ if .ScSortQuery.ByVessel.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                            <a href="{{ .ScSortQuery.ByFg.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByFg.Active }}active disabled{{ end }}">
+                                FG{{ if .ScSortQuery.ByFg.Active }}{{ if .ScSortQuery.ByFg.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
+                        </div>
+                    </div>
+                    {{ if .Items }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                {{ if .Items }}
+                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3">
+                        {{ range .Items }}
+                            <div class="col">
+                                <article class="card shadow-sm h-100 card-lift sc-event-grid-card {{ monthParityClass .Event.ScTime }}">
+                                    <a href="{{ .DetailHref }}" class="text-decoration-none text-reset">
+                                        <div class="thumb-2x3 sc-event-cover">
+                                            {{ if .HasComeMovieCover }}
+                                                <img src="{{ .ComeMovieJacketImg }}" alt="{{ .Event.Name }} 封面" loading="lazy" decoding="async">
+                                            {{ else }}
+                                                <div class="sc-event-cover-empty">
+                                                    <span class="sc-event-cover-kicker">SC EVENT</span>
+                                                    <strong>
+                                                        <span class="sc-event-time">
+                                                            <span class="sc-event-date">{{ formatUnixDate .Event.ScTime }}</span>
+                                                            <span class="sc-event-hour">{{ formatUnixHm .Event.ScTime }}</span>
+                                                        </span>
+                                                    </strong>
+                                                    <span>{{ .Event.Name }}</span>
+                                                </div>
+                                            {{ end }}
+                                            <div class="sc-event-cover-badge">{{ .Event.MovieNumber }} 部</div>
+                                        </div>
+                                    </a>
+
+                                    <div class="card-body sc-event-card-body">
+                                        <div class="small mb-2">
+                                            <span class="sc-event-time">
+                                                <span class="sc-event-date">{{ formatUnixDate .Event.ScTime }}</span>
+                                                <span class="sc-event-hour">{{ formatUnixHm .Event.ScTime }}</span>
+                                            </span>
+                                        </div>
+                                        <h5 class="h6 mb-2">
+                                            <a href="{{ .DetailHref }}" class="text-decoration-none text-reset">{{ .Event.Name }}</a>
+                                        </h5>
+
+                                        <div class="mb-3">
+                                            <div class="text-muted small text-uppercase mb-1">Come Movie</div>
+                                            {{ if .ComeMovieName }}
+                                                {{ if .ComeMovieHref }}
+                                                    <a href="{{ .ComeMovieHref }}" class="sc-event-come-link">{{ .ComeMovieName }}</a>
+                                                {{ else }}
+                                                    <span>{{ .ComeMovieName }}</span>
+                                                {{ end }}
+                                            {{ else }}
+                                                <span class="text-muted">-</span>
+                                            {{ end }}
+                                        </div>
+
+                                        <div class="sc-event-meta-grid">
+                                            <span class="sc-pill">{{ if gt .Event.Cooldown 0 }}{{ humanDays .Event.Cooldown }}{{ else }}Cooldown -{{ end }}</span>
+                                            <span class="sc-pill">{{ if .Event.MovieCast }}{{ .Event.MovieCast }}{{ else }}演员 -{{ end }}</span>
+                                            <span class="sc-pill">{{ if .Event.Vessel }}Vessel {{ .Event.Vessel }}{{ else }}Vessel -{{ end }}</span>
+                                            <span class="sc-pill">{{ if .Event.Fg }}FG {{ .Event.Fg }}{{ else }}FG -{{ end }}</span>
+                                        </div>
+                                    </div>
+                                </article>
+                            </div>
+                        {{ end }}
+                    </div>
+                {{ else }}
+                    <div class="sc-empty-state">还没有可展示的 SC 事件。</div>
+                {{ end }}
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    </body>
+    </html>
+{{ end }}

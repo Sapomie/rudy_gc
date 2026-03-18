@@ -161,41 +161,35 @@
                         </div>
                     </div>
 
-                    <!-- SC 任务 -->
+                    <!-- 回填任务 -->
                     <div class="col-xl-12">
                         <div class="card">
                             <div class="card-body">
-                                <h4 class="card-title">SC 任务</h4>
-                                <p class="card-title-desc">填写参数后触发 SC 相关流程。</p>
+                                <h4 class="card-title">回填任务</h4>
+                                <p class="card-title-desc">手动触发一次统计回填，后台串行执行，不与日常入口混用。</p>
 
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
-                                            <h6 class="fw-semibold mb-3 text-primary">移动 SC 影片</h6>
-                                            <p class="text-muted small mb-2">输入 SC 名称，将对应影片移动到指定目录。</p>
-                                            <form id="formScMove" class="needs-validation" novalidate>
-                                                <div class="input-group">
-                                                    <input type="text" class="form-control" id="scMoveName"
-                                                           placeholder="例如：睡前" required>
-                                                    <button type="submit" class="btn btn-outline-primary">执行</button>
-                                                    <div class="invalid-tooltip">请输入 SC 名称</div>
-                                                </div>
-                                            </form>
+                                            <h6 class="fw-semibold mb-3 text-success">SC 回填</h6>
+                                            <p class="text-muted small mb-3">
+                                                重建 SC 相关统计：演员的 sc_times、come_times、last_sc_time，并同步校正影片侧 SC 统计。
+                                            </p>
+                                            <button id="btnScRebuildStats" type="button" class="btn btn-outline-success w-100">
+                                                执行 SC 回填
+                                            </button>
                                         </div>
                                     </div>
 
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
-                                            <h6 class="fw-semibold mb-3 text-success">添加 SC 目录</h6>
-                                            <p class="text-muted small mb-2">输入目录路径，扫描并添加新的 SC 影片。</p>
-                                            <form id="formScAdd" class="needs-validation" novalidate>
-                                                <div class="input-group">
-                                                    <input type="text" class="form-control" id="scAddDir"
-                                                           placeholder="/path/to/scan" required>
-                                                    <button type="submit" class="btn btn-outline-success">执行</button>
-                                                    <div class="invalid-tooltip">请输入目录路径</div>
-                                                </div>
-                                            </form>
+                                            <h6 class="fw-semibold mb-3 text-secondary">Rank 回填</h6>
+                                            <p class="text-muted small mb-3">
+                                                重建演员 rank 统计：rank500、rank20、rank1、highest_rank、rank_times。
+                                            </p>
+                                            <button id="btnRebuildCastRank" type="button" class="btn btn-outline-secondary w-100">
+                                                执行 Rank 回填
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

@@ -24,6 +24,7 @@ type (
 
 		// 业务扩展
 		ListCastIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error)
+		ListMovieJavIDsByCastID(ctx context.Context, castId int64) ([]string, error)
 	}
 
 	customAmrMovieCastModel struct {
@@ -66,6 +67,27 @@ func (m *customAmrMovieCastModel) ListCastIDsByMovieJavId(ctx context.Context, m
 	}
 
 	var ids []int64
+	if err := m.QueryRowsNoCacheCtx(ctx, &ids, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ids, nil
+}
+
+func (m *customAmrMovieCastModel) ListMovieJavIDsByCastID(ctx context.Context, castId int64) ([]string, error) {
+	query, args, err := squirrel.
+		Select("`movie_jav_id`").
+		From(m.TableName()).
+		Where(squirrel.Eq{"cast_id": castId}).
+		OrderBy("`movie_jav_id` ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
 	if err := m.QueryRowsNoCacheCtx(ctx, &ids, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return nil, nil

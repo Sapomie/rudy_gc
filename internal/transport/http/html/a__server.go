@@ -13,6 +13,7 @@ import (
 
 // -------- Handler 结构 --------
 type MovieHTMLHandler struct {
+	deps       *svc.Deps
 	movieSvc   *movie.MovieService
 	scSvc      *sc.ScService
 	detailJobs chan string // ✅ 单 ID 通道
@@ -21,6 +22,7 @@ type MovieHTMLHandler struct {
 // 依赖注入
 func NewMovieHTMLHandler(deps *svc.Deps) *MovieHTMLHandler {
 	return &MovieHTMLHandler{
+		deps:       deps,
 		movieSvc:   movie.NewMovieService(deps),
 		scSvc:      sc.NewScService(deps),
 		detailJobs: deps.DetailJobs, // deps.DetailJobs = make(chan string, 200)

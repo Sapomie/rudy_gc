@@ -81,9 +81,20 @@
 
                 <div class="card mt-3" id="pickedCard" style="display: none;">
                     <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                             <h5 class="mb-0">抽取结果</h5>
-                            <span class="text-muted small" id="pickedCount"></span>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <div class="btn-group btn-group-sm flex-wrap" id="pickedSortBar" role="group" aria-label="抽取结果排序">
+                                    <button type="button" class="btn btn-outline-primary active" data-sort-base="picked" data-default-dir="desc">抽取顺序</button>
+                                    <button type="button" class="btn btn-outline-primary" data-sort-base="film_birth" data-default-dir="desc">下载时间</button>
+                                    <button type="button" class="btn btn-outline-primary" data-sort-base="releasing" data-default-dir="desc">上映日期</button>
+                                    <button type="button" class="btn btn-outline-primary" data-sort-base="sc" data-default-dir="desc">SC次数</button>
+                                    <button type="button" class="btn btn-outline-primary" data-sort-base="come" data-default-dir="desc">CO次数</button>
+                                    <button type="button" class="btn btn-outline-primary" data-sort-base="rank" data-default-dir="asc">最高排名</button>
+                                    <button type="button" class="btn btn-outline-primary" data-sort-base="score" data-default-dir="desc">评分</button>
+                                </div>
+                                <span class="text-muted small" id="pickedCount"></span>
+                            </div>
                         </div>
                         <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-3 picked-grid-8"
                              id="pickedGrid"></div>

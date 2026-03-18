@@ -18,16 +18,14 @@ import (
 /* ========= 结构体 ========= */
 
 type CrawlLogic struct {
-	deps      *svc.Deps
-	castIdMap map[int64]struct{}
-	movieSvc  *movie.MovieService
+	deps     *svc.Deps
+	movieSvc *movie.MovieService
 }
 
 func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 	return &CrawlLogic{
-		deps:      deps,
-		castIdMap: map[int64]struct{}{},
-		movieSvc:  movie.NewMovieService(deps),
+		deps:     deps,
+		movieSvc: movie.NewMovieService(deps),
 	}
 }
 

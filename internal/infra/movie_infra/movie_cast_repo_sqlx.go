@@ -42,3 +42,7 @@ func (r *MovieCastRepoSqlx) TryLink(ctx context.Context, movieJavId string, cast
 func (r *MovieCastRepoSqlx) ListCastIDsByMovieJavId(ctx context.Context, movieJavId string) ([]int64, error) {
 	return r.m.ListCastIDsByMovieJavId(ctx, movieJavId)
 }
+
+func (r *MovieCastRepoSqlx) ListMovieJavIDsByCastID(ctx context.Context, castId int64) ([]string, error) {
+	return r.m.ListMovieJavIDsByCastID(ctx, castId)
+}

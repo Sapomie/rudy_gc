@@ -15,6 +15,7 @@ import (
 
 func (l *CrawlLogic) ProcessBestinvRank(ctx context.Context) error {
 	log := l.deps.Log.WithContext(ctx)
+	affectedCastIDs := make(map[int64]struct{})
 
 	// 取出需要排名检查的 bestinv
 	ids, err := l.deps.BestinvRepo.ListIDsByRankCheck(ctx, consts.BestinvNeedRankCheck, 1000)
@@ -49,8 +50,11 @@ func (l *CrawlLogic) ProcessBestinvRank(ctx context.Context) error {
 	}
 
 	// 最后更新电影的排名信息
-	if err := l.UpdateMovieRankInfo(ctx, javIdMap); err != nil {
+	if err := l.UpdateMovieRankInfo(ctx, javIdMap, affectedCastIDs); err != nil {
 		return fmt.Errorf("更新影片排名信息失败: %w", err)
+	}
+	if err := l.rebuildCastRankStatsByIDs(ctx, affectedCastIDs); err != nil {
+		return fmt.Errorf("更新演员排名信息失败: %w", err)
 	}
 
 	log.Info("Bestinv 排名处理完成")
@@ -121,12 +125,12 @@ func makeRanksFromBestinv(best *types.Bestinv) ([]*types.Rank, error) {
 }
 
 // UpdateMovieRankInfo 批量按 javId 聚合更新排行信息
-func (l *CrawlLogic) UpdateMovieRankInfo(ctx context.Context, javIdSet map[string]struct{}) error {
+func (l *CrawlLogic) UpdateMovieRankInfo(ctx context.Context, javIdSet map[string]struct{}, affectedCastIDs map[int64]struct{}) error {
 	l.deps.Log.Infof("开始汇总并更新排行信息，待处理 %d 个 javId", len(javIdSet))
 
 	updated := 0
 	for javId := range javIdSet {
-		if err := l.AddRankInfo(ctx, javId); err != nil {
+		if err := l.AddRankInfo(ctx, javId, affectedCastIDs); err != nil {
 			return fmt.Errorf("更新 javId=%s 的排行信息失败: %w", javId, err)
 		}
 		updated++
@@ -136,7 +140,7 @@ func (l *CrawlLogic) UpdateMovieRankInfo(ctx context.Context, javIdSet map[strin
 }
 
 // AddRankInfo 计算单个影片的：首次上榜日、最佳名次、上榜天数，并写回 bm_minfo
-func (l *CrawlLogic) AddRankInfo(ctx context.Context, javId string) error {
+func (l *CrawlLogic) AddRankInfo(ctx context.Context, javId string, affectedCastIDs map[int64]struct{}) error {
 	// 1) 统计聚合（SQL 聚合更快；没有就先在 Repo 做一层）
 	firstDay, bestRank, daysInRank, err := l.deps.RankRepo.AggregateByJavId(ctx, javId)
 	if err != nil {
@@ -154,7 +158,7 @@ func (l *CrawlLogic) AddRankInfo(ctx context.Context, javId string) error {
 		return fmt.Errorf("查询电影演员关系失败(movieId=%d): %w", mv.Id, err)
 	}
 	for _, cid := range castIDs {
-		l.castIdMap[cid] = struct{}{}
+		affectedCastIDs[cid] = struct{}{}
 	}
 
 	// 4) 回写 bm_minfo 的排行三件套

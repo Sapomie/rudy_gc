@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"rudy_gc/internal/contracts"
+	"rudy_gc/internal/domain/sc"
 )
 
 func (l *FetchLoopService) ScTriggerLoop(ctx context.Context, ch <-chan contracts.ScTriggerMsg) {
@@ -48,10 +49,26 @@ func (l *FetchLoopService) ScTriggerLoop(ctx context.Context, ch <-chan contract
 				}
 				log.Infof("ScTriggerLoop: AddSc(dir=%s) begin", dir)
 
-				if err := l.scSvc.AddSc(ctx, dir); err != nil {
+				if err := l.scSvc.AddSc(ctx, sc.AddScInput{
+					Dir:            dir,
+					ComeMovieJavId: strings.TrimSpace(msg.ComeMovieJavId),
+					MovieCast:      strings.TrimSpace(msg.MovieCast),
+					Duration:       msg.Duration,
+					Fg:             msg.Fg,
+					Vessel:         msg.Vessel,
+					Remarks:        msg.Remarks,
+				}); err != nil {
 					log.Errorf("ScTriggerLoop: AddSc failed: %v", err)
 				} else {
 					log.Infof("ScTriggerLoop: AddSc ok in %v", time.Since(start))
+				}
+
+			case contracts.ScRebuildStats:
+				log.Info("ScTriggerLoop: RebuildAllScStats begin")
+				if err := l.scSvc.RebuildAllScStats(ctx); err != nil {
+					log.Errorf("ScTriggerLoop: RebuildAllScStats failed: %v", err)
+				} else {
+					log.Infof("ScTriggerLoop: RebuildAllScStats ok in %v", time.Since(start))
 				}
 
 			default:
