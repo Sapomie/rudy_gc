@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/spider/logic"
+	"rudy_gc/internal/service/spider"
 	"rudy_gc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -33,7 +33,7 @@ func main() {
 	//	panic(err)
 	//}
 
-	err = logic.NewCrawlLogic(deps).UpdateAllMovieNumbers(ctx)
+	err = spider.NewCrawlLogic(deps).UpdateAllMovieNumbers(ctx)
 	if err != nil {
 		fmt.Println(err)
 	}

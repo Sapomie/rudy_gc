@@ -1,0 +1,776 @@
+package sc
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/consts"
+	"rudy_gc/internal/types"
+)
+
+func (s *Service) scFindAll(ctx context.Context) ([]*types.GSc, error) {
+	rows, err := s.deps.ScModel.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GSc, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapScModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) scFindByNames(ctx context.Context, names []string) ([]*types.GSc, error) {
+	rows, err := s.deps.ScModel.ListByNames(ctx, names)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GSc, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapScModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) scFindNearest(ctx context.Context, t int64) (*types.GSc, error) {
+	row, err := s.deps.ScModel.FindNearest(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return mapScModelToTypes(row), nil
+}
+
+func (s *Service) scFindOneByName(ctx context.Context, name string) (*types.GSc, error) {
+	row, err := s.deps.ScModel.FindOneByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return mapScModelToTypes(row), nil
+}
+
+func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField, sortOrder string) ([]*types.GSc, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 200 {
+		pageSize = 20
+	}
+
+	total, err := s.deps.ScModel.CountAll(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return []*types.GSc{}, 0, nil
+	}
+
+	offset := int64((page - 1) * pageSize)
+	rows, err := s.deps.ScModel.ListPage(ctx, offset, int64(pageSize), buildScOrderBy(sortField, sortOrder))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	out := make([]*types.GSc, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapScModelToTypes(row))
+	}
+	return out, total, nil
+}
+
+func (s *Service) scUpsert(ctx context.Context, in *types.GSc) (*types.GSc, error) {
+	if in == nil {
+		return nil, errors.New("nil input")
+	}
+	now := time.Now().Unix()
+
+	old, err := s.deps.ScModel.FindOneByName(ctx, in.Name)
+	if err == nil && old != nil {
+		changed := false
+		if old.MovieNumber != in.MovieNumber {
+			old.MovieNumber = in.MovieNumber
+			changed = true
+		}
+		if old.ScTime != in.ScTime {
+			old.ScTime = in.ScTime
+			changed = true
+		}
+		if old.ComeMovieName != in.ComeMovieName {
+			old.ComeMovieName = in.ComeMovieName
+			changed = true
+		}
+		if old.Cooldown != in.Cooldown {
+			old.Cooldown = in.Cooldown
+			changed = true
+		}
+		if old.Duration != in.Duration {
+			old.Duration = in.Duration
+			changed = true
+		}
+		if old.Fg != in.Fg {
+			old.Fg = in.Fg
+			changed = true
+		}
+		if old.Vessel != in.Vessel {
+			old.Vessel = in.Vessel
+			changed = true
+		}
+		if old.MovieCast != in.MovieCast {
+			old.MovieCast = in.MovieCast
+			changed = true
+		}
+		if old.Remarks != in.Remarks {
+			old.Remarks = in.Remarks
+			changed = true
+		}
+		if old.ImagePath != in.ImagePath {
+			old.ImagePath = in.ImagePath
+			changed = true
+		}
+		if changed {
+			old.UpdatedOn = now
+			if err := s.deps.ScModel.Update(ctx, old); err != nil {
+				return nil, err
+			}
+		}
+		return mapScModelToTypes(old), nil
+	}
+
+	row := &moviex.GSc{
+		Name:          in.Name,
+		MovieNumber:   in.MovieNumber,
+		ScTime:        in.ScTime,
+		ComeMovieName: in.ComeMovieName,
+		Cooldown:      in.Cooldown,
+		Duration:      in.Duration,
+		Fg:            in.Fg,
+		Vessel:        in.Vessel,
+		MovieCast:     in.MovieCast,
+		Remarks:       in.Remarks,
+		ImagePath:     in.ImagePath,
+		CreatedOn:     now,
+		UpdatedOn:     now,
+	}
+	if _, err := s.deps.ScModel.Insert(ctx, row); err != nil {
+		if again, e2 := s.deps.ScModel.FindOneByName(ctx, in.Name); e2 == nil && again != nil {
+			return mapScModelToTypes(again), nil
+		}
+		return nil, err
+	}
+	ins, err := s.deps.ScModel.FindOneByName(ctx, in.Name)
+	if err != nil {
+		return nil, err
+	}
+	return mapScModelToTypes(ins), nil
+}
+
+func (s *Service) glFindAll(ctx context.Context) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) glUpsert(ctx context.Context, in *types.GList) (*types.GList, error) {
+	if in == nil {
+		return nil, errors.New("nil input")
+	}
+	now := time.Now().Unix()
+
+	old, err := s.deps.GListModel.FindOneByName(ctx, in.Name)
+	if err == nil && old != nil {
+		changed := false
+		if old.ScName != in.ScName {
+			old.ScName = in.ScName
+			changed = true
+		}
+		if old.MovieJavId != in.MovieJavId {
+			old.MovieJavId = in.MovieJavId
+			changed = true
+		}
+		if old.IsCome != in.IsCome {
+			old.IsCome = in.IsCome
+			changed = true
+		}
+		if changed {
+			old.UpdatedOn = now
+			if err := s.deps.GListModel.Update(ctx, old); err != nil {
+				return nil, err
+			}
+		}
+		return mapGListModelToTypes(old), nil
+	}
+
+	row := &moviex.GList{
+		Name:       in.Name,
+		ScName:     in.ScName,
+		MovieJavId: in.MovieJavId,
+		IsCome:     in.IsCome,
+		CreatedOn:  now,
+		UpdatedOn:  now,
+	}
+	if _, err := s.deps.GListModel.Insert(ctx, row); err != nil {
+		if again, e2 := s.deps.GListModel.FindOneByName(ctx, in.Name); e2 == nil && again != nil {
+			return mapGListModelToTypes(again), nil
+		}
+		return nil, err
+	}
+	ins, err := s.deps.GListModel.FindOneByName(ctx, in.Name)
+	if err != nil {
+		return nil, err
+	}
+	return mapGListModelToTypes(ins), nil
+}
+
+func (s *Service) glFindByScName(ctx context.Context, scName string) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.ListByScName(ctx, scName)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) glFindByFilters(ctx context.Context, scName string, isCome *int64, page, pageSize int) ([]*types.GList, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 200 {
+		pageSize = 20
+	}
+	offset := int64((page - 1) * pageSize)
+	rows, err := s.deps.GListModel.ListByFilters(ctx, scName, isCome, offset, int64(pageSize))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) glFindByMovieJavIDs(ctx context.Context, javIDs []string) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.ListByMovieJavIds(ctx, javIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) glFindByMovieJavID(ctx context.Context, javID string) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.ListByMovieJavId(ctx, javID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) filmFindOneByMovieJavID(ctx context.Context, javID string) (*types.Film, error) {
+	row, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, javID)
+	if err != nil {
+		return nil, err
+	}
+	return mapFilmModelToTypes(row), nil
+}
+
+func (s *Service) filmFindOneByMovieName(ctx context.Context, name string) (*types.Film, error) {
+	row, err := s.deps.FilmModel.FindOneByMovieName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return mapFilmModelToTypes(row), nil
+}
+
+func (s *Service) filmFindAll(ctx context.Context, removedStatus int64) ([]*types.Film, error) {
+	rows, err := s.deps.FilmModel.FindAll(ctx, removedStatus)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.Film, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapFilmModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, consts.UpsertStatus, error) {
+	if in == nil {
+		return nil, 0, errors.New("nil input")
+	}
+	if row, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, in.MovieJavId); err == nil && row != nil {
+		changed := false
+		if row.MovieName != in.MovieName {
+			row.MovieName = in.MovieName
+			changed = true
+		}
+		if row.FileName != in.FileName {
+			row.FileName = in.FileName
+			changed = true
+		}
+		if row.DirectoryId != in.DirectoryId {
+			row.DirectoryId = in.DirectoryId
+			changed = true
+		}
+		if row.RootDir != in.RootDir {
+			row.RootDir = in.RootDir
+			changed = true
+		}
+		if row.FullDir != in.FullDir {
+			row.FullDir = in.FullDir
+			changed = true
+		}
+		if row.Dir1Id != in.Dir1Id {
+			row.Dir1Id = in.Dir1Id
+			changed = true
+		}
+		if row.Dir2Id != in.Dir2Id {
+			row.Dir2Id = in.Dir2Id
+			changed = true
+		}
+		if row.Dir3Id != in.Dir3Id {
+			row.Dir3Id = in.Dir3Id
+			changed = true
+		}
+		if row.Dir4Id != in.Dir4Id {
+			row.Dir4Id = in.Dir4Id
+			changed = true
+		}
+		if row.Alias != in.Alias {
+			row.Alias = in.Alias
+			changed = true
+		}
+		if row.Size != in.Size {
+			row.Size = in.Size
+			changed = true
+		}
+		if row.Width != in.Width {
+			row.Width = in.Width
+			changed = true
+		}
+		if row.Height != in.Height {
+			row.Height = in.Height
+			changed = true
+		}
+		if row.BitRate != in.BitRate {
+			row.BitRate = in.BitRate
+			changed = true
+		}
+		if row.Duration != in.Duration {
+			row.Duration = in.Duration
+			changed = true
+		}
+		if row.FrameAverage != in.FrameAverage {
+			row.FrameAverage = in.FrameAverage
+			changed = true
+		}
+		if row.HasSub != in.HasSub {
+			row.HasSub = in.HasSub
+			changed = true
+		}
+		if row.SelfMake != in.SelfMake {
+			row.SelfMake = in.SelfMake
+			changed = true
+		}
+		if row.HasMask != in.HasMask {
+			row.HasMask = in.HasMask
+			changed = true
+		}
+		if row.NeedScanMeta != in.NeedScanMeta {
+			row.NeedScanMeta = in.NeedScanMeta
+			changed = true
+		}
+		if row.IsRemoved != in.IsRemoved {
+			row.IsRemoved = in.IsRemoved
+			changed = true
+		}
+		if row.RemoveTime != in.RemoveTime {
+			row.RemoveTime = in.RemoveTime
+			changed = true
+		}
+		if row.ScTimes != in.ScTimes {
+			row.ScTimes = in.ScTimes
+			changed = true
+		}
+		if row.ComeTimes != in.ComeTimes {
+			row.ComeTimes = in.ComeTimes
+			changed = true
+		}
+		if row.LastScTime != in.LastScTime {
+			row.LastScTime = in.LastScTime
+			changed = true
+		}
+		if row.BirthTime != in.BirthTime {
+			row.BirthTime = in.BirthTime
+			changed = true
+		}
+		if row.ReleasingDate != in.ReleasingDate {
+			row.ReleasingDate = in.ReleasingDate
+			changed = true
+		}
+		if changed {
+			row.UpdatedOn = time.Now().Unix()
+			if err := s.deps.FilmModel.Update(ctx, row); err != nil {
+				return nil, 0, err
+			}
+			return mapFilmModelToTypes(row), consts.UpsertUpdated, nil
+		}
+		return mapFilmModelToTypes(row), consts.UpsertUnchanged, nil
+	}
+
+	mv := mapFilmTypesToModel(in)
+	now := time.Now().Unix()
+	mv.CreatedOn = now
+	mv.UpdatedOn = now
+	if _, err := s.deps.FilmModel.Insert(ctx, mv); err != nil {
+		if row2, err2 := s.deps.FilmModel.FindOneByMovieJavId(ctx, in.MovieJavId); err2 == nil && row2 != nil {
+			return mapFilmModelToTypes(row2), consts.UpsertUpdated, nil
+		}
+		return nil, 0, err
+	}
+	row3, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, in.MovieJavId)
+	if err != nil {
+		return nil, 0, err
+	}
+	return mapFilmModelToTypes(row3), consts.UpsertInserted, nil
+}
+
+func (s *Service) castFindOne(ctx context.Context, id int64) (*types.Cast, error) {
+	row, err := s.deps.CastModel.FindOne(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return mapCastModelToTypes(row), nil
+}
+
+func (s *Service) castFindOneByName(ctx context.Context, name string) (*types.Cast, error) {
+	row, err := s.deps.CastModel.FindOneByName(ctx, name)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, types.ErrNotFound
+		}
+		return nil, err
+	}
+	return mapCastModelToTypes(row), nil
+}
+
+func (s *Service) castFindByNames(ctx context.Context, names []string) ([]*types.Cast, error) {
+	return s.deps.CastModel.FindByNames(ctx, names)
+}
+
+func (s *Service) castCountOwnedScMovieNumbersByNames(ctx context.Context, names []string) (map[string]int64, error) {
+	return s.deps.CastModel.CountOwnedScMovieNumbersByNames(ctx, names)
+}
+
+func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, error) {
+	if in == nil {
+		return nil, errors.New("nil input")
+	}
+	now := time.Now().Unix()
+	old, err := s.deps.CastModel.FindOneByName(ctx, in.Name)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return nil, err
+	}
+	if old != nil {
+		old.JavId = in.JavId
+		old.MovieNumber = in.MovieNumber
+		old.OwnedMovieNumber = in.OwnedMovieNumber
+		old.ScTimes = in.ScTimes
+		old.ComeTimes = in.ComeTimes
+		old.LastScTime = in.LastScTime
+		old.Rank500MovieNumber = in.Rank500MovieNumber
+		old.Rank20MovieNumber = in.Rank20MovieNumber
+		old.Rank1MovieNumber = in.Rank1MovieNumber
+		old.HighestRank = in.HighestRank
+		old.RankTimes = in.RankTimes
+		if in.CreatedOn > 0 {
+			old.CreatedOn = in.CreatedOn
+		}
+		old.UpdatedOn = now
+		if err := s.deps.CastModel.Update(ctx, old); err != nil {
+			return nil, err
+		}
+		return mapCastModelToTypes(old), nil
+	}
+
+	row := &moviex.AmCast{
+		Name:               in.Name,
+		JavId:              in.JavId,
+		MovieNumber:        in.MovieNumber,
+		OwnedMovieNumber:   in.OwnedMovieNumber,
+		ScTimes:            in.ScTimes,
+		ComeTimes:          in.ComeTimes,
+		LastScTime:         in.LastScTime,
+		Rank500MovieNumber: in.Rank500MovieNumber,
+		Rank20MovieNumber:  in.Rank20MovieNumber,
+		Rank1MovieNumber:   in.Rank1MovieNumber,
+		HighestRank:        in.HighestRank,
+		RankTimes:          in.RankTimes,
+		CreatedOn:          ifElseInt64(in.CreatedOn > 0, in.CreatedOn, now),
+		UpdatedOn:          now,
+	}
+	if _, err := s.deps.CastModel.Insert(ctx, row); err != nil {
+		if again, e2 := s.deps.CastModel.FindOneByName(ctx, in.Name); e2 == nil && again != nil {
+			return mapCastModelToTypes(again), nil
+		}
+		return nil, err
+	}
+	ins, err := s.deps.CastModel.FindOneByName(ctx, in.Name)
+	if err != nil {
+		return nil, err
+	}
+	return mapCastModelToTypes(ins), nil
+}
+
+func (s *Service) castUpdateMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64, now int64) error {
+	movieNumber, ownedMovieNumber, err := s.deps.CastModel.GetMovieNumbersByID(ctx, id, ownedRemovedStatus)
+	if err != nil {
+		return err
+	}
+	row, err := s.deps.CastModel.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+	if row.MovieNumber == movieNumber && row.OwnedMovieNumber == ownedMovieNumber {
+		return nil
+	}
+	row.MovieNumber = movieNumber
+	row.OwnedMovieNumber = ownedMovieNumber
+	row.UpdatedOn = now
+	return s.deps.CastModel.Update(ctx, row)
+}
+
+func (s *Service) castListAllIDs(ctx context.Context) ([]int64, error) {
+	return s.deps.CastModel.ListAllIDs(ctx)
+}
+
+func (s *Service) movieCastListCastIDsByMovieJavID(ctx context.Context, movieJavID string) ([]int64, error) {
+	return s.deps.MovieCastModel.ListCastIDsByMovieJavId(ctx, movieJavID)
+}
+
+func (s *Service) movieCastListMovieJavIDsByCastID(ctx context.Context, castID int64) ([]string, error) {
+	return s.deps.MovieCastModel.ListMovieJavIDsByCastID(ctx, castID)
+}
+
+func (s *Service) directoryFindOneByName(ctx context.Context, name string) (*types.Directory, error) {
+	row, err := s.deps.DirectoryModel.FindOneByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return &types.Directory{
+		Id:        row.Id,
+		ParentId:  row.ParentId,
+		Name:      row.Name,
+		Depth:     row.Depth,
+		Path:      row.Path,
+		CreatedOn: row.CreatedOn,
+		UpdatedOn: row.UpdatedOn,
+	}, nil
+}
+
+func mapScModelToTypes(v *moviex.GSc) *types.GSc {
+	if v == nil {
+		return nil
+	}
+	return &types.GSc{
+		Id:            v.Id,
+		Name:          v.Name,
+		MovieNumber:   v.MovieNumber,
+		ScTime:        v.ScTime,
+		ComeMovieName: v.ComeMovieName,
+		Cooldown:      v.Cooldown,
+		Duration:      v.Duration,
+		Fg:            v.Fg,
+		Vessel:        v.Vessel,
+		MovieCast:     v.MovieCast,
+		Remarks:       v.Remarks,
+		ImagePath:     v.ImagePath,
+		CreatedOn:     v.CreatedOn,
+		UpdatedOn:     v.UpdatedOn,
+	}
+}
+
+func mapGListModelToTypes(v *moviex.GList) *types.GList {
+	if v == nil {
+		return nil
+	}
+	return &types.GList{
+		Id:         v.Id,
+		Name:       v.Name,
+		ScName:     v.ScName,
+		MovieJavId: v.MovieJavId,
+		IsCome:     v.IsCome,
+		CreatedOn:  v.CreatedOn,
+		UpdatedOn:  v.UpdatedOn,
+	}
+}
+
+func mapFilmModelToTypes(v *moviex.VFilm) *types.Film {
+	if v == nil {
+		return nil
+	}
+	return &types.Film{
+		Id:            v.Id,
+		MovieJavId:    v.MovieJavId,
+		MovieName:     v.MovieName,
+		FileName:      v.FileName,
+		DirectoryId:   v.DirectoryId,
+		RootDir:       v.RootDir,
+		FullDir:       v.FullDir,
+		Dir1Id:        v.Dir1Id,
+		Dir2Id:        v.Dir2Id,
+		Dir3Id:        v.Dir3Id,
+		Dir4Id:        v.Dir4Id,
+		Alias:         v.Alias,
+		Size:          v.Size,
+		Width:         v.Width,
+		Height:        v.Height,
+		BitRate:       v.BitRate,
+		Duration:      v.Duration,
+		FrameAverage:  v.FrameAverage,
+		HasSub:        v.HasSub,
+		SelfMake:      v.SelfMake,
+		HasMask:       v.HasMask,
+		NeedScanMeta:  v.NeedScanMeta,
+		IsRemoved:     v.IsRemoved,
+		RemoveTime:    v.RemoveTime,
+		ScTimes:       v.ScTimes,
+		ComeTimes:     v.ComeTimes,
+		LastScTime:    v.LastScTime,
+		BirthTime:     v.BirthTime,
+		ReleasingDate: v.ReleasingDate,
+		CreatedOn:     v.CreatedOn,
+		UpdatedOn:     v.UpdatedOn,
+	}
+}
+
+func mapFilmTypesToModel(in *types.Film) *moviex.VFilm {
+	return &moviex.VFilm{
+		Id:            in.Id,
+		MovieJavId:    in.MovieJavId,
+		MovieName:     in.MovieName,
+		FileName:      in.FileName,
+		DirectoryId:   in.DirectoryId,
+		RootDir:       in.RootDir,
+		FullDir:       in.FullDir,
+		Dir1Id:        in.Dir1Id,
+		Dir2Id:        in.Dir2Id,
+		Dir3Id:        in.Dir3Id,
+		Dir4Id:        in.Dir4Id,
+		Alias:         in.Alias,
+		Size:          in.Size,
+		Width:         in.Width,
+		Height:        in.Height,
+		BitRate:       in.BitRate,
+		Duration:      in.Duration,
+		FrameAverage:  in.FrameAverage,
+		HasSub:        in.HasSub,
+		SelfMake:      in.SelfMake,
+		HasMask:       in.HasMask,
+		NeedScanMeta:  in.NeedScanMeta,
+		IsRemoved:     in.IsRemoved,
+		RemoveTime:    in.RemoveTime,
+		ScTimes:       in.ScTimes,
+		ComeTimes:     in.ComeTimes,
+		LastScTime:    in.LastScTime,
+		BirthTime:     in.BirthTime,
+		ReleasingDate: in.ReleasingDate,
+		CreatedOn:     in.CreatedOn,
+		UpdatedOn:     in.UpdatedOn,
+	}
+}
+
+func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
+	if v == nil {
+		return nil
+	}
+	return &types.Cast{
+		Id:                 v.Id,
+		Name:               v.Name,
+		JavId:              v.JavId,
+		Chinese:            "",
+		BirthDay:           0,
+		Height:             0,
+		MovieNumber:        v.MovieNumber,
+		OwnedMovieNumber:   v.OwnedMovieNumber,
+		ScTimes:            v.ScTimes,
+		ComeTimes:          v.ComeTimes,
+		LastScTime:         v.LastScTime,
+		Rank500MovieNumber: v.Rank500MovieNumber,
+		Rank20MovieNumber:  v.Rank20MovieNumber,
+		Rank1MovieNumber:   v.Rank1MovieNumber,
+		HighestRank:        v.HighestRank,
+		RankTimes:          v.RankTimes,
+		CreatedOn:          v.CreatedOn,
+		UpdatedOn:          v.UpdatedOn,
+	}
+}
+
+func ifElseInt64(cond bool, a, b int64) int64 {
+	if cond {
+		return a
+	}
+	return b
+}
+
+func buildScOrderBy(sortField, sortOrder string) string {
+	field := normalizeScSortField(sortField)
+	order := normalizeScSortOrder(sortOrder)
+
+	column := "sc_time"
+	switch field {
+	case "movie_number":
+		column = "movie_number"
+	case "come_movie_name":
+		column = "come_movie_name"
+	case "cooldown":
+		column = "cooldown"
+	case "movie_cast":
+		column = "movie_cast"
+	case "vessel":
+		column = "vessel"
+	case "fg":
+		column = "fg"
+	default:
+		column = "sc_time"
+	}
+
+	if column == "sc_time" {
+		return column + " " + order + ", id DESC"
+	}
+	return column + " " + order + ", sc_time DESC, id DESC"
+}
+
+func normalizeScSortField(sortField string) string {
+	switch strings.ToLower(strings.TrimSpace(sortField)) {
+	case "movie_number", "come_movie_name", "cooldown", "movie_cast", "vessel", "fg", "sc_time":
+		return strings.ToLower(strings.TrimSpace(sortField))
+	default:
+		return "sc_time"
+	}
+}
+
+func normalizeScSortOrder(sortOrder string) string {
+	if strings.EqualFold(strings.TrimSpace(sortOrder), "asc") {
+		return "ASC"
+	}
+	return "DESC"
+}

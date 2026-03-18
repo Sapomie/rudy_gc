@@ -11,11 +11,10 @@ import (
 	"time"
 
 	"rudy_gc/internal/config"
-	"rudy_gc/internal/domain/loop"
-	"rudy_gc/internal/svc"
-	http2 "rudy_gc/internal/transport/http"
+	"rudy_gc/internal/dep"
+	"rudy_gc/internal/router"
+	"rudy_gc/internal/service/loop"
 
-	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -25,15 +24,14 @@ func main() {
 	flag.Parse()
 
 	// 1) 读取配置
-	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	c := config.MustLoad(*configFile)
 
 	// 2) 关闭 go-zero 自带日志（你已有）
 	//logx.DisableStat()
 	logx.Disable()
 
 	// 3) 构建依赖
-	deps, err := svc.NewDeps(c)
+	deps, err := dep.New(c)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,16 +41,10 @@ func main() {
 	defer stop()
 
 	srv := loop.NewFetchLoopService(deps)
-
-	// 先启动详情抓取 loop（可随时被 DailyBest 暂停/恢复）
-	srv.StartDetailLoop(ctx, 10*time.Second, 100)
-
-	go srv.ProcessionTriggerLoop(ctx, deps.BestTrigger)
-	go srv.FilmTriggerLoop(ctx, deps.FilmTrigger)
-	go srv.ScTriggerLoop(ctx, deps.ScTrigger)
+	srv.Start(ctx)
 
 	// 6) 启动 HTTP Server（建议放协程里）
-	engine := http2.NewEngine(deps)
+	engine := router.New(deps)
 	s := &http.Server{
 		Addr:         c.Port,
 		Handler:      engine,
@@ -89,6 +81,7 @@ func main() {
 	if err := s.Shutdown(shutdownCtx); err != nil {
 		log.Printf("HTTP server shutdown error: %v", err)
 	}
+	srv.Shutdown()
 
 	// 9) 通知 loop 退出：依赖于 ctx 取消；此处无需 close(deps.DetailJobs)
 	//    如果你确实要 close，确保所有生产者已停止后再 close：

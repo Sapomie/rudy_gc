@@ -1,0 +1,214 @@
+package router
+
+import (
+	"fmt"
+	"html/template"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"rudy_gc/internal/dep"
+	"rudy_gc/internal/router/handler"
+)
+
+func New(d *dep.Dep) *gin.Engine {
+	r := gin.Default()
+
+	funcMap := template.FuncMap{
+		"sub": func(a, b int) int { return a - b },
+		"add": func(a, b int) int { return a + b },
+		"humanSize": func(bytes int64) string {
+			if bytes < 1024 {
+				return fmt.Sprintf("%d B", bytes)
+			} else if bytes < 1024*1024 {
+				return fmt.Sprintf("%.1f KB", float64(bytes)/1024)
+			} else if bytes < 1024*1024*1024 {
+				return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
+			}
+			return fmt.Sprintf("%.1f GB", float64(bytes)/(1024*1024*1024))
+		},
+		"humanTime": func(ts int64) string {
+			if ts == 0 {
+				return "-"
+			}
+			return time.Unix(ts, 0).Format("2006-01-02")
+		},
+		"formatUnix": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("2006-01-02 15:04:05")
+		},
+		"formatUnixMinute": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("2006-01-02 15:04")
+		},
+		"formatUnixDate": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("2006-01-02")
+		},
+		"formatUnixHm": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return time.Unix(sec, 0).Format("15:04")
+		},
+		"monthParityClass": func(sec int64) string {
+			if sec <= 0 {
+				return "sc-month-even"
+			}
+			if int(time.Unix(sec, 0).Month())%2 == 1 {
+				return "sc-month-odd"
+			}
+			return "sc-month-even"
+		},
+		"minus": func(a, b int64) int64 { return a - b },
+		"humanDuration": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			d := time.Duration(sec) * time.Second
+			h := int(d.Hours())
+			m := int(d.Minutes()) % 60
+			s := int(d.Seconds()) % 60
+			switch {
+			case h > 0:
+				return fmt.Sprintf("%dh %dm %ds", h, m, s)
+			case m > 0:
+				return fmt.Sprintf("%dm %ds", m, s)
+			default:
+				return fmt.Sprintf("%ds", s)
+			}
+		},
+		"humanDays": func(sec int64) string {
+			if sec <= 0 {
+				return "-"
+			}
+			return fmt.Sprintf("%.2f 天", float64(sec)/86400.0)
+		},
+		"humanAgeFromBirth": func(birth int64) string {
+			if birth <= 0 {
+				return "-"
+			}
+			now := time.Now().In(time.Local)
+			bd := time.Unix(birth, 0).In(time.Local)
+			age := now.Year() - bd.Year()
+			if now.Month() < bd.Month() || (now.Month() == bd.Month() && now.Day() < bd.Day()) {
+				age--
+			}
+			if age < 0 {
+				return "-"
+			}
+			return fmt.Sprintf("%d", age)
+		},
+	}
+
+	tpl := template.New("").Funcs(funcMap)
+	tpl = template.Must(tpl.ParseGlob("ui/templates/partials/*.html"))
+	tpl = template.Must(tpl.ParseGlob("ui/templates/pages/*.html"))
+	r.SetHTMLTemplate(tpl)
+
+	r.Static("/static", "ui/static")
+	r.Static("/Volumes/Expansion", "/Volumes/Expansion")
+	r.Static("/Volumes/Getea", "/Volumes/Getea")
+	r.Static("/Volumes/T7/data", "/Volumes/T7/data")
+	r.Static("/text", "z_text")
+
+	movieHTML := handler.NewMovieHTMLHandler(d)
+	dirHTML := handler.NewDirectoryHTMLHandler(d)
+	crawlerPages := handler.NewCrawlerPages(d)
+	crawlerAPI := handler.NewCrawlerAPI(d)
+	aggHTML := handler.NewMovieAggHTMLHandler(d)
+
+	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/cards") })
+	r.GET("/cards", movieHTML.ListMovieCardFull)
+	r.GET("/cardstoday", movieHTML.ListMovieCardToday)
+	r.GET("/cardshasrank", movieHTML.ListMovieCardHasRank)
+	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
+	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
+	r.GET("/moviecarddayrank", movieHTML.ListMovieCardDayRank)
+	r.GET("/movie/:movie", movieHTML.MovieDetail)
+	r.GET("/cardsrandom", movieHTML.ListMovieCardFullRandom)
+	r.GET("/cardsrandompick", movieHTML.ListMovieCardRandomPick)
+	r.GET("/records", movieHTML.ListRecordsPage)
+	r.GET("/sc-events", movieHTML.ListScEventsPage)
+	r.GET("/sc-events-cards", movieHTML.ListScEventsCardPage)
+	r.GET("/sc-events/:name", movieHTML.ScEventDetailPage)
+	r.GET("/sc-agg", movieHTML.ScAggPage)
+	r.GET("/sc-agg/:year", movieHTML.ScAggPage)
+	r.GET("/sc-agg/:year/q/:q", movieHTML.ScAggPage)
+	r.GET("/sc-agg/:year/:month", movieHTML.ScAggPage)
+	r.GET("/casts", movieHTML.CastListPage)
+	r.GET("/cast", movieHTML.CastDetailPage)
+	r.GET("/dir/:id", dirHTML.DirDetail)
+	r.GET("/triggers", crawlerPages.JobsPage)
+	r.GET("/crawler/tasks", crawlerPages.TasksPage)
+	r.GET("/sc-triggers", movieHTML.ScTriggersPage)
+	r.GET("/sc/pick-copy", movieHTML.ScPickCopyPage)
+	r.GET("/sc-pick-smart", movieHTML.ScPickSmartPage)
+	r.GET("/movie-agg-owned/release", aggHTML.MovieAggOwnedReleaseYears)
+	r.GET("/movie-agg-owned/release/:year", aggHTML.MovieAggOwnedReleaseMonths)
+	r.GET("/movie-agg-owned/release/:year/q/:q", aggHTML.MovieAggOwnedReleaseQuarter)
+	r.GET("/movie-agg-owned/release/:year/:month", aggHTML.MovieAggOwnedReleaseMonth)
+	r.GET("/movie-agg-owned/birth", aggHTML.MovieAggOwnedBirthYears)
+	r.GET("/movie-agg-owned/birth/:year", aggHTML.MovieAggOwnedBirthMonths)
+	r.GET("/movie-agg-owned/birth/:year/q/:q", aggHTML.MovieAggOwnedBirthQuarter)
+	r.GET("/movie-agg-owned/birth/:year/:month", aggHTML.MovieAggOwnedBirthMonth)
+	r.GET("/movie-agg-all/release", aggHTML.MovieAggAllReleaseYears)
+	r.GET("/movie-agg-all/release/:year", aggHTML.MovieAggAllReleaseMonths)
+	r.GET("/movie-agg-all/release/:year/q/:q", aggHTML.MovieAggAllReleaseQuarter)
+	r.GET("/movie-agg-all/release/:year/:month", aggHTML.MovieAggAllReleaseMonth)
+
+	api := r.Group("/api")
+	{
+		movieAPI := handler.NewMovieAPI(d)
+		api.POST("/movie/:movie/downloadlater", movieAPI.AddToDownloadLater)
+		api.DELETE("/movie/:movie/downloadlater", movieAPI.RemoveFromDownloadLater)
+		api.POST("/movie/:movie/download-cover", movieAPI.DownloadCoverNow)
+		api.POST("/movie/:movie/add-cast", movieAPI.AddCast)
+		api.POST("/open-finder", movieAPI.OpenFinderHandler([]string{
+			"/Volumes/Getea",
+			"/Volumes/Expansion",
+		}))
+
+		triggerAPI := handler.NewTriggerAPI(d)
+		api.POST("/triggers/daily-best", triggerAPI.DailyBest)
+		api.POST("/triggers/daily-best-sync", triggerAPI.DailyBestSync)
+		api.POST("/triggers/rebuild-cast-rank", triggerAPI.RebuildCastRank)
+		api.POST("/triggers/cast/rebuild-rank", triggerAPI.RebuildActorRank)
+		api.POST("/triggers/seeds", triggerAPI.Seeds)
+		api.POST("/triggers/seed-by-name", triggerAPI.SeedByName)
+		api.POST("/triggers/refresh-oldest-detail", triggerAPI.RefreshOldestDetail)
+
+		filmTriggerAPI := handler.NewFilmTriggerAPI(d)
+		api.POST("/triggers/film/rename", filmTriggerAPI.Rename)
+		api.POST("/triggers/film/process", filmTriggerAPI.Process)
+
+		scTriggerAPI := handler.NewScTriggerAPI(d)
+		api.POST("/triggers/sc/move", scTriggerAPI.Move)
+		api.POST("/triggers/sc/add-preview", scTriggerAPI.AddPreview)
+		api.POST("/triggers/sc/add", scTriggerAPI.Add)
+		api.POST("/triggers/sc/rebuild-stats", scTriggerAPI.RebuildStats)
+		api.POST("/triggers/sc/pick-copy", scTriggerAPI.PickCopy)
+		api.POST("/triggers/sc/pick-only", scTriggerAPI.PickOnly)
+		api.POST("/triggers/sc/pick-smart-copy", scTriggerAPI.PickSmartCopy)
+		api.POST("/triggers/sc/pick-smart-only", scTriggerAPI.PickSmartOnly)
+		api.GET("/triggers/sc/copy-status", scTriggerAPI.CopyStatus)
+		api.POST("/triggers/sc/copy-stop", scTriggerAPI.CopyStop)
+
+		api.POST("/crawler/jobs/start", crawlerAPI.Start)
+		api.GET("/crawler/jobs", crawlerAPI.ListJobs)
+		api.GET("/crawler/jobs/:jobID", crawlerAPI.GetJob)
+		api.GET("/crawler/jobs/:jobID/stream", crawlerAPI.Stream)
+		api.POST("/crawler/jobs/:jobID/pause", crawlerAPI.Pause)
+		api.POST("/crawler/jobs/:jobID/resume", crawlerAPI.Resume)
+		api.POST("/crawler/jobs/:jobID/stop", crawlerAPI.Stop)
+	}
+
+	return r
+}
