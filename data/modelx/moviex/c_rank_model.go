@@ -3,6 +3,8 @@ package moviex
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
@@ -20,7 +22,9 @@ type (
 		All(ctx context.Context) ([]*CRank, error)
 		AggregateByJavId(ctx context.Context, javId string) (firstDay int64, bestRank int64, daysInRank int64, err error)
 		FindHighestRank(ctx context.Context, movieJavId string, limit uint64) ([]*CRank, error)
+		ListByMovieJavId(ctx context.Context, movieJavId string) ([]*CRank, error)
 		FindByDayNumber(ctx context.Context, dayNumber int64) ([]*CRank, error)
+		ListByDayRangeAndCategory(ctx context.Context, startDayNumber, endDayNumber, category int64) ([]*CRank, error)
 		FindEarliestDayNumber(ctx context.Context) (int64, error)
 		FindLatestDayNumber(ctx context.Context) (int64, error)
 	}
@@ -77,10 +81,34 @@ func (m *defaultCRankModel) FindHighestRank(ctx context.Context, movieJavId stri
 
 	// 执行查询并填充 ranks 切片
 	if err := m.QueryRowsNoCacheCtx(ctx, &ranks, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return []*CRank{}, nil
+		}
 		return nil, err
 	}
 
 	return ranks, nil
+}
+
+func (m *customCRankModel) ListByMovieJavId(ctx context.Context, movieJavId string) ([]*CRank, error) {
+	query, args, err := squirrel.Select("*").
+		From(m.tableName()).
+		Where(squirrel.Eq{"movie_jav_id": movieJavId}).
+		OrderBy("day_number ASC", "rank_pos ASC", "id ASC").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	var rows []*CRank
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return []*CRank{}, nil
+		}
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func (m *customCRankModel) All(ctx context.Context) ([]*CRank, error) {
@@ -88,6 +116,9 @@ func (m *customCRankModel) All(ctx context.Context) ([]*CRank, error) {
 
 	var rows []*CRank
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return []*CRank{}, nil
+		}
 		return nil, err
 	}
 	return rows, nil
@@ -98,6 +129,27 @@ func (m *customCRankModel) FindByDayNumber(ctx context.Context, dayNumber int64)
 
 	var rows []*CRank
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, dayNumber); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return []*CRank{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customCRankModel) ListByDayRangeAndCategory(ctx context.Context, startDayNumber, endDayNumber, category int64) ([]*CRank, error) {
+	query := fmt.Sprintf(`
+		SELECT *
+		FROM %s
+		WHERE day_number >= ? AND day_number <= ? AND category = ?
+		ORDER BY movie_jav_id ASC, rank_pos ASC, day_number ASC, id ASC
+	`, m.tableName())
+
+	var rows []*CRank
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, startDayNumber, endDayNumber, category); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return []*CRank{}, nil
+		}
 		return nil, err
 	}
 	return rows, nil

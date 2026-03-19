@@ -32,17 +32,31 @@ func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 /* ========= 具体流程 ========= */
 
 func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool) error {
-	return l.runPipeline(
-		ctx,
-		consts.RecordTypeDailyBest,
-		func(ctx context.Context) (int64, error) {
-			if err := l.FetchAndParseDailyBestinv(ctx, isSync); err != nil {
-				return 0, err
-			}
-			return l.FetchAndParseDetails(ctx)
-		},
-		isSync, // ✅ 同步模式下不记录
-		l.ProcessBestinvRank,
+	start := time.Now()
+
+	detailNum, err := func(ctx context.Context) (int64, error) {
+		if err := l.FetchAndParseDailyBestinv(ctx, isSync); err != nil {
+			return 0, err
+		}
+		return l.FetchAndParseDetails(ctx)
+	}(ctx)
+	if err != nil {
+		return err
+	}
+
+	end := time.Now()
+	if !isSync {
+		l.saveRecord(ctx, consts.RecordTypeDailyBest, start, end, detailNum)
+	}
+
+	if err := l.ProcessBestinvRank(ctx); err != nil {
+		return err
+	}
+	if err := l.movieSvc.RebuildCurrentRankPeriods(ctx); err != nil {
+		return err
+	}
+
+	return l.runParallel(ctx,
 		l.DownLoadAllPicture,
 		l.TranslateTitle,
 	)

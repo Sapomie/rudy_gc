@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/service/spider"
 	"rudy_gc/internal/service/vfilm"
@@ -19,10 +20,12 @@ const (
 type FetchLoopService struct {
 	deps       *svc.Deps
 	crawlLogic *spider.CrawlLogic
+	movieSvc   *movie.Service
 	filmSvc    *vfilm.FilmService
 	scSvc      *sc.ScService
 
-	jobs *managedProgressJobManager
+	jobs       *managedProgressJobManager
+	detailLogs *detailLoopLogHub
 
 	rootMu  sync.Mutex
 	rootCtx context.Context
@@ -37,6 +40,7 @@ type FetchLoopService struct {
 	detailCancel     context.CancelFunc
 	detailDone       chan struct{}
 	detailPaused     bool
+	detailStartedAt  int64
 	detailBaseWindow time.Duration
 	detailMaxBatch   int
 }
@@ -55,9 +59,11 @@ func NewFetchLoopService(deps *svc.Deps) *FetchLoopService {
 	sharedFetchLoopService.svc = &FetchLoopService{
 		deps:             deps,
 		crawlLogic:       spider.NewCrawlLogic(deps),
+		movieSvc:         movie.NewService(deps),
 		filmSvc:          vfilm.NewFilmService(deps),
 		scSvc:            sc.NewService(deps),
 		jobs:             newManagedProgressJobManager("crawler", 64, pushManagedProgressEvent),
+		detailLogs:       newDetailLoopLogHub(64),
 		detailBaseWindow: defaultDetailBaseWindow,
 		detailMaxBatch:   defaultDetailMaxBatch,
 	}

@@ -1,0 +1,396 @@
+{{ define "page.e_item_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <style>
+            .sc-sort-link {
+                color: inherit;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .sc-sort-link.active {
+                color: #0d6efd;
+            }
+        </style>
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">EItem 列表</h4>
+                        <p class="text-muted mb-0">浏览 e_item 列表，并按字段筛选条目。</p>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="sc-page-summary">
+                        <span class="sc-page-summary-label">总数</span>
+                        <span class="sc-page-summary-value" id="itemTotalCount">{{ .Total }}</span>
+                    </div>
+                    {{ if .Items }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-2 align-items-end" method="get" action="/e-items">
+                            {{ if gt .Query.PageSize 0 }}<input type="hidden" name="ps" value="{{ .Query.PageSize }}">{{ end }}
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">JavLib 编号</label>
+                                <input class="form-control" type="text" name="jav_id" value="{{ .Query.JavID }}" placeholder="JavLib 编号">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">影片编号</label>
+                                <input class="form-control" type="text" name="name" value="{{ .Query.Name }}" placeholder="影片编号">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">详情状态</label>
+                                <select class="form-select" name="has_detail">
+                                    <option value="" {{ if eq .Query.HasDetail "" }}selected{{ end }}>全部</option>
+                                    <option value="none" {{ if eq .Query.HasDetail "none" }}selected{{ end }}>无详情</option>
+                                    <option value="ok" {{ if eq .Query.HasDetail "ok" }}selected{{ end }}>已有详情</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">封面状态</label>
+                                <select class="form-select" name="has_download_cover">
+                                    <option value="" {{ if eq .Query.HasDownloadCover "" }}selected{{ end }}>全部</option>
+                                    <option value="none" {{ if eq .Query.HasDownloadCover "none" }}selected{{ end }}>无本地封面</option>
+                                    <option value="ok" {{ if eq .Query.HasDownloadCover "ok" }}selected{{ end }}>已有本地封面</option>
+                                    <option value="wrong" {{ if eq .Query.HasDownloadCover "wrong" }}selected{{ end }}>错误封面链接</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">中文字幕</label>
+                                <select class="form-select" name="has_chinese">
+                                    <option value="" {{ if eq .Query.HasChinese "" }}selected{{ end }}>全部</option>
+                                    <option value="none" {{ if eq .Query.HasChinese "none" }}selected{{ end }}>无中文字幕</option>
+                                    <option value="ok" {{ if eq .Query.HasChinese "ok" }}selected{{ end }}>有中文字幕</option>
+                                    <option value="error" {{ if eq .Query.HasChinese "error" }}selected{{ end }}>翻译错误</option>
+                                    <option value="sensitive" {{ if eq .Query.HasChinese "sensitive" }}selected{{ end }}>含敏感词</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">详情扫描状态</label>
+                                <select class="form-select" name="detail_need_scan">
+                                    <option value="" {{ if eq .Query.DetailNeedScan "" }}selected{{ end }}>全部</option>
+                                    <option value="need" {{ if eq .Query.DetailNeedScan "need" }}selected{{ end }}>需要扫描</option>
+                                    <option value="no_need" {{ if eq .Query.DetailNeedScan "no_need" }}selected{{ end }}>无需扫描</option>
+                                    <option value="wrong" {{ if eq .Query.DetailNeedScan "wrong" }}selected{{ end }}>内容错误</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">详情时间从</label>
+                                <input class="form-control" type="date" name="detail_birth_time_from" value="{{ .Query.DetailBirthTimeFrom }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">详情时间到</label>
+                                <input class="form-control" type="date" name="detail_birth_time_to" value="{{ .Query.DetailBirthTimeTo }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">最后查询时间从</label>
+                                <input class="form-control" type="date" name="last_query_detail_time_from" value="{{ .Query.LastQueryDetailTimeFrom }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">最后查询时间到</label>
+                                <input class="form-control" type="date" name="last_query_detail_time_to" value="{{ .Query.LastQueryDetailTimeTo }}">
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">筛选</button>
+                                <a class="btn btn-outline-secondary" href="/e-items">清空</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div class="small text-muted">
+                                已选 <span id="itemBatchSelectedCount">0</span> 项
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnBatchEditStatus" disabled>
+                                批量编辑状态
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th class="text-center text-nowrap">
+                                        <input class="form-check-input js-item-check-all" id="itemCheckAll" type="checkbox" aria-label="全选当前页">
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByJavID.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByJavID.Href }}">
+                                            JavLib 编号{{ if .ItemSortQuery.ByJavID.Active }}{{ if .ItemSortQuery.ByJavID.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByName.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByName.Href }}">
+                                            影片编号{{ if .ItemSortQuery.ByName.Active }}{{ if .ItemSortQuery.ByName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByHasDetail.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByHasDetail.Href }}">
+                                            详情状态{{ if .ItemSortQuery.ByHasDetail.Active }}{{ if .ItemSortQuery.ByHasDetail.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByHasDownloadCover.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByHasDownloadCover.Href }}">
+                                            封面状态{{ if .ItemSortQuery.ByHasDownloadCover.Active }}{{ if .ItemSortQuery.ByHasDownloadCover.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByHasChinese.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByHasChinese.Href }}">
+                                            中文字幕{{ if .ItemSortQuery.ByHasChinese.Active }}{{ if .ItemSortQuery.ByHasChinese.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByDetailNeedScan.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByDetailNeedScan.Href }}">
+                                            详情扫描状态{{ if .ItemSortQuery.ByDetailNeedScan.Active }}{{ if .ItemSortQuery.ByDetailNeedScan.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByDetailBirthTime.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByDetailBirthTime.Href }}">
+                                            详情时间{{ if .ItemSortQuery.ByDetailBirthTime.Active }}{{ if .ItemSortQuery.ByDetailBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ItemSortQuery.ByLastQueryDetailTime.Active }}active{{ end }}" href="{{ .ItemSortQuery.ByLastQueryDetailTime.Href }}">
+                                            最后查询时间{{ if .ItemSortQuery.ByLastQueryDetailTime.Active }}{{ if .ItemSortQuery.ByLastQueryDetailTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">操作</th>
+                                </tr>
+                                </thead>
+                                <tbody id="itemTableBody">
+                                {{ if .Items }}
+                                    {{ range .Items }}
+                                        <tr data-item-id="{{ .Id }}">
+                                            <td class="text-center">
+                                                <input class="form-check-input js-item-check" type="checkbox" value="{{ .Id }}" aria-label="选择 {{ .JavId }}">
+                                            </td>
+                                            <td class="text-nowrap">
+                                                {{ if .JavUrl }}
+                                                    <a href="{{ .JavUrl }}" target="_blank" rel="noopener noreferrer">{{ .JavId }}</a>
+                                                {{ else }}
+                                                    {{ .JavId }}
+                                                {{ end }}
+                                            </td>
+                                            <td><a href="/movie/{{ .Name }}">{{ .Name }}</a></td>
+                                            <td class="js-item-has-detail">{{ .HasDetailText }}</td>
+                                            <td class="js-item-has-download-cover">{{ .HasDownloadCoverText }}</td>
+                                            <td class="js-item-has-chinese">{{ .HasChineseText }}</td>
+                                            <td class="js-item-detail-need-scan">{{ .DetailNeedScanText }}</td>
+                                            <td class="text-nowrap">{{ formatUnixMinute .DetailBirthTime }}</td>
+                                            <td class="text-nowrap">{{ formatUnixMinute .LastQueryDetailTime }}</td>
+                                            <td class="text-nowrap">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-item-status-edit"
+                                                        data-item-id="{{ .Id }}"
+                                                        data-item-jav-id="{{ .JavId }}"
+                                                        data-item-name="{{ .Name }}"
+                                                        data-has-detail="{{ .HasDetailValue }}"
+                                                        data-has-download-cover="{{ .HasDownloadCoverValue }}"
+                                                        data-has-chinese="{{ .HasChineseValue }}"
+                                                        data-detail-need-scan="{{ .DetailNeedScanValue }}">
+                                                    编辑状态
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger js-item-delete ms-1"
+                                                        data-item-id="{{ .Id }}"
+                                                        data-item-jav-id="{{ .JavId }}"
+                                                        data-item-name="{{ .Name }}">
+                                                    删除
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="sc-empty-state">当前筛选下没有 e_item 数据。</div>
+                                        </td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="itemStatusModal" tabindex="-1" aria-labelledby="itemStatusModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form id="itemStatusForm">
+                                <input type="hidden" id="itemStatusItemId">
+                                <div class="modal-header">
+                                    <div>
+                                        <h5 class="modal-title" id="itemStatusModalLabel">编辑状态</h5>
+                                        <div id="itemStatusMeta" class="small text-muted"></div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemStatusHasDetail" class="form-label">详情状态</label>
+                                            <select id="itemStatusHasDetail" class="form-select" name="hasDetail">
+                                                <option value="none">无详情</option>
+                                                <option value="ok">已有详情</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemStatusHasDownloadCover" class="form-label">封面状态</label>
+                                            <select id="itemStatusHasDownloadCover" class="form-select" name="hasDownloadCover">
+                                                <option value="none">无本地封面</option>
+                                                <option value="ok">已有本地封面</option>
+                                                <option value="wrong">错误封面链接</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemStatusHasChinese" class="form-label">中文字幕</label>
+                                            <select id="itemStatusHasChinese" class="form-select" name="hasChinese">
+                                                <option value="none">无中文字幕</option>
+                                                <option value="ok">有中文字幕</option>
+                                                <option value="error">翻译错误</option>
+                                                <option value="sensitive">含敏感词</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemStatusDetailNeedScan" class="form-label">详情扫描状态</label>
+                                            <select id="itemStatusDetailNeedScan" class="form-select" name="detailNeedScan">
+                                                <option value="need">需要扫描</option>
+                                                <option value="no_need">无需扫描</option>
+                                                <option value="wrong">内容错误</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="itemStatusMsg" class="alert small py-2 px-3 mt-3 mb-0 d-none"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn btn-primary" id="itemStatusSubmit">保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="itemBatchStatusModal" tabindex="-1" aria-labelledby="itemBatchStatusModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form id="itemBatchStatusForm">
+                                <div class="modal-header">
+                                    <div>
+                                        <h5 class="modal-title" id="itemBatchStatusModalLabel">批量编辑状态</h5>
+                                        <div id="itemBatchStatusMeta" class="small text-muted"></div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemBatchHasDetail" class="form-label">详情状态</label>
+                                            <select id="itemBatchHasDetail" class="form-select" name="hasDetail">
+                                                <option value="">不修改</option>
+                                                <option value="none">无详情</option>
+                                                <option value="ok">已有详情</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemBatchHasDownloadCover" class="form-label">封面状态</label>
+                                            <select id="itemBatchHasDownloadCover" class="form-select" name="hasDownloadCover">
+                                                <option value="">不修改</option>
+                                                <option value="none">无本地封面</option>
+                                                <option value="ok">已有本地封面</option>
+                                                <option value="wrong">错误封面链接</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemBatchHasChinese" class="form-label">中文字幕</label>
+                                            <select id="itemBatchHasChinese" class="form-select" name="hasChinese">
+                                                <option value="">不修改</option>
+                                                <option value="none">无中文字幕</option>
+                                                <option value="ok">有中文字幕</option>
+                                                <option value="error">翻译错误</option>
+                                                <option value="sensitive">含敏感词</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="itemBatchDetailNeedScan" class="form-label">详情扫描状态</label>
+                                            <select id="itemBatchDetailNeedScan" class="form-select" name="detailNeedScan">
+                                                <option value="">不修改</option>
+                                                <option value="need">需要扫描</option>
+                                                <option value="no_need">无需扫描</option>
+                                                <option value="wrong">内容错误</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="itemBatchStatusMsg" class="alert small py-2 px-3 mt-3 mb-0 d-none"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn btn-primary" id="itemBatchStatusSubmit">批量保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="itemDeleteModal" tabindex="-1" aria-labelledby="itemDeleteModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <div>
+                                    <h5 class="modal-title" id="itemDeleteModalLabel">删除电影</h5>
+                                    <div id="itemDeleteMeta" class="small text-muted"></div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="mb-0">会删除这部电影在所有相关表中的数据，并写入删除记录。</p>
+                                <div id="itemDeleteMsg" class="alert small py-2 px-3 mt-3 mb-0 d-none"></div>
+                                <input type="hidden" id="itemDeleteItemId">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-danger" id="itemDeleteSubmit">确认删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/e_item_list.js"></script>
+    </body>
+    </html>
+{{ end }}

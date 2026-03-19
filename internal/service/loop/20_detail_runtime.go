@@ -33,11 +33,13 @@ func (l *FetchLoopService) startDetailLoopLocked(parent context.Context, baseWin
 	}
 
 	ctx, cancel := context.WithCancel(parent)
+	ctx = taskctx.WithLogReporter(ctx, l.reportDetailLoopLog)
 	done := make(chan struct{})
 	l.detailCtx = ctx
 	l.detailCancel = cancel
 	l.detailDone = done
 	l.detailPaused = false
+	l.detailStartedAt = time.Now().Unix()
 
 	go func() {
 		defer close(done)
@@ -58,7 +60,7 @@ func (l *FetchLoopService) startDetailLoopLocked(parent context.Context, baseWin
 		l.DetailFetchLoopSingle(ctx, l.deps.DetailJobs, baseWindow, maxBatch)
 	}()
 
-	l.deps.Log.WithContext(parent).Info("StartDetailLoop: 启动详情抓取 loop")
+	l.deps.Log.WithContext(ctx).Info("StartDetailLoop: 启动详情抓取 loop")
 }
 
 func (l *FetchLoopService) StopDetailLoop() {
@@ -69,6 +71,7 @@ func (l *FetchLoopService) stopDetailLoop() {
 	l.detailMu.Lock()
 	cancel := l.detailCancel
 	done := l.detailDone
+	ctx := l.detailCtx
 	if cancel == nil {
 		l.detailMu.Unlock()
 		return
@@ -76,10 +79,18 @@ func (l *FetchLoopService) stopDetailLoop() {
 	l.detailCancel = nil
 	l.detailMu.Unlock()
 
-	l.deps.Log.Info("StopDetailLoop: 正在停止详情抓取 loop ...")
+	if ctx != nil {
+		l.deps.Log.WithContext(ctx).Info("StopDetailLoop: 正在停止详情抓取 loop ...")
+	} else {
+		l.deps.Log.Info("StopDetailLoop: 正在停止详情抓取 loop ...")
+	}
 	cancel()
 	if done != nil {
 		<-done
+	}
+	if ctx != nil {
+		l.deps.Log.WithContext(ctx).Info("StopDetailLoop: 详情抓取 loop 已停止")
+		return
 	}
 	l.deps.Log.Info("StopDetailLoop: 详情抓取 loop 已停止")
 }
@@ -205,6 +216,18 @@ func (l *FetchLoopService) flushBatch(ctx context.Context, buf *[]string) {
 		return
 	}
 	log.Infof("DetailFetchLoopSingle: processed %d ids (took %v)", len(batch), time.Since(start))
+}
+
+func (l *FetchLoopService) reportDetailLoopLog(event taskctx.Log) {
+	if l == nil || l.detailLogs == nil {
+		return
+	}
+	l.detailLogs.publish(DetailLoopEvent{
+		Level:   event.Level,
+		Message: event.Message,
+		Line:    event.Line,
+		At:      event.At,
+	})
 }
 
 func tryAddID(buf *[]string, id string, seen map[string]time.Time, ttl time.Duration) bool {

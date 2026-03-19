@@ -18,6 +18,7 @@ type (
 		gScModel
 		FindAll(ctx context.Context) ([]*GSc, error)
 		ListByNames(ctx context.Context, names []string) ([]*GSc, error)
+		ListByComeMovieName(ctx context.Context, movieName string) ([]*GSc, error)
 		ListTopNByScTime(ctx context.Context, n uint64) ([]*GSc, error)
 		FindNearest(ctx context.Context, t int64) (*GSc, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string) ([]*GSc, error)
@@ -84,6 +85,31 @@ func (m *customGScModel) ListByNames(ctx context.Context, names []string) ([]*GS
 		Select(gScRows).
 		From(m.table).
 		Where(squirrel.Eq{"name": names}).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*GSc
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GSc{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGScModel) ListByComeMovieName(ctx context.Context, movieName string) ([]*GSc, error) {
+	if movieName == "" {
+		return []*GSc{}, nil
+	}
+
+	sqlStr, args, err := squirrel.
+		Select(gScRows).
+		From(m.table).
+		Where(squirrel.Eq{"come_movie_name": movieName}).
+		OrderBy("sc_time DESC", "id DESC").
 		ToSql()
 	if err != nil {
 		return nil, err

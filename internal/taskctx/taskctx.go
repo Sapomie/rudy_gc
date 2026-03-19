@@ -6,19 +6,34 @@ import (
 )
 
 type Progress struct {
-	Stage        string
-	Message      string
-	HandledCount int
-	SuccessCount int
-	FailedCount  int
-	QueuedCount  int
+	Stage             string
+	Message           string
+	HandledCount      int
+	SuccessCount      int
+	FailedCount       int
+	QueuedCount       int
+	CurrentPhaseKey   string
+	PhaseKey          string
+	PhaseHandledCount int
+	PhaseTotalCount   int
+	PhaseSuccessCount int
+	PhaseFailedCount  int
+}
+
+type Log struct {
+	Level   string
+	Message string
+	Line    string
+	At      int64
 }
 
 type pauseWaiterKey struct{}
 type progressReporterKey struct{}
+type logReporterKey struct{}
 
 type pauseWaiter func(context.Context) error
 type progressReporter func(Progress)
+type logReporter func(Log)
 
 func WithPauseWaiter(ctx context.Context, fn func(context.Context) error) context.Context {
 	if fn == nil {
@@ -62,6 +77,28 @@ func ReportProgress(ctx context.Context, progress Progress) {
 		return
 	}
 	fn(progress)
+}
+
+func WithLogReporter(ctx context.Context, fn func(Log)) context.Context {
+	if fn == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, logReporterKey{}, logReporter(fn))
+}
+
+func ReportLog(ctx context.Context, event Log) {
+	if ctx == nil {
+		return
+	}
+	raw := ctx.Value(logReporterKey{})
+	if raw == nil {
+		return
+	}
+	fn, ok := raw.(logReporter)
+	if !ok || fn == nil {
+		return
+	}
+	fn(event)
 }
 
 func Sleep(ctx context.Context, d time.Duration) error {

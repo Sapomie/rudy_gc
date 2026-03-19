@@ -38,31 +38,47 @@ func (l *FetchLoopService) finishExclusiveTask(jobID string) {
 }
 
 func (l *FetchLoopService) publishTaskProgress(jobID, taskType string, progress taskctx.Progress) {
-	event := JobProgress{
-		JobID:        jobID,
-		TaskType:     taskType,
-		Stage:        progress.Stage,
-		Message:      progress.Message,
-		HandledCount: progress.HandledCount,
-		SuccessCount: progress.SuccessCount,
-		FailedCount:  progress.FailedCount,
-		QueuedCount:  progress.QueuedCount,
-		At:           time.Now().Unix(),
+	event := JobEvent{
+		Kind:              JobEventKindProgress,
+		JobID:             jobID,
+		TaskType:          taskType,
+		Stage:             progress.Stage,
+		Message:           progress.Message,
+		HandledCount:      progress.HandledCount,
+		SuccessCount:      progress.SuccessCount,
+		FailedCount:       progress.FailedCount,
+		QueuedCount:       progress.QueuedCount,
+		CurrentPhaseKey:   progress.CurrentPhaseKey,
+		PhaseKey:          progress.PhaseKey,
+		PhaseHandledCount: progress.PhaseHandledCount,
+		PhaseTotalCount:   progress.PhaseTotalCount,
+		PhaseSuccessCount: progress.PhaseSuccessCount,
+		PhaseFailedCount:  progress.PhaseFailedCount,
+		At:                time.Now().Unix(),
 	}
 	if snapshot := l.findJob(jobID); snapshot != nil {
 		event.StartedAt = snapshot.startedAt
-		if progress.HandledCount == 0 && snapshot.lastEvent != nil {
-			event.HandledCount = snapshot.lastEvent.HandledCount
-		}
-		if progress.SuccessCount == 0 && snapshot.lastEvent != nil {
-			event.SuccessCount = snapshot.lastEvent.SuccessCount
-		}
-		if progress.FailedCount == 0 && snapshot.lastEvent != nil {
-			event.FailedCount = snapshot.lastEvent.FailedCount
-		}
-		if progress.QueuedCount == 0 && snapshot.lastEvent != nil {
-			event.QueuedCount = snapshot.lastEvent.QueuedCount
-		}
+	}
+	l.jobs.publish(jobID, event)
+}
+
+func (l *FetchLoopService) publishTaskLog(jobID, taskType string, logEvent taskctx.Log) {
+	if logEvent.Message == "" && logEvent.Line == "" {
+		return
+	}
+
+	event := JobEvent{
+		Kind:      JobEventKindLog,
+		JobID:     jobID,
+		TaskType:  taskType,
+		Message:   logEvent.Message,
+		Level:     logEvent.Level,
+		Line:      logEvent.Line,
+		At:        logEvent.At,
+		StartedAt: 0,
+	}
+	if snapshot := l.findJob(jobID); snapshot != nil {
+		event.StartedAt = snapshot.startedAt
 	}
 	l.jobs.publish(jobID, event)
 }

@@ -70,6 +70,7 @@ var (
 ========================= */
 
 func (s *FilmService) ProcessFilm(ctx context.Context) error {
+	log := s.deps.Log.WithContext(ctx)
 	fctx, err := s.buildFilmContext(ctx)
 	if err != nil {
 		return err
@@ -86,7 +87,7 @@ func (s *FilmService) ProcessFilm(ctx context.Context) error {
 	threading.GoSafe(func() {
 		err := s.PrepareFilmCache(ctx)
 		if err != nil {
-			s.deps.Log.Errorf("PrepareFilmCache: %v", err)
+			log.Errorf("PrepareFilmCache: %v", err)
 		}
 	})
 
@@ -157,6 +158,7 @@ func (s *FilmService) walkOneRoot(
 	skipped *int,
 ) error {
 	root = strings.TrimRight(root, string(filepath.Separator))
+	log := s.deps.Log.WithContext(ctx)
 	return filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
 		if err := taskctx.WaitIfPaused(ctx); err != nil {
 			return err
@@ -194,7 +196,7 @@ func (s *FilmService) walkOneRoot(
 
 		// 5) 非视频：仅告警
 		if !isVideo(p) {
-			s.deps.Log.Warnf("non-video file encountered: %s", p)
+			log.Warnf("non-video file encountered: %s", p)
 			return nil
 		}
 
@@ -206,7 +208,7 @@ func (s *FilmService) walkOneRoot(
 		// 7) 进度日志
 		fctx.Processed++
 		if fctx.Processed%100 == 0 {
-			s.deps.Log.Infof("处理完成第 %v 部 film", fctx.Processed)
+			log.Infof("处理完成第 %v 部 film", fctx.Processed)
 		}
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:        "film_process_item",
@@ -223,11 +225,12 @@ func (s *FilmService) walkOneRoot(
 ========================= */
 
 func (s *FilmService) handleOneVideo(ctx context.Context, root, fullPath string, fctx *filmContext, info os.FileInfo) (*types.Film, error) {
+	log := s.deps.Log.WithContext(ctx)
 	fileName := info.Name()
 	movieName := extractMovieName(fileName)
 
 	// 同名告警
-	s.handleMovieNameConflict(movieName, fctx, fullPath)
+	s.handleMovieNameConflict(ctx, movieName, fctx, fullPath)
 
 	// 取 Movie
 	movie, err := s.pickMovieByName(ctx, movieName)
@@ -257,7 +260,7 @@ func (s *FilmService) handleOneVideo(ctx context.Context, root, fullPath string,
 		return nil, err
 	}
 	if status == consts.UpsertInserted {
-		s.deps.Log.Info("Added Film:", film.MovieName)
+		log.Info("Added Film:", film.MovieName)
 	}
 
 	// 失效缓存
@@ -266,6 +269,7 @@ func (s *FilmService) handleOneVideo(ctx context.Context, root, fullPath string,
 }
 
 func (s *FilmService) pickMovieByName(ctx context.Context, name string) (*types.Movie, error) {
+	log := s.deps.Log.WithContext(ctx)
 	movies, err := s.movieFindByName(ctx, name)
 	if err != nil {
 		return nil, err
@@ -274,7 +278,7 @@ func (s *FilmService) pickMovieByName(ctx context.Context, name string) (*types.
 		return nil, errNoMovie
 	}
 	if len(movies) > 1 {
-		s.deps.Log.Warnf("存在相同名字的电影：%s", name)
+		log.Warnf("存在相同名字的电影：%s", name)
 	}
 	return movies[0], nil
 }
@@ -339,6 +343,7 @@ func (s *FilmService) fillFilmMeta(ctx context.Context, f *types.Film, fullPath 
 ========================= */
 
 func (s *FilmService) removeMissingFilmFiles(ctx context.Context, fctx *filmContext) error {
+	log := s.deps.Log.WithContext(ctx)
 	for _, fi := range fctx.FilmExistMap {
 		if fi.RemoveFlag == RemoveNo {
 			continue
@@ -353,7 +358,7 @@ func (s *FilmService) removeMissingFilmFiles(ctx context.Context, fctx *filmCont
 			return fmt.Errorf("更新 Film 条目失败: %w", err)
 		}
 		s.movieSvc.InvalidateMovieType(ctx, film.MovieJavId)
-		s.deps.Log.Infof("Film 条目删除成功: %s", fi.Film.MovieName)
+		log.Infof("Film 条目删除成功: %s", fi.Film.MovieName)
 	}
 	return nil
 }
@@ -397,12 +402,13 @@ func extractMovieName(fileName string) string {
 	return head
 }
 
-func (s *FilmService) handleMovieNameConflict(movieName string, fctx *filmContext, fullPath string) {
+func (s *FilmService) handleMovieNameConflict(ctx context.Context, movieName string, fctx *filmContext, fullPath string) {
+	log := s.deps.Log.WithContext(ctx)
 	if existing, ok := fctx.NameMap[movieName]; !ok {
 		fctx.NameMap[movieName] = &sameMovieInfo{MovieName: movieName, MoviePath: fullPath}
 	} else {
-		s.deps.Log.Warnf("Same movie %v, Path 1: %s", existing, existing.MoviePath)
-		s.deps.Log.Warnf("Same movie %v, Path 2: %s", existing, fullPath)
+		log.Warnf("Same movie %v, Path 1: %s", existing, existing.MoviePath)
+		log.Warnf("Same movie %v, Path 2: %s", existing, fullPath)
 	}
 }
 

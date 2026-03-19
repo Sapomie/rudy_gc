@@ -259,6 +259,15 @@ func (l *ScService) fetchCandidates(ctx context.Context, req *types.ListMovieFul
 	return resp.List, nil
 }
 
+func ensureReqDefaults(req *types.ListMovieFullRequest) {
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.PageSize == 0 {
+		req.PageSize = 100
+	}
+}
+
 // 计算基础权重
 func computeBaseWeights(cands []*types.MovieType, movieLast, actorLast map[string]int64, now time.Time) []float64 {
 	base := make([]float64, len(cands))

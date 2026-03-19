@@ -1,0 +1,22 @@
+1. 删除错误的电影jav_id
+
+
+2. 
+[02:46:36] | detail_item_done | 详情完成：MEYD-046 | task_type=spider_refresh_oldest_detail | handled=23 | success=15 | failed=8 | queued=4977
+[2026-03-19 02:46:36] INFO    已完成 23/5000: MEYD-046（距上次更新 106.4 天），用时 1.4 分钟，预计剩余 308.6 分钟
+[2026-03-19 02:46:35] INFO    第 1 次尝试: https://www.b96g.com/cn/?v=javliitztu
+
+[02:46:32] | detail_item_done | 详情完成：MEYD-045 | task_type=spider_refresh_oldest_detail | handled=22 | success=14 | failed=8 | queued=4978
+[2026-03-19 02:46:32] INFO    已完成 22/5000: MEYD-045（距上次更新 106.4 天），用时 1.4 分钟，预计剩余 308.1 分钟
+[2026-03-19 02:46:31] INFO    第 1 次尝试: https://www.b96g.com/cn/?v=javliitz5m
+
+里面的[02:46:32] | detail_item_done |这一行不需要  
+INFO/WARN/ERROR 这些标识也不要，按照不同颜色的字体颜色表示
+
+
+
+4.
+e_item的列表显示，更改status等
+
+5.
+

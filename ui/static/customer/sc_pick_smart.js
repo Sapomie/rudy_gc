@@ -96,7 +96,7 @@
 
     let pickedMoviesCache = [];
     let pickedTotalSizeGb = '';
-    let pickedSortBase = 'picked';
+    let pickedSortBase = 'film_birth';
     let pickedSortDir = 'desc';
 
     function numberOrZero(v) {

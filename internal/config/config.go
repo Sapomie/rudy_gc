@@ -24,7 +24,7 @@ type Film struct {
 	Pairs               []FilmDirPair
 	CopyDestinationPath string
 	ScRootDir           string
-	RenamePath          string
+	RenamePaths         []string
 }
 
 type FilmDirPair struct {

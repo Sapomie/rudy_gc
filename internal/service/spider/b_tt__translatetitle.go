@@ -51,16 +51,19 @@ var (
 
 // TranslateTitle：核心逻辑不变，但更稳、更幂等
 func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
-	var count int64
+	var successCount int64
+	var failedCount int64
+	log := l.deps.Log.WithContext(ctx)
 
 	items, err := l.deps.ItemRepo.FindByTranslateStatus(ctx, consts.ItemChineseNone)
 	if err != nil {
 		return err
 	}
 	if len(items) == 0 {
-		l.deps.Log.Info("没有需要翻译的条目")
+		log.Info("没有需要翻译的条目")
 		return nil
 	}
+	l.reportPhaseProgress(ctx, "translate", "translate_queue_ready", fmt.Sprintf("待翻译标题 %d 条", len(items)), 0, len(items), 0, 0)
 
 	lastCall := time.Time{}
 
@@ -89,6 +92,17 @@ func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
 				HasChinese: ptr.Int64(consts.ItemChineseError),
 				UpdatedOn:  &now,
 			})
+			failedCount++
+			l.reportPhaseProgress(
+				ctx,
+				"translate",
+				"translate_failed",
+				fmt.Sprintf("标题翻译失败：%s", movie.Name),
+				int(successCount+failedCount),
+				len(items),
+				int(successCount),
+				int(failedCount),
+			)
 			continue
 		}
 
@@ -104,6 +118,7 @@ func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
 		lastCall = time.Now()
 
 		var translationStatus int64
+		stage := "translate_done"
 		switch {
 		case err == nil:
 			dst = replaceSlashes(strings.TrimSpace(dst))
@@ -121,18 +136,25 @@ func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
 
 				l.movieSvc.InvalidateMovieType(ctx, movie.JavId)
 				translationStatus = consts.ItemChineseOK
+				successCount++
 			} else {
 				translationStatus = consts.ItemChineseError
+				failedCount++
+				stage = "translate_failed"
 			}
 
 		case errors.Is(err, errSensitive):
-			l.deps.Log.Warnf("敏感词：Name=%s, Title=%s", movie.Name, movie.Title)
+			log.Warnf("敏感词：Name=%s, Title=%s", movie.Name, movie.Title)
 			translationStatus = consts.ItemChineseSensitive
+			failedCount++
+			stage = "translate_failed"
 
 		default:
 			// 非敏感的其它错误：记录并继续下一个（不返回整体失败）
-			l.deps.Log.Warnf("翻译失败 %s: %v", movie.Name, err)
+			log.Warnf("翻译失败 %s: %v", movie.Name, err)
 			translationStatus = consts.ItemChineseError
+			failedCount++
+			stage = "translate_failed"
 		}
 
 		now := time.Now().Unix()
@@ -143,12 +165,21 @@ func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
 			return uerr
 		}
 
-		count++
-		l.deps.Log.Infof("%s 翻译完成 %d/%d", movie.Name, count, len(items))
-		l.reportProgress(ctx, "translate_done", fmt.Sprintf("标题翻译完成：%s", movie.Name), int(count), int(count), 0, len(items)-int(count))
+		handled := int(successCount + failedCount)
+		log.Infof("%s 翻译完成 %d/%d", movie.Name, handled, len(items))
+		l.reportPhaseProgress(
+			ctx,
+			"translate",
+			stage,
+			fmt.Sprintf("标题翻译完成：%s", movie.Name),
+			handled,
+			len(items),
+			int(successCount),
+			int(failedCount),
+		)
 	}
 
-	l.deps.Log.Infof("完成 %d 个 Movie 的翻译", count)
+	log.Infof("完成 %d 个 Movie 的翻译", successCount+failedCount)
 	return nil
 }
 

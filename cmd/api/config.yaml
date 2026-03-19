@@ -32,8 +32,9 @@ LogursLevel: "info"
 Film:
   CopyDestinationPath: "/Users/gaojinwei/Desktop/temp/sc/"
   ScRootDir: "/Users/gaojinwei/Desktop/temp/sc/"
-#  RenamePath: "/Volumes/Getea/x_process/rename/"
-  RenamePath: "/Volumes/Expansion/process/rename/"
+  RenamePaths:
+    - "/Volumes/Expansion/process/rename/"
+    - "/Volumes/Getea/x_process/rename/"
   Pairs:
     - RootDir: "/Volumes/Expansion/v3/"
       MoveFilmDestination: "/Volumes/Expansion/goingon/"

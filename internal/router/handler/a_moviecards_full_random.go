@@ -50,13 +50,14 @@ func (h *MovieHTMLHandler) ListMovieCardFullRandom(c *gin.Context) {
 	sortQ := buildSortQuery(c, curOD)
 
 	c.HTML(http.StatusOK, "page.list_movie_card", gin.H{
-		"Title":       "MovieCard (Random)",
-		"movies":      resp.List,
-		"total":       resp.Total,
-		"PageInfo":    pi,
-		"pageInfo":    pi,
-		"ownedQuery":  ownedQ,
-		"sortQuery":   sortQ,
-		"CurrentSort": curOD,
+		"Title":           "MovieCard (Random)",
+		"movies":          resp.List,
+		"total":           resp.Total,
+		"PageInfo":        pi,
+		"pageInfo":        pi,
+		"ownedQuery":      ownedQ,
+		"sortQuery":       sortQ,
+		"CurrentSort":     curOD,
+		"MovieCardFilter": buildMovieCardFilterView(c, req, curOD, &n),
 	})
 }

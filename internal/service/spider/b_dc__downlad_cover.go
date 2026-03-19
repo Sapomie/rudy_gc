@@ -16,12 +16,15 @@ import (
 const formatYearMonth = "2006-01"
 
 func (l *CrawlLogic) DownLoadAllPicture(ctx context.Context) error {
+	log := l.deps.Log.WithContext(ctx)
 	items, err := l.deps.ItemRepo.FindByDownloadCoverStatus(ctx, consts.ItemCoverNone)
 	if err != nil {
 		return fmt.Errorf("FindByDownloadCoverStatus: %w", err)
 	}
+	l.reportPhaseProgress(ctx, "cover", "cover_queue_ready", fmt.Sprintf("待下载封面 %d 个", len(items)), 0, len(items), 0, 0)
 
 	var done int64
+	var failed int64
 	for _, it := range items {
 		if err := l.waitIfPaused(ctx); err != nil {
 			return err
@@ -34,16 +37,35 @@ func (l *CrawlLogic) DownLoadAllPicture(ctx context.Context) error {
 		}
 
 		if err := l.DownloadPictureOfMovie(ctx, it); err != nil {
-			l.deps.Log.Errorf("图片下载错误: %s (%s): %v", it.Name, it.JavId, err)
-			l.reportProgress(ctx, "cover_download_failed", fmt.Sprintf("封面下载失败：%s", it.Name), int(done), int(done), 1, len(items)-int(done))
+			log.Errorf("图片下载错误: %s (%s): %v", it.Name, it.JavId, err)
+			failed++
+			l.reportPhaseProgress(
+				ctx,
+				"cover",
+				"cover_download_failed",
+				fmt.Sprintf("封面下载失败：%s", it.Name),
+				int(done+failed),
+				len(items),
+				int(done),
+				int(failed),
+			)
 			if sleepErr := l.sleepWithContext(ctx, getRandomSleepDuration()); sleepErr != nil {
 				return sleepErr
 			}
 			continue
 		}
 		done++
-		l.deps.Log.Infof("图片下载已完成 %d/%d --- %s", done, len(items), it.Name)
-		l.reportProgress(ctx, "cover_download_done", fmt.Sprintf("封面下载完成：%s", it.Name), int(done), int(done), 0, len(items)-int(done))
+		log.Infof("图片下载已完成 %d/%d --- %s", done, len(items), it.Name)
+		l.reportPhaseProgress(
+			ctx,
+			"cover",
+			"cover_download_done",
+			fmt.Sprintf("封面下载完成：%s", it.Name),
+			int(done+failed),
+			len(items),
+			int(done),
+			int(failed),
+		)
 		if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
 			return err
 		}

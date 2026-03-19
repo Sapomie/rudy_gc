@@ -1,0 +1,90 @@
+{{ define "page.list_movie_card_rank_period" }}
+    <!doctype html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/dataTables.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/buttons.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex flex-column gap-3 mb-3">
+                    <div class="alert alert-success py-2 mb-0">
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+                            <div class="d-flex flex-column gap-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <strong class="font-size-14">{{ .periodTypeLabel }}</strong>
+                                    <span class="font-18 fw-semibold">{{ .periodKey }}</span>
+                                    <span class="badge bg-light text-dark border">{{ .categoryLabel }}</span>
+                                </div>
+                                <div class="small text-muted">
+                                    {{ .rangeStart }} ~ {{ .rangeEnd }} | Total {{ .total }}
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Period type switch">
+                                    {{ range .typeLinks }}
+                                        <a href="{{ .Href }}" class="btn {{ if .Active }}btn-primary active disabled{{ else }}btn-outline-primary{{ end }}">{{ .Label }}</a>
+                                    {{ end }}
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Period category switch">
+                                    {{ range .categoryLinks }}
+                                        <a href="{{ .Href }}" class="btn {{ if .Active }}btn-secondary active disabled{{ else }}btn-outline-secondary{{ end }}">{{ .Label }}</a>
+                                    {{ end }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Period navigation">
+                            <a href="{{ .prevHref }}" class="btn btn-outline-primary {{ if .prevDisabled }}disabled{{ end }}" aria-disabled="{{ if .prevDisabled }}true{{ else }}false{{ end }}">上一期</a>
+                            <a href="{{ .nextHref }}" class="btn btn-outline-primary {{ if .nextDisabled }}disabled{{ end }}" aria-disabled="{{ if .nextDisabled }}true{{ else }}false{{ end }}">下一期</a>
+                            <a href="{{ .latestHref }}" class="btn btn-outline-primary">最新</a>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            {{ template "pagination" . }}
+                        </div>
+                    </div>
+                </div>
+
+                <section aria-label="Movies">
+                    <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
+                        {{ range .cards }}
+                            {{ template "card_period" . }}
+                        {{ end }}
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/dataTables.buttons.min.js"></script>
+    <script src="/static/js/buttons.bootstrap4.min.js"></script>
+    <script src="/static/js/jszip.min.js"></script>
+    <script src="/static/js/buttons.html5.min.js"></script>
+    <script src="/static/js/buttons.print.min.js"></script>
+    <script src="/static/js/buttons.colVis.min.js"></script>
+    <script src="/static/js/dashboard.init.js"></script>
+    <script src="/static/js/app.js"></script>
+    </body>
+    </html>
+{{ end }}

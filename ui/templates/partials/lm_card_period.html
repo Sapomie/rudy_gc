@@ -1,0 +1,89 @@
+{{ define "card_period" }}
+    <div class="col">
+        <article class="card shadow-sm h-100 card-lift">
+            <a href="/movie/{{ .Movie.Name }}" class="d-block" aria-label="查看 {{ .Movie.Name }} 详情">
+                <div class="thumb-2x3">
+                    <img src="{{ .Movie.JacketImg }}" alt="{{ .Movie.Name }} 海报" loading="lazy" decoding="async">
+
+                    <div class="badge-top-left">
+                        {{ if gt .Movie.ComeTimes 0 }}<span class="badge-come">❤ {{ .Movie.ComeTimes }}</span>{{ end }}
+                        {{ if gt .Movie.ScTimes 0 }} <span class="badge-times">× {{ .Movie.ScTimes }}</span>{{ end }}
+                    </div>
+
+                    <div class="badge-bottom-right">
+                        {{ if gt .Movie.HighestRank 0 }}<span class="badge-rank">#{{ .Movie.HighestRank }}</span>{{ end }}
+                        {{ if ne (printf "%v" .Movie.Score) "" }}<span class="badge-score">★ {{ .Movie.Score }}</span>{{ end }}
+                    </div>
+                </div>
+            </a>
+
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <h6 class="mb-1 text-truncate" title="{{ .Movie.Title }}">
+                        <a href="/cards?pn={{ .Movie.Prefix }}"
+                           class="stretched-link text-reset text-decoration-none">{{ .Movie.Name }}</a>
+                        {{ if and (ne (printf "%v" .Movie.Score) "") (ne (printf "%v" .Movie.ViewersNumberWatched) "") }}
+                            <small class="text-muted ml-2">({{ .Movie.ViewersNumberWatched }})</small>
+                        {{ end }}
+                    </h6>
+                    {{ if .Movie.Title }}
+                        <p class="mb-0 text-muted line-clamp-2" title="{{ .Movie.Title }}">{{ .Movie.Title }}</p>
+                    {{ end }}
+                </li>
+
+                <li class="list-group-item">
+                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                        <span class="badge bg-dark">周期 #{{ .Item.RankPos }}</span>
+                        <span class="badge {{ .RankChangeClass }}">{{ .RankChangeText }}</span>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        上期 {{ .PrevRankText }} · 峰值 #{{ .Item.PeakRank }} · 最佳日 #{{ .Item.BestRank }}
+                    </div>
+                    <div class="small text-muted mt-1">
+                        上榜 {{ .Item.DaysInRank }} 天 · 取样 {{ .Item.UsedPickDays }} 天 · 分数 {{ printf "%.2f" .Item.Score }}
+                    </div>
+                </li>
+
+                {{ if ge .Movie.Owned 2 }}
+                    <li class="list-group-item d-flex align-items-center">
+                        {{ if eq .Movie.Owned 5 }}
+                            <a href="{{ .Movie.VideoUrl }}" class="btn btn-sm btn-info me-2">Play</a>
+                        {{ else if eq .Movie.Owned 4 }}
+                            <a href="{{ .Movie.VideoUrl }}" class="btn btn-sm btn-success me-2">Play</a>
+                        {{ else if eq .Movie.Owned 6 }}
+                            <a href="{{ .Movie.VideoUrl }}" class="btn btn-sm btn-secondary me-2">ReMoved</a>
+                        {{ end }}
+                        {{ if .Movie.FilmBirthDate }}<span class="text-muted small">| {{ .Movie.FilmBirthDate }}</span>{{ end }}
+                    </li>
+                {{ end }}
+
+                <li class="list-group-item text-muted">
+                    {{ range $i, $g := .Movie.Genre }}
+                        <a href="/cards?gn={{ $g }}" class="badge badge-genre me-1 mb-1">{{ $g }}</a>
+                    {{ end }}
+                </li>
+
+                <li class="list-group-item">
+                    {{ range $i, $c := .Movie.Cast }}
+                        <a href="/cards?cn={{ $c.Name }}" class="person-tag mr-2"
+                           title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
+                    {{ end }}
+                    {{ if .Movie.Director }}
+                        <a href="/cards?dn={{ .Movie.Director }}" class="person-tag ml-2"
+                           title="{{ .Movie.Director }}">{{ .Movie.Director }}</a>
+                    {{ end }}
+                </li>
+
+                <li class="list-group-item d-flex align-items-center small">
+                    {{ if .Movie.BusUrl }}
+                        <a href="{{ .Movie.BusUrl }}" class="me-2" target="_blank" rel="noopener">Bus</a>{{ end }}
+                    {{ if .Movie.SearchUrl }}<a href="{{ .Movie.SearchUrl }}" class="me-2" target="_blank"
+                                                rel="noopener">Suk</a>{{ end }}
+                    {{ if .Movie.JavUrl }}
+                        <a href="{{ .Movie.JavUrl }}" class="me-2" target="_blank" rel="noopener">Lib</a>{{ end }}
+                    <span class="ms-auto text-muted">{{ .Movie.ReleasingDate }}</span>
+                </li>
+            </ul>
+        </article>
+    </div>
+{{ end }}

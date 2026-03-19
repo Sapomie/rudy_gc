@@ -59,15 +59,6 @@ func (l *ScService) PickProcession() error {
 	return nil
 }
 
-func (l *ScService) PickCopyFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int) ([]*types.MovieType, error) {
-	movieTypes, err := l.PickFromRequests(ctx, reqs, n)
-	if err != nil {
-		return nil, err
-	}
-
-	return movieTypes, nil
-}
-
 func (l *ScService) PickFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int) ([]*types.MovieType, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("reqs is empty")

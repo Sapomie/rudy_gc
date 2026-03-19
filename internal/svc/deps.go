@@ -30,29 +30,32 @@ type Deps struct {
 	Log     *logrus.Logger
 
 	// moviex models（新 service 直连用）
-	MovieModel      moviex.AMovieModel
-	MinfoModel      moviex.BmMinfoModel
-	MurlModel       moviex.BmMurlModel
-	ItemModel       moviex.EItemModel
-	CastModel       moviex.AmCastModel
-	GenreModel      moviex.AmGenreModel
-	DirectorModel   moviex.AmDirectorModel
-	LabelModel      moviex.AmLabelModel
-	MakerModel      moviex.AmMakerModel
-	PrefixModel     moviex.AmPrefixModel
-	MovieCastModel  moviex.AmrMovieCastModel
-	MovieGenreModel moviex.AmrMovieGenreModel
-	FilmModel       moviex.VFilmModel
-	DirectoryModel  moviex.VDirectoryModel
-	GListModel      moviex.GListModel
-	ScModel         moviex.GScModel
-	RankModel       moviex.CRankModel
-	CafoModel       moviex.CCafoModel
-	RecordModel     moviex.ERecordModel
-	SeedModel       spiderx.DSeedModel
-	InventoryModel  spiderx.DInventoryModel
-	DetailModel     spiderx.DDetailModel
-	BestinvModel    spiderx.DBestinvModel
+	MovieModel          moviex.AMovieModel
+	MinfoModel          moviex.BmMinfoModel
+	MurlModel           moviex.BmMurlModel
+	ItemModel           moviex.EItemModel
+	DeletedMovieModel   moviex.EDeletedMovieModel
+	CastModel           moviex.AmCastModel
+	GenreModel          moviex.AmGenreModel
+	DirectorModel       moviex.AmDirectorModel
+	LabelModel          moviex.AmLabelModel
+	MakerModel          moviex.AmMakerModel
+	PrefixModel         moviex.AmPrefixModel
+	MovieCastModel      moviex.AmrMovieCastModel
+	MovieGenreModel     moviex.AmrMovieGenreModel
+	FilmModel           moviex.VFilmModel
+	DirectoryModel      moviex.VDirectoryModel
+	GListModel          moviex.GListModel
+	ScModel             moviex.GScModel
+	RankModel           moviex.CRankModel
+	RankPeriodModel     moviex.CRankPeriodModel
+	RankPeriodItemModel moviex.CRankPeriodItemModel
+	CafoModel           moviex.CCafoModel
+	RecordModel         moviex.ERecordModel
+	SeedModel           spiderx.DSeedModel
+	InventoryModel      spiderx.DInventoryModel
+	DetailModel         spiderx.DDetailModel
+	BestinvModel        spiderx.DBestinvModel
 
 	MovieTypeCache MovieTypeCache
 
@@ -65,20 +68,23 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	c := cfg.Cache
 
 	var (
-		movieModel  = moviex.NewAMovieModel(conn, c)
-		minfoModel  = moviex.NewBmMinfoModel(conn, c)
-		murlModel   = moviex.NewBmMurlModel(conn, c)
-		itemModel   = moviex.NewEItemModel(conn, c)
-		rankModel   = moviex.NewCRankModel(conn, c)
-		cafoModel   = moviex.NewCCafoModel(conn, c)
-		filmModel   = moviex.NewVFilmModel(conn, c)
-		glistModel  = moviex.NewGListModel(conn, c)
-		scModel     = moviex.NewGScModel(conn, c)
-		recordModel = moviex.NewERecordModel(conn, c)
-		seedModel   = spiderx.NewDSeedModel(conn)
-		invModel    = spiderx.NewDInventoryModel(conn)
-		detailModel = spiderx.NewDDetailModel(conn)
-		bestModel   = spiderx.NewDBestinvModel(conn)
+		movieModel          = moviex.NewAMovieModel(conn, c)
+		minfoModel          = moviex.NewBmMinfoModel(conn, c)
+		murlModel           = moviex.NewBmMurlModel(conn, c)
+		itemModel           = moviex.NewEItemModel(conn, c)
+		deletedMovieModel   = moviex.NewEDeletedMovieModel(conn, c)
+		rankModel           = moviex.NewCRankModel(conn, c)
+		cafoModel           = moviex.NewCCafoModel(conn, c)
+		filmModel           = moviex.NewVFilmModel(conn, c)
+		glistModel          = moviex.NewGListModel(conn, c)
+		scModel             = moviex.NewGScModel(conn, c)
+		recordModel         = moviex.NewERecordModel(conn, c)
+		rankPeriodModel     = moviex.NewCRankPeriodModel(conn, c)
+		rankPeriodItemModel = moviex.NewCRankPeriodItemModel(conn, c)
+		seedModel           = spiderx.NewDSeedModel(conn)
+		invModel            = spiderx.NewDInventoryModel(conn)
+		detailModel         = spiderx.NewDDetailModel(conn)
+		bestModel           = spiderx.NewDBestinvModel(conn)
 
 		// 新增的 8 个 model
 		labelModel    = moviex.NewAmLabelModel(conn, c)
@@ -115,35 +121,42 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 
 	return &Deps{
 		Config: cfg,
-		Log:    mylog.NewLogrusLogger(cfg.LogursLevel),
+		Log: func() *logrus.Logger {
+			logger := mylog.NewLogrusLogger(cfg.LogursLevel)
+			mylog.EnsureTaskHook(logger)
+			return logger
+		}(),
 
 		SqlConn: conn,
 		Cache:   c,
 
-		MovieModel:      movieModel,
-		MinfoModel:      minfoModel,
-		MurlModel:       murlModel,
-		ItemModel:       itemModel,
-		CastModel:       castModel,
-		GenreModel:      genreModel,
-		DirectorModel:   directorModel,
-		LabelModel:      labelModel,
-		MakerModel:      makerModel,
-		PrefixModel:     prefixModel,
-		MovieCastModel:  movieCastModel,
-		MovieGenreModel: movieGenreModel,
-		FilmModel:       filmModel,
-		DirectoryModel:  vdirModel,
-		GListModel:      glistModel,
-		ScModel:         scModel,
-		RankModel:       rankModel,
-		CafoModel:       cafoModel,
-		RecordModel:     recordModel,
-		SeedModel:       seedModel,
-		InventoryModel:  invModel,
-		DetailModel:     detailModel,
-		BestinvModel:    bestModel,
-		MovieTypeCache:  movieTypeCache,
+		MovieModel:          movieModel,
+		MinfoModel:          minfoModel,
+		MurlModel:           murlModel,
+		ItemModel:           itemModel,
+		DeletedMovieModel:   deletedMovieModel,
+		CastModel:           castModel,
+		GenreModel:          genreModel,
+		DirectorModel:       directorModel,
+		LabelModel:          labelModel,
+		MakerModel:          makerModel,
+		PrefixModel:         prefixModel,
+		MovieCastModel:      movieCastModel,
+		MovieGenreModel:     movieGenreModel,
+		FilmModel:           filmModel,
+		DirectoryModel:      vdirModel,
+		GListModel:          glistModel,
+		ScModel:             scModel,
+		RankModel:           rankModel,
+		RankPeriodModel:     rankPeriodModel,
+		RankPeriodItemModel: rankPeriodItemModel,
+		CafoModel:           cafoModel,
+		RecordModel:         recordModel,
+		SeedModel:           seedModel,
+		InventoryModel:      invModel,
+		DetailModel:         detailModel,
+		BestinvModel:        bestModel,
+		MovieTypeCache:      movieTypeCache,
 
 		DetailJobs:  make(chan string, 200),
 		BestTrigger: make(chan contracts.TriggerMsg, 8),

@@ -16,248 +16,194 @@
 
 <main class="main-content">
     <div class="page-content">
-        <div class="container-fluid crawler-console-page" id="crawlerJobsPage">
-            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-                <div>
-                    <h4 class="mb-1">后台任务控制台</h4>
-                    <p class="text-muted mb-0">长任务统一走 job runtime，支持任务列表、暂停、继续、停止和实时事件流。</p>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="/crawler/tasks" class="btn btn-outline-primary">任务列表</a>
-                    <a href="/sc-triggers" class="btn btn-outline-success">SC 预览与提交</a>
-                </div>
-            </div>
-
-            <div class="row g-4 mb-4">
-                <div class="col-sm-6 col-xl-3">
-                    <div class="card crawler-stat-card">
-                        <div class="card-body">
-                            <span class="crawler-stat-label">运行中任务</span>
-                            <div class="crawler-stat-value" id="summaryRunning">0</div>
-                            <div class="crawler-stat-desc">当前仍在执行中的 job</div>
+        <div class="container-fluid" id="crawlerJobsPage">
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ if .PageTitle }}{{ .PageTitle }}{{ else if .Title }}{{ .Title }}{{ else }}后台任务控制台{{ end }}</h4>
+                            {{ if .PageNote }}
+                                <div class="text-muted small mt-1">{{ .PageNote }}</div>
+                            {{ end }}
                         </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-xl-3">
-                    <div class="card crawler-stat-card">
-                        <div class="card-body">
-                            <span class="crawler-stat-label">暂停中任务</span>
-                            <div class="crawler-stat-value" id="summaryPaused">0</div>
-                            <div class="crawler-stat-desc">等待继续的任务</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-xl-3">
-                    <div class="card crawler-stat-card">
-                        <div class="card-body">
-                            <span class="crawler-stat-label">最近任务数</span>
-                            <div class="crawler-stat-value" id="summaryFinished">0</div>
-                            <div class="crawler-stat-desc">当前会话内的运行与完成记录</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-xl-3">
-                    <div class="card crawler-stat-card">
-                        <div class="card-body">
-                            <span class="crawler-stat-label">详情抓取 Loop</span>
-                            <div class="crawler-stat-value fs-5" id="summaryDetailLoop">未知</div>
-                            <div class="crawler-stat-desc" id="summaryDetailLoopDesc">等待状态</div>
+                        <div class="task-link-buttons">
+                            <a href="/crawler/tasks" class="btn btn-outline-primary btn-sm">任务列表</a>
+                            <a href="/triggers/sc" class="btn btn-outline-primary btn-sm ml-2">SC 预览与提交</a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-4">
-                <div class="col-xxl-4">
+            <div class="row">
+                <div class="col-lg-5">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">爬虫任务</h4>
-                            <p class="card-title-desc">复用卡片、表单与进度条结构，按任务类型直接启动 job。</p>
-
-                            <div class="crawler-launch-stack">
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">DailyBest 抓取</h6>
-                                        <span class="badge bg-primary-subtle text-primary">Spider</span>
+                            <h4 class="card-title mb-3">{{ if .TaskPanelTitle }}{{ .TaskPanelTitle }}{{ else }}任务触发与实时进度{{ end }}</h4>
+                            <form id="crawlerTaskForm">
+                                <div class="form-grid">
+                                    <div class="form-group compact-field grid-span-2">
+                                        <label>触发任务</label>
+                                        <input type="hidden" id="task_type" name="task_type" value="{{ .DefaultTaskType }}">
+                                        <div class="btn-group btn-group-toggle d-flex flex-wrap task-type-toggle" role="group" aria-label="crawler task type">
+                                            {{ $defaultTaskType := .DefaultTaskType }}
+                                            {{ range .TaskButtons }}
+                                                <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .TaskType $defaultTaskType }} active{{ end }}" data-task-type="{{ .TaskType }}">{{ .Label }}</button>
+                                            {{ end }}
+                                        </div>
                                     </div>
-                                    <p class="text-muted small mb-3">抓取每日榜与详情，开始后可在右侧查看实时事件流。</p>
-                                    <button id="btnDailyBest" type="button" class="btn btn-primary w-100">启动任务</button>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="nameFieldWrap">
+                                        <label for="task_name">Seed 名称</label>
+                                        <input id="task_name" name="name" class="form-control" type="text" placeholder="输入 seed 名称">
+                                    </div>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="numberFieldWrap">
+                                        <label for="task_number">刷新数量</label>
+                                        <input id="task_number" name="number" class="form-control" type="number" placeholder="输入刷新数量">
+                                    </div>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="actorNameFieldWrap">
+                                        <label for="task_actor_name">演员名称</label>
+                                        <input id="task_actor_name" name="actor_name" class="form-control" type="text" placeholder="输入演员名称">
+                                    </div>
                                 </div>
 
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">DailyBest 同步</h6>
-                                        <span class="badge bg-secondary-subtle text-secondary">Spider</span>
-                                    </div>
-                                    <p class="text-muted small mb-3">只做榜单同步与后续解析，不走普通按钮触发模式。</p>
-                                    <button id="btnDailyBestSync" type="button" class="btn btn-secondary w-100">启动任务</button>
+                                <div class="d-flex align-items-center flex-wrap action-row">
+                                    <button type="submit" id="submitBtn" class="btn btn-primary">开始执行</button>
+                                    <button type="button" id="pauseBtn" class="btn btn-outline-warning ml-2" disabled>暂停</button>
+                                    <button type="button" id="resumeBtn" class="btn btn-outline-success ml-2" disabled>继续</button>
+                                    <button type="button" id="stopBtn" class="btn btn-outline-danger ml-2" disabled>停止</button>
                                 </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">活跃 Seeds 抓取</h6>
-                                        <span class="badge bg-success-subtle text-success">Spider</span>
-                                    </div>
-                                    <p class="text-muted small mb-3">抓取活跃种子与库存页。</p>
-                                    <button id="btnSeeds" type="button" class="btn btn-success w-100">启动任务</button>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">按名称抓取 Seed</h6>
-                                        <span class="badge bg-info-subtle text-info">Spider</span>
-                                    </div>
-                                    <form id="formSeedByName" class="crawler-inline-form">
-                                        <input id="seedByName" type="text" class="form-control" placeholder="输入 seed 名称">
-                                        <button type="submit" class="btn btn-outline-info">启动</button>
-                                    </form>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">刷新最久未更新详情</h6>
-                                        <span class="badge bg-warning-subtle text-warning">Spider</span>
-                                    </div>
-                                    <form id="formRefreshOldest" class="crawler-inline-form">
-                                        <input id="refreshNumber" type="number" class="form-control" placeholder="刷新数量">
-                                        <button type="submit" class="btn btn-outline-warning">启动</button>
-                                    </form>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">演员 Rank 回填</h6>
-                                        <span class="badge bg-dark-subtle text-dark">Spider</span>
-                                    </div>
-                                    <div class="d-grid gap-2">
-                                        <button id="btnRebuildCastRank" type="button" class="btn btn-outline-dark">全量回填</button>
-                                        <form id="formRebuildActorRank" class="crawler-inline-form">
-                                            <input id="actorName" type="text" class="form-control" placeholder="演员名称">
-                                            <button type="submit" class="btn btn-outline-dark">单演员</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
 
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">影片与 SC 任务</h4>
-                            <p class="card-title-desc">复用卡片页和表单页结构，把 film/sc 长任务全部放进统一 runtime。</p>
-
-                            <div class="crawler-launch-stack">
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">影片重命名</h6>
-                                        <span class="badge bg-primary-subtle text-primary">Film</span>
-                                    </div>
-                                    <button id="btnFilmRename" type="button" class="btn btn-outline-primary w-100">启动任务</button>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">影片处理</h6>
-                                        <span class="badge bg-warning-subtle text-warning">Film</span>
-                                    </div>
-                                    <button id="btnFilmProcess" type="button" class="btn btn-outline-warning w-100">启动任务</button>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">SC 统计回填</h6>
-                                        <span class="badge bg-success-subtle text-success">SC</span>
-                                    </div>
-                                    <button id="btnScRebuildStats" type="button" class="btn btn-outline-success w-100">启动任务</button>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">SC 影片移动</h6>
-                                        <span class="badge bg-secondary-subtle text-secondary">SC</span>
-                                    </div>
-                                    <form id="formScMove" class="crawler-inline-form">
-                                        <input id="scName" type="text" class="form-control" placeholder="输入 SC 名称">
-                                        <button type="submit" class="btn btn-outline-secondary">启动</button>
-                                    </form>
-                                </div>
-
-                                <div class="crawler-launch-card">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">SC 新增预览入口</h6>
-                                        <span class="badge bg-info-subtle text-info">SC</span>
-                                    </div>
-                                    <p class="text-muted small mb-3">`AddPreview` 保留为即时接口，长任务 `AddSc` 启动后会返回 job_id。</p>
-                                    <a href="/sc-triggers" class="btn btn-outline-info w-100">打开预览页</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xxl-8">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
-                                <div>
-                                    <h4 class="card-title mb-1">实时事件流</h4>
-                                    <p class="text-muted mb-0">选中任意任务后，这里会持续显示状态、进度和阶段日志。</p>
-                                </div>
-                                <div class="btn-group">
-                                    <button id="btnPauseSelected" type="button" class="btn btn-outline-warning">暂停</button>
-                                    <button id="btnResumeSelected" type="button" class="btn btn-outline-success">继续</button>
-                                    <button id="btnStopSelected" type="button" class="btn btn-outline-danger">停止</button>
-                                </div>
-                            </div>
-
-                            <div class="crawler-selected-meta mb-3">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                    <div>
-                                        <h5 class="mb-1" id="selectedJobTitle">暂无选中任务</h5>
-                                        <div class="text-muted small" id="selectedJobMeta">启动任务后会自动切换到实时流。</div>
-                                    </div>
-                                    <div class="text-end">
-                                        <div class="small text-muted">最近更新</div>
-                                        <div id="selectedJobUpdated">-</div>
+                            <h4 class="card-title mb-3">运行概览</h4>
+                                <div class="crawl-overview">
+                                {{ if or (eq .OverviewExtraMode "dailybest_stages") (eq .OverviewExtraMode "seeds_stages") }}
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-12 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">当前阶段</div>
+                                            <div class="value" id="currentStageText">-</div>
+                                            <div class="subvalue" id="elapsedText">已运行时长 00:00</div>
+                                        </div>
                                     </div>
                                 </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestBestinvProgressCard" data-phase="{{ if eq .OverviewExtraMode "seeds_stages" }}seed{{ else }}bestinv{{ end }}">
+                                            <div class="label">{{ if eq .OverviewExtraMode "seeds_stages" }}种子抓取进度{{ else }}榜单抓取进度{{ end }}</div>
+                                            <div class="value" id="dailyBestBestinvProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestBestinvResultCard" data-phase="{{ if eq .OverviewExtraMode "seeds_stages" }}seed{{ else }}bestinv{{ end }}">
+                                            <div class="label">{{ if eq .OverviewExtraMode "seeds_stages" }}种子抓取正确/错误{{ else }}榜单抓取正确/错误{{ end }}</div>
+                                            <div class="value" id="dailyBestBestinvResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestDetailProgressCard" data-phase="detail">
+                                            <div class="label">详情抓取进度</div>
+                                            <div class="value" id="dailyBestDetailProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestDetailResultCard" data-phase="detail">
+                                            <div class="label">详情抓取正确/错误</div>
+                                            <div class="value" id="dailyBestDetailResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestCoverProgressCard" data-phase="cover">
+                                            <div class="label">封面下载进度</div>
+                                            <div class="value" id="dailyBestCoverProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestCoverResultCard" data-phase="cover">
+                                            <div class="label">封面下载正确/错误</div>
+                                            <div class="value" id="dailyBestCoverResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestTranslateProgressCard" data-phase="translate">
+                                            <div class="label">标题翻译进度</div>
+                                            <div class="value" id="dailyBestTranslateProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestTranslateResultCard" data-phase="translate">
+                                            <div class="label">标题翻译正确/错误</div>
+                                            <div class="value" id="dailyBestTranslateResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{ else }}
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">{{ .Labels.Extra }}</div>
+                                            <div class="value" id="detailLoopText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">{{ .Labels.Result }}</div>
+                                            <div class="value" id="resultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">{{ .Labels.Elapsed }}</div>
+                                            <div class="value" id="elapsedText">00:00</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{ end }}
                                 <div class="progress mt-3">
-                                    <div id="selectedJobProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%">0%</div>
+                                    <div
+                                        id="progressBar"
+                                        class="progress-bar progress-bar-striped progress-bar-animated"
+                                        role="progressbar"
+                                        style="width: 0%"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        aria-valuenow="0"
+                                    >0%</div>
                                 </div>
-                                <div class="crawler-selected-stats mt-3" id="selectedJobStats">Handled 0 / Success 0 / Failed 0 / Queued 0</div>
-                            </div>
-
-                            <div class="crawler-event-log" id="eventLog">
-                                <div class="crawler-empty-state">暂时没有事件流，启动或选中任务后会在这里持续刷新。</div>
+                                <div class="mt-3 d-flex align-items-center justify-content-between">
+                                    <span id="statusMsg" class="text-muted">{{ .EmptyStateText }}</span>
+                                    <span class="badge bg-light text-dark" id="eventCountText">0 条</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                                <div>
-                                    <h4 class="card-title mb-1">当前任务与最近记录</h4>
-                                    <p class="text-muted mb-0">表格结构复用自 `tables-basic`，点击任意行即可切换右侧事件流。</p>
-                                </div>
-                                <a href="/crawler/tasks" class="btn btn-sm btn-outline-primary">打开完整任务列表</a>
-                            </div>
+                </div>
 
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle crawler-job-table">
-                                    <thead>
-                                    <tr>
-                                        <th>任务</th>
-                                        <th>状态</th>
-                                        <th>进度</th>
-                                        <th>更新时间</th>
-                                        <th class="text-end">操作</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody id="jobsTableBody"></tbody>
-                                </table>
+                <div class="col-lg-7">
+                    <div class="card event-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h4 class="card-title mb-0">{{ if .EventTitle }}{{ .EventTitle }}{{ else }}事件流{{ end }}</h4>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="debugRaw">
+                                    <label class="custom-control-label" for="debugRaw">显示原始 JSON</label>
+                                </div>
                             </div>
-                            <div class="crawler-empty-state" id="emptyJobsState">还没有可展示的任务记录。</div>
+                            <div class="result-box">
+                                <pre id="resultBox">{{ .EmptyStateText }}</pre>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -270,10 +216,18 @@
 
 <script>
 window.CRAWLER_JOBS_PAGE_DATA = {
-    initialJobId: {{ printf "%q" .JobID }},
+    initialJobId: {{ .JobID }},
+    storageKey: {{ .StorageKey }},
     tasksPageUrl: "/crawler/tasks",
-    scPreviewUrl: "/sc-triggers",
-    storageKey: "crawler_jobs_selected_job"
+    scPreviewUrl: "/triggers/sc",
+    defaultTaskType: {{ .DefaultTaskType }},
+    overviewExtraMode: {{ .OverviewExtraMode }},
+    emptyStateText: {{ .EmptyStateText }},
+    allowedTaskTypes: [
+        {{- range $index, $item := .AllowedTaskTypes }}
+        {{- if $index }}, {{ end }}{{ $item }}
+        {{- end }}
+    ]
 };
 </script>
 <script src="/static/customer/crawler_jobs.js"></script>

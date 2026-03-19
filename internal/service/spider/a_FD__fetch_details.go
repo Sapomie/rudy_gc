@@ -99,7 +99,7 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 
 	start := time.Now()
 	l.deps.Log.WithContext(ctx).Infof("有 %d 个详情需要抓取", total)
-	l.reportProgress(ctx, "detail_queue_ready", fmt.Sprintf("待抓取详情 %d 条", total), 0, 0, 0, total)
+	l.reportPhaseProgress(ctx, "detail", "detail_queue_ready", fmt.Sprintf("待抓取详情 %d 条", total), 0, total, 0, 0)
 	var failed int
 	for i, it := range items {
 		if err := l.waitIfPaused(ctx); err != nil {
@@ -115,7 +115,7 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 				i+1, total, it.Name, err,
 			)
 			failed++
-			l.reportProgress(ctx, "detail_fetch_failed", fmt.Sprintf("抓取失败：%s", it.Name), i+1, (i+1)-failed, failed, total-(i+1))
+			l.reportPhaseProgress(ctx, "detail", "detail_fetch_failed", fmt.Sprintf("抓取失败：%s", it.Name), i+1, total, (i+1)-failed, failed)
 			if sleepErr := l.sleepWithContext(ctx, getRandomSleepDuration()); sleepErr != nil {
 				return i + 1, sleepErr
 			}
@@ -143,15 +143,15 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 				i+1, total, it.Name, err,
 			)
 			failed++
-			l.reportProgress(ctx, "detail_parse_failed", fmt.Sprintf("解析失败：%s", it.Name), i+1, (i+1)-failed, failed, total-(i+1))
+			l.reportPhaseProgress(ctx, "detail", "detail_parse_failed", fmt.Sprintf("解析失败：%s", it.Name), i+1, total, (i+1)-failed, failed)
 			continue
 		}
 
 		// -------------------------------
 		// 4) 进度日志
 		// -------------------------------
-		l.logItemProgress(i+1, total, it.Name, it.LastQueryDetailTime, start)
-		l.reportProgress(ctx, "detail_item_done", fmt.Sprintf("详情完成：%s", it.Name), i+1, (i+1)-failed, failed, total-(i+1))
+		l.logItemProgress(ctx, i+1, total, it.Name, it.LastQueryDetailTime, start)
+		l.reportPhaseProgress(ctx, "detail", "detail_item_done", fmt.Sprintf("详情完成：%s", it.Name), i+1, total, (i+1)-failed, failed)
 		if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
 			return i + 1, err
 		}

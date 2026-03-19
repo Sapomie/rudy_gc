@@ -12,6 +12,7 @@ import (
 )
 
 func (l *CrawlLogic) ParseDetails(ctx context.Context) (*affectedMovieNumbers, error) {
+	log := l.deps.Log.WithContext(ctx)
 	// 查找需要解析的 Item
 	items, err := l.deps.ItemRepo.FindByDetailNeedScan(ctx, consts.ItemDetailStatusNeedScan)
 	if err != nil {
@@ -20,10 +21,10 @@ func (l *CrawlLogic) ParseDetails(ctx context.Context) (*affectedMovieNumbers, e
 
 	total := len(items)
 	if total == 0 {
-		l.deps.Log.WithContext(ctx).Info("没有需要解析的 Detail")
+		log.Info("没有需要解析的 Detail")
 		return newAffectedMovieNumbers(), nil
 	}
-	l.deps.Log.Infof("共有 %d 个 Item 需要解析 Detail", total)
+	log.Infof("共有 %d 个 Item 需要解析 Detail", total)
 
 	affected := newAffectedMovieNumbers()
 	var done int
@@ -34,7 +35,7 @@ func (l *CrawlLogic) ParseDetails(ctx context.Context) (*affectedMovieNumbers, e
 		}
 		affected.addFromResponse(resp)
 		done++
-		l.deps.Log.Infof("%s 处理Detail，已完成 %d/%d", it.Name, done, total)
+		log.Infof("%s 处理Detail，已完成 %d/%d", it.Name, done, total)
 	}
 	return affected, nil
 }

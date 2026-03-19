@@ -12,6 +12,7 @@ import (
 func (l *CrawlLogic) FetchBestinv(ctx context.Context, typ int64, pageEnd int64) error {
 	date := time.Now().Add(-8 * time.Hour).Format(time.DateOnly) // 与老项目保持相同的日期口径
 	l.deps.Log.WithContext(ctx).Infof("开始抓取 Bestinv：typ=%d, date=%s, 至多 %d 页", typ, date, pageEnd)
+	l.reportPhaseProgress(ctx, "bestinv", "bestinv_prepare", "开始抓取榜单", 0, int(pageEnd), 0, 0)
 
 	for page := int64(1); page <= pageEnd; page++ {
 		if err := l.waitIfPaused(ctx); err != nil {
@@ -25,7 +26,16 @@ func (l *CrawlLogic) FetchBestinv(ctx context.Context, typ int64, pageEnd int64)
 			}
 			return err
 		}
-		l.reportProgress(ctx, "bestinv_page_done", fmt.Sprintf("已抓取榜单第 %d 页", page), int(page), int(page), 0, int(pageEnd-page))
+		l.reportPhaseProgress(
+			ctx,
+			"bestinv",
+			"bestinv_page_done",
+			fmt.Sprintf("已抓取榜单第 %d 页", page),
+			int(page),
+			int(pageEnd),
+			int(page),
+			0,
+		)
 		if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
 			return err
 		}
@@ -43,7 +53,11 @@ func (l *CrawlLogic) fetchBestinvByRated(ctx context.Context, typ int64, date st
 	queryWithPage := fmt.Sprintf("/%s&page=%d", queryBy, page)
 	fullURL := fmt.Sprintf("https://%s/cn%s", l.deps.Config.Fetcher.JavAddress, queryWithPage)
 
-	content, err := l.fetchInventoryContentWithRetry(ctx, fullURL)
+	content, err := l.fetchInventoryContentWithRetryWithOptions(ctx, fullURL, inventoryFetchOptions{
+		successMessage: func(_ int, _ string) string {
+			return fmt.Sprintf("成功获取第%d页内容", page)
+		},
+	})
 	if err != nil {
 		return err // 这里包含 ErrBlankPage；上层会识别并提前停止
 	}
@@ -68,8 +82,6 @@ func (l *CrawlLogic) fetchBestinvByRated(ctx context.Context, typ int64, date st
 	if err := l.deps.BestinvRepo.Upsert(ctx, best); err != nil {
 		return fmt.Errorf("写入 Bestinv 失败(page=%d): %w", page, err)
 	}
-
-	l.deps.Log.WithContext(ctx).Infof("已抓取 Bestinv 第 %d 页：%s", page, best.Name)
 	return nil
 }
 

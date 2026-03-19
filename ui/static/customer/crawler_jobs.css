@@ -1,0 +1,210 @@
+.action-row {
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 8px;
+}
+
+.grid-span-2 {
+  grid-column: 1 / span 2;
+}
+
+.compact-field {
+  margin-bottom: 0;
+}
+
+.compact-field label {
+  margin-bottom: 4px;
+}
+
+.task-type-toggle {
+  gap: 8px;
+}
+
+.task-type-toggle .btn {
+  min-width: 150px;
+}
+
+.task-link-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crawl-overview {
+  border: 1px solid #e4eaf4;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.overview-item {
+  border: 1px solid #e9edf5;
+  border-radius: 6px;
+  background: #fff;
+  padding: 10px;
+  height: 100%;
+}
+
+.overview-item .label {
+  font-size: 12px;
+  color: #667085;
+  margin-bottom: 4px;
+}
+
+.overview-item .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #101828;
+  line-height: 1.1;
+}
+
+.overview-item .subvalue {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.overview-stage-card.is-active {
+  border-color: #98a2ff;
+  box-shadow: 0 0 0 2px rgba(127, 86, 217, 0.08);
+}
+
+.dailybest-stage-row:last-child .mb-2 {
+  margin-bottom: 0 !important;
+}
+
+.progress {
+  height: 18px;
+  background-color: #e8eef8;
+}
+
+.progress-bar {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.result-box {
+  border: 1px dashed #d0d7e2;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 10px 12px;
+  height: 100%;
+  max-height: none;
+  overflow: auto;
+}
+
+.result-box pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.result-box pre .event-line {
+  display: block;
+  margin: 0;
+}
+
+.result-box pre .event-line.log-info {
+  color: #334155;
+}
+
+.result-box pre .event-line.log-warn {
+  color: #b45309;
+}
+
+.result-box pre .event-line.log-error {
+  color: #b42318;
+}
+
+.result-box pre .event-line .event-link {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.result-box pre .event-line .event-link:hover {
+  color: #1d4ed8;
+}
+
+.event-card {
+  height: 72vh;
+  min-height: 72vh;
+  max-height: 72vh;
+}
+
+.event-card .card-body {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.event-card .result-box {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.task-id-cell {
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.is-hidden {
+  display: none;
+}
+
+#msgArea {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2000;
+  display: none;
+}
+
+#statusMsg.ok {
+  color: #067647;
+}
+
+#statusMsg.err {
+  color: #b42318;
+}
+
+@media (max-width: 991.98px) {
+  .event-card {
+    height: auto;
+    min-height: 420px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grid-span-2 {
+    grid-column: auto;
+  }
+
+  .task-type-toggle .btn {
+    min-width: 0;
+  }
+}

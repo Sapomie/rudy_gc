@@ -30,11 +30,11 @@ const (
 
 // RenameFilm 扫描配置目录下的 mp4 文件并按规则重命名。
 func (s *FilmService) RenameFilm(ctx context.Context) error {
+	log := s.deps.Log.WithContext(ctx)
 
-	dir := s.deps.Config.Film.RenamePath
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("read dir %q: %w", dir, err)
+	dirs := s.deps.Config.Film.RenamePaths
+	if len(dirs) == 0 {
+		return nil
 	}
 
 	filmSet, err := s.getExistingFilmNameSet(ctx)
@@ -43,67 +43,78 @@ func (s *FilmService) RenameFilm(ctx context.Context) error {
 	}
 
 	var count, total int
-	for _, e := range entries {
-		if err := taskctx.WaitIfPaused(ctx); err != nil {
-			return err
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		if !e.Type().IsRegular() {
-			continue
-		}
-		name := e.Name()
-		if !strings.HasSuffix(strings.ToLower(name), videoExt) {
-			continue
-		}
-		info, statErr := e.Info()
-		if statErr != nil {
-			s.deps.Log.Warnf("stat %s failed: %v", name, statErr)
-			continue
-		}
-		if info.Size() < minFileSize {
-			continue
-		}
-		total++
-
-		movieName := movieNameFromRawFile(name)
-		if _, exists := filmSet[movieName]; exists {
-			s.deps.Log.Warnf("已存在 film: %s", movieName)
+	for _, dir := range dirs {
+		entries, readErr := os.ReadDir(dir)
+		if readErr != nil {
+			if os.IsNotExist(readErr) {
+				log.Warnf("目录不存在，跳过：%s", dir)
+				continue
+			}
+			return fmt.Errorf("read dir %q: %w", dir, readErr)
 		}
 
-		newName, genErr := s.generateNewFileName(ctx, dir, name, movieName)
-		if genErr != nil {
-			s.deps.Log.Warnf("generateNewFileName(%s) err: %v", name, genErr)
-			continue
-		}
-		if newName == name {
-			s.deps.Log.Infof("跳过：文件名相同（%s）", name)
-			continue
-		}
+		for _, e := range entries {
+			if err := taskctx.WaitIfPaused(ctx); err != nil {
+				return err
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+			if !e.Type().IsRegular() {
+				continue
+			}
+			name := e.Name()
+			if !strings.HasSuffix(strings.ToLower(name), videoExt) {
+				continue
+			}
+			info, statErr := e.Info()
+			if statErr != nil {
+				log.Warnf("stat %s failed: %v", filepath.Join(dir, name), statErr)
+				continue
+			}
+			if info.Size() < minFileSize {
+				continue
+			}
+			total++
 
-		oldPath := filepath.Join(dir, name)
-		newPath := filepath.Join(dir, newName)
-		if _, existErr := os.Stat(newPath); existErr == nil {
-			s.deps.Log.Warnf("目标已存在，跳过：%s", newPath)
-			continue
-		}
-		if err = os.Rename(oldPath, newPath); err != nil {
-			return fmt.Errorf("rename %q -> %q: %w", oldPath, newPath, err)
-		}
+			movieName := movieNameFromRawFile(name)
+			if _, exists := filmSet[movieName]; exists {
+				log.Warnf("已存在 film: %s", movieName)
+			}
 
-		count++
-		s.deps.Log.Infof("重命名第 %d/%d 个: %s -> %s", count, total, name, newName)
-		taskctx.ReportProgress(ctx, taskctx.Progress{
-			Stage:        "film_rename_done",
-			Message:      fmt.Sprintf("已重命名：%s", name),
-			HandledCount: total,
-			SuccessCount: count,
-		})
+			newName, genErr := s.generateNewFileName(ctx, dir, name, movieName)
+			if genErr != nil {
+				log.Warnf("generateNewFileName(%s) err: %v", filepath.Join(dir, name), genErr)
+				continue
+			}
+			if newName == name {
+				log.Infof("跳过：文件名相同（%s）", filepath.Join(dir, name))
+				continue
+			}
+
+			oldPath := filepath.Join(dir, name)
+			newPath := filepath.Join(dir, newName)
+			if _, existErr := os.Stat(newPath); existErr == nil {
+				log.Warnf("目标已存在，跳过：%s", newPath)
+				continue
+			}
+			if err = os.Rename(oldPath, newPath); err != nil {
+				return fmt.Errorf("rename %q -> %q: %w", oldPath, newPath, err)
+			}
+
+			count++
+			log.Infof("重命名第 %d/%d 个: %s -> %s", count, total, oldPath, newPath)
+			taskctx.ReportProgress(ctx, taskctx.Progress{
+				Stage:        "film_rename_done",
+				Message:      fmt.Sprintf("已重命名：%s", oldPath),
+				HandledCount: total,
+				SuccessCount: count,
+			})
+		}
 	}
-	s.deps.Log.Infof("重命名完成：共扫描 %d，成功 %d", total, count)
+	log.Infof("重命名完成：共扫描 %d，成功 %d", total, count)
 	return nil
 }
 
@@ -120,16 +131,17 @@ func (s *FilmService) getExistingFilmNameSet(ctx context.Context) (map[string]st
 }
 
 func (s *FilmService) generateNewFileName(ctx context.Context, dir, fileName, movieName string) (string, error) {
+	log := s.deps.Log.WithContext(ctx)
 	movies, err := s.movieFindByName(ctx, movieName)
 	if err != nil {
 		return "", fmt.Errorf("FindMoviesByName(%s): %w", movieName, err)
 	}
 	if len(movies) == 0 {
-		s.deps.Log.Errorf("No record: %s", movieName)
+		log.Errorf("No record: %s", movieName)
 		return "", sqlx.ErrNotFound
 	}
 	if len(movies) > 1 {
-		s.deps.Log.Warnf("More than one record: %s (选用第一条)", movieName)
+		log.Warnf("More than one record: %s (选用第一条)", movieName)
 	}
 	movie := movies[0]
 
@@ -148,7 +160,7 @@ func (s *FilmService) generateNewFileName(ctx context.Context, dir, fileName, mo
 	compressPart := parseCompressPart(fileName)
 	erasedPart := parseErasedPart(fileName)
 	castPart, genrePart := buildMovieParts(movieType)
-	heightPart, bitRatePart := s.extractTech(meta)
+	heightPart, bitRatePart := s.extractTech(ctx, meta)
 
 	movieNameUpper := strings.ToUpper(movieName)
 	newBase := fmt.Sprintf("%s_%s_%s_%s_%s_%s_%s_%s_%s_%s",
@@ -208,7 +220,8 @@ func buildMovieParts(mt *types.MovieType) (cast string, genre string) {
 	return castB.String(), genreB.String()
 }
 
-func (s *FilmService) extractTech(md *models.Metadata) (heightPart, bitRatePart string) {
+func (s *FilmService) extractTech(ctx context.Context, md *models.Metadata) (heightPart, bitRatePart string) {
+	log := s.deps.Log.WithContext(ctx)
 	// 取视频流的高度
 	for _, st := range md.Streams {
 		if strings.EqualFold(st.CodecType, "video") && st.Height > 0 {
@@ -223,7 +236,7 @@ func (s *FilmService) extractTech(md *models.Metadata) (heightPart, bitRatePart 
 			// 你的原逻辑：除以 1e5 后取整
 			bitRatePart = convert.FloatTo(br / 1e5).DecimalStr(0)
 		} else if err != nil {
-			s.deps.Log.Warnf("parse bitrate failed: %v", err)
+			log.Warnf("parse bitrate failed: %v", err)
 		}
 	}
 

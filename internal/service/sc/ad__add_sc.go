@@ -40,6 +40,7 @@ type AddScPreviewMovie struct {
 }
 
 func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
+	log := l.deps.Log.WithContext(ctx)
 	dir := strings.TrimSpace(in.Dir)
 	if dir == "" {
 		return fmt.Errorf("dir is required")
@@ -103,7 +104,7 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 
 	scName := preview.ScName
 	if len(scName) != 16 {
-		l.deps.Log.Error("Invalid directory name length")
+		log.Error("Invalid directory name length")
 		return fmt.Errorf("directory name %s does not have the expected length of 16 characters", scName)
 	}
 
@@ -169,7 +170,7 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 
 	scName := filepath.Base(dir)
 	if len(scName) != 16 {
-		l.deps.Log.Error("Invalid directory name length")
+		l.deps.Log.WithContext(ctx).Error("Invalid directory name length")
 		return nil, "", fmt.Errorf("directory name %s does not have the expected length of 16 characters", scName)
 	}
 

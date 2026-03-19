@@ -31,25 +31,6 @@ func NewScTriggerAPI(deps *svc.Deps) *ScTriggerAPI {
 	}
 }
 
-// POST /api/triggers/sc/move { "scName": "xxx" }
-type scMoveReq struct {
-	ScName string `json:"scName" form:"scName"`
-}
-
-func (h *ScTriggerAPI) Move(c *gin.Context) {
-	var req scMoveReq
-	_ = c.ShouldBind(&req)
-	name := strings.TrimSpace(req.ScName)
-	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "scName required"})
-		return
-	}
-	h.startTask(c, loop.StartTaskRequest{
-		TaskType: loop.TaskScMove,
-		ScName:   name,
-	})
-}
-
 func (h *ScTriggerAPI) Add(c *gin.Context) {
 	var req scAddReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -210,11 +191,6 @@ type scPickReq struct {
 	Req    types.ListMovieFullRequest `json:"req"`
 }
 
-type scPickCopyReq struct {
-	PickN int         `json:"pickN"`
-	Reqs  []scPickReq `json:"reqs"`
-}
-
 type scSmartPickReq struct {
 	PickN   int                 `json:"pickN"`
 	Options sc.SmartPickOptions `json:"options"`
@@ -301,73 +277,6 @@ func buildPickedTotalSizeGB(movies []*types.MovieType) string {
 		totalBytes += m.VFilm.Size
 	}
 	return fmt.Sprintf("%.2f", float64(totalBytes)/(1024*1024*1024))
-}
-
-// POST /api/triggers/sc/pick-copy
-func (h *ScTriggerAPI) PickCopy(c *gin.Context) {
-	var req scPickCopyReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-	if len(req.Reqs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
-		return
-	}
-
-	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
-	for _, r := range req.Reqs {
-		converted = append(converted, sc.PickRequestWithWeight{
-			Req:    r.Req,
-			Weight: r.Weight,
-		})
-	}
-
-	movies, err := h.scSvc.PickCopyFromRequests(c.Request.Context(), converted, req.PickN)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	started, status := h.scSvc.StartCopyAsync(movies)
-	c.JSON(http.StatusOK, gin.H{
-		"picked":        len(movies),
-		"movies":        buildPickCopyMovies(movies),
-		"total_size_gb": buildPickedTotalSizeGB(movies),
-		"copy_started":  started,
-		"copy_status":   status,
-	})
-}
-
-// POST /api/triggers/sc/pick-only
-func (h *ScTriggerAPI) PickOnly(c *gin.Context) {
-	var req scPickCopyReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-	if len(req.Reqs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
-		return
-	}
-
-	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
-	for _, r := range req.Reqs {
-		converted = append(converted, sc.PickRequestWithWeight{
-			Req:    r.Req,
-			Weight: r.Weight,
-		})
-	}
-
-	movies, err := h.scSvc.PickFromRequests(c.Request.Context(), converted, req.PickN)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"picked":        len(movies),
-		"movies":        buildPickCopyMovies(movies),
-		"total_size_gb": buildPickedTotalSizeGB(movies),
-	})
 }
 
 // POST /api/triggers/sc/pick-smart-only

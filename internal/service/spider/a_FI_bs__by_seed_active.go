@@ -29,18 +29,30 @@ const (
 var ErrBlankPage = errors.New("blank page")
 
 func (l *CrawlLogic) FetchInventoriesBySeedActive(ctx context.Context) error {
-	l.deps.Log.Info("FetchInventoriesBySeedActive: begin")
+	log := l.deps.Log.WithContext(ctx)
+	log.Info("FetchInventoriesBySeedActive: begin")
 
-	// 1) Prefix
-	if err := l.fetchByNameType(ctx, nameTypePrefix); err != nil {
+	prefixSeeds, err := l.deps.SeedRepo.FindActiveByNameType(ctx, nameTypePrefix)
+	if err != nil {
+		return fmt.Errorf("FindActiveSeeds(nameType=%d): %w", nameTypePrefix, err)
+	}
+	labelSeeds, err := l.deps.SeedRepo.FindActiveByNameType(ctx, nameTypeLabel)
+	if err != nil {
+		return fmt.Errorf("FindActiveSeeds(nameType=%d): %w", nameTypeLabel, err)
+	}
+
+	totalSeeds := len(prefixSeeds) + len(labelSeeds)
+	l.reportPhaseProgress(ctx, "seed", "seed_queue_ready", fmt.Sprintf("待处理种子 %d 个", totalSeeds), 0, totalSeeds, 0, 0)
+
+	processed := 0
+	if err := l.fetchSeedBatch(ctx, nameTypePrefix, prefixSeeds, &processed, totalSeeds); err != nil {
 		return err
 	}
-	// 2) Label
-	if err := l.fetchByNameType(ctx, nameTypeLabel); err != nil {
+	if err := l.fetchSeedBatch(ctx, nameTypeLabel, labelSeeds, &processed, totalSeeds); err != nil {
 		return err
 	}
 
-	l.deps.Log.Info("FetchInventoriesBySeedActive: done")
+	log.Info("FetchInventoriesBySeedActive: done")
 	return nil
 }
 
@@ -50,23 +62,20 @@ func (l *CrawlLogic) FetchInventoriesBySeedName(ctx context.Context, seedName st
 		return errors.New("seed not found " + seedName)
 	}
 
+	l.reportPhaseProgress(ctx, "seed", "seed_queue_ready", "待处理种子 1 个", 0, 1, 0, 0)
 	if err := l.handleSeed(ctx, seed); err != nil {
 		return fmt.Errorf("handleSeed(name=%s): %w", seed.Name, err)
 	}
+	l.reportPhaseProgress(ctx, "seed", "seed_item_done", fmt.Sprintf("种子完成：%s", seed.Name), 1, 1, 1, 0)
 	return nil
 }
 
-func (l *CrawlLogic) fetchByNameType(ctx context.Context, nameType int64) error {
-	seeds, err := l.deps.SeedRepo.FindActiveByNameType(ctx, nameType)
-	if err != nil {
-		return fmt.Errorf("FindActiveSeeds(nameType=%d): %w", nameType, err)
-	}
-
-	l.deps.Log.WithFields(logrus.Fields{
+func (l *CrawlLogic) fetchSeedBatch(ctx context.Context, nameType int64, seeds []*types.Seed, processed *int, total int) error {
+	log := l.deps.Log.WithContext(ctx)
+	log.WithFields(logrus.Fields{
 		"nameType": nameType,
 		"count":    len(seeds),
 	}).Info("active seeds fetched")
-	l.reportProgress(ctx, "seed_queue_ready", fmt.Sprintf("待处理种子 %d 个", len(seeds)), 0, 0, 0, len(seeds))
 
 	for i, s := range seeds {
 		if err := l.waitIfPaused(ctx); err != nil {
@@ -76,8 +85,11 @@ func (l *CrawlLogic) fetchByNameType(ctx context.Context, nameType int64) error 
 			return fmt.Errorf("handleSeed(name=%s): %w", s.Name, err)
 		}
 		// ✅ 进度日志
-		l.deps.Log.Infof("fetchByNameType: processed %d/%d seeds (%s)", i+1, len(seeds), s.Name)
-		l.reportProgress(ctx, "seed_item_done", fmt.Sprintf("种子完成：%s", s.Name), i+1, i+1, 0, len(seeds)-(i+1))
+		log.Infof("fetchByNameType: processed %d/%d seeds (%s)", i+1, len(seeds), s.Name)
+		if processed != nil {
+			*processed = *processed + 1
+			l.reportPhaseProgress(ctx, "seed", "seed_item_done", fmt.Sprintf("种子完成：%s", s.Name), *processed, total, *processed, 0)
+		}
 		if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
 			return err
 		}
@@ -87,6 +99,7 @@ func (l *CrawlLogic) fetchByNameType(ctx context.Context, nameType int64) error 
 
 // 处理单个 seed：计算页区间 -> 逐页抓取并保存 -> 推进断点
 func (l *CrawlLogic) handleSeed(ctx context.Context, s *types.Seed) error {
+	log := l.deps.Log.WithContext(ctx)
 	pageStart, pageEnd := determinePageRange(s)
 	if pageStart <= 0 {
 		pageStart = 1
@@ -96,7 +109,7 @@ func (l *CrawlLogic) handleSeed(ctx context.Context, s *types.Seed) error {
 		return nil
 	}
 
-	l.deps.Log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"name":       s.Name,
 		"searchType": s.SearchType,
 		"pageStart":  pageStart,
@@ -114,7 +127,7 @@ func (l *CrawlLogic) handleSeed(ctx context.Context, s *types.Seed) error {
 		if err := l.fetchAndSaveInventory(ctx, s.NameType, s.Name, queryBy, p); err != nil {
 			if errors.Is(err, ErrBlankPage) {
 				newPageNow = p - 1
-				l.deps.Log.WithFields(logrus.Fields{
+				log.WithFields(logrus.Fields{
 					"name":       s.Name,
 					"page":       p,
 					"newPageNow": newPageNow,
@@ -141,10 +154,10 @@ func (l *CrawlLogic) handleSeed(ctx context.Context, s *types.Seed) error {
 	if err := l.deps.SeedRepo.UpdateProgress(
 		ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg,
 	); err != nil {
-		l.deps.Log.Errorf("update seed progress failed: %v", err)
+		log.Errorf("update seed progress failed: %v", err)
 	}
 
-	l.deps.Log.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"name":       s.Name,
 		"pageNowOld": s.PageNow,
 		"pageNowNew": newPageNow,

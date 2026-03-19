@@ -14,7 +14,15 @@ import (
 
 const maxRetries = 45
 
+type inventoryFetchOptions struct {
+	successMessage func(attempts int, content string) string
+}
+
 func (l *CrawlLogic) fetchInventoryContentWithRetry(ctx context.Context, fullURL string) (string, error) {
+	return l.fetchInventoryContentWithRetryWithOptions(ctx, fullURL, inventoryFetchOptions{})
+}
+
+func (l *CrawlLogic) fetchInventoryContentWithRetryWithOptions(ctx context.Context, fullURL string, opts inventoryFetchOptions) (string, error) {
 	tryAttempts := 0
 	var lastErr error
 	var lastStatusCode int
@@ -45,8 +53,15 @@ func (l *CrawlLogic) fetchInventoryContentWithRetry(ctx context.Context, fullURL
 			content, ferr := filterInventoryContent(body) // 可在此做解码/清洗；当前直接转字符串
 			if ferr == nil {
 				if isValidContent(content) {
-					l.deps.Log.WithContext(ctx).Infof("成功获取内容 - url: %s, attempts: %d, content_length: %d",
-						fullURL, tryAttempts, len(content))
+					successMessage := ""
+					if opts.successMessage != nil {
+						successMessage = strings.TrimSpace(opts.successMessage(tryAttempts, content))
+					}
+					if successMessage == "" {
+						successMessage = fmt.Sprintf("成功获取内容 - url: %s, attempts: %d, content_length: %d",
+							fullURL, tryAttempts, len(content))
+					}
+					l.deps.Log.WithContext(ctx).Info(successMessage)
 					return content, nil
 				}
 				// 请求成功但页面为空/无结果 → 作为"空白页"处理给上游
