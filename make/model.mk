@@ -14,9 +14,9 @@ ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 DB_URL ?= root:4521822123@tcp(127.0.0.1:3306)/rudy_gc
 GOCTL  ?= goctl
 STYLE  ?= go_zero
-MOVIE_MODEL_DIR  ?= data/modelx/moviex
-SPIDER_MODEL_DIR ?= data/modelx/spiderx
-MOVIE_TABLES  ?= a*,am*,bm*,c*,e*,v*,g*
+MOVIE_MODEL_DIR  ?= internal/model/modelx/moviex
+SPIDER_MODEL_DIR ?= internal/model/modelx/spiderx
+MOVIE_TABLES  ?= a*,am*,bm*,c*,e*,v*,g*,t*
 SPIDER_TABLES ?= d*
 
 # ---- 将可能的相对路径归一化为绝对路径（相对项目根）----

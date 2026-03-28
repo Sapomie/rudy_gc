@@ -1,0 +1,145 @@
+{{ define "page.fetch_site_javbus_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/customer/fetch_site_list.css" rel="stylesheet">
+    </head>
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid" id="fetchSiteListPage">
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <h4 class="mb-1">{{ .PageTitle }}</h4>
+                        <p class="text-muted mb-0">{{ .PageNote }}</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-outline-primary btn-sm" href="/fetch-site-javbus-list">JavBus 列表</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ .PeerPageURL }}">Sukebei 列表</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ .TaskPageURL }}">抓取任务页</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="{{ .TasksPageURL }}">任务列表</a>
+                    </div>
+                </div>
+                <div id="fetchSiteListMsg" class="alert d-none mb-3" role="alert"></div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="fetch-site-summary-card">
+                        <span class="fetch-site-summary-label">JavBus 总任务数</span>
+                        <span class="fetch-site-summary-value">{{ .Total }}</span>
+                    </div>
+                    {{ if .Rows }}
+                        <nav class="mb-0" aria-label="JavBus Page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                {{ range .PageInfo.Links }}
+                                    {{ if .Ellipsis }}
+                                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                                    {{ else }}
+                                        <li class="page-item {{ if .Active }}active{{ end }} {{ if .Disabled }}disabled{{ end }}">
+                                            <a class="page-link" href="{{ .Href }}" {{ if .Disabled }}tabindex="-1" aria-disabled="true"{{ end }}>{{ .Label }}</a>
+                                        </li>
+                                    {{ end }}
+                                {{ end }}
+                            </ul>
+                        </nav>
+                    {{ end }}
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" method="get" action="/fetch-site-javbus-list">
+                            <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1">JavBus 影片编号 / JavID</label>
+                                <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_code 或 movie_jav_id">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1">JavBus 状态</label>
+                                <select class="form-select" name="status">
+                                    <option value="" {{ if eq .Query.Status "" }}selected{{ end }}>全部</option>
+                                    <option value="1" {{ if eq .Query.Status "1" }}selected{{ end }}>待抓取</option>
+                                    <option value="2" {{ if eq .Query.Status "2" }}selected{{ end }}>抓取中</option>
+                                    <option value="3" {{ if eq .Query.Status "3" }}selected{{ end }}>成功</option>
+                                    <option value="4" {{ if eq .Query.Status "4" }}selected{{ end }}>失败</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1">JavBus 错误筛选</label>
+                                <select class="form-select" name="has_error">
+                                    <option value="" {{ if eq .Query.HasError "" }}selected{{ end }}>全部</option>
+                                    <option value="error" {{ if eq .Query.HasError "error" }}selected{{ end }}>仅错误</option>
+                                    <option value="clean" {{ if eq .Query.HasError "clean" }}selected{{ end }}>仅无错误</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">筛选</button>
+                                <a class="btn btn-outline-secondary" href="/fetch-site-javbus-list">清空</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMovieCode.Active }}active{{ end }}" href="{{ .SortQuery.ByMovieCode.Href }}">影片{{ if .SortQuery.ByMovieCode.Active }}{{ if .SortQuery.ByMovieCode.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th>发行时间</th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByFetchStatus.Active }}active{{ end }}" href="{{ .SortQuery.ByFetchStatus.Href }}">状态{{ if .SortQuery.ByFetchStatus.Active }}{{ if .SortQuery.ByFetchStatus.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th>重试</th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByLastFetchTime.Active }}active{{ end }}" href="{{ .SortQuery.ByLastFetchTime.Href }}">最后抓取{{ if .SortQuery.ByLastFetchTime.Active }}{{ if .SortQuery.ByLastFetchTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByResultCount.Active }}active{{ end }}" href="{{ .SortQuery.ByResultCount.Href }}">结果数{{ if .SortQuery.ByResultCount.Active }}{{ if .SortQuery.ByResultCount.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByHashCount.Active }}active{{ end }}" href="{{ .SortQuery.ByHashCount.Href }}">Hash 数{{ if .SortQuery.ByHashCount.Active }}{{ if .SortQuery.ByHashCount.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByLatestPublish.Active }}active{{ end }}" href="{{ .SortQuery.ByLatestPublish.Href }}">最新日期{{ if .SortQuery.ByLatestPublish.Active }}{{ if .SortQuery.ByLatestPublish.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th>错误</th>
+                                    <th class="text-nowrap">操作</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Rows }}
+                                    {{ range .Rows }}
+                                        <tr data-movie-jav-id="{{ .MovieJavID }}" data-movie-code="{{ .MovieCode }}">
+                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieCode }}">{{ .MovieCode }}</a></div><div class="text-muted small">{{ .MovieJavID }}</div></td>
+                                            <td class="text-nowrap">{{ .ReleaseDateText }}</td>
+                                            <td><span class="badge fetch-site-badge">{{ .FetchStatusText }}</span></td>
+                                            <td>{{ .TryCount }}</td>
+                                            <td class="text-nowrap">{{ .LastFetchText }}</td>
+                                            <td>{{ .LastResultCount }}</td>
+                                            <td>{{ .TorrentHashCount }}</td>
+                                            <td class="text-nowrap">{{ .LatestPublishText }}</td>
+                                            <td class="fetch-site-error-cell">{{ if .LastError }}{{ .LastError }}{{ else }}-{{ end }}</td>
+                                            <td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-primary js-trigger-javbus">触发 JavBus</button></td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr><td colspan="10"><div class="fetch-site-empty-state">当前筛选下没有 JavBus 抓取任务。</div></td></tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/fetch_site_list.js"></script>
+    </body>
+    </html>
+{{ end }}

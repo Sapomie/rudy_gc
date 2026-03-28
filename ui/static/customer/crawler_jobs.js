@@ -8,6 +8,9 @@
         spider_refresh_oldest_detail: '刷新最久详情',
         spider_backfill_person: 'person 回填',
         spider_backfill_rank_period: '周期排行回填',
+        spider_backfill_fetch_site: '外站任务回填',
+        spider_fetch_javbus_resources: 'JavBus 资源抓取',
+        spider_fetch_sukebei_resources: 'Sukebei 资源抓取',
         spider_rebuild_cast_rank: '演员 Rank 回填',
         spider_rebuild_actor_rank: '单演员 Rank',
         film_rename: '影片重命名',
@@ -21,6 +24,8 @@
     const REQUIRED_FIELDS = {
         spider_seed_by_name: 'name',
         spider_refresh_oldest_detail: 'number',
+        spider_fetch_javbus_resources: 'number',
+        spider_fetch_sukebei_resources: 'number',
         spider_rebuild_actor_rank: 'actor_name',
     };
     const STAGE_OVERVIEW_CONFIGS = {
@@ -455,7 +460,12 @@
         runtime.syncTaskFields = function () {
             const taskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '');
             runtime.toggleField(runtime.nameFieldWrap, taskType === 'spider_seed_by_name');
-            runtime.toggleField(runtime.numberFieldWrap, taskType === 'spider_refresh_oldest_detail');
+            runtime.toggleField(
+                runtime.numberFieldWrap,
+                taskType === 'spider_refresh_oldest_detail' ||
+                taskType === 'spider_fetch_javbus_resources' ||
+                taskType === 'spider_fetch_sukebei_resources'
+            );
             runtime.toggleField(runtime.actorNameFieldWrap, taskType === 'spider_rebuild_actor_rank');
         };
 
@@ -479,7 +489,11 @@
             if (taskType === 'spider_seed_by_name') {
                 payload.name = String(runtime.nameInput && runtime.nameInput.value || '').trim();
             }
-            if (taskType === 'spider_refresh_oldest_detail') {
+            if (
+                taskType === 'spider_refresh_oldest_detail' ||
+                taskType === 'spider_fetch_javbus_resources' ||
+                taskType === 'spider_fetch_sukebei_resources'
+            ) {
                 payload.number = String(runtime.numberInput && runtime.numberInput.value || '').trim();
             }
             if (taskType === 'spider_rebuild_actor_rank') {
@@ -489,10 +503,14 @@
             if (requiredField && !String(payload[requiredField] || '').trim()) {
                 throw new Error('请填写任务参数');
             }
-            if (taskType === 'spider_refresh_oldest_detail') {
+            if (
+                taskType === 'spider_refresh_oldest_detail' ||
+                taskType === 'spider_fetch_javbus_resources' ||
+                taskType === 'spider_fetch_sukebei_resources'
+            ) {
                 const parsed = Number(payload.number);
-                if (!Number.isFinite(parsed) || parsed <= 0) {
-                    throw new Error('请填写合法的刷新数量');
+                if (!Number.isFinite(parsed)) {
+                    throw new Error('请填写合法的数量');
                 }
                 payload.number = parsed;
             }
@@ -722,6 +740,23 @@
                 return {
                     level: runtime.normalizeLogLevel(event.level),
                     text: prefix + ' ' + JSON.stringify(event, null, 2),
+                };
+            }
+            if (event.kind === 'progress') {
+                const stage = String(event.stage || '').trim();
+                const message = String(event.message || runtime.stageLabel(stage) || '收到进度').trim();
+                const parts = [prefix + ' ' + message];
+                if (Number(event.handled_count || 0) || Number(event.queued_count || 0)) {
+                    parts.push('handled=' + String(event.handled_count || 0));
+                    parts.push('queued=' + String(event.queued_count || 0));
+                }
+                if (Number(event.success_count || 0) || Number(event.failed_count || 0)) {
+                    parts.push('success=' + String(event.success_count || 0));
+                    parts.push('failed=' + String(event.failed_count || 0));
+                }
+                return {
+                    level: stage === 'failed' ? 'error' : (stage === 'paused' ? 'warn' : 'info'),
+                    text: parts.join(' | '),
                 };
             }
             if (event.kind !== 'log') {

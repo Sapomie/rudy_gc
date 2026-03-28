@@ -1,4 +1,4 @@
-// data/modelg/detail.go
+// internal/model/modelg/detail.go
 package modelg
 
 // Detail 表示抓取到的影片详情页（HTML 原文存档）

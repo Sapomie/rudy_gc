@@ -20,6 +20,9 @@ const (
 	TaskSpiderRebuildActorRank   = "spider_rebuild_actor_rank"
 	TaskSpiderBackfillPerson     = "spider_backfill_person"
 	TaskSpiderBackfillRankPeriod = "spider_backfill_rank_period"
+	TaskSpiderBackfillFetchSite  = "spider_backfill_fetch_site"
+	TaskSpiderFetchJavbus        = "spider_fetch_javbus_resources"
+	TaskSpiderFetchSukebei       = "spider_fetch_sukebei_resources"
 	TaskFilmRename               = "film_rename"
 	TaskFilmProcess              = "film_process"
 	TaskScRebuildStats           = "sc_rebuild_stats"
@@ -37,6 +40,8 @@ type StartTaskRequest struct {
 	Name           string `json:"name"`
 	ActorName      string `json:"actor_name"`
 	Number         int64  `json:"number"`
+	MovieJavID     string `json:"movie_jav_id"`
+	MovieCode      string `json:"movie_code"`
 	ScName         string `json:"sc_name"`
 	Dir            string `json:"dir"`
 	ComeMovieJavID string `json:"come_movie_jav_id"`
@@ -204,6 +209,12 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartBackfillPerson()
 	case TaskSpiderBackfillRankPeriod:
 		return l.StartBackfillRankPeriod()
+	case TaskSpiderBackfillFetchSite:
+		return l.StartBackfillFetchSite()
+	case TaskSpiderFetchJavbus:
+		return l.StartFetchJavbusResources(req.Number, req.MovieJavID, req.MovieCode)
+	case TaskSpiderFetchSukebei:
+		return l.StartFetchSukebeiResources(req.Number, req.MovieJavID, req.MovieCode)
 	case TaskFilmRename:
 		return l.StartFilmRename()
 	case TaskFilmProcess:
@@ -324,6 +335,63 @@ func (l *FetchLoopService) StartBackfillRankPeriod() (string, error) {
 	return l.startManagedTask(TaskSpiderBackfillRankPeriod, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始回填周期排行"})
 		return l.movieSvc.RebuildAllRankPeriods(ctx)
+	})
+}
+
+func (l *FetchLoopService) StartBackfillFetchSite() (string, error) {
+	return l.startManagedTask(TaskSpiderBackfillFetchSite, taskRuntimePolicy{}, func(ctx context.Context) error {
+		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始回填外站抓取任务"})
+		result, err := l.fetchQueue.BackfillFetchTasks(ctx, 200)
+		if err != nil {
+			return err
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:        "fetch_site_backfill_done",
+			Message:      fmt.Sprintf("外站抓取任务回填完成：扫描=%d，新增=%d", result.Scanned, result.Created),
+			HandledCount: int(result.Scanned),
+			SuccessCount: int(result.Created),
+		})
+		return nil
+	})
+}
+
+func (l *FetchLoopService) StartFetchJavbusResources(limit int64, movieJavID, movieCode string) (string, error) {
+	return l.startManagedTask(TaskSpiderFetchJavbus, taskRuntimePolicy{}, func(ctx context.Context) error {
+		movieJavID = strings.TrimSpace(movieJavID)
+		movieCode = strings.TrimSpace(movieCode)
+		msg := "开始抓取 JavBus 资源"
+		if movieJavID != "" {
+			msg = fmt.Sprintf("开始抓取 JavBus 资源：%s", movieCode)
+			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
+			_, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieCode)
+			return err
+		}
+		if limit > 0 {
+			msg = fmt.Sprintf("开始抓取 JavBus 资源，数量=%d", limit)
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
+		_, err := l.fetchQueue.RunPendingJavbusFetchTasks(ctx, limit)
+		return err
+	})
+}
+
+func (l *FetchLoopService) StartFetchSukebeiResources(limit int64, movieJavID, movieCode string) (string, error) {
+	return l.startManagedTask(TaskSpiderFetchSukebei, taskRuntimePolicy{}, func(ctx context.Context) error {
+		movieJavID = strings.TrimSpace(movieJavID)
+		movieCode = strings.TrimSpace(movieCode)
+		msg := "开始抓取 Sukebei 资源"
+		if movieJavID != "" {
+			msg = fmt.Sprintf("开始抓取 Sukebei 资源：%s", movieCode)
+			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
+			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieCode)
+			return err
+		}
+		if limit > 0 {
+			msg = fmt.Sprintf("开始抓取 Sukebei 资源，数量=%d", limit)
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
+		_, err := l.fetchQueue.RunPendingSukebeiFetchTasks(ctx, limit)
+		return err
 	})
 }
 

@@ -48,8 +48,11 @@ func AutoMigrate(db *gorm.DB) error {
 
 		new(Directory),
 		new(Film),
+		new(FetchSite),
 		new(JavbusMagnet),
+		new(JavbusMagnetFetch),
 		new(SukebeiTorrent),
+		new(SukebeiTorrentFetch),
 	); err != nil {
 		return err
 	}

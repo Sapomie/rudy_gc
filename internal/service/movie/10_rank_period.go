@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/taskctx"
 	"rudy_gc/internal/types"
 )

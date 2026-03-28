@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 )
 
 func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64) error {

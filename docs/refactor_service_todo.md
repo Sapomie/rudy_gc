@@ -20,7 +20,7 @@
 - [x] `movie` 主链路改为 `service -> modelx`
 - [x] `MovieType` 聚合迁到 `internal/service/movie`
 - [x] `movie agg / detail / rank day / need download` 入口迁到 `internal/service/movie`
-- [x] 复杂列表查询迁到 `data/modelx/moviex/movie_list_query.go`
+- [x] 复杂列表查询迁到 `internal/model/modelx/moviex/movie_list_query.go`
 - [x] 删除旧 `internal/domain/movie`
 - [x] 删除旧 movie-list 的 `repo/infra`
 

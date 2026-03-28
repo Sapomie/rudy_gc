@@ -27,6 +27,9 @@
                             {{ end }}
                         </div>
                         <div class="task-link-buttons">
+                            {{ range .HeaderLinks }}
+                                <a href="{{ .Href }}" class="btn btn-outline-primary btn-sm mr-2">{{ .Label }}</a>
+                            {{ end }}
                             <a href="/crawler/tasks" class="btn btn-outline-primary btn-sm">任务列表</a>
                             <a href="/triggers/sc" class="btn btn-outline-primary btn-sm ml-2">SC 预览与提交</a>
                         </div>

@@ -1,4 +1,4 @@
-// data/modelg/d_bestinv.go
+// internal/model/modelg/d_bestinv.go
 package modelg
 
 // Bestinv 表示最佳影片排行的原始 HTML 存档

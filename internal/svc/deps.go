@@ -3,12 +3,13 @@
 package svc
 
 import (
+	"context"
 	"rudy_gc/internal/contracts"
 	"rudy_gc/pkg/mylog"
 	"time"
 
-	"rudy_gc/data/modelx/moviex"
-	"rudy_gc/data/modelx/spiderx"
+	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/model/modelx/spiderx"
 
 	"rudy_gc/internal/config"
 	"rudy_gc/internal/service/spider/fetcher"
@@ -30,63 +31,76 @@ type Deps struct {
 	Log     *logrus.Logger
 
 	// moviex models（新 service 直连用）
-	MovieModel          moviex.AMovieModel
-	MinfoModel          moviex.BmMinfoModel
-	MurlModel           moviex.BmMurlModel
-	ItemModel           moviex.EItemModel
-	DeletedMovieModel   moviex.EDeletedMovieModel
-	CastModel           moviex.AmCastModel
-	GenreModel          moviex.AmGenreModel
-	DirectorModel       moviex.AmDirectorModel
-	LabelModel          moviex.AmLabelModel
-	MakerModel          moviex.AmMakerModel
-	PrefixModel         moviex.AmPrefixModel
-	MovieCastModel      moviex.AmrMovieCastModel
-	MovieGenreModel     moviex.AmrMovieGenreModel
-	FilmModel           moviex.VFilmModel
-	DirectoryModel      moviex.VDirectoryModel
-	GListModel          moviex.GListModel
-	ScModel             moviex.GScModel
-	RankModel           moviex.CRankModel
-	RankPeriodModel     moviex.CRankPeriodModel
-	RankPeriodItemModel moviex.CRankPeriodItemModel
-	PersonModel         moviex.CPersonModel
-	CafoModel           moviex.CCafoModel
-	RecordModel         moviex.ERecordModel
-	SeedModel           spiderx.DSeedModel
-	InventoryModel      spiderx.DInventoryModel
-	DetailModel         spiderx.DDetailModel
-	BestinvModel        spiderx.DBestinvModel
+	MovieModel               moviex.AMovieModel
+	MinfoModel               moviex.BmMinfoModel
+	MurlModel                moviex.BmMurlModel
+	ItemModel                moviex.EItemModel
+	DeletedMovieModel        moviex.EDeletedMovieModel
+	CastModel                moviex.AmCastModel
+	GenreModel               moviex.AmGenreModel
+	DirectorModel            moviex.AmDirectorModel
+	LabelModel               moviex.AmLabelModel
+	MakerModel               moviex.AmMakerModel
+	PrefixModel              moviex.AmPrefixModel
+	MovieCastModel           moviex.AmrMovieCastModel
+	MovieGenreModel          moviex.AmrMovieGenreModel
+	FilmModel                moviex.VFilmModel
+	DirectoryModel           moviex.VDirectoryModel
+	GListModel               moviex.GListModel
+	ScModel                  moviex.GScModel
+	RankModel                moviex.CRankModel
+	RankPeriodModel          moviex.CRankPeriodModel
+	RankPeriodItemModel      moviex.CRankPeriodItemModel
+	PersonModel              moviex.CPersonModel
+	CafoModel                moviex.CCafoModel
+	RecordModel              moviex.ERecordModel
+	JavbusMagnetModel        moviex.TJavbusMagnetModel
+	JavbusMagnetFetchModel   moviex.TJavbusMagnetFetchModel
+	SukebeiTorrentModel      moviex.TSukebeiTorrentModel
+	SukebeiTorrentFetchModel moviex.TSukebeiTorrentFetchModel
+	SeedModel                spiderx.DSeedModel
+	InventoryModel           spiderx.DInventoryModel
+	DetailModel              spiderx.DDetailModel
+	BestinvModel             spiderx.DBestinvModel
+	FetchSiteModel           moviex.TFetchSiteModel
 
 	MovieTypeCache MovieTypeCache
 
 	Fetcher    *fetcher.Fetcher
+	FetchSites map[string]FetchSiteConfig
 	DetailJobs chan string
 }
 
 func NewDeps(cfg config.Config) (*Deps, error) {
 	conn := sqlx.NewMysql(cfg.DataSource)
 	c := cfg.Cache
+	logger := mylog.NewLogrusLogger(cfg.LogursLevel)
+	mylog.EnsureTaskHook(logger)
 
 	var (
-		movieModel          = moviex.NewAMovieModel(conn, c)
-		minfoModel          = moviex.NewBmMinfoModel(conn, c)
-		murlModel           = moviex.NewBmMurlModel(conn, c)
-		itemModel           = moviex.NewEItemModel(conn, c)
-		deletedMovieModel   = moviex.NewEDeletedMovieModel(conn, c)
-		rankModel           = moviex.NewCRankModel(conn, c)
-		personModel         = moviex.NewCPersonModel(conn, c)
-		cafoModel           = moviex.NewCCafoModel(conn, c)
-		filmModel           = moviex.NewVFilmModel(conn, c)
-		glistModel          = moviex.NewGListModel(conn, c)
-		scModel             = moviex.NewGScModel(conn, c)
-		recordModel         = moviex.NewERecordModel(conn, c)
-		rankPeriodModel     = moviex.NewCRankPeriodModel(conn, c)
-		rankPeriodItemModel = moviex.NewCRankPeriodItemModel(conn, c)
-		seedModel           = spiderx.NewDSeedModel(conn)
-		invModel            = spiderx.NewDInventoryModel(conn)
-		detailModel         = spiderx.NewDDetailModel(conn)
-		bestModel           = spiderx.NewDBestinvModel(conn)
+		movieModel               = moviex.NewAMovieModel(conn, c)
+		minfoModel               = moviex.NewBmMinfoModel(conn, c)
+		murlModel                = moviex.NewBmMurlModel(conn, c)
+		itemModel                = moviex.NewEItemModel(conn, c)
+		deletedMovieModel        = moviex.NewEDeletedMovieModel(conn, c)
+		rankModel                = moviex.NewCRankModel(conn, c)
+		personModel              = moviex.NewCPersonModel(conn, c)
+		cafoModel                = moviex.NewCCafoModel(conn, c)
+		filmModel                = moviex.NewVFilmModel(conn, c)
+		glistModel               = moviex.NewGListModel(conn, c)
+		scModel                  = moviex.NewGScModel(conn, c)
+		recordModel              = moviex.NewERecordModel(conn, c)
+		javbusMagnetModel        = moviex.NewTJavbusMagnetModel(conn, c)
+		javbusMagnetFetchModel   = moviex.NewTJavbusMagnetFetchModel(conn, c)
+		sukebeiTorrentModel      = moviex.NewTSukebeiTorrentModel(conn, c)
+		sukebeiTorrentFetchModel = moviex.NewTSukebeiTorrentFetchModel(conn, c)
+		rankPeriodModel          = moviex.NewCRankPeriodModel(conn, c)
+		rankPeriodItemModel      = moviex.NewCRankPeriodItemModel(conn, c)
+		seedModel                = spiderx.NewDSeedModel(conn)
+		invModel                 = spiderx.NewDInventoryModel(conn)
+		detailModel              = spiderx.NewDDetailModel(conn)
+		bestModel                = spiderx.NewDBestinvModel(conn)
+		fetchSiteModel           = moviex.NewTFetchSiteModel(conn, c)
 
 		// 新增的 8 个 model
 		labelModel    = moviex.NewAmLabelModel(conn, c)
@@ -120,52 +134,63 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		Proxy:     cfg.Fetcher.Proxy,
 		Timeout:   time.Duration(cfg.Fetcher.Timeout) * time.Second,
 	})
+	fetchSites := loadFetchSiteConfigs(context.Background(), cfg, fetchSiteModel, logger)
+	for siteCode, siteCfg := range fetchSites {
+		f.SetSiteConfig(siteCode, fetcher.Config{
+			UserAgent: siteCfg.UserAgent,
+			Cookie:    siteCfg.Cookie,
+			Proxy:     siteCfg.Proxy,
+			Timeout:   siteCfg.Timeout,
+		})
+	}
 
 	return &Deps{
 		Config: cfg,
-		Log: func() *logrus.Logger {
-			logger := mylog.NewLogrusLogger(cfg.LogursLevel)
-			mylog.EnsureTaskHook(logger)
-			return logger
-		}(),
+		Log:    logger,
 
 		SqlConn: conn,
 		Cache:   c,
 
-		MovieModel:          movieModel,
-		MinfoModel:          minfoModel,
-		MurlModel:           murlModel,
-		ItemModel:           itemModel,
-		DeletedMovieModel:   deletedMovieModel,
-		CastModel:           castModel,
-		GenreModel:          genreModel,
-		DirectorModel:       directorModel,
-		LabelModel:          labelModel,
-		MakerModel:          makerModel,
-		PrefixModel:         prefixModel,
-		MovieCastModel:      movieCastModel,
-		MovieGenreModel:     movieGenreModel,
-		FilmModel:           filmModel,
-		DirectoryModel:      vdirModel,
-		GListModel:          glistModel,
-		ScModel:             scModel,
-		RankModel:           rankModel,
-		RankPeriodModel:     rankPeriodModel,
-		RankPeriodItemModel: rankPeriodItemModel,
-		PersonModel:         personModel,
-		CafoModel:           cafoModel,
-		RecordModel:         recordModel,
-		SeedModel:           seedModel,
-		InventoryModel:      invModel,
-		DetailModel:         detailModel,
-		BestinvModel:        bestModel,
-		MovieTypeCache:      movieTypeCache,
+		MovieModel:               movieModel,
+		MinfoModel:               minfoModel,
+		MurlModel:                murlModel,
+		ItemModel:                itemModel,
+		DeletedMovieModel:        deletedMovieModel,
+		CastModel:                castModel,
+		GenreModel:               genreModel,
+		DirectorModel:            directorModel,
+		LabelModel:               labelModel,
+		MakerModel:               makerModel,
+		PrefixModel:              prefixModel,
+		MovieCastModel:           movieCastModel,
+		MovieGenreModel:          movieGenreModel,
+		FilmModel:                filmModel,
+		DirectoryModel:           vdirModel,
+		GListModel:               glistModel,
+		ScModel:                  scModel,
+		RankModel:                rankModel,
+		RankPeriodModel:          rankPeriodModel,
+		RankPeriodItemModel:      rankPeriodItemModel,
+		PersonModel:              personModel,
+		CafoModel:                cafoModel,
+		RecordModel:              recordModel,
+		JavbusMagnetModel:        javbusMagnetModel,
+		JavbusMagnetFetchModel:   javbusMagnetFetchModel,
+		SukebeiTorrentModel:      sukebeiTorrentModel,
+		SukebeiTorrentFetchModel: sukebeiTorrentFetchModel,
+		SeedModel:                seedModel,
+		InventoryModel:           invModel,
+		DetailModel:              detailModel,
+		BestinvModel:             bestModel,
+		FetchSiteModel:           fetchSiteModel,
+		MovieTypeCache:           movieTypeCache,
 
 		DetailJobs:  make(chan string, 200),
 		BestTrigger: make(chan contracts.TriggerMsg, 8),
 		FilmTrigger: make(chan contracts.FilmTriggerMsg, 8),
 		ScTrigger:   make(chan contracts.ScTriggerMsg, 16),
 
-		Fetcher: f,
+		Fetcher:    f,
+		FetchSites: fetchSites,
 	}, nil
 }

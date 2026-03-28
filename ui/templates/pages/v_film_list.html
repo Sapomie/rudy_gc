@@ -272,9 +272,22 @@
                                     {{ range .Items }}
                                         <tr data-film-id="{{ .Id }}">
                                             <td>
-                                                <a href="{{ .MovieHref }}" class="text-decoration-none">{{ .MovieName }}</a>
+                                                <a href="{{ .MovieHref }}" class="text-decoration-none" target="_blank" rel="noopener noreferrer">{{ .MovieName }}</a>
                                             </td>
-                                            <td title="{{ .CastName }}">{{ .CastName }}</td>
+                                            <td title="{{ .CastName }}">
+                                                {{ if .Casts }}
+                                                    {{ range $idx, $cast := .Casts }}
+                                                        {{ if gt $idx 0 }} / {{ end }}
+                                                        {{ if $cast.Href }}
+                                                            <a href="{{ $cast.Href }}" class="text-decoration-none" target="_blank" rel="noopener noreferrer">{{ $cast.Name }}</a>
+                                                        {{ else }}
+                                                            <span>{{ $cast.Name }}</span>
+                                                        {{ end }}
+                                                    {{ end }}
+                                                {{ else }}
+                                                    {{ .CastName }}
+                                                {{ end }}
+                                            </td>
                                             <td>{{ .SizeGB }}</td>
                                             <td><span data-role="film-height">{{ if gt .Height 0 }}{{ .Height }}{{ else }}-{{ end }}</span></td>
                                             <td><span data-role="film-duration">{{ if gt .DurationMinutes 0 }}{{ .DurationMinutes }}{{ else }}-{{ end }}</span></td>

@@ -1,4 +1,4 @@
-// data/modelx/moviex/v_directory_model_custom.go
+// internal/model/modelx/moviex/v_directory_model_custom.go
 package moviex
 
 import (

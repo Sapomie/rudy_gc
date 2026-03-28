@@ -1,6 +1,6 @@
 package movie
 
-import "rudy_gc/data/modelx/moviex"
+import "rudy_gc/internal/model/modelx/moviex"
 
 func (s *Service) movieListQuery() *moviex.MovieListRepoSqlx {
 	return moviex.NewMovieListRepoSqlx(

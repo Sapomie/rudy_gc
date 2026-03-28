@@ -1,4 +1,4 @@
-// data/modelg/inventory.go
+// internal/model/modelg/inventory.go
 package modelg
 
 // Inventory 表示已抓取的原始库存页（HTML 原文存档）

@@ -3,7 +3,7 @@ package spider
 import (
 	"context"
 
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 )
 
 type MovieGenreRepoSqlx struct {

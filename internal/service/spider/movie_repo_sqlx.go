@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
 )
 

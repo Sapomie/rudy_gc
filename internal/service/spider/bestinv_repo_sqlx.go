@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"rudy_gc/internal/consts"
 
-	"rudy_gc/data/modelx/spiderx"
+	"rudy_gc/internal/model/modelx/spiderx"
 	"rudy_gc/internal/types"
 )
 

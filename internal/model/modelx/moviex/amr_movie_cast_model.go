@@ -1,4 +1,4 @@
-// data/modelx/moviex/amr_movie_cast_model_ext.go
+// internal/model/modelx/moviex/amr_movie_cast_model_ext.go
 package moviex
 
 import (

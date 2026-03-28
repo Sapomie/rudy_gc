@@ -1,6 +1,6 @@
 package types
 
-// Cast 对应 data/modelx/moviex.AmCast，用于对外透出（domain/service 层使用）
+// Cast 对应 internal/model/modelx/moviex.AmCast，用于对外透出（domain/service 层使用）
 type Cast struct {
 	Id                 int64
 	PersonId           int64

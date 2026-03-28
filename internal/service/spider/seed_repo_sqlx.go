@@ -8,7 +8,7 @@ import (
 
 	"github.com/zeromicro/go-zero/core/stores/sqlc"
 
-	"rudy_gc/data/modelx/spiderx"
+	"rudy_gc/internal/model/modelx/spiderx"
 	"rudy_gc/internal/types"
 )
 

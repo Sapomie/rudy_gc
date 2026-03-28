@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"rudy_gc/data/modelx/spiderx"
+	"rudy_gc/internal/model/modelx/spiderx"
 	"rudy_gc/internal/types"
 )
 

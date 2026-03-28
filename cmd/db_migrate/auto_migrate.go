@@ -2,7 +2,7 @@
 package main
 
 import (
-	"rudy_gc/data/modelg"
+	"rudy_gc/internal/model/modelg"
 	"rudy_gc/pkg/orm"
 )
 

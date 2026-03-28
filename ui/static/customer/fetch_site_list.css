@@ -1,0 +1,142 @@
+.fetch-site-summary-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid #d9e2ec;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.fetch-site-summary-label {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.fetch-site-summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #273444;
+}
+
+.fetch-site-sort-link {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.fetch-site-sort-link.active {
+    color: #0d6efd;
+}
+
+.fetch-site-badge {
+    background: #eef4ff;
+    color: #3552a5;
+    border: 1px solid #d4e2ff;
+}
+
+.fetch-site-error-cell {
+    min-width: 220px;
+    max-width: 280px;
+    white-space: normal;
+    color: #b42318;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.fetch-site-empty-state {
+    padding: 28px 12px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.fetch-site-tag-subtitle {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e8f1ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.fetch-site-row-match {
+    background: #eef8f1 !important;
+}
+
+.fetch-site-row-match > td,
+.fetch-site-row-match > th {
+    background: transparent !important;
+}
+
+.fetch-site-row-match:hover {
+    background: #e0f1e6 !important;
+}
+
+.fetch-site-row-match:hover > td,
+.fetch-site-row-match:hover > th {
+    background: transparent !important;
+}
+
+.fetch-site-detail-sukebei-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+}
+
+.fetch-site-detail-sukebei-table {
+    table-layout: auto;
+    width: max-content;
+    min-width: 1670px;
+    max-width: none;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-col-title {
+    width: 960px;
+    min-width: 960px;
+}
+
+.fetch-site-detail-sukebei-table th.fetch-site-col-title,
+.fetch-site-detail-sukebei-table td.fetch-site-col-title {
+    white-space: normal;
+    word-break: normal;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-title-content {
+    display: block;
+    min-width: 960px;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-title-content a {
+    display: block;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-col-compact {
+    width: 90px;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-col-date {
+    width: 120px;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-col-downloads {
+    width: 80px;
+}
+
+.fetch-site-detail-sukebei-table .fetch-site-col-hash {
+    width: auto;
+    min-width: 340px;
+    max-width: none;
+}
+
+.fetch-site-detail-sukebei-table td.fetch-site-col-hash {
+    overflow: visible;
+    white-space: nowrap;
+}
+
+.fetch-site-hash-text {
+    display: inline;
+    overflow: visible;
+    white-space: nowrap;
+}

@@ -1,4 +1,4 @@
-// data/modelx/moviex/c_rank_model.go
+// internal/model/modelx/moviex/c_rank_model.go
 package moviex
 
 import (

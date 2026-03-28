@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/movie"
 	"sync"
 	"time"
@@ -18,14 +19,16 @@ import (
 /* ========= 结构体 ========= */
 
 type CrawlLogic struct {
-	deps     *runtimeDeps
-	movieSvc *movie.Service
+	deps         *runtimeDeps
+	movieSvc     *movie.Service
+	fetchSiteSvc *fetchsite.Service
 }
 
 func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 	return &CrawlLogic{
-		deps:     newRuntimeDeps(deps),
-		movieSvc: movie.NewService(deps),
+		deps:         newRuntimeDeps(deps),
+		movieSvc:     movie.NewService(deps),
+		fetchSiteSvc: fetchsite.NewService(deps),
 	}
 }
 

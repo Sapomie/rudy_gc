@@ -1,4 +1,4 @@
-// data/modelg/item.go
+// internal/model/modelg/item.go
 package modelg
 
 // Item 表：保存从 inventory 抽取出的条目

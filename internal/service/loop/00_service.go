@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"rudy_gc/internal/service/fetchqueue"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/service/spider"
@@ -20,6 +21,7 @@ const (
 type FetchLoopService struct {
 	deps       *svc.Deps
 	crawlLogic *spider.CrawlLogic
+	fetchQueue *fetchqueue.Service
 	movieSvc   *movie.Service
 	filmSvc    *vfilm.FilmService
 	scSvc      *sc.ScService
@@ -61,6 +63,7 @@ func NewFetchLoopService(deps *svc.Deps) *FetchLoopService {
 	sharedFetchLoopService.svc = &FetchLoopService{
 		deps:             deps,
 		crawlLogic:       spider.NewCrawlLogic(deps),
+		fetchQueue:       fetchqueue.NewService(deps),
 		movieSvc:         movie.NewService(deps),
 		filmSvc:          vfilm.NewFilmService(deps),
 		scSvc:            sc.NewService(deps),

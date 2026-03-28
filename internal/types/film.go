@@ -1,7 +1,7 @@
 // internal/types/film.go
 package types
 
-// Film 与 data/modelx/moviex.VFilm 字段一一对应（用于 Domain/Repo 传参与返回）
+// Film 与 internal/model/modelx/moviex.VFilm 字段一一对应（用于 Domain/Repo 传参与返回）
 type Film struct {
 	Id          int64
 	MovieJavId  string

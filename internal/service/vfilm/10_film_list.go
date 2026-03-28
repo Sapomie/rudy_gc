@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"rudy_gc/internal/consts"
@@ -55,6 +56,7 @@ func (s *Service) buildFilmListItem(ctx context.Context, film *types.Film) *type
 		MovieName:       film.MovieName,
 		MovieHref:       "/movie/" + url.PathEscape(film.MovieName),
 		CastName:        "-",
+		Casts:           []*types.FilmListCastItem{},
 		SizeGB:          formatFilmSizeGB(film.Size),
 		Height:          film.Height,
 		DurationMinutes: formatFilmDurationMinutes(film.Duration),
@@ -81,18 +83,19 @@ func (s *Service) buildFilmListItem(ctx context.Context, film *types.Film) *type
 		return item
 	}
 
-	if castName := buildFilmListCastName(mt.Cast); castName != "" {
-		item.CastName = castName
+	if casts := buildFilmListCastItems(mt.Cast); len(casts) > 0 {
+		item.Casts = casts
+		item.CastName = buildFilmListCastName(casts)
 	}
 	item.VideoURL, item.PlayButtonClass, item.PlayButtonText, item.ShowPlayButton = buildFilmListPlayButton(mt)
 	return item
 }
 
-func buildFilmListCastName(casts []*types.CastInfo) string {
+func buildFilmListCastItems(casts []*types.CastInfo) []*types.FilmListCastItem {
 	if len(casts) == 0 {
-		return ""
+		return nil
 	}
-	names := make([]string, 0, len(casts))
+	items := make([]*types.FilmListCastItem, 0, len(casts))
 	seen := make(map[string]struct{}, len(casts))
 	for _, cast := range casts {
 		if cast == nil {
@@ -108,10 +111,40 @@ func buildFilmListCastName(casts []*types.CastInfo) string {
 		if name == "" {
 			continue
 		}
-		if _, ok := seen[name]; ok {
+		seenKey := name
+		if cast.PersonId > 0 {
+			seenKey = "id:" + strconv.FormatInt(cast.PersonId, 10)
+		}
+		if _, ok := seen[seenKey]; ok {
 			continue
 		}
-		seen[name] = struct{}{}
+		seen[seenKey] = struct{}{}
+
+		item := &types.FilmListCastItem{
+			Id:   cast.PersonId,
+			Name: name,
+		}
+		if cast.PersonId > 0 {
+			item.Href = "/cast?id=" + strconv.FormatInt(cast.PersonId, 10)
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+func buildFilmListCastName(casts []*types.FilmListCastItem) string {
+	if len(casts) == 0 {
+		return ""
+	}
+	names := make([]string, 0, len(casts))
+	for _, cast := range casts {
+		if cast == nil {
+			continue
+		}
+		name := strings.TrimSpace(cast.Name)
+		if name == "" {
+			continue
+		}
 		names = append(names, name)
 	}
 	return strings.Join(names, " / ")

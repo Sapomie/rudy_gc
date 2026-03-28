@@ -47,6 +47,12 @@ func (l *CrawlLogic) handleDetailParse(ctx context.Context, it *types.Item) (*sa
 	if err != nil {
 		return nil, fmt.Errorf("解析并入库失败 %s(%s): %w", it.Name, it.JavId, err)
 	}
+	if resp == nil || resp.movie == nil {
+		return nil, fmt.Errorf("解析并入库后电影结果为空 %s(%s)", it.Name, it.JavId)
+	}
+	if err := l.fetchSiteSvc.EnsureFetchTasksForMovie(ctx, resp.movie.JavId, resp.movie.Name, resp.movie.ReleasingDate); err != nil {
+		return nil, fmt.Errorf("创建外站抓取任务失败 %s(%s): %w", it.Name, it.JavId, err)
+	}
 
 	// 更新 item.DetailNeedScan -> 已解析
 	now := time.Now().Unix()

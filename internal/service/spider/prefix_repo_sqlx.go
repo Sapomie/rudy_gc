@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 )
 
 type PrefixRepoSqlx struct {

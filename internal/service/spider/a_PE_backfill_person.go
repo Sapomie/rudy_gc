@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 )
 
 func (l *CrawlLogic) BackfillPersonData(ctx context.Context) error {

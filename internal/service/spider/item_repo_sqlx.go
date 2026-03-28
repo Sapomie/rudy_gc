@@ -3,7 +3,7 @@ package spider
 import (
 	"context"
 	"fmt"
-	"rudy_gc/data/modelx/moviex"
+	"rudy_gc/internal/model/modelx/moviex"
 	"time"
 
 	"rudy_gc/internal/types"

@@ -1,4 +1,4 @@
-// data/modelx/moviex/e_item_model_ext.go
+// internal/model/modelx/moviex/e_item_model_ext.go
 package moviex
 
 import (

@@ -20,7 +20,7 @@ MovieTypeCache:
 Fetcher:
   UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
   Cookie: "timezone=-480; dm=z93j; UGVyc2lzdFN0b3JhZ2U=%7B%7D; __PPU_puid=16775292821052140170; over18=18; cf_clearance=gqp_3r35eP7tPZvuGqT7orRFdvrjnjakLusUQGxj4BY-1770385844-1.2.1.1-F_TcplYJQ2Hc1vFGvkGlHr2iIrgfwXjVcrdNg9a8_ToFT_lcFiRkS3OMh4djV.XYb3pbyUaASqHczVj_zIME1KM6rHOQUtVojz8RCf9D4dWlOutnzRdRFBUmjNcLuvIB1knnuXWg41LeP28XhOCujPDaGgNcFbmXk0YqkQxVjPO9gjx1WamgqIoHP6zZ7tWQ_VlEYGnmIXxk217sm9BC5..MmmqZH8WcFRsjqLDGsCs"
-  Proxy: "http://127.0.0.1:1087/"
+  Proxy: "http://127.0.0.1:7897/"
   Timeout: 60
 #  JavAddress: "www.z93j.com"
   JavAddress: "www.b96g.com"

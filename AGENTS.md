@@ -4,7 +4,7 @@
 - `cmd/` 存放入口程序，例如 `cmd/api`（主服务）和 `cmd/db_migrate`。
 - `internal/` 存放核心业务代码（config、domain、repo、transport、observability）。
 - `pkg/` 放置可在 `internal/` 外复用的共享包。
-- `data/` 包含生成的模型和本地数据资源（见 `data/modelx`）。
+- `data/` 包含生成的模型和本地数据资源（见 `internal/model/modelx`）。
 - `ui/` 包含服务端渲染模板与静态资源（`ui/templates`、`ui/static`）。
 - `deploy/` 存放 Docker 构建资源；`make/` 存放拆分的 Make 目标。
 - `oldmodel/` 与 `z_text/` 为遗留/笔记目录，除非必须否则不要新增工作。
@@ -25,7 +25,7 @@
 - 静态资源按类型放在 `ui/static/` 下（如 `css`、`js`、`image`）。
 
 ## 数据分层与缓存规则
-- 仅 `data/modelx` 允许写 SQL；所有 SQL 写在 `*_model.go` 的自定义方法中。
+- 仅 `internal/model/modelx` 允许写 SQL；所有 SQL 写在 `*_model.go` 的自定义方法中。
 - 读取：`FindOne/FindOneByX` 使用 modelx 的缓存查询。
 - 更新：必须调用 `*_model_gen.go` 的 `Update`/`Delete` 以确保清缓存。
 - 自定义查询/聚合：在 `*_model.go` 中新增方法，并使用 `QueryRowNoCacheCtx/QueryRowsNoCacheCtx`。
@@ -70,7 +70,10 @@
 ## Git 与变更说明
 - 不得回滚用户现有改动（除非用户明确要求）。
 - 使用中文。
-- 默认使用中文 git commit message，除非用户明确要求英文。
+- 用户要求 `git message`、`commit message`、提交说明时，输出必须全部使用中文。
+- 禁止输出任何英文 `git message`。
+- 禁止输出中英混合的 `git message`。
+- 只要出现英文 `git message`，视为直接违反规则。
 - 用户询问“改了什么”或要求 git message 时，固定检查顺序：
     1. `git diff --stat --cached`
     2. `git diff --stat`
@@ -82,6 +85,8 @@
 ## 前端约定（如适用）
 - z_reference文件夹是前端参考文件，写新页面的时候。优先在这个参考文件中寻找相同或相似的组件。
 - 新页面优先复用现有模板结构与组件 class。
+- 写任何新页面前，必须先检索并阅读项目里已存在的同类型页面、对应模板、路由、导航与页面专用 JS/CSS；未被用户明确要求特殊设计时，必须默认按已有页面的结构、路由层级、入口位置、模板组织和交互方式来写，禁止自行发明新结构。
+- `List` 页面默认参照项目里现有的 `List` 页面实现；路由风格、边栏入口、分页区、表格区、页头区必须与已有 `List` 页面保持同风格，除非用户明确提出特殊要求。
 - 新增页面入口必须同步到侧边栏或导航。
 - 移动端与桌面端可视觉差异，但核心业务行为需对齐。
 - 弹框/确认框优先使用现有组件模板，避免临时自造样式。

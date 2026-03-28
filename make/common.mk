@@ -9,8 +9,8 @@ REDIS_HOST ?= 127.0.0.1
 REDIS_PORT ?= 6379
 REDIS_DB   ?= 0
 
-MOVIE_MODEL_DIR  ?= data/modelx/moviex
-SPIDER_MODEL_DIR ?= data/modelx/spiderx
+MOVIE_MODEL_DIR  ?= internal/model/modelx/moviex
+SPIDER_MODEL_DIR ?= internal/model/modelx/spiderx
 MOVIE_TABLES     ?= "a*,am*,bm*,c*,e*,v*,g*"
 SPIDER_TABLES    ?= "d*"
 

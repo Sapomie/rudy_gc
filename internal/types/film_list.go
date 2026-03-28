@@ -60,6 +60,7 @@ type FilmListItem struct {
 	MovieName       string
 	MovieHref       string
 	CastName        string
+	Casts           []*FilmListCastItem
 	SizeGB          string
 	Height          int64
 	DurationMinutes int64
@@ -75,4 +76,10 @@ type FilmListItem struct {
 	LastScTime      int64
 	BirthTime       int64
 	ReleasingDate   int64
+}
+
+type FilmListCastItem struct {
+	Id   int64
+	Name string
+	Href string
 }

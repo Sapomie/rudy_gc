@@ -7,8 +7,8 @@ import (
 	"math"
 	"net/url"
 	"path/filepath"
-	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
 	"sort"
 	"strconv"
@@ -143,7 +143,7 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		Cast:                 castInfos,
 		CastNumber:           mv.CastNumber,
 		JavUrl:               javURL,
-		SearchUrl:            getMovieSearchUrl(mv.Name),
+		SearchUrl:            s.getMovieSearchUrl(mv.Name),
 		BusUrl:               s.getBusUrl(mv.Name),
 		JacketImg:            murl.JacketImg,
 		Prefix:               prefixRow.Name,
@@ -282,15 +282,23 @@ func determineOwnership(film *types.Film) int64 {
 }
 
 func (s *Service) getBusUrl(movieName string) string {
-	return fmt.Sprintf("https://%v/%v", s.deps.Config.Fetcher.BusAddress, movieName)
+	baseURL := s.deps.GetFetchSiteBaseURL("javbus")
+	if baseURL == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s", strings.TrimRight(baseURL, "/"), strings.TrimLeft(movieName, "/"))
 }
 
-func getMovieSearchUrl(movieName string) string {
+func (s *Service) getMovieSearchUrl(movieName string) string {
 	parts := strings.Split(movieName, "-")
 	if len(parts) != 2 {
 		return ""
 	}
-	return fmt.Sprintf("https://sukebei.nyaa.si/?f=0&c=0_0&q=%v+%v", parts[0], parts[1])
+	baseURL := s.deps.GetFetchSiteBaseURL("sukebei")
+	if baseURL == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/?f=0&c=0_0&q=%v+%v", strings.TrimRight(baseURL, "/"), parts[0], parts[1])
 }
 
 func tsToDate(ts int64) string {
@@ -442,15 +450,23 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 	if err != nil {
 		return nil, err
 	}
+	javbusFetch, javbusMagnets, sukebeiFetch, sukebeiTorrents, err := s.buildMovieFetchSiteDetail(ctx, m.JavId)
+	if err != nil {
+		return nil, err
+	}
 	hasFilm := int64(2)
 	if filmInfo == nil {
 		hasFilm = 1
 	}
 	return &types.MovieDetail{
-		MovieType: movieType,
-		FilmInfo:  filmInfo,
-		HasFilm:   hasFilm,
-		RankInfos: rankInfos,
-		SC:        scInfo,
+		MovieType:       movieType,
+		FilmInfo:        filmInfo,
+		HasFilm:         hasFilm,
+		RankInfos:       rankInfos,
+		SC:              scInfo,
+		JavbusFetch:     javbusFetch,
+		JavbusMagnets:   javbusMagnets,
+		SukebeiFetch:    sukebeiFetch,
+		SukebeiTorrents: sukebeiTorrents,
 	}, nil
 }

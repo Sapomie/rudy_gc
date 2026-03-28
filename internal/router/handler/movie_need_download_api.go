@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"rudy_gc/data/modelx/moviex"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/spider"
 	"rudy_gc/internal/svc"

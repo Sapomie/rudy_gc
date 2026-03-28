@@ -7,12 +7,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
 	"rudy_gc/internal/svc"
 )
 
 type CrawlerPages struct {
 	runtime   *loop.FetchLoopService
+	fetchSite *fetchsite.Service
 	scRootDir string
 }
 
@@ -25,6 +27,11 @@ type crawlerJobsPageLabels struct {
 	Extra   string
 	Result  string
 	Elapsed string
+}
+
+type crawlerJobsPageLink struct {
+	Href  string
+	Label string
 }
 
 type crawlerJobsPageConfig struct {
@@ -40,12 +47,14 @@ type crawlerJobsPageConfig struct {
 	EmptyStateText    string
 	AllowedTaskTypes  []string
 	TaskButtons       []crawlerJobsPageTask
+	HeaderLinks       []crawlerJobsPageLink
 	Labels            crawlerJobsPageLabels
 }
 
 func NewCrawlerPages(deps *svc.Deps) *CrawlerPages {
 	return &CrawlerPages{
 		runtime:   newCrawlerRuntime(deps),
+		fetchSite: newFetchSitePageService(deps),
 		scRootDir: deps.Config.Film.ScRootDir,
 	}
 }
@@ -145,6 +154,38 @@ func (h *CrawlerPages) FilmPage(c *gin.Context) {
 	})
 }
 
+func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
+	h.renderJobsPage(c, crawlerJobsPageConfig{
+		Title:             "抓取站点任务",
+		PageTitle:         "JavBus / Sukebei 资源抓取",
+		TaskPanelTitle:    "抓取站点任务",
+		PageNote:          "这里只处理 JavBus / Sukebei 资源抓取，数量参数控制本次最多处理条数。",
+		TaskTableTitle:    "抓取站点任务",
+		EventTitle:        "抓取站点事件流",
+		StorageKey:        "crawler_jobs_fetch_site_selected_job",
+		DefaultTaskType:   loop.TaskSpiderFetchJavbus,
+		OverviewExtraMode: "task_type",
+		EmptyStateText:    "等待抓取站点任务触发",
+		AllowedTaskTypes: []string{
+			loop.TaskSpiderFetchJavbus,
+			loop.TaskSpiderFetchSukebei,
+		},
+		TaskButtons: []crawlerJobsPageTask{
+			{TaskType: loop.TaskSpiderFetchJavbus, Label: "JavBus 资源抓取"},
+			{TaskType: loop.TaskSpiderFetchSukebei, Label: "Sukebei 资源抓取"},
+		},
+		HeaderLinks: []crawlerJobsPageLink{
+			{Href: "/fetch-site-javbus-list", Label: "JavBus 列表"},
+			{Href: "/fetch-site-sukebei-list", Label: "Sukebei 列表"},
+		},
+		Labels: crawlerJobsPageLabels{
+			Extra:   "任务类型",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+	})
+}
+
 func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "回填任务",
@@ -160,6 +201,7 @@ func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 		AllowedTaskTypes: []string{
 			loop.TaskSpiderBackfillPerson,
 			loop.TaskSpiderBackfillRankPeriod,
+			loop.TaskSpiderBackfillFetchSite,
 			loop.TaskSpiderRebuildCastRank,
 			loop.TaskSpiderRebuildActorRank,
 			loop.TaskScRebuildStats,
@@ -168,6 +210,7 @@ func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 		TaskButtons: []crawlerJobsPageTask{
 			{TaskType: loop.TaskSpiderBackfillPerson, Label: "person 回填"},
 			{TaskType: loop.TaskSpiderBackfillRankPeriod, Label: "周期排行回填"},
+			{TaskType: loop.TaskSpiderBackfillFetchSite, Label: "外站任务回填"},
 			{TaskType: loop.TaskSpiderRebuildCastRank, Label: "演员 Rank 回填"},
 			{TaskType: loop.TaskSpiderRebuildActorRank, Label: "单演员 Rank"},
 			{TaskType: loop.TaskScRebuildStats, Label: "SC 统计回填"},
@@ -208,6 +251,7 @@ func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig)
 		"OverviewExtraMode": cfg.OverviewExtraMode,
 		"EmptyStateText":    cfg.EmptyStateText,
 		"TaskButtons":       cfg.TaskButtons,
+		"HeaderLinks":       cfg.HeaderLinks,
 		"Labels":            cfg.Labels,
 		"ScRootDir":         h.scRootDir,
 		"JobID":             strings.TrimSpace(c.Query("job_id")),
