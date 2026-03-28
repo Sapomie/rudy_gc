@@ -232,6 +232,7 @@
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
                                             {{ range $i, $c := .TopCasts }}
                                                 {{ $u := (printf "/cards?cn=%s&owned=3" (urlquery $c.Name)) }}
+                                                {{ if gt $c.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&owned=3" $c.PersonId) }}{{ end }}
                                                 {{ if eq $mode "release" }}
                                                     {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                     {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}

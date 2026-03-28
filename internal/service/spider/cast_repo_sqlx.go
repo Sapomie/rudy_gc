@@ -11,7 +11,9 @@ import (
 )
 
 type CastRepoSqlx struct {
-	m moviex.AmCastModel
+	m               moviex.AmCastModel
+	pm              moviex.CPersonModel
+	syncPersonStats func(ctx context.Context, ids []int64, now int64) error
 }
 
 // ====== 已有：保持不变（返回 id）
@@ -24,10 +26,19 @@ func (r *CastRepoSqlx) GetOrCreateByName(ctx context.Context, name, javId string
 		return 0, err
 	}
 	if row != nil {
+		now := time.Now().Unix()
+		if _, err := r.ensurePersonID(ctx, row, now); err != nil {
+			return 0, err
+		}
 		return row.Id, nil
 	}
 	now := time.Now().Unix()
+	personID, err := r.insertPerson(ctx, name, nil, now)
+	if err != nil {
+		return 0, err
+	}
 	res, err := r.m.Insert(ctx, &moviex.AmCast{
+		PersonId:  personID,
 		Name:      name,
 		JavId:     javId,
 		CreatedOn: now,
@@ -79,6 +90,9 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 	}
 
 	if old != nil {
+		if _, err := r.ensurePersonID(ctx, old, now); err != nil {
+			return nil, err
+		}
 		// 覆盖式更新（按你的字段一一映射）
 		old.JavId = in.JavId
 		old.MovieNumber = in.MovieNumber
@@ -99,11 +113,15 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		if err := r.m.Update(ctx, old); err != nil {
 			return nil, err
 		}
+		if err := r.syncPersonStatsIfNeeded(ctx, now, old.PersonId); err != nil {
+			return nil, err
+		}
 		return mapAmCastToTypes(old), nil
 	}
 
 	// 插入
 	row := &moviex.AmCast{
+		PersonId:           in.PersonId,
 		Name:               in.Name,
 		JavId:              in.JavId,
 		MovieNumber:        in.MovieNumber,
@@ -119,15 +137,28 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		CreatedOn:          ifElseInt64(in.CreatedOn > 0, in.CreatedOn, now),
 		UpdatedOn:          now,
 	}
+	if row.PersonId <= 0 {
+		personID, err := r.insertPerson(ctx, in.Name, in, now)
+		if err != nil {
+			return nil, err
+		}
+		row.PersonId = personID
+	}
 	if _, err := r.m.Insert(ctx, row); err != nil {
 		// 并发兜底
 		if again, e2 := r.m.FindOneByName(ctx, in.Name); e2 == nil && again != nil {
+			if _, err := r.ensurePersonID(ctx, again, now); err != nil {
+				return nil, err
+			}
 			return mapAmCastToTypes(again), nil
 		}
 		return nil, err
 	}
 	ins, err := r.m.FindOneByName(ctx, in.Name)
 	if err != nil {
+		return nil, err
+	}
+	if err := r.syncPersonStatsIfNeeded(ctx, now, row.PersonId); err != nil {
 		return nil, err
 	}
 	return mapAmCastToTypes(ins), nil
@@ -141,6 +172,7 @@ func mapAmCastToTypes(v *moviex.AmCast) *types.Cast {
 	}
 	return &types.Cast{
 		Id:                 v.Id,
+		PersonId:           v.PersonId,
 		Name:               v.Name,
 		JavId:              v.JavId,
 		Chinese:            "",
@@ -159,6 +191,75 @@ func mapAmCastToTypes(v *moviex.AmCast) *types.Cast {
 		CreatedOn:          v.CreatedOn,
 		UpdatedOn:          v.UpdatedOn,
 	}
+}
+
+func (r *CastRepoSqlx) ensurePersonID(ctx context.Context, row *moviex.AmCast, now int64) (int64, error) {
+	if row == nil {
+		return 0, nil
+	}
+	if row.PersonId > 0 {
+		if _, err := r.pm.FindOne(ctx, row.PersonId); err == nil {
+			return row.PersonId, nil
+		} else if !errors.Is(err, moviex.ErrNotFound) {
+			return 0, err
+		}
+	}
+	personID, err := r.insertPerson(ctx, row.Name, mapAmCastToTypes(row), now)
+	if err != nil {
+		return 0, err
+	}
+	row.PersonId = personID
+	row.UpdatedOn = now
+	if err := r.m.Update(ctx, row); err != nil {
+		return 0, err
+	}
+	if err := r.syncPersonStatsIfNeeded(ctx, now, personID); err != nil {
+		return 0, err
+	}
+	return personID, nil
+}
+
+func (r *CastRepoSqlx) insertPerson(ctx context.Context, name string, cast *types.Cast, now int64) (int64, error) {
+	if r.pm == nil {
+		return 0, errors.New("person model is nil")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return 0, errors.New("person name is empty")
+	}
+	personRow, err := r.pm.FindOneByNameOrAliasToken(ctx, name)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return 0, err
+	}
+	if personRow != nil && personRow.Id > 0 {
+		return personRow.Id, nil
+	}
+	row := &moviex.CPerson{
+		Name:      name,
+		Alias:     "",
+		Chinese:   "",
+		BirthDay:  0,
+		Height:    0,
+		Cup:       "",
+		Bwh:       "",
+		Avatar:    "",
+		CreatedOn: now,
+		UpdatedOn: now,
+	}
+	if cast != nil {
+		row.MovieNumber = cast.MovieNumber
+		row.OwnedMovieNumber = cast.OwnedMovieNumber
+		row.ScTimes = cast.ScTimes
+		row.ComeTimes = cast.ComeTimes
+		row.LastScTime = cast.LastScTime
+		row.HighestRank = cast.HighestRank
+		row.RankTimes = cast.RankTimes
+	}
+	res, err := r.pm.Insert(ctx, row)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }
 
 func ifElseInt64(cond bool, a, b int64) int64 {
@@ -187,7 +288,26 @@ func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, own
 	row.OwnedMovieNumber = ownedMovieNumber
 	row.UpdatedOn = now
 
-	return r.m.Update(ctx, row)
+	if err := r.m.Update(ctx, row); err != nil {
+		return err
+	}
+	return r.syncPersonStatsIfNeeded(ctx, now, row.PersonId)
+}
+
+func (r *CastRepoSqlx) syncPersonStatsIfNeeded(ctx context.Context, now int64, personIDs ...int64) error {
+	if r == nil || r.syncPersonStats == nil {
+		return nil
+	}
+	ids := make([]int64, 0, len(personIDs))
+	for _, id := range personIDs {
+		if id > 0 {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.syncPersonStats(ctx, ids, now)
 }
 
 func (r *CastRepoSqlx) ListAllIDs(ctx context.Context) ([]int64, error) {

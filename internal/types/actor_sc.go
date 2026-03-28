@@ -16,16 +16,9 @@ type ActorScEventMovie struct {
 	IsCome bool
 }
 
-type ActorScSummary struct {
-	Actor         *Cast
-	RecentEvents  []*ActorScEventItem
-	ActorPageHref string
-	CardsHref     string
-	ScAggHref     string
-}
-
 type ActorScPage struct {
-	Actor         *Cast
+	Actor         *Person
+	ActorAliases  []string
 	RecentEvents  []*ActorScEventItem
 	Movies        []*MovieType
 	TotalMovies   int

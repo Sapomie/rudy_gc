@@ -158,6 +158,10 @@ func (h *MovieAPI) AddCast(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
 	}
+	if err := h.deps.SyncPersonStatsByIDs(c.Request.Context(), []int64{castRow.PersonId}, now); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
 
 	h.movieSvc.InvalidateMovieType(c.Request.Context(), javId)
 	c.JSON(http.StatusOK, gin.H{"ok": true})

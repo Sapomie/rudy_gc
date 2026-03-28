@@ -8,6 +8,7 @@ type ListMovieResponse struct {
 
 type ListMovieFullRequest struct {
 	CastNames    string `form:"cn"`
+	PersonIds    string `form:"pid"`
 	GenreNames   string `form:"gn"`
 	DirectorName string `form:"dn"`
 	PrefixName   string `form:"pn"`

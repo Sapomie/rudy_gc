@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"rudy_gc/internal/consts"
@@ -335,27 +337,41 @@ func buildTopCasts(movies []*types.MovieType, topN int) []CastStat {
 		topN = 20
 	}
 	type agg struct {
-		n  int
-		sc int64
+		personID int64
+		name     string
+		n        int
+		sc       int64
 	}
-	mp := make(map[string]agg, 1024)
+	mp := make(map[string]*agg, 1024)
 	for _, m := range movies {
 		if m == nil || len(m.Cast) == 0 {
 			continue
 		}
+		seen := make(map[string]struct{}, len(m.Cast))
 		for _, c := range m.Cast {
-			if c == nil || c.Name == "" {
+			key, personID, name := movieAggCastKey(c)
+			if key == "" || name == "" {
 				continue
 			}
-			a := mp[c.Name]
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			a := mp[key]
+			if a == nil {
+				a = &agg{personID: personID, name: name}
+				mp[key] = a
+			}
 			a.n++
 			a.sc += m.ScTimes
-			mp[c.Name] = a
 		}
 	}
 	out := make([]CastStat, 0, len(mp))
-	for name, a := range mp {
-		out = append(out, CastStat{Name: name, Count: a.n, ScSum: a.sc})
+	for _, a := range mp {
+		if a == nil || a.name == "" {
+			continue
+		}
+		out = append(out, CastStat{PersonId: a.personID, Name: a.name, Count: a.n, ScSum: a.sc})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Count != out[j].Count {
@@ -553,29 +569,43 @@ func buildTopCastsAll(movies []*types.MovieType, topN int) []TopStatAll {
 		topN = 20
 	}
 	type agg struct {
-		all   int
-		owned int
+		personID int64
+		name     string
+		all      int
+		owned    int
 	}
-	mp := make(map[string]agg, 1024)
+	mp := make(map[string]*agg, 1024)
 	for _, m := range movies {
 		if m == nil || len(m.Cast) == 0 {
 			continue
 		}
+		seen := make(map[string]struct{}, len(m.Cast))
 		for _, c := range m.Cast {
-			if c == nil || c.Name == "" {
+			key, personID, name := movieAggCastKey(c)
+			if key == "" || name == "" {
 				continue
 			}
-			a := mp[c.Name]
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			a := mp[key]
+			if a == nil {
+				a = &agg{personID: personID, name: name}
+				mp[key] = a
+			}
 			a.all++
 			if isOwned(m) {
 				a.owned++
 			}
-			mp[c.Name] = a
 		}
 	}
 	out := make([]TopStatAll, 0, len(mp))
-	for name, a := range mp {
-		out = append(out, TopStatAll{Name: name, CountAll: a.all, CountOwned: a.owned})
+	for _, a := range mp {
+		if a == nil || a.name == "" {
+			continue
+		}
+		out = append(out, TopStatAll{PersonId: a.personID, Name: a.name, CountAll: a.all, CountOwned: a.owned})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].CountAll != out[j].CountAll {
@@ -590,6 +620,26 @@ func buildTopCastsAll(movies []*types.MovieType, topN int) []TopStatAll {
 		out = out[:topN]
 	}
 	return out
+}
+
+func movieAggCastKey(c *types.CastInfo) (key string, personID int64, name string) {
+	if c == nil {
+		return "", 0, ""
+	}
+	name = strings.TrimSpace(c.DisplayName)
+	if name == "" {
+		name = strings.TrimSpace(c.Name)
+	}
+	if name == "" {
+		name = strings.TrimSpace(c.NameShow)
+	}
+	if name == "" {
+		return "", 0, ""
+	}
+	if c.PersonId > 0 {
+		return "p:" + strconv.FormatInt(c.PersonId, 10), c.PersonId, name
+	}
+	return "n:" + name, 0, name
 }
 
 func buildTopByStringFieldAll(movies []*types.MovieType, pick func(*types.MovieType) string, topN int) []TopStatAll {

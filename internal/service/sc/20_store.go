@@ -480,6 +480,25 @@ func (s *Service) castCountOwnedScMovieNumbersByNames(ctx context.Context, names
 	return s.deps.CastModel.CountOwnedScMovieNumbersByNames(ctx, names)
 }
 
+func (s *Service) personFindOne(ctx context.Context, id int64) (*types.Person, error) {
+	row, err := s.deps.PersonModel.FindOne(ctx, id)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, types.ErrNotFound
+		}
+		return nil, err
+	}
+	return mapPersonModelToTypes(row), nil
+}
+
+func (s *Service) personFindByIDs(ctx context.Context, ids []int64) ([]*types.Person, error) {
+	return s.deps.PersonModel.FindByIDs(ctx, ids)
+}
+
+func (s *Service) personCountOwnedScMovieNumbersByIDs(ctx context.Context, ids []int64) (map[int64]int64, error) {
+	return s.deps.PersonModel.CountOwnedScMovieNumbersByIDs(ctx, ids)
+}
+
 func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, error) {
 	if in == nil {
 		return nil, errors.New("nil input")
@@ -490,6 +509,9 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		return nil, err
 	}
 	if old != nil {
+		if _, err := s.ensureCastPersonID(ctx, old, now); err != nil {
+			return nil, err
+		}
 		old.JavId = in.JavId
 		old.MovieNumber = in.MovieNumber
 		old.OwnedMovieNumber = in.OwnedMovieNumber
@@ -508,10 +530,14 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		if err := s.deps.CastModel.Update(ctx, old); err != nil {
 			return nil, err
 		}
+		if err := s.syncPersonStatsByIDs(ctx, now, old.PersonId); err != nil {
+			return nil, err
+		}
 		return mapCastModelToTypes(old), nil
 	}
 
 	row := &moviex.AmCast{
+		PersonId:           in.PersonId,
 		Name:               in.Name,
 		JavId:              in.JavId,
 		MovieNumber:        in.MovieNumber,
@@ -527,14 +553,27 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		CreatedOn:          ifElseInt64(in.CreatedOn > 0, in.CreatedOn, now),
 		UpdatedOn:          now,
 	}
+	if row.PersonId <= 0 {
+		personID, err := s.insertPersonForCast(ctx, in, now)
+		if err != nil {
+			return nil, err
+		}
+		row.PersonId = personID
+	}
 	if _, err := s.deps.CastModel.Insert(ctx, row); err != nil {
 		if again, e2 := s.deps.CastModel.FindOneByName(ctx, in.Name); e2 == nil && again != nil {
+			if _, err := s.ensureCastPersonID(ctx, again, now); err != nil {
+				return nil, err
+			}
 			return mapCastModelToTypes(again), nil
 		}
 		return nil, err
 	}
 	ins, err := s.deps.CastModel.FindOneByName(ctx, in.Name)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.syncPersonStatsByIDs(ctx, now, row.PersonId); err != nil {
 		return nil, err
 	}
 	return mapCastModelToTypes(ins), nil
@@ -555,7 +594,26 @@ func (s *Service) castUpdateMovieNumbersByID(ctx context.Context, id int64, owne
 	row.MovieNumber = movieNumber
 	row.OwnedMovieNumber = ownedMovieNumber
 	row.UpdatedOn = now
-	return s.deps.CastModel.Update(ctx, row)
+	if err := s.deps.CastModel.Update(ctx, row); err != nil {
+		return err
+	}
+	return s.syncPersonStatsByIDs(ctx, now, row.PersonId)
+}
+
+func (s *Service) syncPersonStatsByIDs(ctx context.Context, now int64, ids ...int64) error {
+	if s == nil || s.deps == nil {
+		return nil
+	}
+	filtered := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id > 0 {
+			filtered = append(filtered, id)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return s.deps.SyncPersonStatsByIDs(ctx, filtered, now)
 }
 
 func (s *Service) castListAllIDs(ctx context.Context) ([]int64, error) {
@@ -704,6 +762,7 @@ func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
 	}
 	return &types.Cast{
 		Id:                 v.Id,
+		PersonId:           v.PersonId,
 		Name:               v.Name,
 		JavId:              v.JavId,
 		Chinese:            "",
@@ -722,6 +781,96 @@ func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
 		CreatedOn:          v.CreatedOn,
 		UpdatedOn:          v.UpdatedOn,
 	}
+}
+
+func mapPersonModelToTypes(v *moviex.CPerson) *types.Person {
+	if v == nil {
+		return nil
+	}
+	return &types.Person{
+		Id:               v.Id,
+		Name:             v.Name,
+		Alias:            v.Alias,
+		Chinese:          v.Chinese,
+		BirthDay:         v.BirthDay,
+		Height:           v.Height,
+		Cup:              v.Cup,
+		Bwh:              v.Bwh,
+		Avatar:           v.Avatar,
+		MovieNumber:      v.MovieNumber,
+		OwnedMovieNumber: v.OwnedMovieNumber,
+		ScTimes:          v.ScTimes,
+		ComeTimes:        v.ComeTimes,
+		LastScTime:       v.LastScTime,
+		HighestRank:      v.HighestRank,
+		RankTimes:        v.RankTimes,
+		CreatedOn:        v.CreatedOn,
+		UpdatedOn:        v.UpdatedOn,
+	}
+}
+
+func (s *Service) insertPersonForCast(ctx context.Context, cast *types.Cast, now int64) (int64, error) {
+	if cast == nil {
+		return 0, errors.New("nil cast")
+	}
+	name := strings.TrimSpace(cast.Name)
+	if name == "" {
+		return 0, errors.New("empty cast name")
+	}
+	personRow, err := s.deps.PersonModel.FindOneByNameOrAliasToken(ctx, name)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return 0, err
+	}
+	if personRow != nil && personRow.Id > 0 {
+		return personRow.Id, nil
+	}
+	row := &moviex.CPerson{
+		Name:             name,
+		Alias:            "",
+		Chinese:          "",
+		BirthDay:         0,
+		Height:           0,
+		Cup:              "",
+		Bwh:              "",
+		Avatar:           "",
+		MovieNumber:      cast.MovieNumber,
+		OwnedMovieNumber: cast.OwnedMovieNumber,
+		ScTimes:          cast.ScTimes,
+		ComeTimes:        cast.ComeTimes,
+		LastScTime:       cast.LastScTime,
+		HighestRank:      cast.HighestRank,
+		RankTimes:        cast.RankTimes,
+		CreatedOn:        ifElseInt64(cast.CreatedOn > 0, cast.CreatedOn, now),
+		UpdatedOn:        now,
+	}
+	res, err := s.deps.PersonModel.Insert(ctx, row)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func (s *Service) ensureCastPersonID(ctx context.Context, row *moviex.AmCast, now int64) (int64, error) {
+	if row == nil {
+		return 0, nil
+	}
+	if row.PersonId > 0 {
+		if _, err := s.deps.PersonModel.FindOne(ctx, row.PersonId); err == nil {
+			return row.PersonId, nil
+		} else if !errors.Is(err, moviex.ErrNotFound) {
+			return 0, err
+		}
+	}
+	personID, err := s.insertPersonForCast(ctx, mapCastModelToTypes(row), now)
+	if err != nil {
+		return 0, err
+	}
+	row.PersonId = personID
+	row.UpdatedOn = now
+	if err := s.deps.CastModel.Update(ctx, row); err != nil {
+		return 0, err
+	}
+	return personID, nil
 }
 
 func ifElseInt64(cond bool, a, b int64) int64 {

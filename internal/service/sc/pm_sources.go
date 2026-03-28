@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"rudy_gc/internal/types"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -231,9 +233,9 @@ func pickOneFromGroup(
 		selectedMovie[picked.JavId] = struct{}{}
 	}
 	for _, c := range picked.Cast {
-		name := canonicalActorName(c)
-		if name != "" {
-			selectedActors[name] = struct{}{}
+		key := canonicalActorKey(c)
+		if key != "" {
+			selectedActors[key] = struct{}{}
 		}
 	}
 	g.alive = append(g.alive[:pos], g.alive[pos+1:]...)
@@ -342,11 +344,11 @@ func scoreMovie(m *types.MovieType, movieLast map[string]int64, actorLast map[st
 	// 硬拦：最近看过演员直接 0
 	if pickCfg.BlockActorDays > 0 {
 		for _, c := range m.Cast {
-			name := canonicalActorName(c)
-			if name == "" {
+			key := canonicalActorKey(c)
+			if key == "" {
 				continue
 			}
-			if last, ok := actorLast[name]; ok && last > 0 {
+			if last, ok := actorLast[key]; ok && last > 0 {
 				if ageInDays(last, now) < float64(pickCfg.BlockActorDays) {
 					return 0
 				}
@@ -358,11 +360,11 @@ func scoreMovie(m *types.MovieType, movieLast map[string]int64, actorLast map[st
 	score := 1.0
 	var maxActorRecentness float64
 	for _, c := range m.Cast {
-		name := canonicalActorName(c)
-		if name == "" {
+		key := canonicalActorKey(c)
+		if key == "" {
 			continue
 		}
-		if last, ok := actorLast[name]; ok && last > 0 {
+		if last, ok := actorLast[key]; ok && last > 0 {
 			ageDays := ageInDays(last, now)
 			r := math.Exp(-ageDays / pickCfg.HalfLifeActorDays)
 			if r > maxActorRecentness {
@@ -385,11 +387,11 @@ func overlapActorCount(m *types.MovieType, selectedActors map[string]struct{}) i
 	}
 	cnt := 0
 	for _, c := range m.Cast {
-		name := canonicalActorName(c)
-		if name == "" {
+		key := canonicalActorKey(c)
+		if key == "" {
 			continue
 		}
-		if _, ok := selectedActors[name]; ok {
+		if _, ok := selectedActors[key]; ok {
 			cnt++
 		}
 	}
@@ -411,12 +413,12 @@ func buildWatchMaps(history []*scMovies) (map[string]int64, map[string]int64) {
 			}
 		}
 		for _, c := range mv.Cast {
-			name := canonicalActorName(c)
-			if name == "" {
+			key := canonicalActorKey(c)
+			if key == "" {
 				continue
 			}
-			if old, ok := actorLast[name]; !ok || wt > old {
-				actorLast[name] = wt
+			if old, ok := actorLast[key]; !ok || wt > old {
+				actorLast[key] = wt
 			}
 		}
 	}
@@ -438,8 +440,49 @@ func canonicalActorName(c *types.CastInfo) string {
 	if c == nil {
 		return ""
 	}
-	if c.Name != "" {
-		return c.Name
+	if name := strings.TrimSpace(c.DisplayName); name != "" {
+		return name
 	}
-	return c.NameShow
+	if name := strings.TrimSpace(c.Name); name != "" {
+		return name
+	}
+	return strings.TrimSpace(c.NameShow)
+}
+
+func canonicalActorKey(c *types.CastInfo) string {
+	if c == nil {
+		return ""
+	}
+	if c.PersonId > 0 {
+		return "p:" + strconv.FormatInt(c.PersonId, 10)
+	}
+	name := canonicalActorName(c)
+	if name == "" {
+		return ""
+	}
+	return "n:" + name
+}
+
+func primaryActorInfos(movie *types.MovieType) []*types.CastInfo {
+	if movie == nil || len(movie.Cast) == 0 {
+		return nil
+	}
+
+	out := make([]*types.CastInfo, 0, 2)
+	seen := make(map[string]struct{}, 2)
+	for _, cast := range movie.Cast {
+		key := canonicalActorKey(cast)
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, cast)
+		if len(out) >= 2 {
+			break
+		}
+	}
+	return out
 }

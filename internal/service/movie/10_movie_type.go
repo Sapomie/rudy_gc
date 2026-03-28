@@ -11,6 +11,7 @@ import (
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -188,8 +189,9 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 	}
 
 	infos := make([]*types.CastInfo, 0, 9)
-	for i, id := range castIDs {
-		if i > 8 {
+	seen := make(map[string]struct{}, len(castIDs))
+	for _, id := range castIDs {
+		if len(infos) >= 9 {
 			break
 		}
 		castRow, err := s.deps.CastModel.FindOne(ctx, id)
@@ -197,24 +199,59 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 			return nil, err
 		}
 		ci := &types.CastInfo{
+			PersonId:   castRow.PersonId,
 			LastScTime: castRow.LastScTime,
 			Name:       castRow.Name,
-			Url:        fmt.Sprintf("cards?cn=%s", url.QueryEscape(castRow.Name)),
 		}
 
-		birthRow, err := s.deps.CafoModel.FindOneByName(ctx, castRow.Name)
-		if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-			return nil, err
+		displayName := castRow.Name
+		birthDay := int64(0)
+		if castRow.PersonId > 0 {
+			personRow, err := s.deps.PersonModel.FindOne(ctx, castRow.PersonId)
+			if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+				return nil, err
+			}
+			if personRow != nil {
+				if strings.TrimSpace(personRow.Chinese) != "" {
+					displayName = personRow.Chinese
+				} else if strings.TrimSpace(personRow.Name) != "" {
+					displayName = personRow.Name
+				}
+				birthDay = personRow.BirthDay
+				ci.Url = fmt.Sprintf("cast?id=%d", castRow.PersonId)
+			}
 		}
-		if birthRow != nil && birthRow.BirthDay > 0 && releasingTs > 0 {
-			age := round1(float64(releasingTs-birthRow.BirthDay) / (3600.0 * 24.0 * 365.0))
-			ci.NameShow = fmt.Sprintf("%s(%v)", castRow.Name, age)
+		displayKey := buildMovieTypeCastDisplayKey(castRow.PersonId, castRow.Name)
+		if displayKey != "" {
+			if _, ok := seen[displayKey]; ok {
+				continue
+			}
+			seen[displayKey] = struct{}{}
+		}
+		if ci.Url == "" {
+			ci.Url = fmt.Sprintf("cards?cn=%s", url.QueryEscape(castRow.Name))
+		}
+		ci.DisplayName = displayName
+		if birthDay > 0 && releasingTs > 0 {
+			age := round1(float64(releasingTs-birthDay) / (3600.0 * 24.0 * 365.0))
+			ci.NameShow = fmt.Sprintf("%s(%v)", displayName, age)
 		} else {
-			ci.NameShow = castRow.Name
+			ci.NameShow = displayName
 		}
 		infos = append(infos, ci)
 	}
 	return infos, nil
+}
+
+func buildMovieTypeCastDisplayKey(personID int64, name string) string {
+	if personID > 0 {
+		return "p:" + strconv.FormatInt(personID, 10)
+	}
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" {
+		return ""
+	}
+	return "n:" + name
 }
 
 func (s *Service) getGenreNames(ctx context.Context, movieJavId string) ([]string, error) {

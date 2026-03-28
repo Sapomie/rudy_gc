@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -68,11 +67,20 @@ func (h *MovieHTMLHandler) ListMovieCardNeedDownload(c *gin.Context) {
 
 /* ======================== 渲染核心 ======================== */
 
-func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieFullRequest, title, fieldName string) {
+type movieCardPageData struct {
+	Movies          []*types.MovieType
+	Total           int64
+	PageInfo        *PageInfo
+	OwnedQuery      *OwnedQuery
+	SortQuery       *SortQuery
+	CurrentSort     string
+	MovieCardFilter *movieCardFilterView
+}
+
+func parseMovieCardRequest(c *gin.Context, base types.ListMovieFullRequest) (types.ListMovieFullRequest, error) {
 	req := base
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
-		return
+		return types.ListMovieFullRequest{}, err
 	}
 	if req.Page <= 0 {
 		req.Page = 1
@@ -80,57 +88,64 @@ func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieF
 	if req.PageSize <= 0 || req.PageSize > maxPageSize {
 		req.PageSize = defaultPageSize
 	}
+	req.OrderBy = normalizeOrderBy(c.Query("od"), req.OrderBy)
+	return req, nil
+}
 
-	curOD := normalizeOrderBy(c.Query("od"), req.OrderBy)
-	req.OrderBy = curOD
-
+func (h *MovieHTMLHandler) loadMovieCardPageData(c *gin.Context, req types.ListMovieFullRequest, action, clearHref string) (*movieCardPageData, error) {
 	resp, err := h.movieSvc.ListMovieFull(c.Request.Context(), &req)
+	if err != nil {
+		return nil, err
+	}
+
+	h.enqueueJavIDsNonBlocking(resp.JavIds)
+
+	pi := BuildPageInfo(c, resp.Total, req.Page, req.PageSize, pageWindow)
+	ownedQ := buildOwnedFilterInfo(c)
+	sortQ := buildSortQuery(c, req.OrderBy)
+	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
+	if action != "" {
+		filterView.Action = action
+	}
+	if clearHref != "" {
+		filterView.ClearHref = clearHref
+	}
+
+	return &movieCardPageData{
+		Movies:          resp.List,
+		Total:           resp.Total,
+		PageInfo:        pi,
+		OwnedQuery:      ownedQ,
+		SortQuery:       sortQ,
+		CurrentSort:     req.OrderBy,
+		MovieCardFilter: filterView,
+	}, nil
+}
+
+func (h *MovieHTMLHandler) renderMovieCard(c *gin.Context, base types.ListMovieFullRequest, title, fieldName string) {
+	req, err := parseMovieCardRequest(c, base)
+	if err != nil {
+		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
+		return
+	}
+
+	data, err := h.loadMovieCardPageData(c, req, "", "")
 	if err != nil {
 		c.String(http.StatusInternalServerError, "查询失败: %v", err)
 		return
 	}
 
-	actorSummary, err := h.buildActorSummary(c, req.CastNames)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "演员 SC 摘要加载失败: %v", err)
-		return
-	}
-
-	// 异步投递 javIds（非阻塞 + 去重）
-	h.enqueueJavIDsNonBlocking(resp.JavIds)
-
-	pi := BuildPageInfo(c, resp.Total, req.Page, req.PageSize, pageWindow)
-	ownedQ := buildOwnedFilterInfo(c)
-	sortQ := buildSortQuery(c, curOD)
-
 	c.HTML(http.StatusOK, "page.list_movie_card", gin.H{
 		"Title":           title,
-		"movies":          resp.List,
-		"total":           resp.Total,
-		"PageInfo":        pi,
-		"pageInfo":        pi,
-		"ownedQuery":      ownedQ,
-		"sortQuery":       sortQ,
-		"CurrentSort":     curOD,
-		"ActorSummary":    actorSummary,
-		"MovieCardFilter": buildMovieCardFilterView(c, req, curOD, nil),
+		"movies":          data.Movies,
+		"total":           data.Total,
+		"PageInfo":        data.PageInfo,
+		"pageInfo":        data.PageInfo,
+		"ownedQuery":      data.OwnedQuery,
+		"sortQuery":       data.SortQuery,
+		"CurrentSort":     data.CurrentSort,
+		"MovieCardFilter": data.MovieCardFilter,
 	})
-}
-
-func (h *MovieHTMLHandler) buildActorSummary(c *gin.Context, castNames string) (*types.ActorScSummary, error) {
-	name := singleActorFilterName(castNames)
-	if name == "" {
-		return nil, nil
-	}
-
-	summary, err := h.scSvc.BuildActorScSummary(c.Request.Context(), name, 5)
-	if err != nil {
-		if errors.Is(err, types.ErrNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return summary, nil
 }
 
 /* ======================== 工具函数 ======================== */

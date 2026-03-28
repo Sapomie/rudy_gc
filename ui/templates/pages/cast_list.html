@@ -55,6 +55,10 @@
                             {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
 
                             <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">Name Search</label>
+                                <input id="casts-keyword" class="form-control" type="text" name="keyword" placeholder="Name / Chinese / Alias" value="{{ .Query.Keyword }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
                                 <label class="form-label mb-1">Owned Range</label>
                                 <div class="row g-2">
                                     <div class="col-6">
@@ -179,7 +183,7 @@
                                     {{ range .Items }}
                                         <tr>
                                             <td>
-                                                <a class="sc-event-link" href="/cast?name={{ urlquery .Name }}">{{ .Name }}</a>
+                                                <a class="sc-event-link" href="/cast?id={{ .Id }}">{{ .Name }}</a>
                                             </td>
                                             <td>{{ if .Chinese }}{{ .Chinese }}{{ else }}-{{ end }}</td>
                                             <td>{{ humanAgeFromBirth .BirthDay }}</td>

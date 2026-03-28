@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -293,6 +294,8 @@ func buildScAggTrend(events []*types.GSc) []types.ScAggTrend {
 
 func buildScAggTopCasts(rows []*types.GList, movieMap map[string]*types.MovieType, limit int) []types.ScAggTopStat {
 	stats := make(map[string]*scAggCount)
+	names := make(map[string]string)
+	hrefs := make(map[string]string)
 	for _, row := range rows {
 		if row == nil || row.ScName == "" || row.MovieJavId == "" {
 			continue
@@ -303,22 +306,44 @@ func buildScAggTopCasts(rows []*types.GList, movieMap map[string]*types.MovieTyp
 		}
 		seen := make(map[string]struct{})
 		for _, cast := range movieType.Cast {
-			name := normalizeCastName(cast)
-			if name == "" {
+			key, name, href := normalizeCastStat(cast)
+			if key == "" || name == "" {
 				continue
 			}
-			if _, ok := seen[name]; ok {
+			if _, ok := seen[key]; ok {
 				continue
 			}
-			seen[name] = struct{}{}
-			acc := ensureScAggCount(stats, name)
+			seen[key] = struct{}{}
+			names[key] = name
+			hrefs[key] = href
+			acc := ensureScAggCount(stats, key)
 			acc.movies++
 			acc.events[row.ScName] = struct{}{}
 		}
 	}
-	return flattenScAggCounts(stats, limit, func(name string) string {
-		return "/cast?name=" + url.QueryEscape(name)
+
+	items := make([]types.ScAggTopStat, 0, len(stats))
+	for key, acc := range stats {
+		items = append(items, types.ScAggTopStat{
+			Name:       names[key],
+			EventCount: len(acc.events),
+			MovieCount: acc.movies,
+			Href:       hrefs[key],
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].EventCount != items[j].EventCount {
+			return items[i].EventCount > items[j].EventCount
+		}
+		if items[i].MovieCount != items[j].MovieCount {
+			return items[i].MovieCount > items[j].MovieCount
+		}
+		return items[i].Name < items[j].Name
 	})
+	if limit > 0 && len(items) > limit {
+		items = items[:limit]
+	}
+	return items
 }
 
 func buildScAggTopLabels(rows []*types.GList, movieMap map[string]*types.MovieType, limit int) []types.ScAggTopStat {
@@ -577,15 +602,25 @@ func buildScEventHref(name string) string {
 	return "/sc-events/" + url.PathEscape(name)
 }
 
-func normalizeCastName(cast *types.CastInfo) string {
+func normalizeCastStat(cast *types.CastInfo) (key string, name string, href string) {
 	if cast == nil {
-		return ""
+		return "", "", ""
 	}
-	name := strings.TrimSpace(cast.Name)
-	if name != "" {
-		return name
+	name = strings.TrimSpace(cast.DisplayName)
+	if name == "" {
+		name = strings.TrimSpace(cast.Name)
 	}
-	return strings.TrimSpace(cast.NameShow)
+	if name == "" {
+		name = strings.TrimSpace(cast.NameShow)
+	}
+	if name == "" {
+		return "", "", ""
+	}
+	if cast.PersonId > 0 {
+		pid := strconv.FormatInt(cast.PersonId, 10)
+		return "p:" + pid, name, "/cast?id=" + pid
+	}
+	return "n:" + name, name, "/cast?name=" + url.QueryEscape(name)
 }
 
 func actorMovieIsCome(gl *types.GList) bool {

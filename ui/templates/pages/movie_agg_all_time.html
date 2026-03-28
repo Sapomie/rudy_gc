@@ -236,6 +236,7 @@
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
                                             {{ range $i, $it := .TopCastsAll }}
                                                 {{ $u := (printf "/cards?cn=%s&owned=1" (urlquery $it.Name)) }}
+                                                {{ if gt $it.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&owned=1" $it.PersonId) }}{{ end }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"

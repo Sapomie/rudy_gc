@@ -445,6 +445,9 @@ func (s *Service) rebuildCastStatsByID(ctx context.Context, castID, now int64) e
 	if err := s.deps.CastModel.Update(ctx, castRow); err != nil {
 		return fmt.Errorf("update am_cast(%d) failed: %w", castID, err)
 	}
+	if err := s.deps.SyncPersonStatsByIDs(ctx, []int64{castRow.PersonId}, now); err != nil {
+		return fmt.Errorf("sync c_person(%d) failed: %w", castRow.PersonId, err)
+	}
 	return nil
 }
 

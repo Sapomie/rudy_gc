@@ -8,6 +8,7 @@
                     {{ if .PageSize }}<input type="hidden" name="ps" value="{{ .PageSize }}" data-explicit="{{ if index $explicit "ps" }}1{{ else }}0{{ end }}">{{ end }}
                     {{ if .OrderBy }}<input type="hidden" name="od" value="{{ .OrderBy }}" data-explicit="{{ if index $explicit "od" }}1{{ else }}0{{ end }}">{{ end }}
                     {{ if .RandomCount }}<input type="hidden" name="n" value="{{ .RandomCount }}" data-explicit="{{ if index $explicit "n" }}1{{ else }}0{{ end }}">{{ end }}
+                    {{ if .PersonIds }}<input type="hidden" name="pid" value="{{ .PersonIds }}" data-explicit="{{ if index $explicit "pid" }}1{{ else }}0{{ end }}">{{ end }}
 
                     <div class="col-12 col-md-6 col-xl-2">
                         <label class="form-label mb-1">演员</label>

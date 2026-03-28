@@ -5,41 +5,57 @@ import (
 	"errors"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 )
 
-func (s *ScService) BuildActorScSummary(ctx context.Context, actorName string, recentLimit int) (*types.ActorScSummary, error) {
-	page, err := s.buildActorScPage(ctx, actorName, recentLimit, 0)
-	if err != nil {
-		return nil, err
-	}
-	if page == nil {
-		return nil, nil
-	}
-
-	return &types.ActorScSummary{
-		Actor:         page.Actor,
-		RecentEvents:  page.RecentEvents,
-		ActorPageHref: page.ActorPageHref,
-		CardsHref:     page.CardsHref,
-		ScAggHref:     page.ScAggHref,
-	}, nil
-}
-
 func (s *ScService) BuildActorScPage(ctx context.Context, actorName string, recentLimit, movieLimit int) (*types.ActorScPage, error) {
-	return s.buildActorScPage(ctx, actorName, recentLimit, movieLimit)
+	return s.buildActorScPageByName(ctx, actorName, recentLimit, movieLimit)
 }
 
-func (s *ScService) buildActorScPage(ctx context.Context, actorName string, recentLimit, movieLimit int) (*types.ActorScPage, error) {
+func (s *ScService) BuildActorScPageByPersonID(ctx context.Context, personID int64, recentLimit, movieLimit int) (*types.ActorScPage, error) {
+	return s.buildActorScPageByPersonID(ctx, personID, recentLimit, movieLimit)
+}
+
+func (s *ScService) buildActorScPageByName(ctx context.Context, actorName string, recentLimit, movieLimit int) (*types.ActorScPage, error) {
 	actorName = strings.TrimSpace(actorName)
 	if actorName == "" {
 		return nil, types.ErrNotFound
 	}
 
-	actor, err := s.castFindOneByName(ctx, actorName)
+	castRow, err := s.castFindOneByName(ctx, actorName)
+	if err != nil {
+		if errors.Is(err, types.ErrNotFound) {
+			return nil, types.ErrNotFound
+		}
+		return nil, err
+	}
+	if castRow == nil {
+		return nil, types.ErrNotFound
+	}
+	if castRow.PersonId > 0 {
+		return s.buildActorScPageByPersonID(ctx, castRow.PersonId, recentLimit, movieLimit)
+	}
+
+	actor := personFromCast(castRow)
+	req := &types.ListMovieFullRequest{
+		CastNames: actorName,
+		Owned:     consts.MovieAll,
+		OrderBy:   consts.OrderByReleasingDate,
+		Page:      1,
+		PageSize:  999999,
+	}
+	return s.buildActorScPageWithMovies(ctx, actor, req, recentLimit, movieLimit, buildActorPageHrefByName(actorName), buildActorCardsHrefByName(actorName))
+}
+
+func (s *ScService) buildActorScPageByPersonID(ctx context.Context, personID int64, recentLimit, movieLimit int) (*types.ActorScPage, error) {
+	if personID <= 0 {
+		return nil, types.ErrNotFound
+	}
+	actor, err := s.personFindOne(ctx, personID)
 	if err != nil {
 		if errors.Is(err, types.ErrNotFound) {
 			return nil, types.ErrNotFound
@@ -49,14 +65,18 @@ func (s *ScService) buildActorScPage(ctx context.Context, actorName string, rece
 	if actor == nil {
 		return nil, types.ErrNotFound
 	}
-
-	resp, err := s.movieSvc.ListMovieFull(ctx, &types.ListMovieFullRequest{
-		CastNames: actorName,
+	req := &types.ListMovieFullRequest{
+		PersonIds: strconv.FormatInt(personID, 10),
 		Owned:     consts.MovieAll,
 		OrderBy:   consts.OrderByReleasingDate,
 		Page:      1,
 		PageSize:  999999,
-	})
+	}
+	return s.buildActorScPageWithMovies(ctx, actor, req, recentLimit, movieLimit, buildActorPageHrefByID(personID), buildActorCardsHrefByID(personID))
+}
+
+func (s *ScService) buildActorScPageWithMovies(ctx context.Context, actor *types.Person, req *types.ListMovieFullRequest, recentLimit, movieLimit int, actorHref, cardsHref string) (*types.ActorScPage, error) {
+	resp, err := s.movieSvc.ListMovieFull(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -84,17 +104,23 @@ func (s *ScService) buildActorScPage(ctx context.Context, actorName string, rece
 		return nil, err
 	}
 
+	actorAliases, err := s.buildActorAliases(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+
 	if movieLimit > 0 && len(movies) > movieLimit {
 		movies = movies[:movieLimit]
 	}
 
 	return &types.ActorScPage{
 		Actor:         actor,
+		ActorAliases:  actorAliases,
 		RecentEvents:  recentEvents,
 		Movies:        movies,
 		TotalMovies:   len(resp.List),
-		ActorPageHref: buildActorPageHref(actorName),
-		CardsHref:     buildActorCardsHref(actorName),
+		ActorPageHref: actorHref,
+		CardsHref:     cardsHref,
 		ScAggHref:     "/sc-agg",
 	}, nil
 }
@@ -235,12 +261,42 @@ func movieLastScTime(movieType *types.MovieType) int64 {
 	return movieType.VFilm.LastScTime
 }
 
-func buildActorPageHref(name string) string {
+func buildActorPageHrefByName(name string) string {
 	return "/cast?name=" + url.QueryEscape(name)
 }
 
-func buildActorCardsHref(name string) string {
+func buildActorCardsHrefByName(name string) string {
 	return "/cards?cn=" + url.QueryEscape(name)
+}
+
+func buildActorPageHrefByID(id int64) string {
+	return "/cast?id=" + strconv.FormatInt(id, 10)
+}
+
+func buildActorCardsHrefByID(id int64) string {
+	return "/cards?pid=" + strconv.FormatInt(id, 10)
+}
+
+func personFromCast(cast *types.Cast) *types.Person {
+	if cast == nil {
+		return nil
+	}
+	return &types.Person{
+		Id:               cast.PersonId,
+		Name:             cast.Name,
+		Chinese:          cast.Chinese,
+		BirthDay:         cast.BirthDay,
+		Height:           cast.Height,
+		MovieNumber:      cast.MovieNumber,
+		OwnedMovieNumber: cast.OwnedMovieNumber,
+		ScTimes:          cast.ScTimes,
+		ComeTimes:        cast.ComeTimes,
+		LastScTime:       cast.LastScTime,
+		HighestRank:      cast.HighestRank,
+		RankTimes:        cast.RankTimes,
+		CreatedOn:        cast.CreatedOn,
+		UpdatedOn:        cast.UpdatedOn,
+	}
 }
 
 func buildActorScEventMovie(gl *types.GList, movieType *types.MovieType) *types.ActorScEventMovie {

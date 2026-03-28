@@ -21,9 +21,12 @@ type (
 	AmCastModel interface {
 		amCastModel
 		GetMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, error)
+		AggregatePersonStatsByIDs(ctx context.Context, ids []int64) (map[int64]*types.Person, error)
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		ListAllIDs(ctx context.Context) ([]int64, error)
+		ListAll(ctx context.Context) ([]*AmCast, error)
+		ListRowsByPersonIDs(ctx context.Context, personIDs []int64) ([]*AmCast, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string, filter types.CastListFilter) ([]*types.Cast, error)
 		CountAll(ctx context.Context, filter types.CastListFilter) (int64, error)
 		FindByNames(ctx context.Context, names []string) ([]*types.Cast, error)
@@ -69,6 +72,78 @@ SELECT
 	return resp.MovieNumber, resp.OwnedMovieNumber, nil
 }
 
+func (m *customAmCastModel) AggregatePersonStatsByIDs(ctx context.Context, ids []int64) (map[int64]*types.Person, error) {
+	uniq := uniqueInt64s(ids)
+	if len(uniq) == 0 {
+		return map[int64]*types.Person{}, nil
+	}
+
+	type row struct {
+		PersonId         int64 `db:"person_id"`
+		MovieNumber      int64 `db:"movie_number"`
+		OwnedMovieNumber int64 `db:"owned_movie_number"`
+		ScTimes          int64 `db:"sc_times"`
+		ComeTimes        int64 `db:"come_times"`
+		LastScTime       int64 `db:"last_sc_time"`
+		HighestRank      int64 `db:"highest_rank"`
+		RankTimes        int64 `db:"rank_times"`
+	}
+
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(uniq)), ",")
+	query := `
+SELECT
+	pm.person_id AS person_id,
+	COUNT(*) AS movie_number,
+	COALESCE(SUM(CASE WHEN vf.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_movie_number,
+	COALESCE(SUM(COALESCE(vf.sc_times, 0)), 0) AS sc_times,
+	COALESCE(SUM(COALESCE(vf.come_times, 0)), 0) AS come_times,
+	COALESCE(MAX(COALESCE(vf.last_sc_time, 0)), 0) AS last_sc_time,
+	COALESCE(MIN(CASE WHEN mi.highest_rank > 0 AND mi.highest_rank < 1000 THEN mi.highest_rank END), 0) AS highest_rank,
+	COALESCE(SUM(CASE WHEN mi.days_in_rank > 0 THEN mi.days_in_rank ELSE 0 END), 0) AS rank_times
+FROM (
+	SELECT DISTINCT ac.person_id AS person_id, amr.movie_jav_id AS movie_jav_id
+	FROM am_cast ac
+	JOIN amr_movie_cast amr ON amr.cast_id = ac.id
+	WHERE ac.person_id IN (` + placeholders + `)
+) pm
+LEFT JOIN v_film vf ON vf.movie_jav_id = pm.movie_jav_id
+LEFT JOIN bm_minfo mi ON mi.jav_id = pm.movie_jav_id
+GROUP BY pm.person_id
+`
+
+	args := make([]any, 0, len(uniq)+1)
+	args = append(args, consts.FilmIsNotRemoved)
+	for _, id := range uniq {
+		args = append(args, id)
+	}
+
+	var rows []*row
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return map[int64]*types.Person{}, nil
+		}
+		return nil, err
+	}
+
+	out := make(map[int64]*types.Person, len(rows))
+	for _, item := range rows {
+		if item == nil || item.PersonId <= 0 {
+			continue
+		}
+		out[item.PersonId] = &types.Person{
+			Id:               item.PersonId,
+			MovieNumber:      item.MovieNumber,
+			OwnedMovieNumber: item.OwnedMovieNumber,
+			ScTimes:          item.ScTimes,
+			ComeTimes:        item.ComeTimes,
+			LastScTime:       item.LastScTime,
+			HighestRank:      item.HighestRank,
+			RankTimes:        item.RankTimes,
+		}
+	}
+	return out, nil
+}
+
 func (m *customAmCastModel) ListAllIDs(ctx context.Context) ([]int64, error) {
 	const query = "SELECT id FROM am_cast"
 	var ids []int64
@@ -81,6 +156,44 @@ func (m *customAmCastModel) ListAllIDs(ctx context.Context) ([]int64, error) {
 	return ids, nil
 }
 
+func (m *customAmCastModel) ListAll(ctx context.Context) ([]*AmCast, error) {
+	var rows []*AmCast
+	query := "select " + amCastRows + " from " + m.table + " order by id asc"
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*AmCast{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customAmCastModel) ListRowsByPersonIDs(ctx context.Context, personIDs []int64) ([]*AmCast, error) {
+	uniq := uniqueInt64s(personIDs)
+	if len(uniq) == 0 {
+		return []*AmCast{}, nil
+	}
+
+	sqlStr, args, err := squirrel.
+		Select(amCastRows).
+		From(m.table).
+		Where(squirrel.Eq{"person_id": uniq}).
+		OrderBy("person_id ASC", "name ASC", "id ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*AmCast
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*AmCast{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, orderBy string, filter types.CastListFilter) ([]*types.Cast, error) {
 	if orderBy == "" {
 		orderBy = "ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
@@ -88,6 +201,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 
 	type castListRow struct {
 		Id                 int64  `db:"id"`
+		PersonId           int64  `db:"person_id"`
 		Name               string `db:"name"`
 		JavId              string `db:"jav_id"`
 		Chinese            string `db:"chinese"`
@@ -110,11 +224,12 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 	builder := squirrel.
 		Select(
 			"ac.id AS id",
+			"ac.person_id AS person_id",
 			"ac.name AS name",
 			"ac.jav_id AS jav_id",
-			"COALESCE(cc.chinese, '') AS chinese",
-			"COALESCE(cc.birth_day, 0) AS birth_day",
-			"COALESCE(cc.height, 0) AS height",
+			"COALESCE(p.chinese, '') AS chinese",
+			"COALESCE(p.birth_day, 0) AS birth_day",
+			"COALESCE(p.height, 0) AS height",
 			"ac.movie_number AS movie_number",
 			"ac.owned_movie_number AS owned_movie_number",
 			"ac.sc_times AS sc_times",
@@ -129,7 +244,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			"ac.updated_on AS updated_on",
 		).
 		From(m.table + " ac").
-		LeftJoin("`c_cafo` cc ON cc.name = ac.name")
+		LeftJoin("`c_person` p ON p.id = ac.person_id")
 
 	builder = applyCastListFilter(builder, filter)
 
@@ -157,6 +272,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 		}
 		out = append(out, &types.Cast{
 			Id:                 row.Id,
+			PersonId:           row.PersonId,
 			Name:               row.Name,
 			JavId:              row.JavId,
 			Chinese:            row.Chinese,
@@ -206,6 +322,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 
 	type castRow struct {
 		Id                 int64  `db:"id"`
+		PersonId           int64  `db:"person_id"`
 		Name               string `db:"name"`
 		JavId              string `db:"jav_id"`
 		MovieNumber        int64  `db:"movie_number"`
@@ -225,6 +342,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 	sqlStr, args, err := squirrel.
 		Select(
 			"id",
+			"person_id",
 			"name",
 			"jav_id",
 			"movie_number",
@@ -262,6 +380,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 		}
 		out = append(out, &types.Cast{
 			Id:                 row.Id,
+			PersonId:           row.PersonId,
 			Name:               row.Name,
 			JavId:              row.JavId,
 			MovieNumber:        row.MovieNumber,

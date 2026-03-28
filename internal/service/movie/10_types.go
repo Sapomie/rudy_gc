@@ -26,9 +26,10 @@ type Breadcrumb struct {
 }
 
 type CastStat struct {
-	Name  string
-	Count int
-	ScSum int64
+	PersonId int64
+	Name     string
+	Count    int
+	ScSum    int64
 }
 
 type TopStat struct {
@@ -38,6 +39,7 @@ type TopStat struct {
 }
 
 type TopStatAll struct {
+	PersonId   int64
 	Name       string
 	CountAll   int
 	CountOwned int

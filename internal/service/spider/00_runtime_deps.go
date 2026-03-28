@@ -35,7 +35,7 @@ func newRuntimeDeps(base *svc.Deps) *runtimeDeps {
 		DetailRepo:     &DetailRepoSqlx{m: base.DetailModel},
 		BestinvRepo:    &BestinvRepoSqlx{m: base.BestinvModel},
 		MovieRepo:      &MovieRepoSqlx{m: base.MovieModel},
-		CastRepo:       &CastRepoSqlx{m: base.CastModel},
+		CastRepo:       &CastRepoSqlx{m: base.CastModel, pm: base.PersonModel, syncPersonStats: base.SyncPersonStatsByIDs},
 		GenreRepo:      &GenreRepoSqlx{m: base.GenreModel},
 		DirectorRepo:   &DirectorRepoSqlx{m: base.DirectorModel},
 		LabelRepo:      &LabelRepoSqlx{m: base.LabelModel},

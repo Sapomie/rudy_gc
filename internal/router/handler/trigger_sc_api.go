@@ -31,6 +31,24 @@ func NewScTriggerAPI(deps *svc.Deps) *ScTriggerAPI {
 	}
 }
 
+type scMoveReq struct {
+	ScName string `json:"scName" form:"scName"`
+}
+
+func (h *ScTriggerAPI) Move(c *gin.Context) {
+	var req scMoveReq
+	_ = c.ShouldBind(&req)
+	name := strings.TrimSpace(req.ScName)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "scName required"})
+		return
+	}
+	h.startTask(c, loop.StartTaskRequest{
+		TaskType: loop.TaskScMove,
+		ScName:   name,
+	})
+}
+
 func (h *ScTriggerAPI) Add(c *gin.Context) {
 	var req scAddReq
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -20,6 +20,7 @@ type movieCardFilterView struct {
 	Explicit    map[string]bool
 
 	CastNames    string
+	PersonIds    string
 	GenreNames   string
 	DirectorName string
 	PrefixName   string
@@ -71,6 +72,7 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 		Explicit:  buildMovieCardFilterExplicit(c, randomN != nil),
 
 		CastNames:    queryOrFallbackString(c, "cn", req.CastNames),
+		PersonIds:    queryOrFallbackString(c, "pid", req.PersonIds),
 		GenreNames:   queryOrFallbackString(c, "gn", req.GenreNames),
 		DirectorName: queryOrFallbackString(c, "dn", req.DirectorName),
 		PrefixName:   queryOrFallbackString(c, "pn", req.PrefixName),
@@ -120,7 +122,7 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 func buildMovieCardFilterExplicit(c *gin.Context, hasRandom bool) map[string]bool {
 	keys := []string{
 		"ps", "od",
-		"cn", "gn", "dn", "pn", "mn", "ln", "wd",
+		"cn", "pid", "gn", "dn", "pn", "mn", "ln", "wd",
 		"owned", "nd", "drkmin",
 		"d1", "d2", "d3", "d4",
 		"rs", "re", "bs", "be", "srds", "srde", "lsctmin", "lsctmax",

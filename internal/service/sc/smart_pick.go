@@ -107,7 +107,7 @@ func (l *ScService) SmartPickFromRequests(ctx context.Context, reqs []PickReques
 					return nil, fmt.Errorf("%s group quota unmet: %w", plan.label, err)
 				}
 				selected = append(selected, picked)
-				for _, name := range primaryActorNames(picked) {
+				for _, name := range primaryActorKeys(picked) {
 					selectedActors[name] = struct{}{}
 				}
 				if picked != nil && picked.JavId != "" {
@@ -180,13 +180,46 @@ func normalizeSmartPickReq(req *types.ListMovieFullRequest) {
 }
 
 func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickGroup) (map[string]smartCastStat, error) {
+	personIDs := make([]int64, 0, 128)
 	names := make([]string, 0, 128)
 	for _, g := range groups {
 		if g == nil {
 			continue
 		}
 		for _, movie := range g.candidates {
-			names = append(names, primaryActorNames(movie)...)
+			for _, cast := range primaryActorInfos(movie) {
+				if cast == nil {
+					continue
+				}
+				if cast.PersonId > 0 {
+					personIDs = append(personIDs, cast.PersonId)
+					continue
+				}
+				if name := canonicalActorName(cast); name != "" {
+					names = append(names, name)
+				}
+			}
+		}
+	}
+
+	stats := make(map[string]smartCastStat, len(personIDs)+len(names))
+
+	personRows, err := l.personFindByIDs(ctx, personIDs)
+	if err != nil {
+		return nil, err
+	}
+	personOwnedScMap, err := l.personCountOwnedScMovieNumbersByIDs(ctx, personIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range personRows {
+		if row == nil || row.Id <= 0 {
+			continue
+		}
+		stats["p:"+fmt.Sprintf("%d", row.Id)] = smartCastStat{
+			LastScTime:         row.LastScTime,
+			OwnedMovieNumber:   row.OwnedMovieNumber,
+			OwnedScMovieNumber: personOwnedScMap[row.Id],
 		}
 	}
 
@@ -198,24 +231,30 @@ func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickG
 	if err != nil {
 		return nil, err
 	}
-
-	stats := make(map[string]smartCastStat, len(rows))
 	for _, row := range rows {
 		if row == nil || row.Name == "" {
 			continue
 		}
-		stats[row.Name] = smartCastStat{
+		stats["n:"+row.Name] = smartCastStat{
 			LastScTime:         row.LastScTime,
 			OwnedMovieNumber:   row.OwnedMovieNumber,
 			OwnedScMovieNumber: ownedScMap[row.Name],
 		}
 	}
 
-	for _, name := range names {
-		if _, ok := stats[name]; ok {
+	for _, personID := range personIDs {
+		key := "p:" + fmt.Sprintf("%d", personID)
+		if _, ok := stats[key]; ok {
 			continue
 		}
-		stats[name] = smartCastStat{}
+		stats[key] = smartCastStat{}
+	}
+	for _, name := range names {
+		key := "n:" + name
+		if _, ok := stats[key]; ok {
+			continue
+		}
+		stats[key] = smartCastStat{}
 	}
 	return stats, nil
 }
@@ -238,7 +277,7 @@ func smartMovieBaseWeight(movie *types.MovieType, castStats map[string]smartCast
 		}
 	}
 
-	actors := primaryActorNames(movie)
+	actors := primaryActorKeys(movie)
 	if len(actors) == 0 {
 		return movieHasScFactor
 	}
@@ -460,7 +499,7 @@ func smartMovieEligible(
 		return false
 	}
 
-	for _, name := range primaryActorNames(movie) {
+	for _, name := range primaryActorKeys(movie) {
 		if _, ok := selectedActors[name]; ok {
 			return false
 		}
@@ -492,24 +531,13 @@ func smartBucketAllowsMovie(bucket smartRankBucket, movie *types.MovieType) bool
 	}
 }
 
-func primaryActorNames(movie *types.MovieType) []string {
-	if movie == nil || len(movie.Cast) == 0 {
-		return nil
-	}
-	out := make([]string, 0, 2)
-	seen := make(map[string]struct{}, 2)
-	for _, cast := range movie.Cast {
-		name := canonicalActorName(cast)
-		if name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		out = append(out, name)
-		if len(out) >= 2 {
-			break
+func primaryActorKeys(movie *types.MovieType) []string {
+	infos := primaryActorInfos(movie)
+	out := make([]string, 0, len(infos))
+	for _, cast := range infos {
+		key := canonicalActorKey(cast)
+		if key != "" {
+			out = append(out, key)
 		}
 	}
 	return out

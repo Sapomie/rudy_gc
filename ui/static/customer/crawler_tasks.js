@@ -11,12 +11,14 @@
         spider_seeds: '活跃 Seeds',
         spider_seed_by_name: '按名称抓取',
         spider_refresh_oldest_detail: '刷新最久详情',
+        spider_backfill_person: 'person 回填',
         spider_backfill_rank_period: '周期排行回填',
         spider_rebuild_cast_rank: '演员 Rank 回填',
         spider_rebuild_actor_rank: '单演员 Rank',
         film_rename: '影片重命名',
         film_process: '影片处理',
         sc_rebuild_stats: 'SC 统计回填',
+        sc_move: 'SC 影片移动',
         sc_add: 'SC 新增',
     };
     const TASK_TRIGGER_PAGES = {
@@ -25,12 +27,14 @@
         spider_seeds: '/triggers/seeds',
         spider_seed_by_name: '/triggers/seeds',
         spider_refresh_oldest_detail: '/triggers/seeds',
+        spider_backfill_person: '/triggers/backfill',
         spider_backfill_rank_period: '/triggers/backfill',
         film_rename: '/triggers/film',
         film_process: '/triggers/film',
         spider_rebuild_cast_rank: '/triggers/backfill',
         spider_rebuild_actor_rank: '/triggers/backfill',
         sc_rebuild_stats: '/triggers/backfill',
+        sc_move: '/triggers/backfill',
         sc_add: '/triggers/sc',
     };
 

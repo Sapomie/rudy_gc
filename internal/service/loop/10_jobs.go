@@ -18,11 +18,18 @@ const (
 	TaskSpiderRefreshOldest      = "spider_refresh_oldest_detail"
 	TaskSpiderRebuildCastRank    = "spider_rebuild_cast_rank"
 	TaskSpiderRebuildActorRank   = "spider_rebuild_actor_rank"
+	TaskSpiderBackfillPerson     = "spider_backfill_person"
 	TaskSpiderBackfillRankPeriod = "spider_backfill_rank_period"
 	TaskFilmRename               = "film_rename"
 	TaskFilmProcess              = "film_process"
 	TaskScRebuildStats           = "sc_rebuild_stats"
+	TaskScMove                   = "sc_move"
 	TaskScAdd                    = "sc_add"
+)
+
+const (
+	taskGroupFetchPriority = "fetch_priority"
+	taskGroupRefreshOldest = "refresh_oldest"
 )
 
 type StartTaskRequest struct {
@@ -30,6 +37,7 @@ type StartTaskRequest struct {
 	Name           string `json:"name"`
 	ActorName      string `json:"actor_name"`
 	Number         int64  `json:"number"`
+	ScName         string `json:"sc_name"`
 	Dir            string `json:"dir"`
 	ComeMovieJavID string `json:"come_movie_jav_id"`
 	MovieCast      string `json:"movie_cast"`
@@ -150,6 +158,11 @@ func (l *FetchLoopService) PauseJob(jobID string) error {
 
 func (l *FetchLoopService) ResumeJob(jobID string) error {
 	jobID = strings.TrimSpace(jobID)
+	if snapshot, ok := l.jobs.snapshot(jobID); ok {
+		if snapshot.TaskType == TaskSpiderRefreshOldest && l.isExclusiveGroupRunning(taskGroupFetchPriority) {
+			return fmt.Errorf("高优先抓取任务运行中，刷新最久详情暂不可继续")
+		}
+	}
 	event, err := l.jobs.resume(jobID)
 	if err != nil {
 		return err
@@ -187,6 +200,8 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 			return "", fmt.Errorf("actor_name is required")
 		}
 		return l.StartRebuildActorRank(actorName)
+	case TaskSpiderBackfillPerson:
+		return l.StartBackfillPerson()
 	case TaskSpiderBackfillRankPeriod:
 		return l.StartBackfillRankPeriod()
 	case TaskFilmRename:
@@ -195,6 +210,12 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartFilmProcess()
 	case TaskScRebuildStats:
 		return l.StartScRebuildStats()
+	case TaskScMove:
+		scName := strings.TrimSpace(req.ScName)
+		if scName == "" {
+			return "", fmt.Errorf("sc_name is required")
+		}
+		return l.StartScMove(scName)
 	case TaskScAdd:
 		dir := strings.TrimSpace(req.Dir)
 		if dir == "" {
@@ -215,7 +236,11 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 }
 
 func (l *FetchLoopService) StartDailyBest() (string, error) {
-	return l.startExclusiveTask(TaskSpiderDailyBest, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderDailyBest, taskRuntimePolicy{
+		ExclusiveGroup:        taskGroupFetchPriority,
+		PauseDetailLoop:       true,
+		PreemptsRefreshOldest: true,
+	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:           "pipeline_pre",
 			Message:         "开始抓取每日榜",
@@ -226,7 +251,11 @@ func (l *FetchLoopService) StartDailyBest() (string, error) {
 }
 
 func (l *FetchLoopService) StartDailyBestSync() (string, error) {
-	return l.startExclusiveTask(TaskSpiderDailyBestSync, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderDailyBestSync, taskRuntimePolicy{
+		ExclusiveGroup:        taskGroupFetchPriority,
+		PauseDetailLoop:       true,
+		PreemptsRefreshOldest: true,
+	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:           "pipeline_pre",
 			Message:         "开始同步每日榜",
@@ -237,21 +266,33 @@ func (l *FetchLoopService) StartDailyBestSync() (string, error) {
 }
 
 func (l *FetchLoopService) StartSeeds() (string, error) {
-	return l.startExclusiveTask(TaskSpiderSeeds, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderSeeds, taskRuntimePolicy{
+		ExclusiveGroup:        taskGroupFetchPriority,
+		PauseDetailLoop:       true,
+		PreemptsRefreshOldest: true,
+	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始抓取活跃种子"})
 		return l.crawlLogic.CrawlBySeedsActiveProcession(ctx)
 	})
 }
 
 func (l *FetchLoopService) StartSeedByName(name string) (string, error) {
-	return l.startExclusiveTask(TaskSpiderSeedByName, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderSeedByName, taskRuntimePolicy{
+		ExclusiveGroup:        taskGroupFetchPriority,
+		PauseDetailLoop:       true,
+		PreemptsRefreshOldest: true,
+	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: fmt.Sprintf("开始按名称抓取：%s", name)})
 		return l.crawlLogic.CrawlBySeedName(ctx, name)
 	})
 }
 
 func (l *FetchLoopService) StartRefreshOldestDetail(number int64) (string, error) {
-	return l.startExclusiveTask(TaskSpiderRefreshOldest, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderRefreshOldest, taskRuntimePolicy{
+		ExclusiveGroup:         taskGroupRefreshOldest,
+		PauseDetailLoop:        true,
+		RegistersRefreshOldest: true,
+	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: fmt.Sprintf("开始刷新最久未更新详情，数量=%d", number)})
 		_, err := l.crawlLogic.RefreshOldestDetail(ctx, number)
 		return err
@@ -259,60 +300,74 @@ func (l *FetchLoopService) StartRefreshOldestDetail(number int64) (string, error
 }
 
 func (l *FetchLoopService) StartRebuildCastRank() (string, error) {
-	return l.startExclusiveTask(TaskSpiderRebuildCastRank, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderRebuildCastRank, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始回填演员 rank"})
 		return l.crawlLogic.RebuildAllCastRankStats(ctx)
 	})
 }
 
 func (l *FetchLoopService) StartRebuildActorRank(actorName string) (string, error) {
-	return l.startExclusiveTask(TaskSpiderRebuildActorRank, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderRebuildActorRank, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: fmt.Sprintf("开始回填演员 rank：%s", actorName)})
 		return l.crawlLogic.RebuildCastRankStatsByName(ctx, actorName)
 	})
 }
 
+func (l *FetchLoopService) StartBackfillPerson() (string, error) {
+	return l.startManagedTask(TaskSpiderBackfillPerson, taskRuntimePolicy{}, func(ctx context.Context) error {
+		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始回填 person"})
+		return l.crawlLogic.BackfillPersonData(ctx)
+	})
+}
+
 func (l *FetchLoopService) StartBackfillRankPeriod() (string, error) {
-	return l.startExclusiveTask(TaskSpiderBackfillRankPeriod, func(ctx context.Context) error {
+	return l.startManagedTask(TaskSpiderBackfillRankPeriod, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始回填周期排行"})
 		return l.movieSvc.RebuildAllRankPeriods(ctx)
 	})
 }
 
 func (l *FetchLoopService) StartFilmRename() (string, error) {
-	return l.startExclusiveTask(TaskFilmRename, func(ctx context.Context) error {
+	return l.startManagedTask(TaskFilmRename, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "film_prepare", Message: "开始重命名影片"})
 		return l.filmSvc.RenameFilm(ctx)
 	})
 }
 
 func (l *FetchLoopService) StartFilmProcess() (string, error) {
-	return l.startExclusiveTask(TaskFilmProcess, func(ctx context.Context) error {
+	return l.startManagedTask(TaskFilmProcess, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "film_prepare", Message: "开始处理影片"})
 		return l.filmSvc.ProcessFilm(ctx)
 	})
 }
 
 func (l *FetchLoopService) StartScRebuildStats() (string, error) {
-	return l.startExclusiveTask(TaskScRebuildStats, func(ctx context.Context) error {
+	return l.startManagedTask(TaskScRebuildStats, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "sc_prepare", Message: "开始回填 SC 统计"})
 		return l.scSvc.RebuildAllScStats(ctx)
 	})
 }
 
+func (l *FetchLoopService) StartScMove(scName string) (string, error) {
+	return l.startManagedTask(TaskScMove, taskRuntimePolicy{}, func(ctx context.Context) error {
+		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "sc_prepare", Message: fmt.Sprintf("开始移动 SC 影片：%s", scName)})
+		return l.scSvc.MoveScFilm(ctx, scName)
+	})
+}
+
 func (l *FetchLoopService) StartScAdd(in sc.AddScInput) (string, error) {
-	return l.startExclusiveTask(TaskScAdd, func(ctx context.Context) error {
+	return l.startManagedTask(TaskScAdd, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "sc_prepare", Message: fmt.Sprintf("开始新增 SC：%s", in.Dir)})
 		return l.scSvc.AddSc(ctx, in)
 	})
 }
 
-func (l *FetchLoopService) startExclusiveTask(taskType string, run func(context.Context) error) (string, error) {
+func (l *FetchLoopService) startManagedTask(taskType string, policy taskRuntimePolicy, run func(context.Context) error) (string, error) {
 	if run == nil {
 		return "", fmt.Errorf("nil task runner")
 	}
 	jobID := l.jobs.create(taskType)
-	if err := l.beginExclusiveTask(jobID, taskType); err != nil {
+	if err := l.beginTaskRuntime(jobID, taskType, policy); err != nil {
 		l.jobs.finish(jobID, JobEvent{
 			Kind:     JobEventKindProgress,
 			JobID:    jobID,
@@ -328,14 +383,14 @@ func (l *FetchLoopService) startExclusiveTask(taskType string, run func(context.
 	ctx, cancel := context.WithCancel(l.currentRootContext())
 	if err := l.jobs.setCancel(jobID, cancel); err != nil {
 		cancel()
-		l.finishExclusiveTask(jobID)
+		l.finishTaskRuntime(jobID, policy)
 		return "", err
 	}
 
 	go func() {
 		defer cancel()
 		defer l.jobs.clearCancel(jobID)
-		defer l.finishExclusiveTask(jobID)
+		defer l.finishTaskRuntime(jobID, policy)
 
 		ctx = taskctx.WithPauseWaiter(ctx, func(ctx context.Context) error {
 			return l.jobs.waitIfPaused(ctx, jobID)
@@ -352,9 +407,27 @@ func (l *FetchLoopService) startExclusiveTask(taskType string, run func(context.
 			Message: "任务已启动",
 		})
 
-		detailWasRunning := l.IsDetailLoopRunning()
-		if detailWasRunning {
-			l.pauseDetailLoop()
+		l.applyTaskStartPolicy(jobID, policy)
+
+		if err := l.jobs.waitIfPaused(ctx, jobID); err != nil {
+			l.jobs.finish(jobID, JobEvent{
+				Kind:     JobEventKindProgress,
+				JobID:    jobID,
+				TaskType: taskType,
+				Stage:    "failed",
+				Message:  err.Error(),
+				Done:     true,
+				At:       time.Now().Unix(),
+			})
+			return
+		}
+
+		detailPauseApplied := false
+		detailPauseStateChanged := false
+		if policy.PauseDetailLoop && l.IsDetailLoopRunning() {
+			detailPauseApplied, detailPauseStateChanged = l.pauseDetailLoop(jobID)
+		}
+		if detailPauseStateChanged {
 			l.publishTaskProgress(jobID, taskType, taskctx.Progress{
 				Stage:   "detail_paused",
 				Message: "详情抓取已暂停",
@@ -363,12 +436,17 @@ func (l *FetchLoopService) startExclusiveTask(taskType string, run func(context.
 
 		err := run(ctx)
 
-		if detailWasRunning {
-			l.resumeDetailLoop()
-			l.publishTaskProgress(jobID, taskType, taskctx.Progress{
-				Stage:   "detail_resumed",
-				Message: "详情抓取已恢复",
-			})
+		if detailPauseApplied {
+			_, detailResumed := l.resumeDetailLoop(jobID)
+			if detailResumed {
+				l.publishTaskProgress(jobID, taskType, taskctx.Progress{
+					Stage:   "detail_resumed",
+					Message: "详情抓取已恢复",
+				})
+			}
+		}
+		if policy.PreemptsRefreshOldest {
+			l.resumeRefreshOldestIfAutoPaused()
 		}
 
 		if err != nil {

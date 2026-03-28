@@ -54,8 +54,13 @@
 
                 <li class="list-group-item">
                     {{ range $i, $c := .Cast }}
-                        <a href="/cards?cn={{ $c.Name }}" class="person-tag mr-2"
-                           title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
+                        {{ if gt $c.PersonId 0 }}
+                            <a href="/cast?id={{ $c.PersonId }}" class="person-tag mr-2"
+                               title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
+                        {{ else }}
+                            <a href="/cards?cn={{ $c.Name }}" class="person-tag mr-2"
+                               title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
+                        {{ end }}
                     {{ end }}
                     {{ if .Director }}
                         <a href="/cards?dn={{ .Director }}" class="person-tag ml-2"

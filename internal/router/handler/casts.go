@@ -17,6 +17,7 @@ type castListQuery struct {
 	PageSize     int64  `form:"ps"`
 	Sort         string `form:"sort"`
 	Order        string `form:"order"`
+	Keyword      string `form:"keyword"`
 	OwnedMin     string `form:"owned_min"`
 	OwnedMax     string `form:"owned_max"`
 	ScTimesMin   string `form:"sc_times_min"`
@@ -49,14 +50,14 @@ func (h *MovieHTMLHandler) CastListPage(c *gin.Context) {
 		return
 	}
 
-	total, err := h.deps.CastModel.CountAll(c.Request.Context(), filter)
+	total, err := h.deps.PersonModel.CountAll(c.Request.Context(), filter)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "演员列表加载失败: %v", err)
 		return
 	}
 
 	offset := (q.Page - 1) * q.PageSize
-	items, err := h.deps.CastModel.ListPage(
+	items, err := h.deps.PersonModel.ListPage(
 		c.Request.Context(),
 		offset,
 		q.PageSize,
@@ -82,41 +83,43 @@ func (h *MovieHTMLHandler) CastListPage(c *gin.Context) {
 	})
 }
 
-func buildCastListFilter(q castListQuery) (types.CastListFilter, error) {
-	filter := types.CastListFilter{}
+func buildCastListFilter(q castListQuery) (types.PersonListFilter, error) {
+	filter := types.PersonListFilter{
+		Keyword: strings.TrimSpace(q.Keyword),
+	}
 
 	if v, ok, err := parseOptionalNonNegativeInt64(q.OwnedMin); err != nil {
-		return types.CastListFilter{}, err
+		return types.PersonListFilter{}, err
 	} else if ok {
 		filter.OwnedMin = v
 		filter.HasOwnedMin = true
 	}
 	if v, ok, err := parseOptionalNonNegativeInt64(q.OwnedMax); err != nil {
-		return types.CastListFilter{}, err
+		return types.PersonListFilter{}, err
 	} else if ok {
 		filter.OwnedMax = v
 		filter.HasOwnedMax = true
 	}
 	if v, ok, err := parseOptionalNonNegativeInt64(q.ScTimesMin); err != nil {
-		return types.CastListFilter{}, err
+		return types.PersonListFilter{}, err
 	} else if ok {
 		filter.ScTimesMin = v
 		filter.HasScTimesMin = true
 	}
 	if v, ok, err := parseOptionalNonNegativeInt64(q.ScTimesMax); err != nil {
-		return types.CastListFilter{}, err
+		return types.PersonListFilter{}, err
 	} else if ok {
 		filter.ScTimesMax = v
 		filter.HasScTimesMax = true
 	}
 	if v, ok, err := parseOptionalNonNegativeInt64(q.ComeTimesMin); err != nil {
-		return types.CastListFilter{}, err
+		return types.PersonListFilter{}, err
 	} else if ok {
 		filter.ComeTimesMin = v
 		filter.HasComeTimesMin = true
 	}
 	if v, ok, err := parseOptionalNonNegativeInt64(q.ComeTimesMax); err != nil {
-		return types.CastListFilter{}, err
+		return types.PersonListFilter{}, err
 	} else if ok {
 		filter.ComeTimesMax = v
 		filter.HasComeTimesMax = true
@@ -125,7 +128,7 @@ func buildCastListFilter(q castListQuery) (types.CastListFilter, error) {
 	if strings.TrimSpace(q.LastScFrom) != "" {
 		t, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(q.LastScFrom), time.Local)
 		if err != nil {
-			return types.CastListFilter{}, err
+			return types.PersonListFilter{}, err
 		}
 		filter.LastScFrom = t.Unix()
 		filter.HasLastScFrom = true
@@ -134,7 +137,7 @@ func buildCastListFilter(q castListQuery) (types.CastListFilter, error) {
 	if strings.TrimSpace(q.LastScTo) != "" {
 		t, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(q.LastScTo), time.Local)
 		if err != nil {
-			return types.CastListFilter{}, err
+			return types.PersonListFilter{}, err
 		}
 		filter.LastScTo = t.Add(24*time.Hour - time.Second).Unix()
 		filter.HasLastScTo = true
@@ -166,41 +169,41 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 		order = "ASC"
 	}
 
-	column := "ac.owned_movie_number"
+	column := "p.owned_movie_number"
 	switch field {
 	case "name":
-		column = "ac.name"
+		column = "p.name"
 	case "chinese":
-		column = "cc.chinese"
+		column = "p.chinese"
 	case "age":
 		if order == "ASC" {
-			return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day DESC, ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+			return "CASE WHEN p.birth_day > 0 THEN 0 ELSE 1 END ASC, p.birth_day DESC, p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 		}
-		return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day ASC, ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+		return "CASE WHEN p.birth_day > 0 THEN 0 ELSE 1 END ASC, p.birth_day ASC, p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	case "height":
-		return "CASE WHEN cc.height > 0 THEN 0 ELSE 1 END ASC, cc.height " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+		return "CASE WHEN p.height > 0 THEN 0 ELSE 1 END ASC, p.height " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	case "movie_number":
-		column = "ac.movie_number"
+		column = "p.movie_number"
 	case "owned_movie_number":
-		column = "ac.owned_movie_number"
+		column = "p.owned_movie_number"
 	case "sc_times":
-		column = "ac.sc_times"
+		column = "p.sc_times"
 	case "come_times":
-		column = "ac.come_times"
+		column = "p.come_times"
 	case "last_sc_time":
-		column = "ac.last_sc_time"
+		column = "p.last_sc_time"
 	case "highest_rank":
-		column = "ac.highest_rank"
+		column = "p.highest_rank"
 	}
 
-	if column == "ac.owned_movie_number" {
-		return column + " " + order + ", ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	if column == "p.owned_movie_number" {
+		return column + " " + order + ", p.movie_number DESC, p.name ASC, p.id DESC"
 	}
-	if column == "ac.name" {
-		return column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.id DESC"
+	if column == "p.name" {
+		return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.id DESC"
 	}
-	if column == "cc.chinese" {
-		return "CASE WHEN cc.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	if column == "p.chinese" {
+		return "CASE WHEN p.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	}
-	return column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 }

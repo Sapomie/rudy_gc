@@ -1,9 +1,10 @@
 package modelg
 
 type Cast struct {
-	Id    int64  `gorm:"primary_key"`
-	Name  string `gorm:"not null;unique"`
-	JavId string `gorm:"not null;index"`
+	Id       int64  `gorm:"primary_key"`
+	PersonId int64  `gorm:"not null;index"`
+	Name     string `gorm:"not null;unique"`
+	JavId    string `gorm:"not null;index"`
 
 	MovieNumber      int64 `gorm:"not null;index"`
 	OwnedMovieNumber int64 `gorm:"not null;index"`

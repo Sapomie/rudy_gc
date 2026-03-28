@@ -3,10 +3,23 @@ package loop
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"rudy_gc/internal/taskctx"
 )
+
+type exclusiveTaskSlot struct {
+	JobID    string
+	TaskType string
+}
+
+type taskRuntimePolicy struct {
+	ExclusiveGroup         string
+	PauseDetailLoop        bool
+	RegistersRefreshOldest bool
+	PreemptsRefreshOldest  bool
+}
 
 func (l *FetchLoopService) currentRootContext() context.Context {
 	l.rootMu.Lock()
@@ -17,23 +30,133 @@ func (l *FetchLoopService) currentRootContext() context.Context {
 	return context.Background()
 }
 
-func (l *FetchLoopService) beginExclusiveTask(jobID, taskType string) error {
+func (l *FetchLoopService) beginTaskRuntime(jobID, taskType string, policy taskRuntimePolicy) error {
 	l.exclusiveMu.Lock()
 	defer l.exclusiveMu.Unlock()
-	if l.exclusiveJobID != "" {
-		return fmt.Errorf("已有运行中任务：%s", l.exclusiveTaskType)
+	group := strings.TrimSpace(policy.ExclusiveGroup)
+	if group != "" {
+		slot := l.exclusiveGroups[group]
+		if slot.JobID != "" {
+			return fmt.Errorf("已有运行中任务：%s", slot.TaskType)
+		}
+		l.exclusiveGroups[group] = exclusiveTaskSlot{
+			JobID:    jobID,
+			TaskType: taskType,
+		}
 	}
-	l.exclusiveJobID = jobID
-	l.exclusiveTaskType = taskType
+	if policy.RegistersRefreshOldest {
+		l.refreshOldestJobID = jobID
+		l.refreshOldestAutoPause = false
+	}
 	return nil
 }
 
-func (l *FetchLoopService) finishExclusiveTask(jobID string) {
+func (l *FetchLoopService) finishTaskRuntime(jobID string, policy taskRuntimePolicy) {
 	l.exclusiveMu.Lock()
 	defer l.exclusiveMu.Unlock()
-	if l.exclusiveJobID == jobID {
-		l.exclusiveJobID = ""
-		l.exclusiveTaskType = ""
+	group := strings.TrimSpace(policy.ExclusiveGroup)
+	if group != "" {
+		slot := l.exclusiveGroups[group]
+		if slot.JobID == jobID {
+			delete(l.exclusiveGroups, group)
+		}
+	}
+	if policy.RegistersRefreshOldest && l.refreshOldestJobID == jobID {
+		l.refreshOldestJobID = ""
+		l.refreshOldestAutoPause = false
+	}
+}
+
+func (l *FetchLoopService) isExclusiveGroupRunning(group string) bool {
+	group = strings.TrimSpace(group)
+	if group == "" {
+		return false
+	}
+	l.exclusiveMu.Lock()
+	defer l.exclusiveMu.Unlock()
+	slot := l.exclusiveGroups[group]
+	return slot.JobID != ""
+}
+
+func (l *FetchLoopService) pauseRefreshOldestIfRunning() {
+	l.exclusiveMu.Lock()
+	jobID := l.refreshOldestJobID
+	autoPaused := l.refreshOldestAutoPause
+	l.exclusiveMu.Unlock()
+	if jobID == "" || autoPaused {
+		return
+	}
+
+	snapshot, ok := l.jobs.snapshot(jobID)
+	if !ok || snapshot.Done || snapshot.Paused {
+		return
+	}
+	event, err := l.jobs.pause(jobID)
+	if err != nil {
+		return
+	}
+
+	l.exclusiveMu.Lock()
+	if l.refreshOldestJobID == jobID {
+		l.refreshOldestAutoPause = true
+	}
+	l.exclusiveMu.Unlock()
+
+	if event != nil {
+		l.jobs.publish(jobID, *event)
+	}
+}
+
+func (l *FetchLoopService) resumeRefreshOldestIfAutoPaused() {
+	l.exclusiveMu.Lock()
+	jobID := l.refreshOldestJobID
+	autoPaused := l.refreshOldestAutoPause
+	l.exclusiveMu.Unlock()
+	if jobID == "" || !autoPaused {
+		return
+	}
+
+	snapshot, ok := l.jobs.snapshot(jobID)
+	if !ok || snapshot.Done {
+		l.exclusiveMu.Lock()
+		if l.refreshOldestJobID == jobID {
+			l.refreshOldestAutoPause = false
+		}
+		l.exclusiveMu.Unlock()
+		return
+	}
+	if !snapshot.Paused {
+		l.exclusiveMu.Lock()
+		if l.refreshOldestJobID == jobID {
+			l.refreshOldestAutoPause = false
+		}
+		l.exclusiveMu.Unlock()
+		return
+	}
+
+	event, err := l.jobs.resume(jobID)
+	if err != nil {
+		return
+	}
+
+	l.exclusiveMu.Lock()
+	if l.refreshOldestJobID == jobID {
+		l.refreshOldestAutoPause = false
+	}
+	l.exclusiveMu.Unlock()
+
+	if event != nil {
+		l.jobs.publish(jobID, *event)
+	}
+}
+
+func (l *FetchLoopService) applyTaskStartPolicy(jobID string, policy taskRuntimePolicy) {
+	if policy.PreemptsRefreshOldest {
+		l.pauseRefreshOldestIfRunning()
+		return
+	}
+	if policy.RegistersRefreshOldest && l.isExclusiveGroupRunning(taskGroupFetchPriority) {
+		l.pauseRefreshOldestIfRunning()
 	}
 }
 

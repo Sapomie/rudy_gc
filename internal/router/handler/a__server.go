@@ -4,6 +4,7 @@ import (
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/sc"
+	"rudy_gc/internal/service/vfilm"
 	"rudy_gc/internal/svc"
 	"rudy_gc/internal/types"
 
@@ -15,6 +16,7 @@ type MovieHTMLHandler struct {
 	deps       *svc.Deps
 	movieSvc   *movie.Service
 	scSvc      *sc.ScService
+	vfilmSvc   *vfilm.Service
 	detailJobs chan string // ✅ 单 ID 通道
 }
 
@@ -24,6 +26,7 @@ func NewMovieHTMLHandler(deps *svc.Deps) *MovieHTMLHandler {
 		deps:       deps,
 		movieSvc:   movie.NewService(deps),
 		scSvc:      sc.NewService(deps),
+		vfilmSvc:   vfilm.NewService(deps),
 		detailJobs: deps.DetailJobs, // deps.DetailJobs = make(chan string, 200)
 		//bestTrigger: deps.BestTrigger,
 	}

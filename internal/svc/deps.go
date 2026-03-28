@@ -50,6 +50,7 @@ type Deps struct {
 	RankModel           moviex.CRankModel
 	RankPeriodModel     moviex.CRankPeriodModel
 	RankPeriodItemModel moviex.CRankPeriodItemModel
+	PersonModel         moviex.CPersonModel
 	CafoModel           moviex.CCafoModel
 	RecordModel         moviex.ERecordModel
 	SeedModel           spiderx.DSeedModel
@@ -74,6 +75,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		itemModel           = moviex.NewEItemModel(conn, c)
 		deletedMovieModel   = moviex.NewEDeletedMovieModel(conn, c)
 		rankModel           = moviex.NewCRankModel(conn, c)
+		personModel         = moviex.NewCPersonModel(conn, c)
 		cafoModel           = moviex.NewCCafoModel(conn, c)
 		filmModel           = moviex.NewVFilmModel(conn, c)
 		glistModel          = moviex.NewGListModel(conn, c)
@@ -150,6 +152,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		RankModel:           rankModel,
 		RankPeriodModel:     rankPeriodModel,
 		RankPeriodItemModel: rankPeriodItemModel,
+		PersonModel:         personModel,
 		CafoModel:           cafoModel,
 		RecordModel:         recordModel,
 		SeedModel:           seedModel,

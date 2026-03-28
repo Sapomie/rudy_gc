@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,7 +66,7 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	needF := needVFilm(req)
 
 	// 一旦出现多对多（Cast/Genre），严禁任何 onlyX 快速路径 —— 必须走交集
-	hasM2M := req.CastNames != "" || req.GenreNames != ""
+	hasM2M := req.CastNames != "" || req.PersonIds != "" || req.GenreNames != ""
 
 	onlyA := !hasM2M && needA && !needM && !needF
 	onlyM := !hasM2M && needM && !needA && !needF
@@ -584,6 +585,18 @@ func (r *MovieListRepoSqlx) pickFromAMovie(ctx context.Context, req *types.ListM
 			}
 		}
 	}
+	if req.PersonIds != "" {
+		for _, personID := range splitInt64Tokens(req.PersonIds) {
+			sPerson, err := r.pickFromPerson(ctx, personID)
+			if err != nil {
+				return nil, err
+			}
+			base = intersectTwo(base, sPerson)
+			if len(base) == 0 {
+				return base, nil
+			}
+		}
+	}
 	// 多对多：类型
 	if req.GenreNames != "" {
 		for _, name := range splitNames(req.GenreNames) {
@@ -667,6 +680,26 @@ func (r *MovieListRepoSqlx) pickFromCast(ctx context.Context, castName string) (
 	return sliceToSet(ids), nil
 }
 
+func (r *MovieListRepoSqlx) pickFromPerson(ctx context.Context, personID int64) (map[string]struct{}, error) {
+	if personID <= 0 {
+		return map[string]struct{}{}, nil
+	}
+	sqlStr, args, _ := squirrel.
+		Select("DISTINCT amr.movie_jav_id").
+		From(r.rc.TableName() + " amr").
+		Join("`am_cast` ac ON ac.id = amr.cast_id").
+		Where(squirrel.Eq{"ac.person_id": personID}).
+		ToSql()
+	var ids []string
+	if err := r.rc.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return map[string]struct{}{}, nil
+		}
+		return nil, err
+	}
+	return sliceToSet(ids), nil
+}
+
 func (r *MovieListRepoSqlx) pickFromGenre(ctx context.Context, genreName string) (map[string]struct{}, error) {
 	row, err := r.gr.FindOneByName(ctx, genreName)
 	if err != nil || row == nil {
@@ -685,6 +718,29 @@ func (r *MovieListRepoSqlx) pickFromGenre(ctx context.Context, genreName string)
 		return nil, err
 	}
 	return sliceToSet(ids), nil
+}
+
+func splitInt64Tokens(raw string) []int64 {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '|' || r == ';' || r == ' ' || r == '\t' || r == '\n'
+	})
+	out := make([]int64, 0, len(parts))
+	seen := make(map[int64]struct{}, len(parts))
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		v, err := strconv.ParseInt(strings.TrimSpace(part), 10, 64)
+		if err != nil || v <= 0 {
+			continue
+		}
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out
 }
 
 /* ------------------- B. 分表排序分页（WHERE ... IN） ------------------- */

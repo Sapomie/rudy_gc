@@ -22,3 +22,4 @@ help:
 	@echo "  migrate.mk - db migrations"
 	@echo "  docker.mk  - docker build"
 	@echo "  cache.mk   - clear redis cache"
+	@echo "  backup.mk  - backup mysql database"

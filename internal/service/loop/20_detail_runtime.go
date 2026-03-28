@@ -39,6 +39,7 @@ func (l *FetchLoopService) startDetailLoopLocked(parent context.Context, baseWin
 	l.detailCancel = cancel
 	l.detailDone = done
 	l.detailPaused = false
+	l.detailPauseOwners = make(map[string]struct{})
 	l.detailStartedAt = time.Now().Unix()
 
 	go func() {
@@ -53,6 +54,7 @@ func (l *FetchLoopService) startDetailLoopLocked(parent context.Context, baseWin
 				l.detailCancel = nil
 				l.detailDone = nil
 				l.detailPaused = false
+				l.detailPauseOwners = nil
 			}
 			l.detailMu.Unlock()
 		}()
@@ -110,16 +112,40 @@ func (l *FetchLoopService) RestartDetailLoop(parent context.Context, baseWindow 
 	l.StartDetailLoop(parent, baseWindow, maxBatch)
 }
 
-func (l *FetchLoopService) pauseDetailLoop() {
+func (l *FetchLoopService) pauseDetailLoop(owner string) (bool, bool) {
 	l.detailMu.Lock()
 	defer l.detailMu.Unlock()
+	if l.detailCancel == nil {
+		return false, false
+	}
+	if owner == "" {
+		return false, false
+	}
+	if l.detailPauseOwners == nil {
+		l.detailPauseOwners = make(map[string]struct{})
+	}
+	if _, ok := l.detailPauseOwners[owner]; ok {
+		return false, false
+	}
+	wasPaused := l.detailPaused
+	l.detailPauseOwners[owner] = struct{}{}
 	l.detailPaused = true
+	return true, !wasPaused
 }
 
-func (l *FetchLoopService) resumeDetailLoop() {
+func (l *FetchLoopService) resumeDetailLoop(owner string) (bool, bool) {
 	l.detailMu.Lock()
 	defer l.detailMu.Unlock()
-	l.detailPaused = false
+	if owner == "" || len(l.detailPauseOwners) == 0 {
+		return false, false
+	}
+	if _, ok := l.detailPauseOwners[owner]; !ok {
+		return false, false
+	}
+	wasPaused := l.detailPaused
+	delete(l.detailPauseOwners, owner)
+	l.detailPaused = len(l.detailPauseOwners) > 0
+	return true, wasPaused && !l.detailPaused
 }
 
 func (l *FetchLoopService) waitDetailLoopActive(ctx context.Context) error {

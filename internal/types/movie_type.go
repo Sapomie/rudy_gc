@@ -40,8 +40,10 @@ type MovieType struct {
 }
 
 type CastInfo struct {
-	Name       string
-	NameShow   string
-	LastScTime int64
-	Url        string
+	PersonId    int64
+	Name        string
+	DisplayName string
+	NameShow    string
+	LastScTime  int64
+	Url         string
 }

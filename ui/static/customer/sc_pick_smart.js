@@ -325,10 +325,27 @@
     }
 
     let copyTimer = null;
+    let copyStatusBootstrapped = false;
+    let copyStartedInPage = false;
 
     function setCopyVisible(visible) {
         if (!copyCard) return;
         copyCard.style.display = visible ? 'block' : 'none';
+    }
+
+    function resetCopyStatusUI() {
+        setCopyVisible(false);
+        if (copyProgress) {
+            copyProgress.style.width = '0%';
+            copyProgress.textContent = '';
+        }
+        if (copyMeta) copyMeta.textContent = '';
+        if (copyCurrent) copyCurrent.textContent = '';
+        if (copyError) {
+            copyError.style.display = 'none';
+            copyError.textContent = '';
+        }
+        if (btnStopCopy) btnStopCopy.disabled = true;
     }
 
     function updateCopyStatus(status) {
@@ -385,8 +402,18 @@
         fetch('/api/triggers/sc/copy-status')
             .then((r) => r.json())
             .then((data) => {
-                updateCopyStatus(data || {});
-                if (data && data.running) startCopyPolling();
+                const st = data || {};
+                if (!copyStatusBootstrapped) {
+                    copyStatusBootstrapped = true;
+                    if (!copyStartedInPage && !st.running) {
+                        resetCopyStatusUI();
+                        stopCopyPolling();
+                        return;
+                    }
+                }
+
+                updateCopyStatus(st);
+                if (st.running) startCopyPolling();
                 else stopCopyPolling();
             })
             .catch(() => {});
@@ -528,6 +555,8 @@
                 const picked = data.picked || 0;
                 renderMovies(data.movies || [], data.total_size_gb || '');
                 if (data.copy_status) {
+                    copyStatusBootstrapped = true;
+                    copyStartedInPage = !!(data.copy_started || data.copy_status.running);
                     updateCopyStatus(data.copy_status);
                     if (data.copy_status.running) startCopyPolling();
                 }
@@ -555,6 +584,7 @@
             post('/api/triggers/sc/copy-stop', {})
                 .then((r) => r.json().catch(() => ({})))
                 .then((data) => {
+                    copyStatusBootstrapped = true;
                     updateCopyStatus(data.status || {});
                     showMsg('已发送停止指令');
                     stopCopyPolling();

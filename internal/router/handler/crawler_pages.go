@@ -148,9 +148,9 @@ func (h *CrawlerPages) FilmPage(c *gin.Context) {
 func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "回填任务",
-		PageTitle:         "演员回填 / 周期排行回填 / SC 统计回填",
+		PageTitle:         "人物回填 / 演员回填 / 周期排行回填 / SC 统计回填 / SC 影片移动",
 		TaskPanelTitle:    "回填任务",
-		PageNote:          "这里只处理演员 Rank 回填、周期排行回填和 SC 统计回填。",
+		PageNote:          "这里只处理 person 回填、演员 Rank 回填、周期排行回填、SC 统计回填和 SC 影片移动。",
 		TaskTableTitle:    "回填任务",
 		EventTitle:        "回填事件流",
 		StorageKey:        "crawler_jobs_backfill_selected_job",
@@ -158,12 +158,15 @@ func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 		OverviewExtraMode: "task_type",
 		EmptyStateText:    "等待回填任务触发",
 		AllowedTaskTypes: []string{
+			loop.TaskSpiderBackfillPerson,
 			loop.TaskSpiderBackfillRankPeriod,
 			loop.TaskSpiderRebuildCastRank,
 			loop.TaskSpiderRebuildActorRank,
 			loop.TaskScRebuildStats,
+			loop.TaskScMove,
 		},
 		TaskButtons: []crawlerJobsPageTask{
+			{TaskType: loop.TaskSpiderBackfillPerson, Label: "person 回填"},
 			{TaskType: loop.TaskSpiderBackfillRankPeriod, Label: "周期排行回填"},
 			{TaskType: loop.TaskSpiderRebuildCastRank, Label: "演员 Rank 回填"},
 			{TaskType: loop.TaskSpiderRebuildActorRank, Label: "单演员 Rank"},

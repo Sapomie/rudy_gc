@@ -31,18 +31,20 @@ type FetchLoopService struct {
 	rootCtx context.Context
 	started bool
 
-	exclusiveMu       sync.Mutex
-	exclusiveJobID    string
-	exclusiveTaskType string
+	exclusiveMu            sync.Mutex
+	exclusiveGroups        map[string]exclusiveTaskSlot
+	refreshOldestJobID     string
+	refreshOldestAutoPause bool
 
-	detailMu         sync.Mutex
-	detailCtx        context.Context
-	detailCancel     context.CancelFunc
-	detailDone       chan struct{}
-	detailPaused     bool
-	detailStartedAt  int64
-	detailBaseWindow time.Duration
-	detailMaxBatch   int
+	detailMu          sync.Mutex
+	detailCtx         context.Context
+	detailCancel      context.CancelFunc
+	detailDone        chan struct{}
+	detailPaused      bool
+	detailPauseOwners map[string]struct{}
+	detailStartedAt   int64
+	detailBaseWindow  time.Duration
+	detailMaxBatch    int
 }
 
 var sharedFetchLoopService struct {
@@ -64,6 +66,7 @@ func NewFetchLoopService(deps *svc.Deps) *FetchLoopService {
 		scSvc:            sc.NewService(deps),
 		jobs:             newManagedProgressJobManager("crawler", 64, pushManagedProgressEvent),
 		detailLogs:       newDetailLoopLogHub(64),
+		exclusiveGroups:  make(map[string]exclusiveTaskSlot),
 		detailBaseWindow: defaultDetailBaseWindow,
 		detailMaxBatch:   defaultDetailMaxBatch,
 	}
