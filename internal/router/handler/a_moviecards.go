@@ -89,6 +89,7 @@ func parseMovieCardRequest(c *gin.Context, base types.ListMovieFullRequest) (typ
 		req.PageSize = defaultPageSize
 	}
 	req.OrderBy = normalizeOrderBy(c.Query("od"), req.OrderBy)
+	req.Order = normalizeOrder(c.Query("order"))
 	return req, nil
 }
 

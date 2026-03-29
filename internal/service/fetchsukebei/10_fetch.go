@@ -21,11 +21,9 @@ func (s *Service) FetchMovieTorrents(ctx context.Context, movieJavID, movieCode 
 	if queryText == "" {
 		return nil, fmt.Errorf("invalid movie code for sukebei query: %s", movieCode)
 	}
-	reportInfoLog(ctx, fmt.Sprintf("Sukebei 搜索请求: %s | query=%s", movieCode, queryText))
 
 	searchURL, err := s.buildSearchURL(queryText)
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("Sukebei 搜索 URL 构造失败: %s | err=%v", movieCode, err))
 		return nil, err
 	}
 
@@ -39,24 +37,18 @@ func (s *Service) FetchMovieTorrents(ctx context.Context, movieJavID, movieCode 
 		return nil
 	})
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("Sukebei 搜索失败: %s | attempts=%d | err=%v", movieCode, attempts, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, searchURL, attempts, err)
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("Sukebei 搜索成功: %s | attempts=%d", movieCode, attempts))
 
 	rows, err := parseTorrentRows(movieJavID, queryText, searchURL, string(resp.Body))
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("Sukebei 解析失败: %s | err=%v", movieCode, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, searchURL, attempts, err)
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("Sukebei 解析完成: %s | count=%d", movieCode, len(rows)))
 	if err := s.saveTorrents(ctx, movieJavID, movieCode, searchURL, attempts, rows); err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("Sukebei 落库失败: %s | err=%v", movieCode, err))
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("Sukebei 落库完成: %s | count=%d", movieCode, len(rows)))
 	return rows, nil
 }
 

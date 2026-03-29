@@ -312,6 +312,36 @@ func round1(v float64) float64 {
 	return math.Round(v*10) / 10
 }
 
+func calcFilmSizeDurationRatio(sizeBytes, durationSeconds int64) float64 {
+	if sizeBytes <= 0 || durationSeconds <= 0 {
+		return 0
+	}
+	hours := float64(durationSeconds) / 3600.0
+	if hours <= 0 {
+		return 0
+	}
+	sizeGB := float64(sizeBytes) / 1e9
+	return round1(sizeGB / hours)
+}
+
+func formatMovieFilmSelfMake(v int64) string {
+	if v == consts.FilmSelfMake {
+		return "是"
+	}
+	return "否"
+}
+
+func formatMovieFilmErased(v int64) string {
+	switch v {
+	case consts.FilmErased:
+		return "去码"
+	case consts.FilmNoMosaic:
+		return "无码"
+	default:
+		return "有码"
+	}
+}
+
 func chooseTitle(title, chinese string, hasChinese int64) string {
 	if hasChinese == 1 && chinese != "" {
 		return chinese
@@ -349,17 +379,21 @@ func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.F
 		return nil, err
 	}
 
+	durationMinutes := float64(vf.Duration) / 60
 	filmInfo := &types.FilmInfo{
-		Name:      vf.MovieName,
-		BirthTime: time.Unix(vf.BirthTime, 0).Format(time.DateTime),
-		Size:      float64(vf.Size) / 1e9,
-		FilePath:  vf.FullDir,
-		FileName:  vf.FileName,
-		Directory: vf.FullDir,
-		Height:    vf.Height,
-		BitRate:   float64(vf.BitRate) / 1e3,
-		Duration:  float64(vf.Duration) / 60,
-		Frame:     vf.FrameAverage,
+		Name:              vf.MovieName,
+		BirthTime:         time.Unix(vf.BirthTime, 0).Format(time.DateTime),
+		Size:              float64(vf.Size) / 1e9,
+		FilePath:          vf.FullDir,
+		FileName:          vf.FileName,
+		Directory:         vf.FullDir,
+		Height:            vf.Height,
+		BitRate:           float64(vf.BitRate) / 1e3,
+		Duration:          durationMinutes,
+		Frame:             vf.FrameAverage,
+		SizeDurationRatio: calcFilmSizeDurationRatio(vf.Size, vf.Duration),
+		SelfMake:          formatMovieFilmSelfMake(vf.SelfMake),
+		Erased:            formatMovieFilmErased(vf.HasMask),
 	}
 	return filmInfo, nil
 }

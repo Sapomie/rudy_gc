@@ -14,10 +14,12 @@ type movieCardFilterView struct {
 	ClearHref string
 
 	OrderBy  string
+	Order    string
 	PageSize string
 
 	RandomCount string
 	Explicit    map[string]bool
+	HideDirs    bool
 
 	CastNames    string
 	PersonIds    string
@@ -68,8 +70,10 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 		Action:    path,
 		ClearHref: buildMovieCardFilterClearHref(path, randomN),
 		OrderBy:   currentOD,
+		Order:     queryOrFallbackString(c, "order", req.Order),
 		PageSize:  strconv.FormatInt(req.PageSize, 10),
 		Explicit:  buildMovieCardFilterExplicit(c, randomN != nil),
+		HideDirs:  false,
 
 		CastNames:    queryOrFallbackString(c, "cn", req.CastNames),
 		PersonIds:    queryOrFallbackString(c, "pid", req.PersonIds),
@@ -121,7 +125,7 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 
 func buildMovieCardFilterExplicit(c *gin.Context, hasRandom bool) map[string]bool {
 	keys := []string{
-		"ps", "od",
+		"ps", "od", "order",
 		"cn", "pid", "gn", "dn", "pn", "mn", "ln", "wd",
 		"owned", "nd", "drkmin",
 		"d1", "d2", "d3", "d4",

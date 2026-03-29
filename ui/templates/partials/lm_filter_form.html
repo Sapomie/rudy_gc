@@ -1,185 +1,190 @@
+{{ define "movie_card_filter_fields" }}
+    {{ $explicit := .Explicit }}
+    {{ if .PageSize }}<input type="hidden" name="ps" value="{{ .PageSize }}" data-explicit="{{ if index $explicit "ps" }}1{{ else }}0{{ end }}">{{ end }}
+    {{ if .OrderBy }}<input type="hidden" name="od" value="{{ .OrderBy }}" data-explicit="{{ if index $explicit "od" }}1{{ else }}0{{ end }}">{{ end }}
+    {{ if .RandomCount }}<input type="hidden" name="n" value="{{ .RandomCount }}" data-explicit="{{ if index $explicit "n" }}1{{ else }}0{{ end }}">{{ end }}
+    {{ if .PersonIds }}<input type="hidden" name="pid" value="{{ .PersonIds }}" data-explicit="{{ if index $explicit "pid" }}1{{ else }}0{{ end }}">{{ end }}
+
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">演员</label>
+        <input class="form-control" type="text" name="cn" value="{{ .CastNames }}" placeholder="演员名，支持多值" data-explicit="{{ if index $explicit "cn" }}1{{ else }}0{{ end }}">
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">类型</label>
+        <input class="form-control" type="text" name="gn" value="{{ .GenreNames }}" placeholder="类型名，支持多值" data-explicit="{{ if index $explicit "gn" }}1{{ else }}0{{ end }}">
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">导演</label>
+        <input class="form-control" type="text" name="dn" value="{{ .DirectorName }}" placeholder="导演名" data-explicit="{{ if index $explicit "dn" }}1{{ else }}0{{ end }}">
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">前缀</label>
+        <input class="form-control" type="text" name="pn" value="{{ .PrefixName }}" placeholder="前缀" data-explicit="{{ if index $explicit "pn" }}1{{ else }}0{{ end }}">
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">片商</label>
+        <input class="form-control" type="text" name="mn" value="{{ .MakerName }}" placeholder="片商" data-explicit="{{ if index $explicit "mn" }}1{{ else }}0{{ end }}">
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">标签</label>
+        <input class="form-control" type="text" name="ln" value="{{ .LabelName }}" placeholder="标签" data-explicit="{{ if index $explicit "ln" }}1{{ else }}0{{ end }}">
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">关键词</label>
+        <input class="form-control" type="text" name="wd" value="{{ .Word }}" placeholder="中文关键词" data-explicit="{{ if index $explicit "wd" }}1{{ else }}0{{ end }}">
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">库存状态</label>
+        <select class="form-select" name="owned" data-explicit="{{ if index $explicit "owned" }}1{{ else }}0{{ end }}">
+            <option value="" {{ if eq .Owned "" }}selected{{ end }}>全部</option>
+            <option value="1" {{ if eq .Owned "1" }}selected{{ end }}>全部电影</option>
+            <option value="2" {{ if eq .Owned "2" }}selected{{ end }}>全部库存</option>
+            <option value="3" {{ if eq .Owned "3" }}selected{{ end }}>已拥有未移除</option>
+            <option value="4" {{ if eq .Owned "4" }}selected{{ end }}>有字幕未移除</option>
+            <option value="5" {{ if eq .Owned "5" }}selected{{ end }}>无字幕未移除</option>
+            <option value="6" {{ if eq .Owned "6" }}selected{{ end }}>已移除</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">下载状态</label>
+        <select class="form-select" name="nd" data-explicit="{{ if index $explicit "nd" }}1{{ else }}0{{ end }}">
+            <option value="" {{ if eq .NeedDownload "" }}selected{{ end }}>全部</option>
+            <option value="1" {{ if eq .NeedDownload "1" }}selected{{ end }}>无需下载</option>
+            <option value="2" {{ if eq .NeedDownload "2" }}selected{{ end }}>需要下载</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">在榜天数</label>
+        <input class="form-control" type="number" name="drkmin" value="{{ .DaysInRankMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "drkmin" }}1{{ else }}0{{ end }}">
+    </div>
+    {{ if not .HideDirs }}
+        <div class="col-12 col-md-6 col-xl-2">
+            <label class="form-label mb-1">目录 1</label>
+            <input class="form-control" type="text" name="d1" value="{{ .Dir1 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d1" }}1{{ else }}0{{ end }}">
+        </div>
+        <div class="col-12 col-md-6 col-xl-2">
+            <label class="form-label mb-1">目录 2</label>
+            <input class="form-control" type="text" name="d2" value="{{ .Dir2 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d2" }}1{{ else }}0{{ end }}">
+        </div>
+        <div class="col-12 col-md-6 col-xl-2">
+            <label class="form-label mb-1">目录 3</label>
+            <input class="form-control" type="text" name="d3" value="{{ .Dir3 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d3" }}1{{ else }}0{{ end }}">
+        </div>
+        <div class="col-12 col-md-6 col-xl-2">
+            <label class="form-label mb-1">目录 4</label>
+            <input class="form-control" type="text" name="d4" value="{{ .Dir4 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d4" }}1{{ else }}0{{ end }}">
+        </div>
+    {{ end }}
+
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">上映日期</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="date" name="rs" value="{{ .ReleasingDateStart }}" data-explicit="{{ if index $explicit "rs" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="date" name="re" value="{{ .ReleasingDateEnd }}" data-explicit="{{ if index $explicit "re" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">影片时间</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="date" name="bs" value="{{ .FilmBirthTimeStart }}" data-explicit="{{ if index $explicit "bs" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="date" name="be" value="{{ .FilmBirthTimeEnd }}" data-explicit="{{ if index $explicit "be" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">上榜日期</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="date" name="srds" value="{{ .StartRankingDateStart }}" data-explicit="{{ if index $explicit "srds" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="date" name="srde" value="{{ .StartRankingDateEnd }}" data-explicit="{{ if index $explicit "srde" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">最后 SC 时间</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="date" name="lsctmin" value="{{ .LastScTimeMin }}" data-explicit="{{ if index $explicit "lsctmin" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="date" name="lsctmax" value="{{ .LastScTimeMax }}" data-explicit="{{ if index $explicit "lsctmax" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">演员年龄</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="number" step="0.1" name="cay" value="{{ .CastAgeMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "cay" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="number" step="0.1" name="cao" value="{{ .CastAgeMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "cao" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">观看人数</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="number" name="vwmin" value="{{ .ViewWatchedMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "vwmin" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="number" name="vwmax" value="{{ .ViewWatchedMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "vwmax" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">评分</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="number" step="0.1" name="smin" value="{{ .ScoreMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "smin" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="number" step="0.1" name="smax" value="{{ .ScoreMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "smax" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">SC 次数</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="number" name="scmin" value="{{ .ScTimesMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "scmin" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="number" name="scmax" value="{{ .ScTimesMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "scmax" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">Come 次数</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="number" name="comin" value="{{ .ComeTimesMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "comin" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="number" name="comax" value="{{ .ComeTimesMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "comax" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+{{ end }}
+
 {{ define "movie_card_filter_form" }}
     {{ with .MovieCardFilter }}
-        {{ $explicit := .Explicit }}
         <div id="movieCardFilterCollapse" class="collapse">
             <div class="card mb-3">
                 <div class="card-body">
                     <form id="movieCardFilterForm" class="row g-2 align-items-end" method="get" action="{{ .Action }}">
-                    {{ if .PageSize }}<input type="hidden" name="ps" value="{{ .PageSize }}" data-explicit="{{ if index $explicit "ps" }}1{{ else }}0{{ end }}">{{ end }}
-                    {{ if .OrderBy }}<input type="hidden" name="od" value="{{ .OrderBy }}" data-explicit="{{ if index $explicit "od" }}1{{ else }}0{{ end }}">{{ end }}
-                    {{ if .RandomCount }}<input type="hidden" name="n" value="{{ .RandomCount }}" data-explicit="{{ if index $explicit "n" }}1{{ else }}0{{ end }}">{{ end }}
-                    {{ if .PersonIds }}<input type="hidden" name="pid" value="{{ .PersonIds }}" data-explicit="{{ if index $explicit "pid" }}1{{ else }}0{{ end }}">{{ end }}
-
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">演员</label>
-                        <input class="form-control" type="text" name="cn" value="{{ .CastNames }}" placeholder="演员名，支持多值" data-explicit="{{ if index $explicit "cn" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">类型</label>
-                        <input class="form-control" type="text" name="gn" value="{{ .GenreNames }}" placeholder="类型名，支持多值" data-explicit="{{ if index $explicit "gn" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">导演</label>
-                        <input class="form-control" type="text" name="dn" value="{{ .DirectorName }}" placeholder="导演名" data-explicit="{{ if index $explicit "dn" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">前缀</label>
-                        <input class="form-control" type="text" name="pn" value="{{ .PrefixName }}" placeholder="前缀" data-explicit="{{ if index $explicit "pn" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">片商</label>
-                        <input class="form-control" type="text" name="mn" value="{{ .MakerName }}" placeholder="片商" data-explicit="{{ if index $explicit "mn" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">标签</label>
-                        <input class="form-control" type="text" name="ln" value="{{ .LabelName }}" placeholder="标签" data-explicit="{{ if index $explicit "ln" }}1{{ else }}0{{ end }}">
-                    </div>
-
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">关键词</label>
-                        <input class="form-control" type="text" name="wd" value="{{ .Word }}" placeholder="中文关键词" data-explicit="{{ if index $explicit "wd" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">库存状态</label>
-                        <select class="form-select" name="owned" data-explicit="{{ if index $explicit "owned" }}1{{ else }}0{{ end }}">
-                            <option value="" {{ if eq .Owned "" }}selected{{ end }}>全部</option>
-                            <option value="1" {{ if eq .Owned "1" }}selected{{ end }}>全部电影</option>
-                            <option value="2" {{ if eq .Owned "2" }}selected{{ end }}>全部库存</option>
-                            <option value="3" {{ if eq .Owned "3" }}selected{{ end }}>已拥有未移除</option>
-                            <option value="4" {{ if eq .Owned "4" }}selected{{ end }}>有字幕未移除</option>
-                            <option value="5" {{ if eq .Owned "5" }}selected{{ end }}>无字幕未移除</option>
-                            <option value="6" {{ if eq .Owned "6" }}selected{{ end }}>已移除</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">下载状态</label>
-                        <select class="form-select" name="nd" data-explicit="{{ if index $explicit "nd" }}1{{ else }}0{{ end }}">
-                            <option value="" {{ if eq .NeedDownload "" }}selected{{ end }}>全部</option>
-                            <option value="1" {{ if eq .NeedDownload "1" }}selected{{ end }}>无需下载</option>
-                            <option value="2" {{ if eq .NeedDownload "2" }}selected{{ end }}>需要下载</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">在榜天数</label>
-                        <input class="form-control" type="number" name="drkmin" value="{{ .DaysInRankMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "drkmin" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">目录 1</label>
-                        <input class="form-control" type="text" name="d1" value="{{ .Dir1 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d1" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">目录 2</label>
-                        <input class="form-control" type="text" name="d2" value="{{ .Dir2 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d2" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">目录 3</label>
-                        <input class="form-control" type="text" name="d3" value="{{ .Dir3 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d3" }}1{{ else }}0{{ end }}">
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-2">
-                        <label class="form-label mb-1">目录 4</label>
-                        <input class="form-control" type="text" name="d4" value="{{ .Dir4 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d4" }}1{{ else }}0{{ end }}">
-                    </div>
-
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">上映日期</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="rs" value="{{ .ReleasingDateStart }}" data-explicit="{{ if index $explicit "rs" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="re" value="{{ .ReleasingDateEnd }}" data-explicit="{{ if index $explicit "re" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">影片时间</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="bs" value="{{ .FilmBirthTimeStart }}" data-explicit="{{ if index $explicit "bs" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="be" value="{{ .FilmBirthTimeEnd }}" data-explicit="{{ if index $explicit "be" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">上榜日期</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="srds" value="{{ .StartRankingDateStart }}" data-explicit="{{ if index $explicit "srds" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="srde" value="{{ .StartRankingDateEnd }}" data-explicit="{{ if index $explicit "srde" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">最后 SC 时间</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="lsctmin" value="{{ .LastScTimeMin }}" data-explicit="{{ if index $explicit "lsctmin" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="date" name="lsctmax" value="{{ .LastScTimeMax }}" data-explicit="{{ if index $explicit "lsctmax" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">演员年龄</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="number" step="0.1" name="cay" value="{{ .CastAgeMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "cay" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="number" step="0.1" name="cao" value="{{ .CastAgeMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "cao" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">观看人数</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="number" name="vwmin" value="{{ .ViewWatchedMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "vwmin" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="number" name="vwmax" value="{{ .ViewWatchedMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "vwmax" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">评分</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="number" step="0.1" name="smin" value="{{ .ScoreMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "smin" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="number" step="0.1" name="smax" value="{{ .ScoreMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "smax" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">SC 次数</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="number" name="scmin" value="{{ .ScTimesMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "scmin" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="number" name="scmax" value="{{ .ScTimesMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "scmax" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-4">
-                        <label class="form-label mb-1">Come 次数</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input class="form-control" type="number" name="comin" value="{{ .ComeTimesMin }}" placeholder="最小值" data-explicit="{{ if index $explicit "comin" }}1{{ else }}0{{ end }}">
-                            </div>
-                            <div class="col-6">
-                                <input class="form-control" type="number" name="comax" value="{{ .ComeTimesMax }}" placeholder="最大值" data-explicit="{{ if index $explicit "comax" }}1{{ else }}0{{ end }}">
-                            </div>
-                        </div>
-                    </div>
-
+                        {{ template "movie_card_filter_fields" . }}
                         <div class="col-12 d-flex gap-2">
                             <button class="btn btn-primary" type="submit">筛选</button>
                             <a class="btn btn-outline-secondary" href="{{ .ClearHref }}">清空</a>

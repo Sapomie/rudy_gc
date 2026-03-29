@@ -7,9 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
 	"rudy_gc/internal/svc"
+	"rudy_gc/internal/types"
 )
 
 type CrawlerPages struct {
@@ -49,7 +51,11 @@ type crawlerJobsPageConfig struct {
 	TaskButtons       []crawlerJobsPageTask
 	HeaderLinks       []crawlerJobsPageLink
 	Labels            crawlerJobsPageLabels
+	MovieCardFilter   *movieCardFilterView
+	ShowMovieFilters  bool
 }
+
+const taskSpiderFetchSiteBoth = "spider_fetch_site_both_resources"
 
 func NewCrawlerPages(deps *svc.Deps) *CrawlerPages {
 	return &CrawlerPages{
@@ -136,7 +142,7 @@ func (h *CrawlerPages) FilmPage(c *gin.Context) {
 		EventTitle:        "影片事件流",
 		StorageKey:        "crawler_jobs_film_selected_job",
 		DefaultTaskType:   loop.TaskFilmRename,
-		OverviewExtraMode: "task_type",
+		OverviewExtraMode: "fetch_site_summary",
 		EmptyStateText:    "等待影片任务触发",
 		AllowedTaskTypes: []string{
 			loop.TaskFilmRename,
@@ -155,16 +161,25 @@ func (h *CrawlerPages) FilmPage(c *gin.Context) {
 }
 
 func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
+	req, err := parseMovieCardRequest(c, types.ListMovieFullRequest{
+		OrderBy: consts.OrderByReleasingDate,
+	})
+	if err != nil {
+		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
+		return
+	}
+	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
+	filterView.HideDirs = true
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "抓取站点任务",
 		PageTitle:         "JavBus / Sukebei 资源抓取",
 		TaskPanelTitle:    "抓取站点任务",
-		PageNote:          "这里只处理 JavBus / Sukebei 资源抓取，数量参数控制本次最多处理条数。",
+		PageNote:          "JavBus / Sukebei 抓取目标由 cards 同源筛选决定，数量参数控制本次最多处理条数。",
 		TaskTableTitle:    "抓取站点任务",
 		EventTitle:        "抓取站点事件流",
 		StorageKey:        "crawler_jobs_fetch_site_selected_job",
 		DefaultTaskType:   loop.TaskSpiderFetchJavbus,
-		OverviewExtraMode: "task_type",
+		OverviewExtraMode: "fetch_site_summary",
 		EmptyStateText:    "等待抓取站点任务触发",
 		AllowedTaskTypes: []string{
 			loop.TaskSpiderFetchJavbus,
@@ -173,6 +188,7 @@ func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
 		TaskButtons: []crawlerJobsPageTask{
 			{TaskType: loop.TaskSpiderFetchJavbus, Label: "JavBus 资源抓取"},
 			{TaskType: loop.TaskSpiderFetchSukebei, Label: "Sukebei 资源抓取"},
+			{TaskType: taskSpiderFetchSiteBoth, Label: "JavBus + Sukebei 同时抓取"},
 		},
 		HeaderLinks: []crawlerJobsPageLink{
 			{Href: "/fetch-site-javbus-list", Label: "JavBus 列表"},
@@ -183,6 +199,8 @@ func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
+		MovieCardFilter:  filterView,
+		ShowMovieFilters: true,
 	})
 }
 
@@ -253,6 +271,8 @@ func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig)
 		"TaskButtons":       cfg.TaskButtons,
 		"HeaderLinks":       cfg.HeaderLinks,
 		"Labels":            cfg.Labels,
+		"MovieCardFilter":   cfg.MovieCardFilter,
+		"ShowMovieFilters":  cfg.ShowMovieFilters,
 		"ScRootDir":         h.scRootDir,
 		"JobID":             strings.TrimSpace(c.Query("job_id")),
 	})

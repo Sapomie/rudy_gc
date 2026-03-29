@@ -49,6 +49,7 @@ type ListMovieFullRequest struct {
 	Dir4 string `form:"d4"`
 
 	OrderBy  string `form:"od"`
+	Order    string `form:"order"`
 	Page     int64  `form:"p"`
 	PageSize int64  `form:"ps"`
 }

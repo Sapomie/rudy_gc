@@ -1,6 +1,7 @@
 {{ define "partials.md.film_info" }}
 <div class="card shadow-sm">
     <div class="card-body">
+        <h5 class="card-title mb-3">视频信息</h5>
         <table class="table table-bordered dt-responsive nowrap" style="width:100%">
             <thead>
             <tr class="table-light">
@@ -19,10 +20,10 @@
             <tbody>
             <tr>
                 <td>{{.film.BirthTime}}</td>
-                <td><a href="{{.film.FilePath}}">{{.film.Size}}</a></td>
+                <td><a href="{{.film.FilePath}}">{{ printf "%.2f" .film.Size }}</a></td>
                 <td>{{.film.Height}}</td>
-                <td>{{.film.BitRate}}</td>
-                <td>{{.film.Duration}}</td>
+                <td>{{ printf "%.0f" .film.BitRate }}</td>
+                <td>{{ printf "%.2f" .film.Duration }}</td>
                 <td>{{.film.SizeDurationRatio}}</td>
                 <td>{{.film.Frame}}</td>
                 <td>{{.film.SelfMake}}</td>
@@ -35,10 +36,6 @@
             </tr>
             </tbody>
         </table>
-
-        <div class="card-title">
-            Update Time: <span class="badge badge-secondary">{{.magUpdateDate}}</span>
-        </div>
     </div>
 </div>
 {{ end }}

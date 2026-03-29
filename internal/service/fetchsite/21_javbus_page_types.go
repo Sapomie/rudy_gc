@@ -1,15 +1,23 @@
 package fetchsite
 
 type JavbusPageQuery struct {
-	Page           int64
-	PageSize       int64
-	Sort           string
-	Order          string
-	Keyword        string
-	Status         int64
-	StatusSet      bool
-	HasErrorOnly   bool
-	HasNoErrorOnly bool
+	Page               int64
+	PageSize           int64
+	Sort               string
+	Order              string
+	Keyword            string
+	Status             int64
+	StatusSet          bool
+	HasErrorOnly       bool
+	HasNoErrorOnly     bool
+	LastFetchFrom      int64
+	LastFetchTo        int64
+	HasLastFetchFrom   bool
+	HasLastFetchTo     bool
+	ReleaseDateFrom    int64
+	ReleaseDateTo      int64
+	HasReleaseDateFrom bool
+	HasReleaseDateTo   bool
 }
 
 type JavbusPageItem struct {

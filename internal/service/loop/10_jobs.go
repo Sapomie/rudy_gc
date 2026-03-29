@@ -50,6 +50,44 @@ type StartTaskRequest struct {
 	Fg             string `json:"fg"`
 	Vessel         string `json:"vessel"`
 	Remarks        string `json:"remarks"`
+
+	CastNames               string `json:"cn"`
+	PersonIds               string `json:"pid"`
+	GenreNames              string `json:"gn"`
+	DirectorName            string `json:"dn"`
+	PrefixName              string `json:"pn"`
+	MakerName               string `json:"mn"`
+	LabelName               string `json:"ln"`
+	ReleasingDateStart      string `json:"rs"`
+	ReleasingDateEnd        string `json:"re"`
+	FilmBirthTimeStart      string `json:"bs"`
+	FilmBirthTimeEnd        string `json:"be"`
+	CastAgeMin              string `json:"cay"`
+	CastAgeMax              string `json:"cao"`
+	StartRankingDateFrom    string `json:"srds"`
+	StartRankingDateTo      string `json:"srde"`
+	DaysInRankMin           string `json:"drkmin"`
+	NeedDownload            string `json:"nd"`
+	Word                    string `json:"wd"`
+	Owned                   string `json:"owned"`
+	ViewWatchedMin          string `json:"vwmin"`
+	ViewWatchedMax          string `json:"vwmax"`
+	ScoreMin                string `json:"smin"`
+	ScoreMax                string `json:"smax"`
+	LastScTimeMin           string `json:"lsctmin"`
+	LastScTimeMax           string `json:"lsctmax"`
+	ScTimesMin              string `json:"scmin"`
+	ScTimesMax              string `json:"scmax"`
+	ComeTimesMin            string `json:"comin"`
+	ComeTimesMax            string `json:"comax"`
+	Dir1                    string `json:"d1"`
+	Dir2                    string `json:"d2"`
+	Dir3                    string `json:"d3"`
+	Dir4                    string `json:"d4"`
+	OrderBy                 string `json:"od"`
+	Order                   string `json:"order"`
+	LastFetchDurationDays   string `json:"last_fetch_duration_days"`
+	LastSuccessDurationDays string `json:"last_success_duration_days"`
 }
 
 type DetailLoopSnapshot struct {
@@ -212,9 +250,9 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 	case TaskSpiderBackfillFetchSite:
 		return l.StartBackfillFetchSite()
 	case TaskSpiderFetchJavbus:
-		return l.StartFetchJavbusResources(req.Number, req.MovieJavID, req.MovieCode)
+		return l.StartFetchJavbusResources(req)
 	case TaskSpiderFetchSukebei:
-		return l.StartFetchSukebeiResources(req.Number, req.MovieJavID, req.MovieCode)
+		return l.StartFetchSukebeiResources(req)
 	case TaskFilmRename:
 		return l.StartFilmRename()
 	case TaskFilmProcess:
@@ -355,10 +393,10 @@ func (l *FetchLoopService) StartBackfillFetchSite() (string, error) {
 	})
 }
 
-func (l *FetchLoopService) StartFetchJavbusResources(limit int64, movieJavID, movieCode string) (string, error) {
+func (l *FetchLoopService) StartFetchJavbusResources(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchJavbus, taskRuntimePolicy{}, func(ctx context.Context) error {
-		movieJavID = strings.TrimSpace(movieJavID)
-		movieCode = strings.TrimSpace(movieCode)
+		movieJavID := strings.TrimSpace(req.MovieJavID)
+		movieCode := strings.TrimSpace(req.MovieCode)
 		msg := "开始抓取 JavBus 资源"
 		if movieJavID != "" {
 			msg = fmt.Sprintf("开始抓取 JavBus 资源：%s", movieCode)
@@ -366,19 +404,32 @@ func (l *FetchLoopService) StartFetchJavbusResources(limit int64, movieJavID, mo
 			_, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieCode)
 			return err
 		}
-		if limit > 0 {
-			msg = fmt.Sprintf("开始抓取 JavBus 资源，数量=%d", limit)
+		movieReq, err := buildFetchSiteMovieRequest(req)
+		if err != nil {
+			return err
 		}
+		durationFilter, err := buildFetchSiteDurationFilter(req)
+		if err != nil {
+			return err
+		}
+		targetCount := normalizeFetchSiteNumber(req.Number)
+		msg = fmt.Sprintf("开始抓取 JavBus 资源，目标数量=%d，排序=%s", targetCount, movieReq.OrderBy)
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-		_, err := l.fetchQueue.RunPendingJavbusFetchTasks(ctx, limit)
+		_, err = l.runJavbusFetchTasksWithFilterTarget(
+			ctx,
+			movieReq,
+			targetCount,
+			durationFilter.LastFetchDurationDays,
+			durationFilter.LastSuccessDurationDays,
+		)
 		return err
 	})
 }
 
-func (l *FetchLoopService) StartFetchSukebeiResources(limit int64, movieJavID, movieCode string) (string, error) {
+func (l *FetchLoopService) StartFetchSukebeiResources(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchSukebei, taskRuntimePolicy{}, func(ctx context.Context) error {
-		movieJavID = strings.TrimSpace(movieJavID)
-		movieCode = strings.TrimSpace(movieCode)
+		movieJavID := strings.TrimSpace(req.MovieJavID)
+		movieCode := strings.TrimSpace(req.MovieCode)
 		msg := "开始抓取 Sukebei 资源"
 		if movieJavID != "" {
 			msg = fmt.Sprintf("开始抓取 Sukebei 资源：%s", movieCode)
@@ -386,11 +437,24 @@ func (l *FetchLoopService) StartFetchSukebeiResources(limit int64, movieJavID, m
 			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieCode)
 			return err
 		}
-		if limit > 0 {
-			msg = fmt.Sprintf("开始抓取 Sukebei 资源，数量=%d", limit)
+		movieReq, err := buildFetchSiteMovieRequest(req)
+		if err != nil {
+			return err
 		}
+		durationFilter, err := buildFetchSiteDurationFilter(req)
+		if err != nil {
+			return err
+		}
+		targetCount := normalizeFetchSiteNumber(req.Number)
+		msg = fmt.Sprintf("开始抓取 Sukebei 资源，目标数量=%d，排序=%s", targetCount, movieReq.OrderBy)
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-		_, err := l.fetchQueue.RunPendingSukebeiFetchTasks(ctx, limit)
+		_, err = l.runSukebeiFetchTasksWithFilterTarget(
+			ctx,
+			movieReq,
+			targetCount,
+			durationFilter.LastFetchDurationDays,
+			durationFilter.LastSuccessDurationDays,
+		)
 		return err
 	})
 }

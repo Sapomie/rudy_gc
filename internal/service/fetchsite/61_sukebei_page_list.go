@@ -18,9 +18,17 @@ func (s *Service) BuildSukebeiPage(ctx context.Context, query SukebeiPageQuery) 
 	}
 
 	filter := moviex.SukebeiFetchPageFilter{
-		Keyword:        query.Keyword,
-		FetchStatus:    query.Status,
-		FetchStatusSet: query.StatusSet,
+		Keyword:            query.Keyword,
+		FetchStatus:        query.Status,
+		FetchStatusSet:     query.StatusSet,
+		LastFetchFrom:      query.LastFetchFrom,
+		LastFetchTo:        query.LastFetchTo,
+		HasLastFetchFrom:   query.HasLastFetchFrom,
+		HasLastFetchTo:     query.HasLastFetchTo,
+		ReleaseDateFrom:    query.ReleaseDateFrom,
+		ReleaseDateTo:      query.ReleaseDateTo,
+		HasReleaseDateFrom: query.HasReleaseDateFrom,
+		HasReleaseDateTo:   query.HasReleaseDateTo,
 	}
 	if query.HasErrorOnly {
 		filter.HasErrorOnly = true

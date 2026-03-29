@@ -25,6 +25,7 @@ type MovieFetchSiteStatus struct {
 	FetchStatusText   string
 	TryCount          int64
 	LastFetchTime     string
+	LastFetchAgo      string
 	LastError         string
 	TorrentHashCount  int64
 	LatestPublishTime string

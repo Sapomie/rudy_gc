@@ -116,11 +116,10 @@
                                     <div class="table-responsive fetch-site-detail-sukebei-wrap">
                                         <table class="table table-sm table-bordered mb-0">
                                             <tbody>
-                                            <tr><th class="w-25">影片</th><td>{{ .javbusFetch.MovieCode }}</td></tr>
-                                            <tr><th>发行时间</th><td>{{ .javbusFetch.ReleaseDate }}</td></tr>
                                             <tr><th>状态</th><td>{{ .javbusFetch.FetchStatusText }}</td></tr>
                                             <tr><th>重试次数</th><td>{{ .javbusFetch.TryCount }}</td></tr>
                                             <tr><th>最后抓取</th><td>{{ .javbusFetch.LastFetchTime }}</td></tr>
+                                            <tr><th>最后抓取距离现在</th><td>{{ .javbusFetch.LastFetchAgo }}</td></tr>
                                             <tr><th>Hash 数</th><td>{{ .javbusFetch.TorrentHashCount }}</td></tr>
                                             <tr><th>最新日期</th><td>{{ .javbusFetch.LatestPublishTime }}</td></tr>
                                             <tr><th>来源地址</th><td>{{ if .javbusFetch.SourceURL }}<a href="{{ .javbusFetch.SourceURL }}" target="_blank" rel="noreferrer">{{ .javbusFetch.SourceURL }}</a>{{ else }}-{{ end }}</td></tr>
@@ -145,11 +144,10 @@
                                     <div class="table-responsive">
                                         <table class="table table-sm table-bordered mb-0">
                                             <tbody>
-                                            <tr><th class="w-25">影片</th><td>{{ .sukebeiFetch.MovieCode }}</td></tr>
-                                            <tr><th>发行时间</th><td>{{ .sukebeiFetch.ReleaseDate }}</td></tr>
                                             <tr><th>状态</th><td>{{ .sukebeiFetch.FetchStatusText }}</td></tr>
                                             <tr><th>重试次数</th><td>{{ .sukebeiFetch.TryCount }}</td></tr>
                                             <tr><th>最后抓取</th><td>{{ .sukebeiFetch.LastFetchTime }}</td></tr>
+                                            <tr><th>最后抓取距离现在</th><td>{{ .sukebeiFetch.LastFetchAgo }}</td></tr>
                                             <tr><th>Hash 数</th><td>{{ .sukebeiFetch.TorrentHashCount }}</td></tr>
                                             <tr><th>最新日期</th><td>{{ .sukebeiFetch.LatestPublishTime }}</td></tr>
                                             <tr><th>来源地址</th><td>{{ if .sukebeiFetch.SourceURL }}<a href="{{ .sukebeiFetch.SourceURL }}" target="_blank" rel="noreferrer">{{ .sukebeiFetch.SourceURL }}</a>{{ else }}-{{ end }}</td></tr>

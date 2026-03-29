@@ -110,11 +110,11 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	var ordered []string
 	switch req.OrderBy {
 	case consts.OrderByBirthTime, consts.OrderByScTimes, consts.OrderByComeTimes, consts.OrderByLastScTime:
-		ordered, err = r.pageOnVFilm(ctx, finalIDs, req.OrderBy, offset, size)
+		ordered, err = r.pageOnVFilm(ctx, finalIDs, req.OrderBy, req.Order, offset, size)
 	case consts.OrderByRankDate, consts.OrderByHighestRank, consts.OrderByDaysInRank:
-		ordered, err = r.pageOnMinfo(ctx, finalIDs, req.OrderBy, offset, size)
+		ordered, err = r.pageOnMinfo(ctx, finalIDs, req.OrderBy, req.Order, offset, size)
 	default:
-		ordered, err = r.pageOnAMovie(ctx, finalIDs, req.OrderBy, offset, size)
+		ordered, err = r.pageOnAMovie(ctx, finalIDs, req.OrderBy, req.Order, offset, size)
 	}
 	if err != nil {
 		return nil, 0, err
@@ -162,7 +162,7 @@ func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.L
 		}
 	}
 
-	order, guards := amovieOrdering(req.OrderBy)
+	order, guards := amovieOrdering(req.OrderBy, req.Order)
 	w = append(w, guards...)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.am.TableName()).Where(w).ToSql()
@@ -197,7 +197,7 @@ func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.L
 
 func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
 	w := minfoBaseFilters(req)
-	order, guards := minfoOrdering(req.OrderBy)
+	order, guards := minfoOrdering(req.OrderBy, req.Order)
 	w = append(w, guards...)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.mi.TableName()).Where(w).ToSql()
@@ -232,7 +232,7 @@ func (r *MovieListRepoSqlx) listFromMinfoOnly(ctx context.Context, req *types.Li
 
 func (r *MovieListRepoSqlx) listFromVFilmOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
 	w := vfilmBaseFilters(ctx, r, req)
-	order, guards := vfilmOrdering(req.OrderBy)
+	order, guards := vfilmOrdering(req.OrderBy, req.Order)
 	w = append(w, guards...)
 
 	cntSql, cntArgs, _ := squirrel.Select("COUNT(*)").From(r.vf.TableName()).Where(w).ToSql()
@@ -745,11 +745,11 @@ func splitInt64Tokens(raw string) []int64 {
 
 /* ------------------- B. 分表排序分页（WHERE ... IN） ------------------- */
 
-func (r *MovieListRepoSqlx) pageOnAMovie(ctx context.Context, finalIDs []string, od string, offset, limit int64) ([]string, error) {
+func (r *MovieListRepoSqlx) pageOnAMovie(ctx context.Context, finalIDs []string, od string, sortOrder string, offset, limit int64) ([]string, error) {
 	if len(finalIDs) == 0 {
 		return nil, nil
 	}
-	order, guards := amovieOrdering(od)
+	order, guards := amovieOrdering(od, sortOrder)
 	w := squirrel.And{squirrel.Eq{"jav_id": finalIDs}}
 	w = append(w, guards...)
 
@@ -770,11 +770,11 @@ func (r *MovieListRepoSqlx) pageOnAMovie(ctx context.Context, finalIDs []string,
 	return ids, nil
 }
 
-func (r *MovieListRepoSqlx) pageOnMinfo(ctx context.Context, finalIDs []string, od string, offset, limit int64) ([]string, error) {
+func (r *MovieListRepoSqlx) pageOnMinfo(ctx context.Context, finalIDs []string, od string, sortOrder string, offset, limit int64) ([]string, error) {
 	if len(finalIDs) == 0 {
 		return nil, nil
 	}
-	order, guards := minfoOrdering(od)
+	order, guards := minfoOrdering(od, sortOrder)
 	w := squirrel.And{squirrel.Eq{"jav_id": finalIDs}}
 	w = append(w, guards...)
 
@@ -795,11 +795,11 @@ func (r *MovieListRepoSqlx) pageOnMinfo(ctx context.Context, finalIDs []string, 
 	return ids, nil
 }
 
-func (r *MovieListRepoSqlx) pageOnVFilm(ctx context.Context, finalIDs []string, od string, offset, limit int64) ([]string, error) {
+func (r *MovieListRepoSqlx) pageOnVFilm(ctx context.Context, finalIDs []string, od string, sortOrder string, offset, limit int64) ([]string, error) {
 	if len(finalIDs) == 0 {
 		return nil, nil
 	}
-	order, guards := vfilmOrdering(od)
+	order, guards := vfilmOrdering(od, sortOrder)
 	w := squirrel.And{squirrel.Eq{"movie_jav_id": finalIDs}}
 	w = append(w, guards...)
 
@@ -894,7 +894,7 @@ func vfilmOrderGuards(orderBy string) squirrel.And {
 	return w
 }
 
-func amovieOrdering(orderBy string) (order string, guards squirrel.And) {
+func amovieOrdering(orderBy string, sortOrder string) (order string, guards squirrel.And) {
 	order = "releasing_date DESC,name DESC"
 	switch orderBy {
 	case consts.OrderByReleasingDate:
@@ -908,11 +908,12 @@ func amovieOrdering(orderBy string) (order string, guards squirrel.And) {
 	case consts.OrderByCastAgeDesc:
 		order = "cast_average_age DESC"
 	}
+	order = applyMovieListOrder(order, sortOrder)
 	guards = amovieOrderGuards(orderBy)
 	return
 }
 
-func minfoOrdering(orderBy string) (order string, guards squirrel.And) {
+func minfoOrdering(orderBy string, sortOrder string) (order string, guards squirrel.And) {
 	order = "first_rank_day_number desc,name desc"
 	switch orderBy {
 	case consts.OrderByHighestRank:
@@ -924,11 +925,12 @@ func minfoOrdering(orderBy string) (order string, guards squirrel.And) {
 	case consts.OrderByRankDate:
 		order = "first_rank_day_number DESC,name DESC"
 	}
+	order = applyMovieListOrder(order, sortOrder)
 	guards = minfoOrderGuards(orderBy)
 	return
 }
 
-func vfilmOrdering(orderBy string) (order string, guards squirrel.And) {
+func vfilmOrdering(orderBy string, sortOrder string) (order string, guards squirrel.And) {
 	order = "birth_time DESC"
 	switch orderBy {
 	case consts.OrderByBirthTime:
@@ -942,8 +944,50 @@ func vfilmOrdering(orderBy string) (order string, guards squirrel.And) {
 	case consts.OrderByReleasingDate:
 		order = "releasing_date DESC,movie_name DESC"
 	}
+	order = applyMovieListOrder(order, sortOrder)
 	guards = vfilmOrderGuards(orderBy)
 	return
+}
+
+func applyMovieListOrder(orderClause string, sortOrder string) string {
+	currentOrder := normalizeMovieListOrder(sortOrder)
+	if currentOrder == "" {
+		return orderClause
+	}
+
+	target := strings.ToUpper(currentOrder)
+	parts := strings.Split(orderClause, ",")
+	normalized := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item == "" {
+			continue
+		}
+		fields := strings.Fields(item)
+		if len(fields) == 0 {
+			continue
+		}
+		last := strings.ToUpper(fields[len(fields)-1])
+		if last == "ASC" || last == "DESC" {
+			fields[len(fields)-1] = target
+			normalized = append(normalized, strings.Join(fields, " "))
+			continue
+		}
+		normalized = append(normalized, item+" "+target)
+	}
+	if len(normalized) == 0 {
+		return orderClause
+	}
+	return strings.Join(normalized, ", ")
+}
+
+func normalizeMovieListOrder(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "asc", "desc":
+		return strings.ToLower(strings.TrimSpace(raw))
+	default:
+		return ""
+	}
 }
 
 func orderBelongsToVFilm(od string) bool {

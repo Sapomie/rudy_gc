@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/url"
+	"strings"
 
 	"rudy_gc/internal/consts"
 
@@ -30,6 +31,15 @@ func normalizeOrderBy(od string, fallback string) string {
 		return od
 	}
 	return fallback
+}
+
+func normalizeOrder(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "asc", "desc":
+		return strings.ToLower(strings.TrimSpace(v))
+	default:
+		return ""
+	}
 }
 
 // SortLink / SortQuery 结构体

@@ -79,6 +79,22 @@
                                     <option value="clean" {{ if eq .Query.HasError "clean" }}selected{{ end }}>仅无错误</option>
                                 </select>
                             </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">最后抓取开始</label>
+                                <input class="form-control" type="date" name="last_fetch_from" value="{{ .Query.LastFetchFrom }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">最后抓取结束</label>
+                                <input class="form-control" type="date" name="last_fetch_to" value="{{ .Query.LastFetchTo }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发行时间开始</label>
+                                <input class="form-control" type="date" name="release_date_from" value="{{ .Query.ReleaseDateFrom }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发行时间结束</label>
+                                <input class="form-control" type="date" name="release_date_to" value="{{ .Query.ReleaseDateTo }}">
+                            </div>
                             <div class="col-12 d-flex gap-2">
                                 <button class="btn btn-primary" type="submit">筛选</button>
                                 <a class="btn btn-outline-secondary" href="/fetch-site-sukebei-list">清空</a>

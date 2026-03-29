@@ -11,13 +11,17 @@ import (
 )
 
 type fetchSiteJavbusPageQuery struct {
-	Page     int64  `form:"p"`
-	PageSize int64  `form:"ps"`
-	Sort     string `form:"sort"`
-	Order    string `form:"order"`
-	Keyword  string `form:"keyword"`
-	Status   string `form:"status"`
-	HasError string `form:"has_error"`
+	Page            int64  `form:"p"`
+	PageSize        int64  `form:"ps"`
+	Sort            string `form:"sort"`
+	Order           string `form:"order"`
+	Keyword         string `form:"keyword"`
+	Status          string `form:"status"`
+	HasError        string `form:"has_error"`
+	LastFetchFrom   string `form:"last_fetch_from"`
+	LastFetchTo     string `form:"last_fetch_to"`
+	ReleaseDateFrom string `form:"release_date_from"`
+	ReleaseDateTo   string `form:"release_date_to"`
 }
 
 type fetchSiteJavbusSortLink struct {
@@ -74,6 +78,34 @@ func (h *CrawlerPages) FetchSiteJavbusListPageMain(c *gin.Context) {
 	default:
 		c.String(http.StatusBadRequest, "JavBus 错误筛选参数错误")
 		return
+	}
+	if ts, ok, err := parseOptionalDateStart(q.LastFetchFrom); err != nil {
+		c.String(http.StatusBadRequest, "JavBus 最后抓取开始日期错误: %v", err)
+		return
+	} else if ok {
+		pageQuery.LastFetchFrom = ts
+		pageQuery.HasLastFetchFrom = true
+	}
+	if ts, ok, err := parseOptionalDateEnd(q.LastFetchTo); err != nil {
+		c.String(http.StatusBadRequest, "JavBus 最后抓取结束日期错误: %v", err)
+		return
+	} else if ok {
+		pageQuery.LastFetchTo = ts
+		pageQuery.HasLastFetchTo = true
+	}
+	if ts, ok, err := parseOptionalDateStart(q.ReleaseDateFrom); err != nil {
+		c.String(http.StatusBadRequest, "JavBus 发行时间开始日期错误: %v", err)
+		return
+	} else if ok {
+		pageQuery.ReleaseDateFrom = ts
+		pageQuery.HasReleaseDateFrom = true
+	}
+	if ts, ok, err := parseOptionalDateEnd(q.ReleaseDateTo); err != nil {
+		c.String(http.StatusBadRequest, "JavBus 发行时间结束日期错误: %v", err)
+		return
+	} else if ok {
+		pageQuery.ReleaseDateTo = ts
+		pageQuery.HasReleaseDateTo = true
 	}
 
 	result, err := h.fetchSite.BuildJavbusPage(c.Request.Context(), pageQuery)

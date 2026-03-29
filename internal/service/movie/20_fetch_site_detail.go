@@ -2,6 +2,7 @@ package movie
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -46,6 +47,7 @@ func (s *Service) buildJavbusFetchStatus(ctx context.Context, javID string) (*ty
 		FetchStatusText:   fetchStatusText(row.FetchStatus),
 		TryCount:          row.TryCount,
 		LastFetchTime:     tsToDateTime(row.LastFetchTime),
+		LastFetchAgo:      tsToDaysAgo(row.LastFetchTime),
 		LastError:         strings.TrimSpace(row.LastError),
 		TorrentHashCount:  row.TorrentHashCount,
 		LatestPublishTime: tsToDate(row.LatestPublishTime),
@@ -93,6 +95,7 @@ func (s *Service) buildSukebeiFetchStatus(ctx context.Context, javID string) (*t
 		FetchStatusText:   fetchStatusText(row.FetchStatus),
 		TryCount:          row.TryCount,
 		LastFetchTime:     tsToDateTime(row.LastFetchTime),
+		LastFetchAgo:      tsToDaysAgo(row.LastFetchTime),
 		LastError:         strings.TrimSpace(row.LastError),
 		TorrentHashCount:  row.TorrentHashCount,
 		LatestPublishTime: tsToDate(row.LatestPublishTime),
@@ -146,6 +149,14 @@ func tsToDateTime(ts int64) string {
 		return "-"
 	}
 	return time.Unix(ts, 0).Format("2006-01-02 15:04:05")
+}
+
+func tsToDaysAgo(ts int64) string {
+	if ts <= 0 {
+		return "-"
+	}
+	days := time.Since(time.Unix(ts, 0)).Hours() / 24
+	return fmt.Sprintf("%.1f 天", days)
 }
 
 func applyMatchedFetchSiteHashes(javbusMagnets []*types.MovieJavbusMagnet, sukebeiTorrents []*types.MovieSukebeiTorrent) {

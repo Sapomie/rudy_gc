@@ -17,27 +17,20 @@ const (
 )
 
 func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieCode string) ([]*moviex.TJavbusMagnet, error) {
-	reportInfoLog(ctx, fmt.Sprintf("JavBus 详情页请求: %s", movieCode))
 	detailURL, detailPayload, detailAttempts, err := s.fetchDetailPage(ctx, movieCode)
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("JavBus 详情页失败: %s | attempts=%d | err=%v", movieCode, detailAttempts, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, detailURL, detailAttempts, err)
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("JavBus 详情页成功: %s | attempts=%d", movieCode, detailAttempts))
-
-	reportInfoLog(ctx, fmt.Sprintf("JavBus Ajax 前等待: %s", movieCode))
 	if err := s.siteSvc.SleepRequest(ctx, fetchsite.FetchSiteCodeJavbus); err != nil {
 		return nil, err
 	}
 
 	ajaxURL, err := detailPayload.buildAjaxURL(s.siteSvc)
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("JavBus Ajax URL 构造失败: %s | err=%v", movieCode, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, detailURL, 1, err)
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("JavBus Ajax 请求: %s", ajaxURL))
 
 	resp, attempts, err := s.siteSvc.FetchWithRetry(ctx, fetchsite.FetchSiteCodeJavbus, ajaxURL, fetchsite.RequestOptions{
 		Referer: detailURL,
@@ -46,29 +39,22 @@ func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieCode s
 		},
 	}, nil)
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("JavBus Ajax 失败: %s | attempts=%d | err=%v", movieCode, attempts, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, ajaxURL, attempts, err)
 		return nil, err
 	}
 	if err := fetchsite.RequireHTTP200(resp.Status); err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("JavBus Ajax 非 200: %s | status=%d | err=%v", movieCode, resp.Status, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, ajaxURL, attempts, err)
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("JavBus Ajax 成功: %s | attempts=%d", movieCode, attempts))
 
 	magnets, err := parseMagnetRows(movieJavID, ajaxURL, string(resp.Body))
 	if err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("JavBus 解析失败: %s | err=%v", movieCode, err))
 		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, ajaxURL, attempts, err)
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("JavBus 解析完成: %s | count=%d", movieCode, len(magnets)))
 	if err := s.saveMagnets(ctx, movieJavID, movieCode, ajaxURL, attempts, magnets); err != nil {
-		reportErrorLog(ctx, fmt.Sprintf("JavBus 落库失败: %s | err=%v", movieCode, err))
 		return nil, err
 	}
-	reportInfoLog(ctx, fmt.Sprintf("JavBus 落库完成: %s | count=%d", movieCode, len(magnets)))
 	return magnets, nil
 }
 

@@ -26,7 +26,16 @@ func parseTorrentRows(movieJavID, queryText, searchURL, html string) ([]*moviex.
 		}
 
 		nameCell := tds.Eq(1)
-		titleAnchor := nameCell.Find("a").First()
+		titleAnchor := nameCell.Find(`a[href^="/view/"]`).FilterFunction(func(_ int, a *goquery.Selection) bool {
+			href, ok := a.Attr("href")
+			if !ok {
+				return false
+			}
+			return !strings.Contains(href, "#comments")
+		}).First()
+		if titleAnchor.Length() == 0 {
+			return
+		}
 		title := strings.TrimSpace(titleAnchor.Text())
 		viewHref, _ := titleAnchor.Attr("href")
 		viewID := parseViewID(viewHref)

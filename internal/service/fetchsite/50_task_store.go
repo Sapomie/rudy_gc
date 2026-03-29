@@ -3,9 +3,11 @@ package fetchsite
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/types"
 )
 
 func (s *Service) ListPendingJavbusFetchTasks(ctx context.Context, limit int64) ([]*JavbusFetchTask, error) {
@@ -74,6 +76,76 @@ func (s *Service) ListPendingSukebeiFetchTasks(ctx context.Context, limit int64)
 	return out, nil
 }
 
+func (s *Service) BuildJavbusFetchTasksByMovies(ctx context.Context, movies []*types.MovieType) ([]*JavbusFetchTask, error) {
+	now := time.Now().Unix()
+	out := make([]*JavbusFetchTask, 0, len(movies))
+	seen := make(map[string]struct{}, len(movies))
+
+	for _, mv := range movies {
+		if mv == nil {
+			continue
+		}
+		movieJavID := strings.TrimSpace(mv.JavId)
+		movieCode := strings.TrimSpace(mv.Name)
+		if movieJavID == "" || movieCode == "" {
+			continue
+		}
+		if _, ok := seen[movieJavID]; ok {
+			continue
+		}
+		seen[movieJavID] = struct{}{}
+
+		if err := s.ensureJavbusFetchTask(ctx, movieJavID, movieCode, pickMovieReleaseDate(mv), now); err != nil {
+			return nil, err
+		}
+		task, err := s.FindJavbusFetchTask(ctx, movieJavID)
+		if err != nil {
+			return nil, err
+		}
+		if task == nil {
+			continue
+		}
+		task.MovieCode = movieCode
+		out = append(out, task)
+	}
+	return out, nil
+}
+
+func (s *Service) BuildSukebeiFetchTasksByMovies(ctx context.Context, movies []*types.MovieType) ([]*SukebeiFetchTask, error) {
+	now := time.Now().Unix()
+	out := make([]*SukebeiFetchTask, 0, len(movies))
+	seen := make(map[string]struct{}, len(movies))
+
+	for _, mv := range movies {
+		if mv == nil {
+			continue
+		}
+		movieJavID := strings.TrimSpace(mv.JavId)
+		movieCode := strings.TrimSpace(mv.Name)
+		if movieJavID == "" || movieCode == "" {
+			continue
+		}
+		if _, ok := seen[movieJavID]; ok {
+			continue
+		}
+		seen[movieJavID] = struct{}{}
+
+		if err := s.ensureSukebeiFetchTask(ctx, movieJavID, movieCode, pickMovieReleaseDate(mv), now); err != nil {
+			return nil, err
+		}
+		task, err := s.FindSukebeiFetchTask(ctx, movieJavID)
+		if err != nil {
+			return nil, err
+		}
+		if task == nil {
+			continue
+		}
+		task.MovieCode = movieCode
+		out = append(out, task)
+	}
+	return out, nil
+}
+
 func (s *Service) MarkJavbusRunning(ctx context.Context, row *moviex.TJavbusMagnetFetch) error {
 	if row == nil {
 		return nil
@@ -120,4 +192,14 @@ func pickRowOrderTimeSukebei(row *moviex.TSukebeiTorrentFetch) int64 {
 		return row.LastFetchTime
 	}
 	return row.CreatedOn
+}
+
+func pickMovieReleaseDate(movie *types.MovieType) int64 {
+	if movie == nil {
+		return 0
+	}
+	if movie.AMovie != nil && movie.AMovie.ReleasingDate > 0 {
+		return movie.AMovie.ReleasingDate
+	}
+	return 0
 }

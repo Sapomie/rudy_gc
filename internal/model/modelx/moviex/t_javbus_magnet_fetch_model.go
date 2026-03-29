@@ -28,11 +28,19 @@ type (
 )
 
 type JavbusFetchPageFilter struct {
-	Keyword        string
-	FetchStatus    int64
-	FetchStatusSet bool
-	HasErrorOnly   bool
-	HasNoErrorOnly bool
+	Keyword            string
+	FetchStatus        int64
+	FetchStatusSet     bool
+	HasErrorOnly       bool
+	HasNoErrorOnly     bool
+	LastFetchFrom      int64
+	LastFetchTo        int64
+	HasLastFetchFrom   bool
+	HasLastFetchTo     bool
+	ReleaseDateFrom    int64
+	ReleaseDateTo      int64
+	HasReleaseDateFrom bool
+	HasReleaseDateTo   bool
 }
 
 // NewTJavbusMagnetFetchModel returns a model for the database table.
@@ -162,6 +170,18 @@ func applyJavbusPageFilter(queryBuilder squirrel.SelectBuilder, filter JavbusFet
 	}
 	if filter.HasNoErrorOnly {
 		queryBuilder = queryBuilder.Where("TRIM(`last_error`) = ''")
+	}
+	if filter.HasLastFetchFrom {
+		queryBuilder = queryBuilder.Where(squirrel.GtOrEq{"last_fetch_time": filter.LastFetchFrom})
+	}
+	if filter.HasLastFetchTo {
+		queryBuilder = queryBuilder.Where(squirrel.LtOrEq{"last_fetch_time": filter.LastFetchTo})
+	}
+	if filter.HasReleaseDateFrom {
+		queryBuilder = queryBuilder.Where(squirrel.GtOrEq{"release_date": filter.ReleaseDateFrom})
+	}
+	if filter.HasReleaseDateTo {
+		queryBuilder = queryBuilder.Where(squirrel.LtOrEq{"release_date": filter.ReleaseDateTo})
 	}
 	return queryBuilder
 }

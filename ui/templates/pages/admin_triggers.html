@@ -62,7 +62,7 @@
 
                                     <div class="form-group compact-field grid-span-2 is-hidden" id="numberFieldWrap">
                                         <label for="task_number">刷新数量</label>
-                                        <input id="task_number" name="number" class="form-control" type="number" placeholder="输入刷新数量">
+                                        <input id="task_number" name="number" class="form-control" type="number" value="1000000" placeholder="输入刷新数量">
                                     </div>
 
                                     <div class="form-group compact-field grid-span-2 is-hidden" id="actorNameFieldWrap">
@@ -70,6 +70,66 @@
                                         <input id="task_actor_name" name="actor_name" class="form-control" type="text" placeholder="输入演员名称">
                                     </div>
                                 </div>
+
+                                {{ if .ShowMovieFilters }}
+                                    <div id="fetchSiteFilterPanel" class="is-hidden mt-3">
+                                        <div class="card border bg-light mb-0">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                                    <h5 class="mb-0">筛选影片</h5>
+                                                    <div class="d-flex align-items-center">
+                                                        <button type="button" id="toggleFetchSiteFilterBtn" class="btn btn-outline-primary btn-sm mr-2">展开筛选</button>
+                                                        <button type="button" id="clearFetchSiteFilterBtn" class="btn btn-outline-secondary btn-sm">清空筛选</button>
+                                                    </div>
+                                                </div>
+                                                <div id="fetchSiteFilterWrap" class="is-hidden">
+                                                    <div class="row g-2 align-items-end">
+                                                        {{ template "movie_card_filter_fields" .MovieCardFilter }}
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 align-items-end mt-2">
+                                                    <div class="col-12">
+                                                        <label class="form-label mb-1">抓取时间过滤（天）</label>
+                                                        <div class="text-muted small mb-1">小于设定天数的影片将被跳过。</div>
+                                                    </div>
+                                                    <div class="col-12 col-md-6 col-xl-3">
+                                                        <label class="form-label mb-1">最近抓取</label>
+                                                        <input type="number" class="form-control" name="last_fetch_duration_days" value="5" placeholder="例如 3">
+                                                    </div>
+                                                    <div class="col-12 col-md-6 col-xl-3">
+                                                        <label class="form-label mb-1">最近成功</label>
+                                                        <input type="number" class="form-control" name="last_success_duration_days" value="5" placeholder="例如 3">
+                                                    </div>
+                                                </div>
+                                                <div class="row g-2 align-items-end mt-2">
+                                                    <div class="col-12">
+                                                        <label class="form-label mb-1">排序规则</label>
+                                                        <div class="btn-group btn-group-toggle d-flex flex-wrap task-type-toggle" role="group" aria-label="fetch site movie order by">
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "du" }} active{{ end }}" data-fetch-site-orderby="du">Detail更新</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "rd" }} active{{ end }}" data-fetch-site-orderby="rd">上映日期</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "vw" }} active{{ end }}" data-fetch-site-orderby="vw">观看人数</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "rk" }} active{{ end }}" data-fetch-site-orderby="rk">上榜日期</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "drk" }} active{{ end }}" data-fetch-site-orderby="drk">在榜天数</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "hrk" }} active{{ end }}" data-fetch-site-orderby="hrk">最高排名</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "bt" }} active{{ end }}" data-fetch-site-orderby="bt">下载时间</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "lsct" }} active{{ end }}" data-fetch-site-orderby="lsct">最后sc</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "sc" }} active{{ end }}" data-fetch-site-orderby="sc">sc次数</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "co" }} active{{ end }}" data-fetch-site-orderby="co">co次数</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 col-md-6 col-xl-2">
+                                                        <label class="form-label mb-1">排序顺序</label>
+                                                        <select class="form-select" name="order" data-explicit="{{ if index .MovieCardFilter.Explicit "order" }}1{{ else }}0{{ end }}">
+                                                            <option value="" {{ if eq .MovieCardFilter.Order "" }}selected{{ end }}>默认</option>
+                                                            <option value="asc" {{ if eq .MovieCardFilter.Order "asc" }}selected{{ end }}>升序</option>
+                                                            <option value="desc" {{ if eq .MovieCardFilter.Order "desc" }}selected{{ end }}>降序</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {{ end }}
 
                                 <div class="d-flex align-items-center flex-wrap action-row">
                                     <button type="submit" id="submitBtn" class="btn btn-primary">开始执行</button>
@@ -148,6 +208,33 @@
                                         <div class="overview-item overview-stage-card" id="dailyBestTranslateResultCard" data-phase="translate">
                                             <div class="label">标题翻译正确/错误</div>
                                             <div class="value" id="dailyBestTranslateResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{ else if eq .OverviewExtraMode "fetch_site_summary" }}
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">JavBus 进度（总/完成）</div>
+                                            <div class="value" id="fetchSiteJavbusProgressText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">JavBus 结果（成功/失败）</div>
+                                            <div class="value" id="fetchSiteJavbusResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">Sukebei 进度（总/完成）</div>
+                                            <div class="value" id="fetchSiteSukebeiProgressText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">Sukebei 结果（成功/失败）</div>
+                                            <div class="value" id="fetchSiteSukebeiResultText">0 / 0</div>
                                         </div>
                                     </div>
                                 </div>

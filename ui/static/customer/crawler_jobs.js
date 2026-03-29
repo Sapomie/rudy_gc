@@ -1,5 +1,9 @@
 (function (global) {
     const API_BASE = '/api/crawler/jobs';
+    const TASK_FETCH_SITE_BOTH = 'spider_fetch_site_both_resources';
+    const FETCH_SITE_TASK_TYPES = ['spider_fetch_javbus_resources', 'spider_fetch_sukebei_resources'];
+    const FETCH_SITE_DEFAULT_NUMBER = 1000000;
+    const FETCH_SITE_DEFAULT_DURATION_DAYS = 5;
     const TASK_LABELS = {
         spider_daily_best: 'DailyBest 抓取',
         spider_daily_best_sync: 'DailyBest 同步',
@@ -11,6 +15,7 @@
         spider_backfill_fetch_site: '外站任务回填',
         spider_fetch_javbus_resources: 'JavBus 资源抓取',
         spider_fetch_sukebei_resources: 'Sukebei 资源抓取',
+        spider_fetch_site_both_resources: 'JavBus + Sukebei 同时抓取',
         spider_rebuild_cast_rank: '演员 Rank 回填',
         spider_rebuild_actor_rank: '单演员 Rank',
         film_rename: '影片重命名',
@@ -26,8 +31,24 @@
         spider_refresh_oldest_detail: 'number',
         spider_fetch_javbus_resources: 'number',
         spider_fetch_sukebei_resources: 'number',
+        spider_fetch_site_both_resources: 'number',
         spider_rebuild_actor_rank: 'actor_name',
     };
+    const MOVIE_FILTER_FIELD_NAMES = [
+        'cn', 'pid', 'gn', 'dn', 'pn', 'mn', 'ln',
+        'rs', 're', 'bs', 'be',
+        'cay', 'cao',
+        'srds', 'srde',
+        'drkmin', 'nd', 'wd', 'owned',
+        'vwmin', 'vwmax', 'smin', 'smax',
+        'lsctmin', 'lsctmax', 'scmin', 'scmax', 'comin', 'comax',
+        'd1', 'd2', 'd3', 'd4',
+        'od', 'order',
+    ];
+    const FETCH_SITE_DURATION_FIELD_NAMES = [
+        'last_fetch_duration_days',
+        'last_success_duration_days',
+    ];
     const STAGE_OVERVIEW_CONFIGS = {
         dailybest_stages: {
             phaseKeys: ['bestinv', 'detail', 'cover', 'translate'],
@@ -98,6 +119,7 @@
                 selectedJobId: '',
                 selectedJob: null,
                 jobs: [],
+                fetchSiteBothJobIds: [],
                 detailLoop: null,
                 eventEntries: [],
                 eventCount: 0,
@@ -107,6 +129,7 @@
                 reconnectTimer: null,
                 loadTimer: null,
                 elapsedTimer: null,
+                fetchSiteFilterExpanded: false,
                 destroyed: false,
             },
         };
@@ -140,6 +163,10 @@
         runtime.detailLoopText = document.getElementById('detailLoopText');
         runtime.resultText = document.getElementById('resultText');
         runtime.elapsedText = document.getElementById('elapsedText');
+        runtime.fetchSiteJavbusProgressText = document.getElementById('fetchSiteJavbusProgressText');
+        runtime.fetchSiteJavbusResultText = document.getElementById('fetchSiteJavbusResultText');
+        runtime.fetchSiteSukebeiProgressText = document.getElementById('fetchSiteSukebeiProgressText');
+        runtime.fetchSiteSukebeiResultText = document.getElementById('fetchSiteSukebeiResultText');
         runtime.dailyBestBestinvProgressText = document.getElementById('dailyBestBestinvProgressText');
         runtime.dailyBestBestinvResultText = document.getElementById('dailyBestBestinvResultText');
         runtime.dailyBestDetailProgressText = document.getElementById('dailyBestDetailProgressText');
@@ -152,6 +179,10 @@
         runtime.nameFieldWrap = document.getElementById('nameFieldWrap');
         runtime.numberFieldWrap = document.getElementById('numberFieldWrap');
         runtime.actorNameFieldWrap = document.getElementById('actorNameFieldWrap');
+        runtime.fetchSiteFilterPanel = document.getElementById('fetchSiteFilterPanel');
+        runtime.toggleFetchSiteFilterBtn = document.getElementById('toggleFetchSiteFilterBtn');
+        runtime.fetchSiteFilterWrap = document.getElementById('fetchSiteFilterWrap');
+        runtime.clearFetchSiteFilterBtn = document.getElementById('clearFetchSiteFilterBtn');
         runtime.nameInput = document.getElementById('task_name');
         runtime.numberInput = document.getElementById('task_number');
         runtime.actorNameInput = document.getElementById('task_actor_name');
@@ -457,16 +488,55 @@
             element.classList.toggle('is-hidden', !visible);
         };
 
+        runtime.isFetchSiteTaskType = function (taskType) {
+            const current = String(taskType || '').trim();
+            return FETCH_SITE_TASK_TYPES.indexOf(current) >= 0 || current === TASK_FETCH_SITE_BOTH;
+        };
+
+        runtime.syncFetchSiteFilterToggleText = function () {
+            if (!runtime.toggleFetchSiteFilterBtn) {
+                return;
+            }
+            runtime.toggleFetchSiteFilterBtn.textContent = runtime.state.fetchSiteFilterExpanded ? '收起筛选' : '展开筛选';
+        };
+
         runtime.syncTaskFields = function () {
             const taskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '');
+            const isFetchSiteTask = runtime.isFetchSiteTaskType(taskType);
             runtime.toggleField(runtime.nameFieldWrap, taskType === 'spider_seed_by_name');
             runtime.toggleField(
                 runtime.numberFieldWrap,
                 taskType === 'spider_refresh_oldest_detail' ||
                 taskType === 'spider_fetch_javbus_resources' ||
-                taskType === 'spider_fetch_sukebei_resources'
+                taskType === 'spider_fetch_sukebei_resources' ||
+                taskType === TASK_FETCH_SITE_BOTH
             );
             runtime.toggleField(runtime.actorNameFieldWrap, taskType === 'spider_rebuild_actor_rank');
+            if (!isFetchSiteTask) {
+                runtime.state.fetchSiteFilterExpanded = false;
+            }
+            runtime.toggleField(runtime.fetchSiteFilterPanel, isFetchSiteTask);
+            runtime.toggleField(runtime.fetchSiteFilterWrap, isFetchSiteTask && runtime.state.fetchSiteFilterExpanded);
+            runtime.syncFetchSiteFilterToggleText();
+        };
+
+        runtime.ensureFetchSiteDefaultValues = function () {
+            if (runtime.numberInput && String(runtime.numberInput.value || '').trim() === '') {
+                runtime.numberInput.value = String(FETCH_SITE_DEFAULT_NUMBER);
+            }
+            if (!runtime.form) {
+                return;
+            }
+            FETCH_SITE_DURATION_FIELD_NAMES.forEach(function (name) {
+                const field = runtime.form.querySelector('[name="' + name + '"]');
+                if (!field) {
+                    return;
+                }
+                if (String(field.value || '').trim() !== '') {
+                    return;
+                }
+                field.value = String(FETCH_SITE_DEFAULT_DURATION_DAYS);
+            });
         };
 
         runtime.setTaskType = function (taskType) {
@@ -479,6 +549,9 @@
                 button.classList.toggle('active', button.getAttribute('data-task-type') === next);
             });
             runtime.syncTaskFields();
+            if (runtime.isFetchSiteTaskType(next)) {
+                runtime.ensureFetchSiteDefaultValues();
+            }
         };
 
         runtime.currentPayload = function () {
@@ -492,12 +565,22 @@
             if (
                 taskType === 'spider_refresh_oldest_detail' ||
                 taskType === 'spider_fetch_javbus_resources' ||
-                taskType === 'spider_fetch_sukebei_resources'
+                taskType === 'spider_fetch_sukebei_resources' ||
+                taskType === TASK_FETCH_SITE_BOTH
             ) {
                 payload.number = String(runtime.numberInput && runtime.numberInput.value || '').trim();
             }
             if (taskType === 'spider_rebuild_actor_rank') {
                 payload.actor_name = String(runtime.actorNameInput && runtime.actorNameInput.value || '').trim();
+            }
+            if (runtime.isFetchSiteTaskType(taskType)) {
+                runtime.ensureFetchSiteDefaultValues();
+                payload.number = String(runtime.numberInput && runtime.numberInput.value || '').trim();
+                runtime.appendMovieFilters(payload);
+                runtime.appendFetchSiteDurationFilters(payload);
+            }
+            if (runtime.isFetchSiteTaskType(taskType) && String(payload.number || '').trim() === '') {
+                payload.number = String(FETCH_SITE_DEFAULT_NUMBER);
             }
 
             if (requiredField && !String(payload[requiredField] || '').trim()) {
@@ -506,7 +589,8 @@
             if (
                 taskType === 'spider_refresh_oldest_detail' ||
                 taskType === 'spider_fetch_javbus_resources' ||
-                taskType === 'spider_fetch_sukebei_resources'
+                taskType === 'spider_fetch_sukebei_resources' ||
+                taskType === TASK_FETCH_SITE_BOTH
             ) {
                 const parsed = Number(payload.number);
                 if (!Number.isFinite(parsed)) {
@@ -515,6 +599,90 @@
                 payload.number = parsed;
             }
             return payload;
+        };
+
+        runtime.appendMovieFilters = function (payload) {
+            MOVIE_FILTER_FIELD_NAMES.forEach(function (name) {
+                const field = runtime.form ? runtime.form.querySelector('[name="' + name + '"]') : null;
+                if (!field) {
+                    return;
+                }
+                const value = String(field.value || '').trim();
+                if (value === '') {
+                    return;
+                }
+                payload[name] = value;
+            });
+        };
+
+        runtime.clearMovieFilters = function () {
+            if (!runtime.form) {
+                return;
+            }
+            MOVIE_FILTER_FIELD_NAMES.forEach(function (name) {
+                const field = runtime.form.querySelector('[name="' + name + '"]');
+                if (!field) {
+                    return;
+                }
+                if (name === 'od') {
+                    field.value = 'rd';
+                    return;
+                }
+                if (name === 'order') {
+                    field.value = '';
+                    return;
+                }
+                field.value = '';
+            });
+            FETCH_SITE_DURATION_FIELD_NAMES.forEach(function (name) {
+                const field = runtime.form.querySelector('[name="' + name + '"]');
+                if (!field) {
+                    return;
+                }
+                field.value = String(FETCH_SITE_DEFAULT_DURATION_DAYS);
+            });
+            if (runtime.numberInput && String(runtime.numberInput.value || '').trim() === '') {
+                runtime.numberInput.value = String(FETCH_SITE_DEFAULT_NUMBER);
+            }
+            runtime.syncFetchSiteOrderByButtons();
+        };
+
+        runtime.syncFetchSiteOrderByButtons = function () {
+            if (!runtime.form) {
+                return;
+            }
+            const orderByField = runtime.form.querySelector('[name="od"]');
+            const current = String(orderByField && orderByField.value || '').trim();
+            page.querySelectorAll('[data-fetch-site-orderby]').forEach(function (button) {
+                const active = String(button.getAttribute('data-fetch-site-orderby') || '').trim() === current;
+                button.classList.toggle('active', active);
+            });
+        };
+
+        runtime.setFetchSiteOrderBy = function (value) {
+            if (!runtime.form) {
+                return;
+            }
+            const orderByField = runtime.form.querySelector('[name="od"]');
+            if (!orderByField) {
+                return;
+            }
+            orderByField.value = String(value || '').trim() || 'rd';
+            runtime.syncFetchSiteOrderByButtons();
+        };
+
+        runtime.appendFetchSiteDurationFilters = function (payload) {
+            FETCH_SITE_DURATION_FIELD_NAMES.forEach(function (name) {
+                const field = runtime.form ? runtime.form.querySelector('[name="' + name + '"]') : null;
+                if (!field) {
+                    return;
+                }
+                const value = String(field.value || '').trim();
+                if (value === '') {
+                    return;
+                }
+                payload[name] = value;
+            });
         };
 
         runtime.closeStream = function () {
@@ -604,6 +772,16 @@
         };
 
         runtime.updateControls = function () {
+            const currentTaskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '').trim();
+            if (currentTaskType === TASK_FETCH_SITE_BOTH) {
+                const pauseJobIDs = runtime.resolveFetchSiteBothControlJobIDs('pause');
+                const resumeJobIDs = runtime.resolveFetchSiteBothControlJobIDs('resume');
+                const stopJobIDs = runtime.resolveFetchSiteBothControlJobIDs('stop');
+                if (runtime.pauseBtn) runtime.pauseBtn.disabled = pauseJobIDs.length <= 0;
+                if (runtime.resumeBtn) runtime.resumeBtn.disabled = resumeJobIDs.length <= 0;
+                if (runtime.stopBtn) runtime.stopBtn.disabled = stopJobIDs.length <= 0;
+                return;
+            }
             const job = runtime.currentJob();
             const selectedId = runtime.normalizeJobId(runtime.state.selectedJobId);
             const paused = !!(job && job.paused);
@@ -611,6 +789,149 @@
             if (runtime.pauseBtn) runtime.pauseBtn.disabled = !job || paused || done;
             if (runtime.resumeBtn) runtime.resumeBtn.disabled = !job || !paused || done;
             if (runtime.stopBtn) runtime.stopBtn.disabled = (!job && !selectedId) || done;
+        };
+
+        runtime.jobSortTs = function (job) {
+            return Number((job && (job.at || job.started_at)) || 0);
+        };
+
+        runtime.pickLatestJobByTaskTypeWithMatcher = function (taskType, matcher) {
+            const list = runtime.filterVisibleJobs(runtime.state.jobs).filter(function (item) {
+                if (!item || String(item.task_type || '') !== taskType) {
+                    return false;
+                }
+                if (typeof matcher !== 'function') {
+                    return true;
+                }
+                return !!matcher(item);
+            });
+            if (!list.length) {
+                return null;
+            }
+            list.sort(function (a, b) {
+                return runtime.jobSortTs(b) - runtime.jobSortTs(a);
+            });
+            return list[0] || null;
+        };
+
+        runtime.isJobActionAllowed = function (job, action) {
+            if (!job) {
+                return action !== 'resume';
+            }
+            const done = !!job.done;
+            const paused = !!job.paused;
+            switch (action) {
+                case 'pause':
+                    return !done && !paused;
+                case 'resume':
+                    return !done && paused;
+                case 'stop':
+                    return !done;
+                default:
+                    return false;
+            }
+        };
+
+        runtime.resolveFetchSiteBothControlJobIDs = function (action) {
+            const visibleJobs = runtime.filterVisibleJobs(runtime.state.jobs);
+            const jobByID = {};
+            visibleJobs.forEach(function (item) {
+                const id = runtime.normalizeJobId(item && item.job_id);
+                if (id) {
+                    jobByID[id] = item;
+                }
+            });
+            const picked = [];
+            const pickedSet = {};
+            const addPicked = function (jobID) {
+                const clean = runtime.normalizeJobId(jobID);
+                if (!clean || pickedSet[clean]) {
+                    return;
+                }
+                pickedSet[clean] = true;
+                picked.push(clean);
+            };
+
+            const remembered = Array.isArray(runtime.state.fetchSiteBothJobIds) ? runtime.state.fetchSiteBothJobIds : [];
+            remembered.forEach(function (jobID) {
+                const clean = runtime.normalizeJobId(jobID);
+                if (!clean) {
+                    return;
+                }
+                const job = jobByID[clean];
+                if (runtime.isJobActionAllowed(job, action)) {
+                    addPicked(clean);
+                }
+            });
+
+            FETCH_SITE_TASK_TYPES.forEach(function (taskType) {
+                const latest = runtime.pickLatestJobByTaskTypeWithMatcher(taskType, function (item) {
+                    return runtime.isJobActionAllowed(item, action);
+                });
+                if (latest) {
+                    addPicked(latest.job_id);
+                }
+            });
+            return picked;
+        };
+
+        runtime.pickLatestJobByTaskType = function (taskType) {
+            const list = runtime.filterVisibleJobs(runtime.state.jobs).filter(function (item) {
+                return item && String(item.task_type || '') === taskType;
+            });
+            if (!list.length) {
+                return null;
+            }
+            let picked = list[0];
+            let pickedTs = Number((picked && (picked.at || picked.started_at)) || 0);
+            for (let i = 1; i < list.length; i += 1) {
+                const current = list[i];
+                const currentTs = Number((current && (current.at || current.started_at)) || 0);
+                if (currentTs > pickedTs) {
+                    picked = current;
+                    pickedTs = currentTs;
+                }
+            }
+            return picked || null;
+        };
+
+        runtime.fetchSiteStatsForTask = function (taskType) {
+            const job = runtime.pickLatestJobByTaskType(taskType);
+            if (!job) {
+                return {job: null, handled: 0, queued: 0, total: 0, success: 0, failed: 0};
+            }
+            const handled = Number(job.handled_count || 0);
+            const queued = Number(job.queued_count || 0);
+            return {
+                job: job,
+                handled: handled,
+                queued: queued,
+                total: handled + queued,
+                success: Number(job.success_count || 0),
+                failed: Number(job.failed_count || 0),
+            };
+        };
+
+        runtime.fetchSiteSummaryState = function (javbusStats, sukebeiStats) {
+            const jobs = [javbusStats.job, sukebeiStats.job].filter(function (item) {
+                return !!item;
+            });
+            if (!jobs.length) {
+                return {className: 'text-muted', text: runtime.emptyStateText};
+            }
+            const hasFailed = jobs.some(function (item) {
+                return !!(item.done && item.stage === 'failed');
+            });
+            if (hasFailed) {
+                return {className: 'err', text: '存在失败任务'};
+            }
+            const hasRunning = jobs.some(function (item) {
+                return !item.done;
+            });
+            if (hasRunning) {
+                return {className: 'text-muted', text: '任务运行中'};
+            }
+            return {className: 'ok', text: '任务完成'};
         };
 
         runtime.renderOverview = function (payload) {
@@ -640,6 +961,48 @@
                 if (runtime.statusMsg) {
                     runtime.statusMsg.className = job.done && job.stage === 'failed' ? 'err' : (job.done ? 'ok' : 'text-muted');
                     runtime.statusMsg.textContent = (job.message || runtime.stageLabel(job.stage || '')) || runtime.emptyStateText;
+                }
+                runtime.updateControls();
+                return;
+            }
+            if (runtime.overviewExtraMode === 'fetch_site_summary') {
+                const javbusStats = runtime.fetchSiteStatsForTask('spider_fetch_javbus_resources');
+                const sukebeiStats = runtime.fetchSiteStatsForTask('spider_fetch_sukebei_resources');
+                if (!javbusStats.job && !sukebeiStats.job) {
+                    const selectedId = runtime.normalizeJobId(runtime.state.selectedJobId);
+                    if (runtime.fetchSiteJavbusProgressText) runtime.fetchSiteJavbusProgressText.textContent = '0 / 0';
+                    if (runtime.fetchSiteJavbusResultText) runtime.fetchSiteJavbusResultText.textContent = '0 / 0';
+                    if (runtime.fetchSiteSukebeiProgressText) runtime.fetchSiteSukebeiProgressText.textContent = '0 / 0';
+                    if (runtime.fetchSiteSukebeiResultText) runtime.fetchSiteSukebeiResultText.textContent = '0 / 0';
+                    if (runtime.progressBar) {
+                        runtime.progressBar.style.width = '0%';
+                        runtime.progressBar.textContent = '0%';
+                        runtime.progressBar.setAttribute('aria-valuenow', '0');
+                    }
+                    if (runtime.statusMsg) {
+                        runtime.statusMsg.className = 'text-muted';
+                        runtime.statusMsg.textContent = selectedId ? '正在获取任务状态' : runtime.emptyStateText;
+                    }
+                    runtime.updateControls();
+                    return;
+                }
+
+                if (runtime.fetchSiteJavbusProgressText) runtime.fetchSiteJavbusProgressText.textContent = String(javbusStats.total) + ' / ' + String(javbusStats.handled);
+                if (runtime.fetchSiteJavbusResultText) runtime.fetchSiteJavbusResultText.textContent = String(javbusStats.success) + ' / ' + String(javbusStats.failed);
+                if (runtime.fetchSiteSukebeiProgressText) runtime.fetchSiteSukebeiProgressText.textContent = String(sukebeiStats.total) + ' / ' + String(sukebeiStats.handled);
+                if (runtime.fetchSiteSukebeiResultText) runtime.fetchSiteSukebeiResultText.textContent = String(sukebeiStats.success) + ' / ' + String(sukebeiStats.failed);
+                if (runtime.progressBar) {
+                    const total = javbusStats.total + sukebeiStats.total;
+                    const handled = javbusStats.handled + sukebeiStats.handled;
+                    const percent = total > 0 ? Math.max(0, Math.min(100, Math.round(handled * 100 / total))) : 0;
+                    runtime.progressBar.style.width = percent + '%';
+                    runtime.progressBar.textContent = percent + '%';
+                    runtime.progressBar.setAttribute('aria-valuenow', String(percent));
+                }
+                if (runtime.statusMsg) {
+                    const summaryState = runtime.fetchSiteSummaryState(javbusStats, sukebeiStats);
+                    runtime.statusMsg.className = summaryState.className;
+                    runtime.statusMsg.textContent = summaryState.text;
                 }
                 runtime.updateControls();
                 return;
@@ -743,6 +1106,9 @@
                 };
             }
             if (event.kind === 'progress') {
+                if (runtime.overviewExtraMode === 'fetch_site_summary') {
+                    return null;
+                }
                 const stage = String(event.stage || '').trim();
                 const message = String(event.message || runtime.stageLabel(stage) || '收到进度').trim();
                 const parts = [prefix + ' ' + message];
@@ -772,7 +1138,7 @@
             }
             return {
                 level: runtime.normalizeLogLevel(event.level),
-                text: rawLine || (prefix + ' ' + String(event.message || '')),
+                text: prefix + ' ' + (rawLine || String(event.message || '')),
             };
         };
 
@@ -1059,6 +1425,58 @@
                 runtime.showMessage(error.message, false);
                 return;
             }
+            if (payload.task_type === TASK_FETCH_SITE_BOTH) {
+                const startPayloads = FETCH_SITE_TASK_TYPES.map(function (taskType) {
+                    const next = Object.assign({}, payload);
+                    next.task_type = taskType;
+                    return next;
+                });
+                runtime.state.fetchSiteBothJobIds = [];
+                Promise.allSettled(startPayloads.map(function (item) {
+                    return runtime.request(API_BASE + '/start', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(item),
+                    });
+                })).then(function (results) {
+                    const successCount = results.filter(function (item) {
+                        return item.status === 'fulfilled';
+                    }).length;
+                    const startedJobIDs = results.map(function (item) {
+                        if (item.status !== 'fulfilled') {
+                            return '';
+                        }
+                        return runtime.normalizeJobId(item.value && item.value.job_id);
+                    }).filter(function (item) {
+                        return item !== '';
+                    });
+                    runtime.state.fetchSiteBothJobIds = startedJobIDs;
+                    if (successCount <= 0) {
+                        const firstError = results.find(function (item) {
+                            return item.status === 'rejected';
+                        });
+                        const errorMessage = firstError && firstError.reason && firstError.reason.message
+                            ? firstError.reason.message
+                            : '任务启动失败';
+                        runtime.showMessage(errorMessage, false);
+                        return;
+                    }
+                    runtime.openJob('');
+                    runtime.loadJobs(true);
+                    if (successCount === startPayloads.length) {
+                        runtime.showMessage('JavBus 与 Sukebei 已同时启动', true);
+                        return;
+                    }
+                    const firstError = results.find(function (item) {
+                        return item.status === 'rejected';
+                    });
+                    const errorMessage = firstError && firstError.reason && firstError.reason.message
+                        ? firstError.reason.message
+                        : '部分任务启动失败';
+                    runtime.showMessage('部分启动成功（' + String(successCount) + '/' + String(startPayloads.length) + '）：' + errorMessage, false);
+                });
+                return;
+            }
             runtime.request(API_BASE + '/start', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1073,6 +1491,55 @@
         };
 
         runtime.controlSelected = function (action) {
+            const currentTaskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '').trim();
+            if (currentTaskType === TASK_FETCH_SITE_BOTH) {
+                const actionLabelMap = {
+                    pause: '暂停',
+                    resume: '继续',
+                    stop: '停止',
+                };
+                const actionLabel = actionLabelMap[action] || '操作';
+                const targetJobIDs = runtime.resolveFetchSiteBothControlJobIDs(action);
+                if (!targetJobIDs.length) {
+                    runtime.showMessage('当前没有可' + actionLabel + '的同时抓取任务', false);
+                    return;
+                }
+                Promise.allSettled(targetJobIDs.map(function (jobID) {
+                    return runtime.request(API_BASE + '/' + encodeURIComponent(jobID) + '/' + action, {
+                        method: 'POST',
+                    });
+                })).then(function (results) {
+                    const successItems = results.filter(function (item) {
+                        return item.status === 'fulfilled';
+                    });
+                    const failedItems = results.filter(function (item) {
+                        return item.status === 'rejected';
+                    });
+                    if (!successItems.length) {
+                        const firstError = failedItems[0];
+                        const errorMessage = firstError && firstError.reason && firstError.reason.message
+                            ? firstError.reason.message
+                            : '操作失败';
+                        runtime.showMessage(errorMessage, false);
+                        return;
+                    }
+                    if (action === 'stop') {
+                        runtime.state.fetchSiteBothJobIds = [];
+                    }
+                    if (!failedItems.length) {
+                        runtime.showMessage('已' + actionLabel + '同时抓取任务（' + String(successItems.length) + '/' + String(results.length) + '）', true);
+                        runtime.loadJobs(true);
+                        return;
+                    }
+                    const firstError = failedItems[0];
+                    const errorMessage = firstError && firstError.reason && firstError.reason.message
+                        ? firstError.reason.message
+                        : '部分操作失败';
+                    runtime.showMessage('已' + actionLabel + ' ' + String(successItems.length) + ' 个任务，失败 ' + String(failedItems.length) + ' 个：' + errorMessage, false);
+                    runtime.loadJobs(true);
+                });
+                return;
+            }
             const job = runtime.currentJob();
             const jobID = runtime.normalizeJobId(runtime.state.selectedJobId || (job && job.job_id));
             if (!jobID) {
@@ -1095,13 +1562,33 @@
                     runtime.setTaskType(button.getAttribute('data-task-type'));
                 });
             });
+            page.querySelectorAll('[data-fetch-site-orderby]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    runtime.setFetchSiteOrderBy(button.getAttribute('data-fetch-site-orderby'));
+                });
+            });
 
-            if (runtime.form) {
-                runtime.form.addEventListener('submit', function (event) {
+        if (runtime.form) {
+            runtime.form.addEventListener('submit', function (event) {
                     event.preventDefault();
                     runtime.startTask();
-                });
-            }
+            });
+        }
+        if (runtime.clearFetchSiteFilterBtn) {
+            runtime.clearFetchSiteFilterBtn.addEventListener('click', function () {
+                runtime.clearMovieFilters();
+            });
+        }
+        if (runtime.toggleFetchSiteFilterBtn) {
+            runtime.toggleFetchSiteFilterBtn.addEventListener('click', function () {
+                const taskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '');
+                if (!runtime.isFetchSiteTaskType(taskType)) {
+                    return;
+                }
+                runtime.state.fetchSiteFilterExpanded = !runtime.state.fetchSiteFilterExpanded;
+                runtime.syncTaskFields();
+            });
+        }
 
             if (runtime.pauseBtn) {
                 runtime.pauseBtn.addEventListener('click', function () {
@@ -1142,6 +1629,8 @@
         runtime.init = function () {
             const configuredJobId = runtime.normalizeJobId(runtime.config.initialJobId);
             const storedRawJobId = global.localStorage.getItem(runtime.storageKey);
+            runtime.syncFetchSiteOrderByButtons();
+            runtime.ensureFetchSiteDefaultValues();
             const storedJobId = runtime.normalizeJobId(storedRawJobId);
             const initialJobId = configuredJobId || storedJobId;
 
