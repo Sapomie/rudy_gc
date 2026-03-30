@@ -17,6 +17,7 @@ type Config struct {
 	Fetcher          FetcherConf
 	MovieTypeCache   MovieTypeCacheConf
 	Film             Film
+	Media            Media
 	LogursLevel      string
 }
 
@@ -30,6 +31,10 @@ type Film struct {
 type FilmDirPair struct {
 	RootDir             string
 	MoveFilmDestination string
+}
+
+type Media struct {
+	RootDirs []string
 }
 
 type FetcherConf struct {

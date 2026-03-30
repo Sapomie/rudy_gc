@@ -19,7 +19,7 @@ type RankInfo struct {
 
 type MovieFetchSiteStatus struct {
 	MovieJavID        string
-	MovieCode         string
+	MovieName         string
 	ReleaseDate       string
 	FetchStatus       int64
 	FetchStatusText   string
@@ -33,6 +33,7 @@ type MovieFetchSiteStatus struct {
 }
 
 type MovieJavbusMagnet struct {
+	RowID          int64
 	MagnetName     string
 	MagnetURL      string
 	InfoHash       string
@@ -42,9 +43,11 @@ type MovieJavbusMagnet struct {
 	HasSubtitle    bool
 	PageURL        string
 	HasMatchedHash bool
+	IsFavorited    bool
 }
 
 type MovieSukebeiTorrent struct {
+	RowID          int64
 	TorrentTitle   string
 	ViewURL        string
 	TorrentURL     string
@@ -56,4 +59,5 @@ type MovieSukebeiTorrent struct {
 	Leechers       int64
 	Completed      int64
 	HasMatchedHash bool
+	IsFavorited    bool
 }

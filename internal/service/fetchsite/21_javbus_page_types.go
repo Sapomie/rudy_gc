@@ -22,7 +22,7 @@ type JavbusPageQuery struct {
 
 type JavbusPageItem struct {
 	MovieJavID        string
-	MovieCode         string
+	MovieName         string
 	ReleaseDate       int64
 	ReleaseDateText   string
 	FetchStatus       int64

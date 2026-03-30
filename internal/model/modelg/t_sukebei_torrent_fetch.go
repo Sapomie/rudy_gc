@@ -4,7 +4,7 @@ type SukebeiTorrentFetch struct {
 	Id int64 `gorm:"primaryKey;autoIncrement"`
 
 	MovieJavID  string `gorm:"column:movie_jav_id;type:varchar(191);not null;uniqueIndex"`
-	MovieCode   string `gorm:"column:movie_code;type:varchar(191);not null"`
+	MovieName   string `gorm:"column:movie_name;type:varchar(191);not null"`
 	ReleaseDate int64  `gorm:"column:release_date;not null"`
 
 	FetchStatus int8  `gorm:"column:fetch_status;type:tinyint;not null;index"`

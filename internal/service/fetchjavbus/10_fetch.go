@@ -16,10 +16,10 @@ const (
 	fetchStatusFailed  = fetchsite.FetchStatusFailed
 )
 
-func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieCode string) ([]*moviex.TJavbusMagnet, error) {
-	detailURL, detailPayload, detailAttempts, err := s.fetchDetailPage(ctx, movieCode)
+func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieName string) ([]*moviex.TJavbusMagnet, error) {
+	detailURL, detailPayload, detailAttempts, err := s.fetchDetailPage(ctx, movieName)
 	if err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, detailURL, detailAttempts, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, detailURL, detailAttempts, err)
 		return nil, err
 	}
 	if err := s.siteSvc.SleepRequest(ctx, fetchsite.FetchSiteCodeJavbus); err != nil {
@@ -28,7 +28,7 @@ func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieCode s
 
 	ajaxURL, err := detailPayload.buildAjaxURL(s.siteSvc)
 	if err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, detailURL, 1, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, detailURL, 1, err)
 		return nil, err
 	}
 
@@ -39,27 +39,27 @@ func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieCode s
 		},
 	}, nil)
 	if err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, ajaxURL, attempts, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, ajaxURL, attempts, err)
 		return nil, err
 	}
 	if err := fetchsite.RequireHTTP200(resp.Status); err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, ajaxURL, attempts, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, ajaxURL, attempts, err)
 		return nil, err
 	}
 
 	magnets, err := parseMagnetRows(movieJavID, ajaxURL, string(resp.Body))
 	if err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, ajaxURL, attempts, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, ajaxURL, attempts, err)
 		return nil, err
 	}
-	if err := s.saveMagnets(ctx, movieJavID, movieCode, ajaxURL, attempts, magnets); err != nil {
+	if err := s.saveMagnets(ctx, movieJavID, movieName, ajaxURL, attempts, magnets); err != nil {
 		return nil, err
 	}
 	return magnets, nil
 }
 
-func (s *Service) fetchDetailPage(ctx context.Context, movieCode string) (string, *detailPagePayload, int64, error) {
-	normalizedCode := strings.ToLower(fetchsite.NormalizeMovieCode(movieCode))
+func (s *Service) fetchDetailPage(ctx context.Context, movieName string) (string, *detailPagePayload, int64, error) {
+	normalizedCode := strings.ToLower(fetchsite.NormalizeMovieName(movieName))
 	detailURL, err := s.siteSvc.BuildURL(fetchsite.FetchSiteCodeJavbus, normalizedCode)
 	if err != nil {
 		return "", nil, 0, err
@@ -87,9 +87,9 @@ func (s *Service) fetchDetailPage(ctx context.Context, movieCode string) (string
 	return detailURL, payload, attempts, nil
 }
 
-func (s *Service) saveMagnets(ctx context.Context, movieJavID, movieCode, sourceURL string, tryCount int64, magnets []*moviex.TJavbusMagnet) error {
+func (s *Service) saveMagnets(ctx context.Context, movieJavID, movieName, sourceURL string, tryCount int64, magnets []*moviex.TJavbusMagnet) error {
 	now := time.Now().Unix()
-	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieCode, sourceURL, now)
+	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieName, sourceURL, now)
 	if err != nil {
 		return err
 	}
@@ -151,9 +151,9 @@ func (s *Service) saveMagnets(ctx context.Context, movieJavID, movieCode, source
 	return s.deps.JavbusMagnetFetchModel.Update(ctx, fetchRow)
 }
 
-func (s *Service) saveFetchFailure(ctx context.Context, movieJavID, movieCode, sourceURL string, tryCount int64, fetchErr error) error {
+func (s *Service) saveFetchFailure(ctx context.Context, movieJavID, movieName, sourceURL string, tryCount int64, fetchErr error) error {
 	now := time.Now().Unix()
-	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieCode, sourceURL, now)
+	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieName, sourceURL, now)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (s *Service) saveFetchFailure(ctx context.Context, movieJavID, movieCode, s
 	return s.deps.JavbusMagnetFetchModel.Update(ctx, fetchRow)
 }
 
-func (s *Service) ensureFetchRow(ctx context.Context, movieJavID, movieCode, sourceURL string, now int64) (*moviex.TJavbusMagnetFetch, error) {
+func (s *Service) ensureFetchRow(ctx context.Context, movieJavID, movieName, sourceURL string, now int64) (*moviex.TJavbusMagnetFetch, error) {
 	row, err := s.deps.JavbusMagnetFetchModel.FindOneByMovieJavId(ctx, movieJavID)
 	if err == nil {
 		return row, nil
@@ -188,7 +188,7 @@ func (s *Service) ensureFetchRow(ctx context.Context, movieJavID, movieCode, sou
 
 	row = &moviex.TJavbusMagnetFetch{
 		MovieJavId:        movieJavID,
-		MovieCode:         movieCode,
+		MovieName:         movieName,
 		ReleaseDate:       releaseDate,
 		FetchStatus:       fetchStatusRunning,
 		TryCount:          0,

@@ -54,7 +54,7 @@ func (s *Service) BuildSukebeiPage(ctx context.Context, query SukebeiPageQuery) 
 		}
 		items = append(items, &SukebeiPageItem{
 			MovieJavID:        row.MovieJavId,
-			MovieCode:         row.MovieCode,
+			MovieName:         row.MovieName,
 			ReleaseDate:       row.ReleaseDate,
 			ReleaseDateText:   pageFormatDate(row.ReleaseDate),
 			FetchStatus:       row.FetchStatus,
@@ -93,8 +93,8 @@ func normalizePageSortOrder(order string) string {
 
 func mapSukebeiPageSortColumn(sortField string) string {
 	switch strings.TrimSpace(sortField) {
-	case "movie_code":
-		return "`movie_code`"
+	case "movie_name":
+		return "`movie_name`"
 	case "fetch_status":
 		return "`fetch_status`"
 	case "last_fetch_time":

@@ -33,7 +33,7 @@
                 <div class="card">
                     <div class="card-body">
                         <p class="text-muted mb-2">按多组条件从本地已拥有影片里抽片，并叠加 Cast SC 阻断、Rank 配额和演员去重规则。</p>
-                        <p class="text-muted small mb-3">固定值：Owned=3，Page=1，PageSize=100000。Rank 配额口径为累计最小值：20 以内 / 100 以内 / 500 以内。</p>
+                        <p class="text-muted small mb-3">固定值：MediaOwned=3，Page=1，PageSize=100000。Rank 配额口径为累计最小值：20 以内 / 100 以内 / 500 以内。</p>
 
                         <form id="formPickSmart" class="needs-validation" novalidate>
                             <div class="card border mb-3">
@@ -159,12 +159,12 @@
                         <input type="text" class="form-control" data-req-field="ReleasingDateEnd" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">下载日期起 (bs)</label>
-                        <input type="text" class="form-control" data-req-field="FilmBirthTimeStart" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                        <label class="form-label">下载日期起 (mbs)</label>
+                        <input type="text" class="form-control" data-req-field="MediaBirthTimeStart" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">下载日期止 (be)</label>
-                        <input type="text" class="form-control" data-req-field="FilmBirthTimeEnd" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                        <label class="form-label">下载日期止 (mbe)</label>
+                        <input type="text" class="form-control" data-req-field="MediaBirthTimeEnd" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     </div>
 
                     <div class="col-md-3">
@@ -212,8 +212,8 @@
                                 <input type="text" class="form-control" data-req-field="LabelName">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Dir4 (d4)</label>
-                                <input type="text" class="form-control" data-req-field="Dir4">
+                                <label class="form-label">MediaDir4 (md4)</label>
+                                <input type="text" class="form-control" data-req-field="MediaDir4">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">关键字 (wd)</label>
@@ -246,17 +246,17 @@
                                 <input type="text" class="form-control" data-req-field="LastScTimeMax" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Dir1 (d1)</label>
-                                <input type="text" class="form-control" data-req-field="Dir1">
+                                <label class="form-label">MediaDir1 (md1)</label>
+                                <input type="text" class="form-control" data-req-field="MediaDir1">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Dir2 (d2)</label>
-                                <input type="text" class="form-control" data-req-field="Dir2">
+                                <label class="form-label">MediaDir2 (md2)</label>
+                                <input type="text" class="form-control" data-req-field="MediaDir2">
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Dir3 (d3)</label>
-                                <input type="text" class="form-control" data-req-field="Dir3">
+                                <label class="form-label">MediaDir3 (md3)</label>
+                                <input type="text" class="form-control" data-req-field="MediaDir3">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">排序 (od)</label>

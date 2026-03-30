@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,6 +80,20 @@ func (h *MovieAPI) DownloadCoverNow(c *gin.Context) {
 
 type addMovieCastReq struct {
 	Name string `json:"name"`
+}
+
+type addMovieAlbumItemReq struct {
+	SourceType  string `json:"source_type"`
+	SourceRowID int64  `json:"source_row_id"`
+	MovieJavID  string `json:"movie_jav_id"`
+}
+
+type removeAlbumItemReq struct {
+	ItemID int64 `json:"item_id"`
+}
+
+type batchRemoveAlbumItemReq struct {
+	ItemIDs []int64 `json:"item_ids"`
 }
 
 // POST /api/movie/:movie/add-cast
@@ -165,4 +180,155 @@ func (h *MovieAPI) AddCast(c *gin.Context) {
 
 	h.movieSvc.InvalidateMovieType(c.Request.Context(), javId)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// POST /api/movie/:movie/album-item
+func (h *MovieAPI) AddFetchResourceToAlbum(c *gin.Context) {
+	javID := strings.TrimSpace(c.Param("movie"))
+	if javID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 movie 参数"})
+		return
+	}
+
+	var req addMovieAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	if req.MovieJavID != "" && !strings.EqualFold(strings.TrimSpace(req.MovieJavID), javID) {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "影片参数不匹配"})
+		return
+	}
+
+	created, err := h.movieSvc.AddFetchResourceToDefaultAlbum(c.Request.Context(), javID, req.SourceType, req.SourceRowID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrInvalidSourceType), errors.Is(err, movie.ErrInvalidSourceRow), errors.Is(err, movie.ErrSourceMovieMiss):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		case errors.Is(err, movie.ErrSourceNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	if created {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "created": true, "favorited": true, "message": "已加入相册：下载中"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "created": false, "favorited": true, "message": "该资源已在相册：下载中"})
+}
+
+// DELETE /api/movie/:movie/album-item
+func (h *MovieAPI) RemoveFetchResourceFromAlbum(c *gin.Context) {
+	javID := strings.TrimSpace(c.Param("movie"))
+	if javID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 movie 参数"})
+		return
+	}
+
+	var req addMovieAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	if req.MovieJavID != "" && !strings.EqualFold(strings.TrimSpace(req.MovieJavID), javID) {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "影片参数不匹配"})
+		return
+	}
+
+	removed, err := h.movieSvc.RemoveFetchResourceFromDefaultAlbum(c.Request.Context(), javID, req.SourceType, req.SourceRowID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrInvalidSourceType), errors.Is(err, movie.ErrInvalidSourceRow), errors.Is(err, movie.ErrSourceMovieMiss):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		case errors.Is(err, movie.ErrSourceNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	if removed {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "removed": true, "favorited": false, "message": "已从相册下载中移除"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "removed": false, "favorited": false, "message": "该资源不在相册：下载中"})
+}
+
+// POST /api/albums/:albumID/items/remove
+func (h *MovieAPI) RemoveAlbumItem(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req removeAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	removed, err := h.movieSvc.RemoveAlbumItemByID(c.Request.Context(), albumID, req.ItemID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrInvalidAlbumID), errors.Is(err, movie.ErrInvalidAlbumItem), errors.Is(err, movie.ErrAlbumMismatch):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"removed": removed,
+		"message": "移除完成",
+	})
+}
+
+// POST /api/albums/:albumID/items/batch-remove
+func (h *MovieAPI) BatchRemoveAlbumItems(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req batchRemoveAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	removedCount, failedIDs, err := h.movieSvc.RemoveAlbumItemsByIDs(c.Request.Context(), albumID, req.ItemIDs)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrInvalidAlbumID):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":            true,
+		"removed_count": removedCount,
+		"failed_ids":    failedIDs,
+		"message":       "批量移除完成",
+	})
+}
+
+func parseAlbumID(raw string) (int64, error) {
+	albumID, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil || albumID <= 0 {
+		return 0, movie.ErrInvalidAlbumID
+	}
+	return albumID, nil
 }

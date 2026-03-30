@@ -12,7 +12,7 @@ func (s *Service) FindJavbusFetchTask(ctx context.Context, movieJavID string) (*
 	}
 	return &JavbusFetchTask{
 		MovieJavID: row.MovieJavId,
-		MovieCode:  row.MovieCode,
+		MovieName:  row.MovieName,
 		Row:        row,
 	}, nil
 }
@@ -24,7 +24,7 @@ func (s *Service) FindSukebeiFetchTask(ctx context.Context, movieJavID string) (
 	}
 	return &SukebeiFetchTask{
 		MovieJavID: row.MovieJavId,
-		MovieCode:  row.MovieCode,
+		MovieName:  row.MovieName,
 		Row:        row,
 	}, nil
 }

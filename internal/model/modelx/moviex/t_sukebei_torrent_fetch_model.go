@@ -158,7 +158,7 @@ func applySukebeiPageFilter(queryBuilder squirrel.SelectBuilder, filter SukebeiF
 	if keyword != "" {
 		like := "%" + keyword + "%"
 		queryBuilder = queryBuilder.Where(squirrel.Or{
-			squirrel.Like{"movie_code": like},
+			squirrel.Like{"movie_name": like},
 			squirrel.Like{"movie_jav_id": like},
 		})
 	}

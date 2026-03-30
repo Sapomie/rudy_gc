@@ -103,7 +103,7 @@ func (s *Service) RunPreparedSukebeiFetchTasks(
 	return s.runSukebeiTasks(ctx, tasks, loadLabel)
 }
 
-func (s *Service) RunSingleJavbusFetchTask(ctx context.Context, movieJavID, movieCode string) (*fetchsite.RunFetchTasksResult, error) {
+func (s *Service) RunSingleJavbusFetchTask(ctx context.Context, movieJavID, movieName string) (*fetchsite.RunFetchTasksResult, error) {
 	task, err := s.siteSvc.FindJavbusFetchTask(ctx, movieJavID)
 	if err != nil {
 		return nil, err
@@ -111,8 +111,8 @@ func (s *Service) RunSingleJavbusFetchTask(ctx context.Context, movieJavID, movi
 	if task == nil {
 		return &fetchsite.RunFetchTasksResult{}, nil
 	}
-	if movieCode != "" {
-		task.MovieCode = movieCode
+	if movieName != "" {
+		task.MovieName = movieName
 	}
 	result := &fetchsite.RunFetchTasksResult{Queued: 1, Handled: 1}
 	if err := s.runJavbusTask(ctx, task); err != nil {
@@ -123,7 +123,7 @@ func (s *Service) RunSingleJavbusFetchTask(ctx context.Context, movieJavID, movi
 	return result, nil
 }
 
-func (s *Service) RunSingleSukebeiFetchTask(ctx context.Context, movieJavID, movieCode string) (*fetchsite.RunFetchTasksResult, error) {
+func (s *Service) RunSingleSukebeiFetchTask(ctx context.Context, movieJavID, movieName string) (*fetchsite.RunFetchTasksResult, error) {
 	task, err := s.siteSvc.FindSukebeiFetchTask(ctx, movieJavID)
 	if err != nil {
 		return nil, err
@@ -131,8 +131,8 @@ func (s *Service) RunSingleSukebeiFetchTask(ctx context.Context, movieJavID, mov
 	if task == nil {
 		return &fetchsite.RunFetchTasksResult{}, nil
 	}
-	if movieCode != "" {
-		task.MovieCode = movieCode
+	if movieName != "" {
+		task.MovieName = movieName
 	}
 	result := &fetchsite.RunFetchTasksResult{Queued: 1, Handled: 1}
 	if err := s.runSukebeiTask(ctx, task); err != nil {
@@ -141,6 +141,44 @@ func (s *Service) RunSingleSukebeiFetchTask(ctx context.Context, movieJavID, mov
 	}
 	result.Success = 1
 	return result, nil
+}
+
+func (s *Service) RunAfterDetailFetchTasks(
+	ctx context.Context,
+	movies []*types.MovieType,
+) (*fetchsite.RunFetchTasksResult, *fetchsite.RunFetchTasksResult, error) {
+	javbusTasks, err := s.siteSvc.BuildJavbusFetchTasksByMovies(ctx, movies)
+	if err != nil {
+		return nil, nil, err
+	}
+	javbusPendingTasks := make([]*fetchsite.JavbusFetchTask, 0, len(javbusTasks))
+	for _, task := range javbusTasks {
+		if task == nil || !fetchsite.ShouldFetchJavbus(task.Row) {
+			continue
+		}
+		javbusPendingTasks = append(javbusPendingTasks, task)
+	}
+	javbusResult, err := s.runJavbusTasks(ctx, javbusPendingTasks, "详情后 JavBus 待抓取任务已加载")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sukebeiTasks, err := s.siteSvc.BuildSukebeiFetchTasksByMovies(ctx, movies)
+	if err != nil {
+		return nil, nil, err
+	}
+	sukebeiPendingTasks := make([]*fetchsite.SukebeiFetchTask, 0, len(sukebeiTasks))
+	for _, task := range sukebeiTasks {
+		if task == nil || !fetchsite.ShouldFetchSukebei(task.Row) {
+			continue
+		}
+		sukebeiPendingTasks = append(sukebeiPendingTasks, task)
+	}
+	sukebeiResult, err := s.runSukebeiTasks(ctx, sukebeiPendingTasks, "详情后 Sukebei 待抓取任务已加载")
+	if err != nil {
+		return nil, nil, err
+	}
+	return javbusResult, sukebeiResult, nil
 }
 
 func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusFetchTask, loadLabel string) (*fetchsite.RunFetchTasksResult, error) {
@@ -162,7 +200,7 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 		if err := taskctx.WaitIfPaused(ctx); err != nil {
 			return nil, err
 		}
-		if task == nil || task.MovieJavID == "" || task.MovieCode == "" {
+		if task == nil || task.MovieJavID == "" || task.MovieName == "" {
 			continue
 		}
 
@@ -175,7 +213,7 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 		result.Handled++
 		runErr := s.runJavbusTask(ctx, task)
 		if runErr != nil {
-			reportErrorLog(ctx, fmt.Sprintf("JavBus 抓取失败: %s | err=%v", task.MovieCode, runErr))
+			reportErrorLog(ctx, fmt.Sprintf("JavBus 抓取失败: %s | err=%v", task.MovieName, runErr))
 			result.Failed++
 			taskctx.ReportProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_javbus_failed",
@@ -192,7 +230,7 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 				PhaseFailedCount:  result.Failed,
 			})
 		} else {
-			reportInfoLog(ctx, fmt.Sprintf("JavBus 抓取成功: %s", task.MovieCode))
+			reportInfoLog(ctx, fmt.Sprintf("JavBus 抓取成功: %s", task.MovieName))
 			result.Success++
 			taskctx.ReportProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_javbus_done",
@@ -247,7 +285,7 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 		if err := taskctx.WaitIfPaused(ctx); err != nil {
 			return nil, err
 		}
-		if task == nil || task.MovieJavID == "" || task.MovieCode == "" {
+		if task == nil || task.MovieJavID == "" || task.MovieName == "" {
 			continue
 		}
 
@@ -260,7 +298,7 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 		result.Handled++
 		runErr := s.runSukebeiTask(ctx, task)
 		if runErr != nil {
-			reportErrorLog(ctx, fmt.Sprintf("Sukebei 抓取失败: %s | err=%v", task.MovieCode, runErr))
+			reportErrorLog(ctx, fmt.Sprintf("Sukebei 抓取失败: %s | err=%v", task.MovieName, runErr))
 			result.Failed++
 			taskctx.ReportProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_sukebei_failed",
@@ -277,7 +315,7 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 				PhaseFailedCount:  result.Failed,
 			})
 		} else {
-			reportInfoLog(ctx, fmt.Sprintf("Sukebei 抓取成功: %s", task.MovieCode))
+			reportInfoLog(ctx, fmt.Sprintf("Sukebei 抓取成功: %s", task.MovieName))
 			result.Success++
 			taskctx.ReportProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_sukebei_done",
@@ -320,7 +358,7 @@ func (s *Service) runJavbusTask(ctx context.Context, task *fetchsite.JavbusFetch
 	if err := s.siteSvc.MarkJavbusRunning(ctx, task.Row); err != nil {
 		return err
 	}
-	_, err := s.javbusSvc.FetchMovieMagnets(ctx, task.MovieJavID, task.MovieCode)
+	_, err := s.javbusSvc.FetchMovieMagnets(ctx, task.MovieJavID, task.MovieName)
 	return err
 }
 
@@ -331,7 +369,7 @@ func (s *Service) runSukebeiTask(ctx context.Context, task *fetchsite.SukebeiFet
 	if err := s.siteSvc.MarkSukebeiRunning(ctx, task.Row); err != nil {
 		return err
 	}
-	_, err := s.sukebeiSvc.FetchMovieTorrents(ctx, task.MovieJavID, task.MovieCode)
+	_, err := s.sukebeiSvc.FetchMovieTorrents(ctx, task.MovieJavID, task.MovieName)
 	return err
 }
 

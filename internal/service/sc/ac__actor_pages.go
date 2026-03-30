@@ -42,11 +42,11 @@ func (s *ScService) buildActorScPageByName(ctx context.Context, actorName string
 
 	actor := personFromCast(castRow)
 	req := &types.ListMovieFullRequest{
-		CastNames: actorName,
-		Owned:     consts.MovieAll,
-		OrderBy:   consts.OrderByReleasingDate,
-		Page:      1,
-		PageSize:  999999,
+		CastNames:  actorName,
+		MediaOwned: consts.MovieAll,
+		OrderBy:    consts.OrderByReleasingDate,
+		Page:       1,
+		PageSize:   999999,
 	}
 	return s.buildActorScPageWithMovies(ctx, actor, req, recentLimit, movieLimit, buildActorPageHrefByName(actorName), buildActorCardsHrefByName(actorName))
 }
@@ -66,11 +66,11 @@ func (s *ScService) buildActorScPageByPersonID(ctx context.Context, personID int
 		return nil, types.ErrNotFound
 	}
 	req := &types.ListMovieFullRequest{
-		PersonIds: strconv.FormatInt(personID, 10),
-		Owned:     consts.MovieAll,
-		OrderBy:   consts.OrderByReleasingDate,
-		Page:      1,
-		PageSize:  999999,
+		PersonIds:  strconv.FormatInt(personID, 10),
+		MediaOwned: consts.MovieAll,
+		OrderBy:    consts.OrderByReleasingDate,
+		Page:       1,
+		PageSize:   999999,
 	}
 	return s.buildActorScPageWithMovies(ctx, actor, req, recentLimit, movieLimit, buildActorPageHrefByID(personID), buildActorCardsHrefByID(personID))
 }

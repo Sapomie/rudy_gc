@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/types"
+	"sort"
 	"time"
 )
 
@@ -14,6 +16,7 @@ type affectedMovieNumbers struct {
 	labelIDs    map[int64]struct{}
 	makerIDs    map[int64]struct{}
 	prefixIDs   map[int64]struct{}
+	movies      map[string]*types.Movie
 }
 
 func newAffectedMovieNumbers() *affectedMovieNumbers {
@@ -24,6 +27,7 @@ func newAffectedMovieNumbers() *affectedMovieNumbers {
 		labelIDs:    map[int64]struct{}{},
 		makerIDs:    map[int64]struct{}{},
 		prefixIDs:   map[int64]struct{}{},
+		movies:      map[string]*types.Movie{},
 	}
 }
 
@@ -53,6 +57,38 @@ func (a *affectedMovieNumbers) addFromResponse(resp *saveParsedMovieResponse) {
 	if resp.prefixID > 0 {
 		a.prefixIDs[resp.prefixID] = struct{}{}
 	}
+	if resp.movieChanged && resp.movie != nil && resp.movie.JavId != "" {
+		a.movies[resp.movie.JavId] = resp.movie
+	}
+}
+
+func (a *affectedMovieNumbers) listMovieTypes() []*types.MovieType {
+	if a == nil || len(a.movies) == 0 {
+		return []*types.MovieType{}
+	}
+	javIDs := make([]string, 0, len(a.movies))
+	for javID := range a.movies {
+		if javID == "" {
+			continue
+		}
+		javIDs = append(javIDs, javID)
+	}
+	sort.Strings(javIDs)
+	out := make([]*types.MovieType, 0, len(javIDs))
+	for _, javID := range javIDs {
+		mv := a.movies[javID]
+		if mv == nil {
+			continue
+		}
+		out = append(out, &types.MovieType{
+			Name:  mv.Name,
+			JavId: mv.JavId,
+			AMovie: &types.Movie{
+				ReleasingDate: mv.ReleasingDate,
+			},
+		})
+	}
+	return out
 }
 
 func (a *affectedMovieNumbers) addIDs(

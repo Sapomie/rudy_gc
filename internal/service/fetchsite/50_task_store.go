@@ -19,12 +19,12 @@ func (s *Service) ListPendingJavbusFetchTasks(ctx context.Context, limit int64) 
 
 	out := make([]*JavbusFetchTask, 0, len(rows))
 	for _, row := range rows {
-		if row == nil || row.MovieJavId == "" || row.MovieCode == "" {
+		if row == nil || row.MovieJavId == "" || row.MovieName == "" {
 			continue
 		}
 		out = append(out, &JavbusFetchTask{
 			MovieJavID: row.MovieJavId,
-			MovieCode:  row.MovieCode,
+			MovieName:  row.MovieName,
 			Row:        row,
 		})
 	}
@@ -52,12 +52,12 @@ func (s *Service) ListPendingSukebeiFetchTasks(ctx context.Context, limit int64)
 
 	out := make([]*SukebeiFetchTask, 0, len(rows))
 	for _, row := range rows {
-		if row == nil || row.MovieJavId == "" || row.MovieCode == "" {
+		if row == nil || row.MovieJavId == "" || row.MovieName == "" {
 			continue
 		}
 		out = append(out, &SukebeiFetchTask{
 			MovieJavID: row.MovieJavId,
-			MovieCode:  row.MovieCode,
+			MovieName:  row.MovieName,
 			Row:        row,
 		})
 	}
@@ -86,8 +86,8 @@ func (s *Service) BuildJavbusFetchTasksByMovies(ctx context.Context, movies []*t
 			continue
 		}
 		movieJavID := strings.TrimSpace(mv.JavId)
-		movieCode := strings.TrimSpace(mv.Name)
-		if movieJavID == "" || movieCode == "" {
+		movieName := strings.TrimSpace(mv.Name)
+		if movieJavID == "" || movieName == "" {
 			continue
 		}
 		if _, ok := seen[movieJavID]; ok {
@@ -95,7 +95,7 @@ func (s *Service) BuildJavbusFetchTasksByMovies(ctx context.Context, movies []*t
 		}
 		seen[movieJavID] = struct{}{}
 
-		if err := s.ensureJavbusFetchTask(ctx, movieJavID, movieCode, pickMovieReleaseDate(mv), now); err != nil {
+		if err := s.ensureJavbusFetchTask(ctx, movieJavID, movieName, pickMovieReleaseDate(mv), now); err != nil {
 			return nil, err
 		}
 		task, err := s.FindJavbusFetchTask(ctx, movieJavID)
@@ -105,7 +105,7 @@ func (s *Service) BuildJavbusFetchTasksByMovies(ctx context.Context, movies []*t
 		if task == nil {
 			continue
 		}
-		task.MovieCode = movieCode
+		task.MovieName = movieName
 		out = append(out, task)
 	}
 	return out, nil
@@ -121,8 +121,8 @@ func (s *Service) BuildSukebeiFetchTasksByMovies(ctx context.Context, movies []*
 			continue
 		}
 		movieJavID := strings.TrimSpace(mv.JavId)
-		movieCode := strings.TrimSpace(mv.Name)
-		if movieJavID == "" || movieCode == "" {
+		movieName := strings.TrimSpace(mv.Name)
+		if movieJavID == "" || movieName == "" {
 			continue
 		}
 		if _, ok := seen[movieJavID]; ok {
@@ -130,7 +130,7 @@ func (s *Service) BuildSukebeiFetchTasksByMovies(ctx context.Context, movies []*
 		}
 		seen[movieJavID] = struct{}{}
 
-		if err := s.ensureSukebeiFetchTask(ctx, movieJavID, movieCode, pickMovieReleaseDate(mv), now); err != nil {
+		if err := s.ensureSukebeiFetchTask(ctx, movieJavID, movieName, pickMovieReleaseDate(mv), now); err != nil {
 			return nil, err
 		}
 		task, err := s.FindSukebeiFetchTask(ctx, movieJavID)
@@ -140,7 +140,7 @@ func (s *Service) BuildSukebeiFetchTasksByMovies(ctx context.Context, movies []*
 		if task == nil {
 			continue
 		}
-		task.MovieCode = movieCode
+		task.MovieName = movieName
 		out = append(out, task)
 	}
 	return out, nil

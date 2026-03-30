@@ -44,7 +44,7 @@ type (
 	TJavbusMagnetFetch struct {
 		Id                int64  `db:"id"`
 		MovieJavId        string `db:"movie_jav_id"`
-		MovieCode         string `db:"movie_code"`
+		MovieName         string `db:"movie_name"`
 		FetchStatus       int64  `db:"fetch_status"`
 		TryCount          int64  `db:"try_count"`
 		LastFetchTime     int64  `db:"last_fetch_time"`
@@ -124,7 +124,7 @@ func (m *defaultTJavbusMagnetFetchModel) Insert(ctx context.Context, data *TJavb
 	rudyGcTJavbusMagnetFetchMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcTJavbusMagnetFetchMovieJavIdPrefix, data.MovieJavId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tJavbusMagnetFetchRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieCode, data.FetchStatus, data.TryCount, data.LastFetchTime, data.LastSuccessTime, data.LastError, data.LastResultCount, data.SourceUrl, data.CreatedOn, data.UpdatedOn, data.TorrentHashCount, data.LatestPublishTime, data.ReleaseDate)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FetchStatus, data.TryCount, data.LastFetchTime, data.LastSuccessTime, data.LastError, data.LastResultCount, data.SourceUrl, data.CreatedOn, data.UpdatedOn, data.TorrentHashCount, data.LatestPublishTime, data.ReleaseDate)
 	}, rudyGcTJavbusMagnetFetchIdKey, rudyGcTJavbusMagnetFetchMovieJavIdKey)
 	return ret, err
 }
@@ -139,7 +139,7 @@ func (m *defaultTJavbusMagnetFetchModel) Update(ctx context.Context, newData *TJ
 	rudyGcTJavbusMagnetFetchMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcTJavbusMagnetFetchMovieJavIdPrefix, data.MovieJavId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, tJavbusMagnetFetchRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieCode, newData.FetchStatus, newData.TryCount, newData.LastFetchTime, newData.LastSuccessTime, newData.LastError, newData.LastResultCount, newData.SourceUrl, newData.CreatedOn, newData.UpdatedOn, newData.TorrentHashCount, newData.LatestPublishTime, newData.ReleaseDate, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FetchStatus, newData.TryCount, newData.LastFetchTime, newData.LastSuccessTime, newData.LastError, newData.LastResultCount, newData.SourceUrl, newData.CreatedOn, newData.UpdatedOn, newData.TorrentHashCount, newData.LatestPublishTime, newData.ReleaseDate, newData.Id)
 	}, rudyGcTJavbusMagnetFetchIdKey, rudyGcTJavbusMagnetFetchMovieJavIdKey)
 	return err
 }

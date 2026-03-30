@@ -69,6 +69,14 @@
                                         <label for="task_actor_name">演员名称</label>
                                         <input id="task_actor_name" name="actor_name" class="form-control" type="text" placeholder="输入演员名称">
                                     </div>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="autoFetchSiteFieldWrap">
+                                        <label class="d-block mb-2">详情后自动抓取外站</label>
+                                        <div class="form-check">
+                                            <input id="task_auto_fetch_site" name="auto_fetch_site" class="form-check-input" type="checkbox" checked>
+                                            <label class="form-check-label" for="task_auto_fetch_site">detail 解析完成后自动抓取 JavBus / Sukebei</label>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {{ if .ShowMovieFilters }}
@@ -278,6 +286,59 @@
                             </div>
                         </div>
                     </div>
+
+                    {{ if .ShowFavoriteAlbum }}
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h4 class="card-title mb-0">下载中（tm_album_item）</h4>
+                                <a href="/album-items?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">查看全部</a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>影片</th>
+                                        <th>来源</th>
+                                        <th>大小</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {{ if .FavoriteRows }}
+                                        {{ range .FavoriteRows }}
+                                            <tr>
+                                                <td class="text-nowrap">
+                                                    {{ if .MovieName }}
+                                                        <a class="fw-semibold" href="/movie/{{ .MovieName }}">{{ .MovieName }}</a>
+                                                    {{ else if .MovieJavID }}
+                                                        {{ .MovieJavID }}
+                                                    {{ else }}
+                                                        -
+                                                    {{ end }}
+                                                </td>
+                                                <td class="text-nowrap">
+                                                    {{ if eq .SourceType "javbus_magnet" }}
+                                                        <span class="badge bg-primary-subtle text-primary">JavBus</span>
+                                                    {{ else if eq .SourceType "sukebei_torrent" }}
+                                                        <span class="badge bg-danger-subtle text-danger">Sukebei</span>
+                                                    {{ else }}
+                                                        <span class="badge bg-secondary-subtle text-secondary">{{ .SourceLabel }}</span>
+                                                    {{ end }}
+                                                </td>
+                                                <td class="text-nowrap">{{ if .Size }}{{ .Size }}{{ else }}-{{ end }}</td>
+                                            </tr>
+                                        {{ end }}
+                                    {{ else }}
+                                        <tr>
+                                            <td colspan="3" class="text-muted text-center">下载中 album 当前没有 tm_album_item 数据</td>
+                                        </tr>
+                                    {{ end }}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {{ end }}
 
                 </div>
 

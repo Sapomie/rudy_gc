@@ -25,7 +25,7 @@ var (
 
 	configFile = flag.String("f", "cmd/api/config.yaml", "the config file")
 	movieJavID = flag.String("movie_jav_id", "", "movie jav id")
-	movieCode  = flag.String("movie_code", "", "movie code")
+	movieName  = flag.String("movie_name", "", "movie code")
 	mode       = flag.String("mode", "both", "javbus|sukebei|both")
 	enqueue    = flag.Bool("enqueue", true, "ensure fetch tasks before run")
 )
@@ -36,8 +36,8 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
-	if strings.TrimSpace(*movieJavID) == "" || strings.TrimSpace(*movieCode) == "" {
-		panic("movie_jav_id and movie_code are required")
+	if strings.TrimSpace(*movieJavID) == "" || strings.TrimSpace(*movieName) == "" {
+		panic("movie_jav_id and movie_name are required")
 	}
 
 	d, err := dep.New(c)
@@ -64,7 +64,7 @@ func main() {
 	}
 	fmt.Printf("proxy.javbus=%s\n", d.FetchSites[fetchsite.FetchSiteCodeJavbus].Proxy)
 	fmt.Printf("proxy.sukebei=%s\n", d.FetchSites[fetchsite.FetchSiteCodeSukebei].Proxy)
-	if resp, err := d.Fetcher.GetBySite(ctx, fetchsite.FetchSiteCodeJavbus, "https://www.javbus.com/"+strings.ToLower(strings.TrimSpace(*movieCode))); err == nil {
+	if resp, err := d.Fetcher.GetBySite(ctx, fetchsite.FetchSiteCodeJavbus, "https://www.javbus.com/"+strings.ToLower(strings.TrimSpace(*movieName))); err == nil {
 		body := string(resp.Body)
 		if len(body) > 600 {
 			body = body[:600]
@@ -90,7 +90,7 @@ func main() {
 			values.Set("floor", floor)
 			ajaxURL := "https://www.javbus.com/ajax/uncledatoolsbyajax.php?" + values.Encode()
 			if ajaxResp, ajaxErr := d.Fetcher.GetBySiteWithOptions(ctx, fetchsite.FetchSiteCodeJavbus, ajaxURL, fetchsite.RequestOptions{
-				Referer: "https://www.javbus.com/" + strings.ToLower(strings.TrimSpace(*movieCode)),
+				Referer: "https://www.javbus.com/" + strings.ToLower(strings.TrimSpace(*movieName)),
 				Headers: map[string]string{
 					"X-Requested-With": "XMLHttpRequest",
 				},
@@ -111,7 +111,7 @@ func main() {
 	}
 	if *enqueue {
 		fmt.Println("ensure fetch tasks...")
-		if err := siteSvc.EnsureFetchTasksForMovie(ctx, strings.TrimSpace(*movieJavID), strings.TrimSpace(*movieCode), releaseDate); err != nil {
+		if err := siteSvc.EnsureFetchTasksForMovie(ctx, strings.TrimSpace(*movieJavID), strings.TrimSpace(*movieName), releaseDate); err != nil {
 			panic(err)
 		}
 	}
@@ -124,7 +124,7 @@ func main() {
 	if currentMode == "javbus" || currentMode == "both" {
 		fmt.Println("run javbus...")
 		javbusSvc := fetchjavbus.NewService(d)
-		rows, err := javbusSvc.FetchMovieMagnets(ctx, strings.TrimSpace(*movieJavID), strings.TrimSpace(*movieCode))
+		rows, err := javbusSvc.FetchMovieMagnets(ctx, strings.TrimSpace(*movieJavID), strings.TrimSpace(*movieName))
 		if err != nil {
 			panic(err)
 		}
@@ -141,7 +141,7 @@ func main() {
 	if currentMode == "sukebei" || currentMode == "both" {
 		fmt.Println("run sukebei...")
 		sukebeiSvc := fetchsukebei.NewService(d)
-		rows, err := sukebeiSvc.FetchMovieTorrents(ctx, strings.TrimSpace(*movieJavID), strings.TrimSpace(*movieCode))
+		rows, err := sukebeiSvc.FetchMovieTorrents(ctx, strings.TrimSpace(*movieJavID), strings.TrimSpace(*movieName))
 		if err != nil {
 			panic(err)
 		}

@@ -59,7 +59,7 @@
                             {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
                             <div class="col-12 col-md-6 col-xl-4">
                                 <label class="form-label mb-1">JavBus 影片编号 / JavID</label>
-                                <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_code 或 movie_jav_id">
+                                <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_name 或 movie_jav_id">
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
                                 <label class="form-label mb-1">JavBus 状态</label>
@@ -109,7 +109,7 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                 <tr>
-                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMovieCode.Active }}active{{ end }}" href="{{ .SortQuery.ByMovieCode.Href }}">影片{{ if .SortQuery.ByMovieCode.Active }}{{ if .SortQuery.ByMovieCode.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMovieName.Active }}active{{ end }}" href="{{ .SortQuery.ByMovieName.Href }}">影片{{ if .SortQuery.ByMovieName.Active }}{{ if .SortQuery.ByMovieName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th>发行时间</th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByFetchStatus.Active }}active{{ end }}" href="{{ .SortQuery.ByFetchStatus.Href }}">状态{{ if .SortQuery.ByFetchStatus.Active }}{{ if .SortQuery.ByFetchStatus.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th>重试</th>
@@ -124,8 +124,8 @@
                                 <tbody>
                                 {{ if .Rows }}
                                     {{ range .Rows }}
-                                        <tr data-movie-jav-id="{{ .MovieJavID }}" data-movie-code="{{ .MovieCode }}">
-                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieCode }}">{{ .MovieCode }}</a></div><div class="text-muted small">{{ .MovieJavID }}</div></td>
+                                        <tr data-movie-jav-id="{{ .MovieJavID }}" data-movie-name="{{ .MovieName }}">
+                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieName }}">{{ .MovieName }}</a></div><div class="text-muted small">{{ .MovieJavID }}</div></td>
                                             <td class="text-nowrap">{{ .ReleaseDateText }}</td>
                                             <td><span class="badge fetch-site-badge">{{ .FetchStatusText }}</span></td>
                                             <td>{{ .TryCount }}</td>

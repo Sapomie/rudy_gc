@@ -46,6 +46,8 @@ type Deps struct {
 	MovieGenreModel          moviex.AmrMovieGenreModel
 	FilmModel                moviex.VFilmModel
 	DirectoryModel           moviex.VDirectoryModel
+	WFolderModel             moviex.WFolderModel
+	WMediaModel              moviex.WMediaModel
 	GListModel               moviex.GListModel
 	ScModel                  moviex.GScModel
 	RankModel                moviex.CRankModel
@@ -54,6 +56,8 @@ type Deps struct {
 	PersonModel              moviex.CPersonModel
 	CafoModel                moviex.CCafoModel
 	RecordModel              moviex.ERecordModel
+	AlbumModel               moviex.TAlbumModel
+	AlbumItemModel           moviex.TmAlbumItemModel
 	JavbusMagnetModel        moviex.TJavbusMagnetModel
 	JavbusMagnetFetchModel   moviex.TJavbusMagnetFetchModel
 	SukebeiTorrentModel      moviex.TSukebeiTorrentModel
@@ -90,6 +94,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		glistModel               = moviex.NewGListModel(conn, c)
 		scModel                  = moviex.NewGScModel(conn, c)
 		recordModel              = moviex.NewERecordModel(conn, c)
+		albumModel               = moviex.NewTAlbumModel(conn, c)
+		albumItemModel           = moviex.NewTmAlbumItemModel(conn, c)
 		javbusMagnetModel        = moviex.NewTJavbusMagnetModel(conn, c)
 		javbusMagnetFetchModel   = moviex.NewTJavbusMagnetFetchModel(conn, c)
 		sukebeiTorrentModel      = moviex.NewTSukebeiTorrentModel(conn, c)
@@ -114,7 +120,9 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieGenreModel = moviex.NewAmrMovieGenreModel(conn, c)
 
 		// ★ 目录 model
-		vdirModel = moviex.NewVDirectoryModel(conn, c)
+		vdirModel    = moviex.NewVDirectoryModel(conn, c)
+		wFolderModel = moviex.NewWFolderModel(conn, c)
+		wMediaModel  = moviex.NewWMediaModel(conn, c)
 	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
@@ -166,6 +174,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		MovieGenreModel:          movieGenreModel,
 		FilmModel:                filmModel,
 		DirectoryModel:           vdirModel,
+		WFolderModel:             wFolderModel,
+		WMediaModel:              wMediaModel,
 		GListModel:               glistModel,
 		ScModel:                  scModel,
 		RankModel:                rankModel,
@@ -174,6 +184,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		PersonModel:              personModel,
 		CafoModel:                cafoModel,
 		RecordModel:              recordModel,
+		AlbumModel:               albumModel,
+		AlbumItemModel:           albumItemModel,
 		JavbusMagnetModel:        javbusMagnetModel,
 		JavbusMagnetFetchModel:   javbusMagnetFetchModel,
 		SukebeiTorrentModel:      sukebeiTorrentModel,

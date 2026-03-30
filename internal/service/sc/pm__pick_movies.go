@@ -24,20 +24,20 @@ func (l *ScService) PickProcession() error {
 	reqs := []*requestWithWeight{
 
 		{
-			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
-				ScTimesMax:         ptr.Int64(0),
-				FilmBirthTimeStart: "2025-10-01",
-				FilmBirthTimeEnd:   "2025-11-11",
-				Dir4:               "vx",
+			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, MediaOwned: 3,
+				ScTimesMax:          ptr.Int64(0),
+				MediaBirthTimeStart: "2025-10-01",
+				MediaBirthTimeEnd:   "2025-11-11",
+				MediaDir4:           "vx",
 			},
 			w: 12,
 		},
 		{
-			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, Owned: 3,
+			req: &types.ListMovieFullRequest{Page: 1, PageSize: 10000, MediaOwned: 3,
 				ScTimesMax: ptr.Int64(0),
 
-				FilmBirthTimeStart: "2025-12-01",
-				Dir4:               "vx",
+				MediaBirthTimeStart: "2025-12-01",
+				MediaDir4:           "vx",
 			},
 			w: 12,
 		},

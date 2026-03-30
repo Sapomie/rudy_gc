@@ -30,10 +30,10 @@ type movieCardFilterView struct {
 	LabelName    string
 	Word         string
 
-	ReleasingDateStart string
-	ReleasingDateEnd   string
-	FilmBirthTimeStart string
-	FilmBirthTimeEnd   string
+	ReleasingDateStart  string
+	ReleasingDateEnd    string
+	MediaBirthTimeStart string
+	MediaBirthTimeEnd   string
 
 	CastAgeMin string
 	CastAgeMax string
@@ -43,7 +43,7 @@ type movieCardFilterView struct {
 
 	DaysInRankMin string
 	NeedDownload  string
-	Owned         string
+	MediaOwned    string
 
 	ViewWatchedMin string
 	ViewWatchedMax string
@@ -57,10 +57,10 @@ type movieCardFilterView struct {
 	ComeTimesMin  string
 	ComeTimesMax  string
 
-	Dir1 string
-	Dir2 string
-	Dir3 string
-	Dir4 string
+	MediaDir1 string
+	MediaDir2 string
+	MediaDir3 string
+	MediaDir4 string
 }
 
 func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, currentOD string, randomN *int) *movieCardFilterView {
@@ -84,10 +84,10 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 		LabelName:    queryOrFallbackString(c, "ln", req.LabelName),
 		Word:         queryOrFallbackString(c, "wd", req.Word),
 
-		ReleasingDateStart: queryOrFallbackString(c, "rs", req.ReleasingDateStart),
-		ReleasingDateEnd:   queryOrFallbackString(c, "re", req.ReleasingDateEnd),
-		FilmBirthTimeStart: queryOrFallbackString(c, "bs", req.FilmBirthTimeStart),
-		FilmBirthTimeEnd:   queryOrFallbackString(c, "be", req.FilmBirthTimeEnd),
+		ReleasingDateStart:  queryOrFallbackString(c, "rs", req.ReleasingDateStart),
+		ReleasingDateEnd:    queryOrFallbackString(c, "re", req.ReleasingDateEnd),
+		MediaBirthTimeStart: queryOrFallbackString(c, "mbs", req.MediaBirthTimeStart),
+		MediaBirthTimeEnd:   queryOrFallbackString(c, "mbe", req.MediaBirthTimeEnd),
 
 		CastAgeMin: queryOrFallbackFloat(c, "cay", req.CastAgeMin),
 		CastAgeMax: queryOrFallbackFloat(c, "cao", req.CastAgeMax),
@@ -97,7 +97,7 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 
 		DaysInRankMin: queryOrFallbackInt(c, "drkmin", req.DaysInRankMin, false),
 		NeedDownload:  queryOrFallbackInt(c, "nd", req.NeedDownload, false),
-		Owned:         queryOrFallbackInt(c, "owned", req.Owned, false),
+		MediaOwned:    queryOrFallbackInt(c, "mowned", req.MediaOwned, false),
 
 		ViewWatchedMin: queryOrFallbackInt(c, "vwmin", req.ViewWatchedMin, false),
 		ViewWatchedMax: queryOrFallbackInt(c, "vwmax", req.ViewWatchedMax, false),
@@ -111,10 +111,10 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 		ComeTimesMin:  queryOrFallbackInt(c, "comin", req.ComeTimesMin, false),
 		ComeTimesMax:  queryOrFallbackIntPtr(c, "comax", req.ComeTimesMax),
 
-		Dir1: queryOrFallbackString(c, "d1", req.Dir1),
-		Dir2: queryOrFallbackString(c, "d2", req.Dir2),
-		Dir3: queryOrFallbackString(c, "d3", req.Dir3),
-		Dir4: queryOrFallbackString(c, "d4", req.Dir4),
+		MediaDir1: queryOrFallbackString(c, "md1", req.MediaDir1),
+		MediaDir2: queryOrFallbackString(c, "md2", req.MediaDir2),
+		MediaDir3: queryOrFallbackString(c, "md3", req.MediaDir3),
+		MediaDir4: queryOrFallbackString(c, "md4", req.MediaDir4),
 	}
 
 	if randomN != nil {
@@ -127,9 +127,9 @@ func buildMovieCardFilterExplicit(c *gin.Context, hasRandom bool) map[string]boo
 	keys := []string{
 		"ps", "od", "order",
 		"cn", "pid", "gn", "dn", "pn", "mn", "ln", "wd",
-		"owned", "nd", "drkmin",
-		"d1", "d2", "d3", "d4",
-		"rs", "re", "bs", "be", "srds", "srde", "lsctmin", "lsctmax",
+		"mowned", "nd", "drkmin",
+		"md1", "md2", "md3", "md4",
+		"rs", "re", "mbs", "mbe", "srds", "srde", "lsctmin", "lsctmax",
 		"cay", "cao", "vwmin", "vwmax", "smin", "smax", "scmin", "scmax", "comin", "comax",
 	}
 	if hasRandom {

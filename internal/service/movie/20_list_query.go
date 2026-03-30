@@ -7,6 +7,7 @@ func (s *Service) movieListQuery() *moviex.MovieListRepoSqlx {
 		s.deps.MovieModel,
 		s.deps.MinfoModel,
 		s.deps.FilmModel,
+		s.deps.WMediaModel,
 		s.deps.LabelModel,
 		s.deps.MakerModel,
 		s.deps.DirectorModel,

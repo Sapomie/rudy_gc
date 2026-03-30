@@ -173,7 +173,7 @@ func (l *ScService) buildSmartPickGroups(ctx context.Context, reqs []PickRequest
 }
 
 func normalizeSmartPickReq(req *types.ListMovieFullRequest) {
-	req.Owned = consts.OwnedAllNotRemoved
+	req.MediaOwned = consts.OwnedAllNotRemoved
 	req.Page = 1
 	req.PageSize = 100000
 	ensureReqDefaults(req)

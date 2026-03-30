@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/service/fetchqueue"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/movie"
 	"sync"
@@ -22,6 +23,7 @@ type CrawlLogic struct {
 	deps         *runtimeDeps
 	movieSvc     *movie.Service
 	fetchSiteSvc *fetchsite.Service
+	fetchQueue   *fetchqueue.Service
 }
 
 func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
@@ -29,19 +31,20 @@ func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 		deps:         newRuntimeDeps(deps),
 		movieSvc:     movie.NewService(deps),
 		fetchSiteSvc: fetchsite.NewService(deps),
+		fetchQueue:   fetchqueue.NewService(deps),
 	}
 }
 
 /* ========= 具体流程 ========= */
 
-func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool) error {
+func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool, autoFetchSite bool) error {
 	start := time.Now()
 
 	detailNum, err := func(ctx context.Context) (int64, error) {
 		if err := l.FetchAndParseDailyBestinv(ctx, isSync); err != nil {
 			return 0, err
 		}
-		return l.FetchAndParseDetails(ctx)
+		return l.FetchAndParseDetails(ctx, autoFetchSite, true)
 	}(ctx)
 	if err != nil {
 		return err
@@ -66,7 +69,7 @@ func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool) 
 }
 
 // 活跃 Seeds 流程
-func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context) error {
+func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context, autoFetchSite bool) error {
 	return l.runPipeline(
 		ctx,
 		consts.RecordTypeSeedsActive,
@@ -74,7 +77,7 @@ func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context) error {
 			if err := l.FetchAndParseInventoryBySeedActive(ctx); err != nil {
 				return 0, err
 			}
-			return l.FetchAndParseDetails(ctx)
+			return l.FetchAndParseDetails(ctx, autoFetchSite, false)
 		},
 		false, // ✅ 保持记录
 		l.DownLoadAllPicture,
@@ -83,7 +86,7 @@ func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context) error {
 }
 
 // 指定 Seed 名称流程
-func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string) error {
+func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string, autoFetchSite bool) error {
 	return l.runPipeline(
 		ctx,
 		consts.RecordTypeSeedName,
@@ -91,7 +94,7 @@ func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string) error {
 			if err := l.FetchAndParseInventoryBySeedName(ctx, name); err != nil {
 				return 0, err
 			}
-			return l.FetchAndParseDetails(ctx)
+			return l.FetchAndParseDetails(ctx, autoFetchSite, false)
 		},
 		false, // ✅ 保持记录
 		l.DownLoadAllPicture,

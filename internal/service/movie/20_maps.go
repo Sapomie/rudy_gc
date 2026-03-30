@@ -105,3 +105,35 @@ func mapVFilmToTypes(mv *moviex.VFilm) *types.Film {
 		UpdatedOn:     mv.UpdatedOn,
 	}
 }
+
+func mapWMediaToTypes(mv *moviex.WMedia) *types.Media {
+	if mv == nil {
+		return nil
+	}
+	return &types.Media{
+		Id:            mv.Id,
+		MovieJavId:    mv.MovieJavId,
+		MovieName:     mv.MovieName,
+		FileName:      mv.FileName,
+		DirectoryId:   mv.DirectoryId,
+		RootDir:       mv.RootDir,
+		FullDir:       mv.FullDir,
+		Alias:         mv.Alias,
+		Size:          mv.Size,
+		Width:         mv.Width,
+		Height:        mv.Height,
+		BitRate:       mv.BitRate,
+		Duration:      mv.Duration,
+		FrameAverage:  mv.FrameAverage,
+		HasSub:        mv.HasSub,
+		SelfMake:      mv.SelfMake,
+		HasMask:       mv.HasMask,
+		NeedScanMeta:  mv.NeedScanMeta,
+		IsRemoved:     mv.IsRemoved,
+		RemoveTime:    mv.RemoveTime,
+		BirthTime:     mv.BirthTime,
+		ReleasingDate: mv.ReleasingDate,
+		CreatedOn:     mv.CreatedOn,
+		UpdatedOn:     mv.UpdatedOn,
+	}
+}

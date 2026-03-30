@@ -31,7 +31,7 @@ type fetchSiteJavbusSortLink struct {
 }
 
 type fetchSiteJavbusSortQuery struct {
-	ByMovieCode     fetchSiteJavbusSortLink
+	ByMovieName     fetchSiteJavbusSortLink
 	ByFetchStatus   fetchSiteJavbusSortLink
 	ByLastFetchTime fetchSiteJavbusSortLink
 	ByResultCount   fetchSiteJavbusSortLink
@@ -152,7 +152,7 @@ func buildFetchSiteJavbusSortQuery(c *gin.Context, currentField string, currentO
 	}
 
 	return &fetchSiteJavbusSortQuery{
-		ByMovieCode:     makeHref("movie_code"),
+		ByMovieName:     makeHref("movie_name"),
 		ByFetchStatus:   makeHref("fetch_status"),
 		ByLastFetchTime: makeHref("last_fetch_time"),
 		ByResultCount:   makeHref("last_result_count"),
@@ -163,7 +163,7 @@ func buildFetchSiteJavbusSortQuery(c *gin.Context, currentField string, currentO
 
 func normalizeFetchSiteJavbusSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
-	case "movie_code", "fetch_status", "last_fetch_time", "last_result_count", "torrent_hash_count", "latest_publish_time":
+	case "movie_name", "fetch_status", "last_fetch_time", "last_result_count", "torrent_hash_count", "latest_publish_time":
 		return strings.TrimSpace(raw)
 	default:
 		return "last_fetch_time"

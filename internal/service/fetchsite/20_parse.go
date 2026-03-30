@@ -11,14 +11,14 @@ import (
 
 var infoHashPattern = regexp.MustCompile(`(?i)btih:([0-9a-z]+)`)
 
-func NormalizeMovieCode(movieCode string) string {
-	code := strings.TrimSpace(movieCode)
+func NormalizeMovieName(movieName string) string {
+	code := strings.TrimSpace(movieName)
 	code = strings.ReplaceAll(code, "_", "-")
 	return code
 }
 
-func BuildSukebeiQuery(movieCode string) string {
-	code := strings.ToUpper(NormalizeMovieCode(movieCode))
+func BuildSukebeiQuery(movieName string) string {
+	code := strings.ToUpper(NormalizeMovieName(movieName))
 	parts := strings.Split(code, "-")
 	if len(parts) != 2 {
 		return ""

@@ -26,17 +26,21 @@ type MovieType struct {
 	BusUrl               string      `json:"bus_url"`
 	JacketImg            string      `json:"jacket_img"`
 	Owned                int64       `json:"owned"`
+	OwnedWMedia          int64       `json:"owned_w_media"`
 	NeedDownload         int64       `json:"need_download"`
 	Prefix               string      `json:"prefix"`
 	EncodeName           string      `json:"encode_name"`
 	ScTimes              int64       `json:"sc_times"`
 	ComeTimes            int64       `json:"come_times"`
+	VideoUrlWMedia       string      `json:"video_url_w_media"`
+	FilmBirthDateWMedia  string      `json:"film_birth_date_w_media"`
 	HighestRank          int64       `json:"highest_rank"`
 	FirstRankingDay      string      `json:"first_ranking_day"`
 	AMovie               *Movie      `json:"a_movie"`
 	BmMinfo              *Minfo      `json:"bm_minfo"`
 	BmMurl               *Murl       `json:"bm_murl"`
 	VFilm                *Film       `json:"v_film"`
+	WMedia               *Media      `json:"w_media,omitempty"`
 }
 
 type CastInfo struct {

@@ -421,7 +421,7 @@
 
     function buildReqFromGroup(group) {
         const req = {
-            Owned: 3,
+            MediaOwned: 3,
             Page: 1,
             PageSize: 100000,
         };

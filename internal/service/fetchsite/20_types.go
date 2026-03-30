@@ -4,13 +4,13 @@ import "rudy_gc/internal/model/modelx/moviex"
 
 type JavbusFetchTask struct {
 	MovieJavID string
-	MovieCode  string
+	MovieName  string
 	Row        *moviex.TJavbusMagnetFetch
 }
 
 type SukebeiFetchTask struct {
 	MovieJavID string
-	MovieCode  string
+	MovieName  string
 	Row        *moviex.TSukebeiTorrentFetch
 }
 

@@ -40,17 +40,17 @@ func buildFetchSiteMovieRequest(req StartTaskRequest) (*types.ListMovieFullReque
 		LabelName:             strings.TrimSpace(req.LabelName),
 		ReleasingDateStart:    strings.TrimSpace(req.ReleasingDateStart),
 		ReleasingDateEnd:      strings.TrimSpace(req.ReleasingDateEnd),
-		FilmBirthTimeStart:    strings.TrimSpace(req.FilmBirthTimeStart),
-		FilmBirthTimeEnd:      strings.TrimSpace(req.FilmBirthTimeEnd),
+		MediaBirthTimeStart:   strings.TrimSpace(req.MediaBirthTimeStart),
+		MediaBirthTimeEnd:     strings.TrimSpace(req.MediaBirthTimeEnd),
 		StartRankingDateStart: strings.TrimSpace(req.StartRankingDateFrom),
 		StartRankingDateEnd:   strings.TrimSpace(req.StartRankingDateTo),
 		Word:                  strings.TrimSpace(req.Word),
 		LastScTimeMin:         strings.TrimSpace(req.LastScTimeMin),
 		LastScTimeMax:         strings.TrimSpace(req.LastScTimeMax),
-		Dir1:                  strings.TrimSpace(req.Dir1),
-		Dir2:                  strings.TrimSpace(req.Dir2),
-		Dir3:                  strings.TrimSpace(req.Dir3),
-		Dir4:                  strings.TrimSpace(req.Dir4),
+		MediaDir1:             strings.TrimSpace(req.MediaDir1),
+		MediaDir2:             strings.TrimSpace(req.MediaDir2),
+		MediaDir3:             strings.TrimSpace(req.MediaDir3),
+		MediaDir4:             strings.TrimSpace(req.MediaDir4),
 		OrderBy:               normalizeFetchSiteOrderBy(req.OrderBy),
 		Order:                 normalizeFetchSiteOrder(req.Order),
 		Page:                  1,
@@ -70,7 +70,7 @@ func buildFetchSiteMovieRequest(req StartTaskRequest) (*types.ListMovieFullReque
 	if out.NeedDownload, err = parseFetchSiteInt(req.NeedDownload, "nd"); err != nil {
 		return nil, err
 	}
-	if out.Owned, err = parseFetchSiteInt(req.Owned, "owned"); err != nil {
+	if out.MediaOwned, err = parseFetchSiteInt(req.MediaOwned, "mowned"); err != nil {
 		return nil, err
 	}
 	if out.ViewWatchedMin, err = parseFetchSiteInt(req.ViewWatchedMin, "vwmin"); err != nil {

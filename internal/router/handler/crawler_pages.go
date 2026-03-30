@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -8,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
 	"rudy_gc/internal/svc"
@@ -17,6 +20,7 @@ import (
 type CrawlerPages struct {
 	runtime   *loop.FetchLoopService
 	fetchSite *fetchsite.Service
+	deps      *svc.Deps
 	scRootDir string
 }
 
@@ -53,7 +57,22 @@ type crawlerJobsPageConfig struct {
 	Labels            crawlerJobsPageLabels
 	MovieCardFilter   *movieCardFilterView
 	ShowMovieFilters  bool
+	ShowFavoriteAlbum bool
+	FavoriteRows      []*favoriteAlbumItemRow
 }
+
+type favoriteAlbumItemRow struct {
+	MovieName   string
+	MovieJavID  string
+	SourceType  string
+	SourceLabel string
+	Size        string
+}
+
+const (
+	crawlerFavoriteAlbumName  = "下载中"
+	crawlerFavoriteCardMaxRow = 50
+)
 
 const taskSpiderFetchSiteBoth = "spider_fetch_site_both_resources"
 
@@ -61,6 +80,7 @@ func NewCrawlerPages(deps *svc.Deps) *CrawlerPages {
 	return &CrawlerPages{
 		runtime:   newCrawlerRuntime(deps),
 		fetchSite: newFetchSitePageService(deps),
+		deps:      deps,
 		scRootDir: deps.Config.Film.ScRootDir,
 	}
 }
@@ -157,6 +177,18 @@ func (h *CrawlerPages) FilmPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
+	})
+}
+
+func (h *CrawlerPages) MediaPage(c *gin.Context) {
+	favoriteRows, _ := h.loadFavoriteAlbumRows(c.Request.Context())
+	rootDirs := h.deps.Config.Media.RootDirs
+	c.HTML(http.StatusOK, "page.media_ingest", gin.H{
+		"Title":        "媒体入库",
+		"PageTitle":    "媒体入库（两段执行）",
+		"PageNote":     "第一段只做预处理校验与插入前预览；第二段仅插入通过项。",
+		"RootDirs":     rootDirs,
+		"FavoriteRows": favoriteRows,
 	})
 }
 
@@ -273,7 +305,51 @@ func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig)
 		"Labels":            cfg.Labels,
 		"MovieCardFilter":   cfg.MovieCardFilter,
 		"ShowMovieFilters":  cfg.ShowMovieFilters,
+		"ShowFavoriteAlbum": cfg.ShowFavoriteAlbum,
+		"FavoriteRows":      cfg.FavoriteRows,
 		"ScRootDir":         h.scRootDir,
 		"JobID":             strings.TrimSpace(c.Query("job_id")),
 	})
+}
+
+func (h *CrawlerPages) loadFavoriteAlbumRows(ctx context.Context) ([]*favoriteAlbumItemRow, error) {
+	album, err := h.deps.AlbumModel.FindOneByName(ctx, crawlerFavoriteAlbumName)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return []*favoriteAlbumItemRow{}, nil
+		}
+		return nil, err
+	}
+
+	rows, err := h.deps.AlbumItemModel.ListPageRows(ctx, album.Id, 0, crawlerFavoriteCardMaxRow, "`created_on` DESC, `id` DESC", moviex.AlbumItemPageFilter{})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*favoriteAlbumItemRow, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		movieName := strings.TrimSpace(row.MovieName)
+		out = append(out, &favoriteAlbumItemRow{
+			MovieName:   movieName,
+			MovieJavID:  strings.TrimSpace(row.MovieJavId),
+			SourceType:  strings.TrimSpace(row.SourceType),
+			SourceLabel: favoriteSourceTypeLabel(row.SourceType),
+			Size:        strings.TrimSpace(row.Size),
+		})
+	}
+	return out, nil
+}
+
+func favoriteSourceTypeLabel(sourceType string) string {
+	switch strings.TrimSpace(sourceType) {
+	case "javbus_magnet":
+		return "JavBus"
+	case "sukebei_torrent":
+		return "Sukebei"
+	default:
+		return "未知"
+	}
 }

@@ -47,8 +47,8 @@ func (h *MovieHTMLHandler) ListMovieCardHasRank(c *gin.Context) {
 func (h *MovieHTMLHandler) ListMovieCardOwned(c *gin.Context) {
 	h.renderMovieCard(c,
 		types.ListMovieFullRequest{
-			Owned:   consts.OwnedAllNotRemoved,
-			OrderBy: consts.OrderByBirthTime,
+			MediaOwned: consts.OwnedAllNotRemoved,
+			OrderBy:    consts.OrderByBirthTime,
 		},
 		"MovieCard", "Movies",
 	)

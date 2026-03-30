@@ -34,16 +34,16 @@ type OwnedLink struct {
 	Active bool
 }
 type OwnedQuery struct {
-	All      OwnedLink // owned=0
-	Owned    OwnedLink // owned=5  (按你旧逻辑)
-	NotOwned OwnedLink // owned=1
+	All      OwnedLink // mowned=0
+	Owned    OwnedLink // mowned=5  (按你旧逻辑)
+	NotOwned OwnedLink // mowned=1
 }
 
 func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
-	// 当前 owned
-	curOwned := c.Query("owned")
+	// 当前 mowned
+	curOwned := c.Query("mowned")
 
-	// 工具：基于当前 URL 复制参数、覆写 owned & page，并返回完整链接
+	// 工具：基于当前 URL 复制参数、覆写 mowned & page，并返回完整链接
 	makeHref := func(ownedVal string) (href string, active bool) {
 		// 拿到一份可修改的副本
 		q := c.Request.URL.Query()
@@ -52,10 +52,10 @@ func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
 		q.Set("p", "1")
 
 		if ownedVal == "" {
-			q.Del("owned")
+			q.Del("mowned")
 			active = (curOwned == "" || curOwned == "0") // 无参或0都视为 All
 		} else {
-			q.Set("owned", ownedVal)
+			q.Set("mowned", ownedVal)
 			active = (curOwned == ownedVal)
 		}
 

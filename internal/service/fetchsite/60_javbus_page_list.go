@@ -54,7 +54,7 @@ func (s *Service) BuildJavbusPage(ctx context.Context, query JavbusPageQuery) (*
 		}
 		items = append(items, &JavbusPageItem{
 			MovieJavID:        row.MovieJavId,
-			MovieCode:         row.MovieCode,
+			MovieName:         row.MovieName,
 			ReleaseDate:       row.ReleaseDate,
 			ReleaseDateText:   pageFormatDate(row.ReleaseDate),
 			FetchStatus:       row.FetchStatus,
@@ -86,8 +86,8 @@ func javbusPageOrderBy(sortField string, sortOrder string) string {
 
 func mapJavbusPageSortColumn(sortField string) string {
 	switch strings.TrimSpace(sortField) {
-	case "movie_code":
-		return "`movie_code`"
+	case "movie_name":
+		return "`movie_name`"
 	case "fetch_status":
 		return "`fetch_status`"
 	case "last_fetch_time":

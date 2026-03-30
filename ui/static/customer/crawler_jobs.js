@@ -36,13 +36,13 @@
     };
     const MOVIE_FILTER_FIELD_NAMES = [
         'cn', 'pid', 'gn', 'dn', 'pn', 'mn', 'ln',
-        'rs', 're', 'bs', 'be',
+        'rs', 're', 'mbs', 'mbe',
         'cay', 'cao',
         'srds', 'srde',
-        'drkmin', 'nd', 'wd', 'owned',
+        'drkmin', 'nd', 'wd', 'mowned',
         'vwmin', 'vwmax', 'smin', 'smax',
         'lsctmin', 'lsctmax', 'scmin', 'scmax', 'comin', 'comax',
-        'd1', 'd2', 'd3', 'd4',
+        'md1', 'md2', 'md3', 'md4',
         'od', 'order',
     ];
     const FETCH_SITE_DURATION_FIELD_NAMES = [
@@ -179,6 +179,7 @@
         runtime.nameFieldWrap = document.getElementById('nameFieldWrap');
         runtime.numberFieldWrap = document.getElementById('numberFieldWrap');
         runtime.actorNameFieldWrap = document.getElementById('actorNameFieldWrap');
+        runtime.autoFetchSiteFieldWrap = document.getElementById('autoFetchSiteFieldWrap');
         runtime.fetchSiteFilterPanel = document.getElementById('fetchSiteFilterPanel');
         runtime.toggleFetchSiteFilterBtn = document.getElementById('toggleFetchSiteFilterBtn');
         runtime.fetchSiteFilterWrap = document.getElementById('fetchSiteFilterWrap');
@@ -186,6 +187,7 @@
         runtime.nameInput = document.getElementById('task_name');
         runtime.numberInput = document.getElementById('task_number');
         runtime.actorNameInput = document.getElementById('task_actor_name');
+        runtime.autoFetchSiteInput = document.getElementById('task_auto_fetch_site');
 
         runtime.escapeHtml = function (input) {
             return String(input || '')
@@ -493,6 +495,14 @@
             return FETCH_SITE_TASK_TYPES.indexOf(current) >= 0 || current === TASK_FETCH_SITE_BOTH;
         };
 
+        runtime.isAutoFetchSiteTaskType = function (taskType) {
+            const current = String(taskType || '').trim();
+            return current === 'spider_daily_best' ||
+                current === 'spider_daily_best_sync' ||
+                current === 'spider_seeds' ||
+                current === 'spider_seed_by_name';
+        };
+
         runtime.syncFetchSiteFilterToggleText = function () {
             if (!runtime.toggleFetchSiteFilterBtn) {
                 return;
@@ -512,6 +522,7 @@
                 taskType === TASK_FETCH_SITE_BOTH
             );
             runtime.toggleField(runtime.actorNameFieldWrap, taskType === 'spider_rebuild_actor_rank');
+            runtime.toggleField(runtime.autoFetchSiteFieldWrap, runtime.isAutoFetchSiteTaskType(taskType));
             if (!isFetchSiteTask) {
                 runtime.state.fetchSiteFilterExpanded = false;
             }
@@ -572,6 +583,9 @@
             }
             if (taskType === 'spider_rebuild_actor_rank') {
                 payload.actor_name = String(runtime.actorNameInput && runtime.actorNameInput.value || '').trim();
+            }
+            if (runtime.isAutoFetchSiteTaskType(taskType)) {
+                payload.auto_fetch_site = runtime.autoFetchSiteInput && runtime.autoFetchSiteInput.checked ? '1' : '0';
             }
             if (runtime.isFetchSiteTaskType(taskType)) {
                 runtime.ensureFetchSiteDefaultValues();

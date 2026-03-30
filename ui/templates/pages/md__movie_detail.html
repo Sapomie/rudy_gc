@@ -27,7 +27,7 @@
 
     <main class="main-content">
         <div class="page-content">
-            <div class="container-fluid" id="fetchSiteListPage" data-movie-jav-id="{{ .movieType.JavId }}" data-movie-code="{{ .movieType.Name }}">
+            <div class="container-fluid" id="fetchSiteListPage" data-movie-jav-id="{{ .movieType.JavId }}" data-movie-name="{{ .movieType.Name }}">
 
                 <div class="row">
                     <!-- 左侧：海报 + 标题 -->
@@ -200,6 +200,7 @@
                                                         </th>
                                                         <th>标签</th>
                                                         <th>Info Hash</th>
+                                                        <th>下载中</th>
                                                     </tr>
                                                     </thead>
                                                     <tbody>
@@ -216,6 +217,15 @@
                                                                 {{ end }}
                                                             </td>
                                                             <td class="text-monospace">{{ .InfoHash }}</td>
+                                                            <td class="text-nowrap">
+                                                                <button type="button" class="btn btn-sm {{ if .IsFavorited }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
+                                                                        data-source-type="javbus_magnet"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-favorited="{{ if .IsFavorited }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsFavorited }}移出下载中{{ else }}加入下载中{{ end }}">
+                                                                    {{ if .IsFavorited }}已在下载中{{ else }}加入下载中{{ end }}
+                                                                </button>
+                                                            </td>
                                                         </tr>
                                                     {{ end }}
                                                     </tbody>
@@ -235,6 +245,7 @@
                                                         <col style="width: 130px;">
                                                         <col style="width: 90px;">
                                                         <col style="width: 340px;">
+                                                        <col style="width: 90px;">
                                                     </colgroup>
                                                     <thead>
                                                     <tr>
@@ -255,6 +266,7 @@
                                                             </button>
                                                         </th>
                                                         <th class="fetch-site-col-hash">Info Hash</th>
+                                                        <th class="fetch-site-col-compact">下载中</th>
                                                     </tr>
                                                     </thead>
                                                     <tbody>
@@ -270,6 +282,15 @@
                                                             <td class="fetch-site-col-compact text-nowrap" data-sort-key="downloads">{{ .Completed }}</td>
                                                             <td class="fetch-site-col-hash text-monospace">
                                                                 <span class="fetch-site-hash-text" title="{{ .InfoHash }}">{{ .InfoHash }}</span>
+                                                            </td>
+                                                            <td class="fetch-site-col-compact text-nowrap">
+                                                                <button type="button" class="btn btn-sm {{ if .IsFavorited }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
+                                                                        data-source-type="sukebei_torrent"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-favorited="{{ if .IsFavorited }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsFavorited }}移出下载中{{ else }}加入下载中{{ end }}">
+                                                                    {{ if .IsFavorited }}已在下载中{{ else }}加入下载中{{ end }}
+                                                                </button>
                                                             </td>
                                                         </tr>
                                                     {{ end }}

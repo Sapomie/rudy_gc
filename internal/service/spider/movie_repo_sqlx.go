@@ -34,14 +34,19 @@ func (r *MovieRepoSqlx) ListPage(ctx context.Context, offset, limit int64, order
 }
 
 // UpsertByJavId 按 JavId 保存（幂等）
-func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*types.Movie, error) {
+func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*types.Movie, bool, error) {
 	// 先查
 	exist, err := r.m.FindOneByJavId(ctx, mv.JavId)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return nil, err
+		return nil, false, err
 	}
 
 	if exist != nil {
+		changed := movieChanged(exist, mv)
+		if !changed {
+			return toTypesMovie(exist), false, nil
+		}
+
 		// 更新：保留 CreatedOn
 		exist.Name = mv.Name
 		exist.Title = mv.Title
@@ -62,9 +67,9 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 		exist.UpdatedOn = mv.UpdatedOn
 
 		if err := r.m.Update(ctx, exist); err != nil {
-			return nil, fmt.Errorf("update movie(%s) failed: %w", mv.JavId, err)
+			return nil, false, fmt.Errorf("update movie(%s) failed: %w", mv.JavId, err)
 		}
-		return toTypesMovie(exist), nil
+		return toTypesMovie(exist), true, nil
 	}
 
 	// 插入
@@ -91,7 +96,7 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 	}
 	ret, err := r.m.Insert(ctx, row)
 	if err != nil {
-		return nil, fmt.Errorf("insert movie(%s) failed: %w", mv.JavId, err)
+		return nil, false, fmt.Errorf("insert movie(%s) failed: %w", mv.JavId, err)
 	}
 	if id, e := ret.LastInsertId(); e == nil {
 		row.Id = id // 关键：填回自增ID
@@ -99,11 +104,33 @@ func (r *MovieRepoSqlx) UpsertByJavId(ctx context.Context, mv *types.Movie) (*ty
 		// 少数驱动拿不到 last insert id 时，兜底回查
 		got, fe := r.m.FindOneByJavId(ctx, mv.JavId)
 		if fe != nil {
-			return nil, fmt.Errorf("insert ok but re-fetch movie(%s) failed: %w", mv.JavId, fe)
+			return nil, false, fmt.Errorf("insert ok but re-fetch movie(%s) failed: %w", mv.JavId, fe)
 		}
 		row = got
 	}
-	return toTypesMovie(row), nil
+	return toTypesMovie(row), true, nil
+}
+
+func movieChanged(exist *moviex.AMovie, mv *types.Movie) bool {
+	if exist == nil || mv == nil {
+		return true
+	}
+	return exist.Name != mv.Name ||
+		exist.Title != mv.Title ||
+		exist.ReleasingDate != mv.ReleasingDate ||
+		exist.EncodeName != mv.EncodeName ||
+		exist.Length != mv.Length ||
+		exist.Score != mv.Score ||
+		exist.ViewersNumberWant != mv.ViewersNumberWant ||
+		exist.ViewersNumberOwned != mv.ViewersNumberOwned ||
+		exist.ViewersNumberWatched != mv.ViewersNumberWatched ||
+		exist.PrefixId != mv.PrefixId ||
+		exist.MakerId != mv.MakerId ||
+		exist.LabelId != mv.LabelId ||
+		exist.DirectorId != mv.DirectorId ||
+		exist.CastNumber != mv.CastNumber ||
+		exist.CastAverageAge != mv.CastAverageAge ||
+		exist.DetailUpdateTime != mv.DetailUpdateTime
 }
 
 func (r *MovieRepoSqlx) FindMoviesByName(ctx context.Context, name string) ([]*types.Movie, error) {

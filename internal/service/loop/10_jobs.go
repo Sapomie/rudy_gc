@@ -39,9 +39,10 @@ type StartTaskRequest struct {
 	TaskType       string `json:"task_type"`
 	Name           string `json:"name"`
 	ActorName      string `json:"actor_name"`
+	AutoFetchSite  string `json:"auto_fetch_site"`
 	Number         int64  `json:"number"`
 	MovieJavID     string `json:"movie_jav_id"`
-	MovieCode      string `json:"movie_code"`
+	MovieName      string `json:"movie_name"`
 	ScName         string `json:"sc_name"`
 	Dir            string `json:"dir"`
 	ComeMovieJavID string `json:"come_movie_jav_id"`
@@ -60,8 +61,8 @@ type StartTaskRequest struct {
 	LabelName               string `json:"ln"`
 	ReleasingDateStart      string `json:"rs"`
 	ReleasingDateEnd        string `json:"re"`
-	FilmBirthTimeStart      string `json:"bs"`
-	FilmBirthTimeEnd        string `json:"be"`
+	MediaBirthTimeStart     string `json:"mbs"`
+	MediaBirthTimeEnd       string `json:"mbe"`
 	CastAgeMin              string `json:"cay"`
 	CastAgeMax              string `json:"cao"`
 	StartRankingDateFrom    string `json:"srds"`
@@ -69,7 +70,7 @@ type StartTaskRequest struct {
 	DaysInRankMin           string `json:"drkmin"`
 	NeedDownload            string `json:"nd"`
 	Word                    string `json:"wd"`
-	Owned                   string `json:"owned"`
+	MediaOwned              string `json:"mowned"`
 	ViewWatchedMin          string `json:"vwmin"`
 	ViewWatchedMax          string `json:"vwmax"`
 	ScoreMin                string `json:"smin"`
@@ -80,10 +81,10 @@ type StartTaskRequest struct {
 	ScTimesMax              string `json:"scmax"`
 	ComeTimesMin            string `json:"comin"`
 	ComeTimesMax            string `json:"comax"`
-	Dir1                    string `json:"d1"`
-	Dir2                    string `json:"d2"`
-	Dir3                    string `json:"d3"`
-	Dir4                    string `json:"d4"`
+	MediaDir1               string `json:"md1"`
+	MediaDir2               string `json:"md2"`
+	MediaDir3               string `json:"md3"`
+	MediaDir4               string `json:"md4"`
 	OrderBy                 string `json:"od"`
 	Order                   string `json:"order"`
 	LastFetchDurationDays   string `json:"last_fetch_duration_days"`
@@ -219,17 +220,33 @@ func (l *FetchLoopService) ResumeJob(jobID string) error {
 func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 	switch strings.TrimSpace(req.TaskType) {
 	case TaskSpiderDailyBest:
-		return l.StartDailyBest()
+		autoFetchSite, err := parseAutoFetchSiteEnabled(req.AutoFetchSite, true)
+		if err != nil {
+			return "", err
+		}
+		return l.StartDailyBest(autoFetchSite)
 	case TaskSpiderDailyBestSync:
-		return l.StartDailyBestSync()
+		autoFetchSite, err := parseAutoFetchSiteEnabled(req.AutoFetchSite, true)
+		if err != nil {
+			return "", err
+		}
+		return l.StartDailyBestSync(autoFetchSite)
 	case TaskSpiderSeeds:
-		return l.StartSeeds()
+		autoFetchSite, err := parseAutoFetchSiteEnabled(req.AutoFetchSite, true)
+		if err != nil {
+			return "", err
+		}
+		return l.StartSeeds(autoFetchSite)
 	case TaskSpiderSeedByName:
 		name := strings.TrimSpace(req.Name)
 		if name == "" {
 			return "", fmt.Errorf("name is required")
 		}
-		return l.StartSeedByName(name)
+		autoFetchSite, err := parseAutoFetchSiteEnabled(req.AutoFetchSite, true)
+		if err != nil {
+			return "", err
+		}
+		return l.StartSeedByName(name, autoFetchSite)
 	case TaskSpiderRefreshOldest:
 		if req.Number <= 0 {
 			return "", fmt.Errorf("number is required")
@@ -284,7 +301,7 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 	}
 }
 
-func (l *FetchLoopService) StartDailyBest() (string, error) {
+func (l *FetchLoopService) StartDailyBest(autoFetchSite bool) (string, error) {
 	return l.startManagedTask(TaskSpiderDailyBest, taskRuntimePolicy{
 		ExclusiveGroup:        taskGroupFetchPriority,
 		PauseDetailLoop:       true,
@@ -295,11 +312,11 @@ func (l *FetchLoopService) StartDailyBest() (string, error) {
 			Message:         "开始抓取每日榜",
 			CurrentPhaseKey: "bestinv",
 		})
-		return l.crawlLogic.CrawlDailyBestProcession(ctx, false)
+		return l.crawlLogic.CrawlDailyBestProcession(ctx, false, autoFetchSite)
 	})
 }
 
-func (l *FetchLoopService) StartDailyBestSync() (string, error) {
+func (l *FetchLoopService) StartDailyBestSync(autoFetchSite bool) (string, error) {
 	return l.startManagedTask(TaskSpiderDailyBestSync, taskRuntimePolicy{
 		ExclusiveGroup:        taskGroupFetchPriority,
 		PauseDetailLoop:       true,
@@ -310,29 +327,29 @@ func (l *FetchLoopService) StartDailyBestSync() (string, error) {
 			Message:         "开始同步每日榜",
 			CurrentPhaseKey: "bestinv",
 		})
-		return l.crawlLogic.CrawlDailyBestProcession(ctx, true)
+		return l.crawlLogic.CrawlDailyBestProcession(ctx, true, autoFetchSite)
 	})
 }
 
-func (l *FetchLoopService) StartSeeds() (string, error) {
+func (l *FetchLoopService) StartSeeds(autoFetchSite bool) (string, error) {
 	return l.startManagedTask(TaskSpiderSeeds, taskRuntimePolicy{
 		ExclusiveGroup:        taskGroupFetchPriority,
 		PauseDetailLoop:       true,
 		PreemptsRefreshOldest: true,
 	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: "开始抓取活跃种子"})
-		return l.crawlLogic.CrawlBySeedsActiveProcession(ctx)
+		return l.crawlLogic.CrawlBySeedsActiveProcession(ctx, autoFetchSite)
 	})
 }
 
-func (l *FetchLoopService) StartSeedByName(name string) (string, error) {
+func (l *FetchLoopService) StartSeedByName(name string, autoFetchSite bool) (string, error) {
 	return l.startManagedTask(TaskSpiderSeedByName, taskRuntimePolicy{
 		ExclusiveGroup:        taskGroupFetchPriority,
 		PauseDetailLoop:       true,
 		PreemptsRefreshOldest: true,
 	}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: fmt.Sprintf("开始按名称抓取：%s", name)})
-		return l.crawlLogic.CrawlBySeedName(ctx, name)
+		return l.crawlLogic.CrawlBySeedName(ctx, name, autoFetchSite)
 	})
 }
 
@@ -396,12 +413,12 @@ func (l *FetchLoopService) StartBackfillFetchSite() (string, error) {
 func (l *FetchLoopService) StartFetchJavbusResources(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchJavbus, taskRuntimePolicy{}, func(ctx context.Context) error {
 		movieJavID := strings.TrimSpace(req.MovieJavID)
-		movieCode := strings.TrimSpace(req.MovieCode)
+		movieName := strings.TrimSpace(req.MovieName)
 		msg := "开始抓取 JavBus 资源"
 		if movieJavID != "" {
-			msg = fmt.Sprintf("开始抓取 JavBus 资源：%s", movieCode)
+			msg = fmt.Sprintf("开始抓取 JavBus 资源：%s", movieName)
 			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-			_, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieCode)
+			_, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieName)
 			return err
 		}
 		movieReq, err := buildFetchSiteMovieRequest(req)
@@ -429,12 +446,12 @@ func (l *FetchLoopService) StartFetchJavbusResources(req StartTaskRequest) (stri
 func (l *FetchLoopService) StartFetchSukebeiResources(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchSukebei, taskRuntimePolicy{}, func(ctx context.Context) error {
 		movieJavID := strings.TrimSpace(req.MovieJavID)
-		movieCode := strings.TrimSpace(req.MovieCode)
+		movieName := strings.TrimSpace(req.MovieName)
 		msg := "开始抓取 Sukebei 资源"
 		if movieJavID != "" {
-			msg = fmt.Sprintf("开始抓取 Sukebei 资源：%s", movieCode)
+			msg = fmt.Sprintf("开始抓取 Sukebei 资源：%s", movieName)
 			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieCode)
+			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieName)
 			return err
 		}
 		movieReq, err := buildFetchSiteMovieRequest(req)

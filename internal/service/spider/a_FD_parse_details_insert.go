@@ -14,6 +14,7 @@ import (
 // saveParsedMovieResponse 返回保存后的电影记录与关联实体信息（供后续统计/链路使用）
 type saveParsedMovieResponse struct {
 	movie        *types.Movie
+	movieChanged bool
 	castJavIdMap map[string]struct{}
 	castIDs      []int64
 	genreIDs     []int64
@@ -150,7 +151,7 @@ func (l *CrawlLogic) saveParsedMovie(ctx context.Context, raw *RawJavMovie) (*sa
 	}
 
 	//todo:1.事物        2.BatchTryLink(movieId, ids []int64)
-	mvSaved, err := l.deps.MovieRepo.UpsertByJavId(ctx, mv)
+	mvSaved, movieChanged, err := l.deps.MovieRepo.UpsertByJavId(ctx, mv)
 	if err != nil {
 		return nil, fmt.Errorf("保存电影失败: %w", err)
 	}
@@ -198,6 +199,7 @@ func (l *CrawlLogic) saveParsedMovie(ctx context.Context, raw *RawJavMovie) (*sa
 
 	return &saveParsedMovieResponse{
 		movie:        mvSaved,
+		movieChanged: movieChanged,
 		castJavIdMap: castJavIdMap,
 		castIDs:      castIDs,
 		genreIDs:     genreIDs,

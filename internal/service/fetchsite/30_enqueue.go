@@ -10,19 +10,19 @@ import (
 	"rudy_gc/internal/model/modelx/moviex"
 )
 
-func (s *Service) EnsureFetchTasksForMovie(ctx context.Context, movieJavID, movieCode string, releaseDate int64) error {
+func (s *Service) EnsureFetchTasksForMovie(ctx context.Context, movieJavID, movieName string, releaseDate int64) error {
 	now := time.Now().Unix()
 
-	if err := s.ensureJavbusFetchTask(ctx, movieJavID, movieCode, releaseDate, now); err != nil {
+	if err := s.ensureJavbusFetchTask(ctx, movieJavID, movieName, releaseDate, now); err != nil {
 		return err
 	}
-	if err := s.ensureSukebeiFetchTask(ctx, movieJavID, movieCode, releaseDate, now); err != nil {
+	if err := s.ensureSukebeiFetchTask(ctx, movieJavID, movieName, releaseDate, now); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) ensureJavbusFetchTask(ctx context.Context, movieJavID, movieCode string, releaseDate int64, now int64) error {
+func (s *Service) ensureJavbusFetchTask(ctx context.Context, movieJavID, movieName string, releaseDate int64, now int64) error {
 	if row, err := s.deps.JavbusMagnetFetchModel.FindOneByMovieJavId(ctx, movieJavID); err == nil {
 		if row.ReleaseDate != releaseDate {
 			row.ReleaseDate = releaseDate
@@ -34,14 +34,14 @@ func (s *Service) ensureJavbusFetchTask(ctx context.Context, movieJavID, movieCo
 		return err
 	}
 
-	sourceURL, err := s.BuildURL(FetchSiteCodeJavbus, strings.ToLower(NormalizeMovieCode(movieCode)))
+	sourceURL, err := s.BuildURL(FetchSiteCodeJavbus, strings.ToLower(NormalizeMovieName(movieName)))
 	if err != nil {
 		return err
 	}
 
 	row := &moviex.TJavbusMagnetFetch{
 		MovieJavId:      movieJavID,
-		MovieCode:       movieCode,
+		MovieName:       movieName,
 		ReleaseDate:     releaseDate,
 		FetchStatus:     FetchStatusPending,
 		TryCount:        0,
@@ -57,7 +57,7 @@ func (s *Service) ensureJavbusFetchTask(ctx context.Context, movieJavID, movieCo
 	return err
 }
 
-func (s *Service) ensureSukebeiFetchTask(ctx context.Context, movieJavID, movieCode string, releaseDate int64, now int64) error {
+func (s *Service) ensureSukebeiFetchTask(ctx context.Context, movieJavID, movieName string, releaseDate int64, now int64) error {
 	if row, err := s.deps.SukebeiTorrentFetchModel.FindOneByMovieJavId(ctx, movieJavID); err == nil {
 		if row.ReleaseDate != releaseDate {
 			row.ReleaseDate = releaseDate
@@ -69,9 +69,9 @@ func (s *Service) ensureSukebeiFetchTask(ctx context.Context, movieJavID, movieC
 		return err
 	}
 
-	queryText := BuildSukebeiQuery(movieCode)
+	queryText := BuildSukebeiQuery(movieName)
 	if strings.TrimSpace(queryText) == "" {
-		return fmt.Errorf("invalid movie code for sukebei query: %s", movieCode)
+		return fmt.Errorf("invalid movie code for sukebei query: %s", movieName)
 	}
 
 	baseURL, err := s.BuildURL(FetchSiteCodeSukebei)
@@ -85,7 +85,7 @@ func (s *Service) ensureSukebeiFetchTask(ctx context.Context, movieJavID, movieC
 
 	row := &moviex.TSukebeiTorrentFetch{
 		MovieJavId:      movieJavID,
-		MovieCode:       movieCode,
+		MovieName:       movieName,
 		ReleaseDate:     releaseDate,
 		FetchStatus:     FetchStatusPending,
 		TryCount:        0,

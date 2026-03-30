@@ -15,10 +15,10 @@ type ListMovieFullRequest struct {
 	MakerName    string `form:"mn"`
 	LabelName    string `form:"ln"`
 
-	ReleasingDateStart string `form:"rs"`
-	ReleasingDateEnd   string `form:"re"`
-	FilmBirthTimeStart string `form:"bs"`
-	FilmBirthTimeEnd   string `form:"be"`
+	ReleasingDateStart  string `form:"rs"`
+	ReleasingDateEnd    string `form:"re"`
+	MediaBirthTimeStart string `form:"mbs"`
+	MediaBirthTimeEnd   string `form:"mbe"`
 
 	CastAgeMin float64 `form:"cay"`
 	CastAgeMax float64 `form:"cao"`
@@ -29,7 +29,7 @@ type ListMovieFullRequest struct {
 	DaysInRankMin int64  `form:"drkmin"`
 	NeedDownload  int64  `form:"nd"`
 	Word          string `form:"wd"`
-	Owned         int64  `form:"owned"`
+	MediaOwned    int64  `form:"mowned"`
 
 	ViewWatchedMin int64   `form:"vwmin"`
 	ViewWatchedMax int64   `form:"vwmax"`
@@ -43,10 +43,10 @@ type ListMovieFullRequest struct {
 	ComeTimesMin  int64  `form:"comin"`
 	ComeTimesMax  *int64 `form:"comax"`
 
-	Dir1 string `form:"d1"`
-	Dir2 string `form:"d2"`
-	Dir3 string `form:"d3"`
-	Dir4 string `form:"d4"`
+	MediaDir1 string `form:"md1"`
+	MediaDir2 string `form:"md2"`
+	MediaDir3 string `form:"md3"`
+	MediaDir4 string `form:"md4"`
 
 	OrderBy  string `form:"od"`
 	Order    string `form:"order"`

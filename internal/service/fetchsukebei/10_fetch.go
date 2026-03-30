@@ -16,10 +16,10 @@ const (
 	fetchStatusFailed  = fetchsite.FetchStatusFailed
 )
 
-func (s *Service) FetchMovieTorrents(ctx context.Context, movieJavID, movieCode string) ([]*moviex.TSukebeiTorrent, error) {
-	queryText := fetchsite.BuildSukebeiQuery(movieCode)
+func (s *Service) FetchMovieTorrents(ctx context.Context, movieJavID, movieName string) ([]*moviex.TSukebeiTorrent, error) {
+	queryText := fetchsite.BuildSukebeiQuery(movieName)
 	if queryText == "" {
-		return nil, fmt.Errorf("invalid movie code for sukebei query: %s", movieCode)
+		return nil, fmt.Errorf("invalid movie code for sukebei query: %s", movieName)
 	}
 
 	searchURL, err := s.buildSearchURL(queryText)
@@ -37,16 +37,16 @@ func (s *Service) FetchMovieTorrents(ctx context.Context, movieJavID, movieCode 
 		return nil
 	})
 	if err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, searchURL, attempts, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, searchURL, attempts, err)
 		return nil, err
 	}
 
 	rows, err := parseTorrentRows(movieJavID, queryText, searchURL, string(resp.Body))
 	if err != nil {
-		_ = s.saveFetchFailure(ctx, movieJavID, movieCode, searchURL, attempts, err)
+		_ = s.saveFetchFailure(ctx, movieJavID, movieName, searchURL, attempts, err)
 		return nil, err
 	}
-	if err := s.saveTorrents(ctx, movieJavID, movieCode, searchURL, attempts, rows); err != nil {
+	if err := s.saveTorrents(ctx, movieJavID, movieName, searchURL, attempts, rows); err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -64,9 +64,9 @@ func (s *Service) buildSearchURL(queryText string) (string, error) {
 	return baseURL + "/?" + values.Encode(), nil
 }
 
-func (s *Service) saveTorrents(ctx context.Context, movieJavID, movieCode, sourceURL string, tryCount int64, rows []*moviex.TSukebeiTorrent) error {
+func (s *Service) saveTorrents(ctx context.Context, movieJavID, movieName, sourceURL string, tryCount int64, rows []*moviex.TSukebeiTorrent) error {
 	now := time.Now().Unix()
-	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieCode, sourceURL, now)
+	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieName, sourceURL, now)
 	if err != nil {
 		return err
 	}
@@ -133,9 +133,9 @@ func (s *Service) saveTorrents(ctx context.Context, movieJavID, movieCode, sourc
 	return s.deps.SukebeiTorrentFetchModel.Update(ctx, fetchRow)
 }
 
-func (s *Service) saveFetchFailure(ctx context.Context, movieJavID, movieCode, sourceURL string, tryCount int64, fetchErr error) error {
+func (s *Service) saveFetchFailure(ctx context.Context, movieJavID, movieName, sourceURL string, tryCount int64, fetchErr error) error {
 	now := time.Now().Unix()
-	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieCode, sourceURL, now)
+	fetchRow, err := s.ensureFetchRow(ctx, movieJavID, movieName, sourceURL, now)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func (s *Service) saveFetchFailure(ctx context.Context, movieJavID, movieCode, s
 	return s.deps.SukebeiTorrentFetchModel.Update(ctx, fetchRow)
 }
 
-func (s *Service) ensureFetchRow(ctx context.Context, movieJavID, movieCode, sourceURL string, now int64) (*moviex.TSukebeiTorrentFetch, error) {
+func (s *Service) ensureFetchRow(ctx context.Context, movieJavID, movieName, sourceURL string, now int64) (*moviex.TSukebeiTorrentFetch, error) {
 	row, err := s.deps.SukebeiTorrentFetchModel.FindOneByMovieJavId(ctx, movieJavID)
 	if err == nil {
 		return row, nil
@@ -170,7 +170,7 @@ func (s *Service) ensureFetchRow(ctx context.Context, movieJavID, movieCode, sou
 
 	row = &moviex.TSukebeiTorrentFetch{
 		MovieJavId:        movieJavID,
-		MovieCode:         movieCode,
+		MovieName:         movieName,
 		ReleaseDate:       releaseDate,
 		FetchStatus:       fetchStatusRunning,
 		TryCount:          0,

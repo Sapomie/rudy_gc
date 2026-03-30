@@ -169,6 +169,18 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		out.Owned = determineOwnership(film)
 	}
 
+	mediaRow, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, mv.JavId)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return nil, fmt.Errorf("WMediaModel.FindOneByMovieJavId failed: %w", err)
+	}
+	if mediaRow != nil {
+		media := mapWMediaToTypes(mediaRow)
+		out.WMedia = media
+		out.FilmBirthDateWMedia = tsToDate(media.BirthTime)
+		out.OwnedWMedia = determineOwnershipByState(media.IsRemoved, media.HasSub)
+		out.VideoUrlWMedia = media.FullDir + string(filepath.Separator) + media.FileName
+	}
+
 	if minfo.HighestRank < 1000 {
 		out.HighestRank = minfo.HighestRank
 	}
@@ -272,10 +284,14 @@ func (s *Service) getGenreNames(ctx context.Context, movieJavId string) ([]strin
 }
 
 func determineOwnership(film *types.Film) int64 {
-	if film.IsRemoved == consts.FilmIsRemoved {
+	return determineOwnershipByState(film.IsRemoved, film.HasSub)
+}
+
+func determineOwnershipByState(isRemoved, hasSub int64) int64 {
+	if isRemoved == consts.FilmIsRemoved {
 		return consts.OwnedRemoved
 	}
-	if film.HasSub == consts.FilmHasSub {
+	if hasSub == consts.FilmHasSub {
 		return consts.OwnedHasSubNotRemoved
 	}
 	return consts.OwnedNoSubNotRemoved

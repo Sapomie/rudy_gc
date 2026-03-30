@@ -27,6 +27,9 @@ func (s *Service) buildMovieFetchSiteDetail(ctx context.Context, javID string) (
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
+	if err := s.applyFetchSiteFavoriteStatus(ctx, javID, javbusMagnets, sukebeiTorrents); err != nil {
+		return nil, nil, nil, nil, err
+	}
 	applyMatchedFetchSiteHashes(javbusMagnets, sukebeiTorrents)
 	return javbusFetch, javbusMagnets, sukebeiFetch, sukebeiTorrents, nil
 }
@@ -41,7 +44,7 @@ func (s *Service) buildJavbusFetchStatus(ctx context.Context, javID string) (*ty
 	}
 	return &types.MovieFetchSiteStatus{
 		MovieJavID:        row.MovieJavId,
-		MovieCode:         row.MovieCode,
+		MovieName:         row.MovieName,
 		ReleaseDate:       tsToDate(row.ReleaseDate),
 		FetchStatus:       row.FetchStatus,
 		FetchStatusText:   fetchStatusText(row.FetchStatus),
@@ -66,6 +69,7 @@ func (s *Service) buildJavbusMagnets(ctx context.Context, javID string) ([]*type
 			continue
 		}
 		out = append(out, &types.MovieJavbusMagnet{
+			RowID:       row.Id,
 			MagnetName:  row.MagnetName,
 			MagnetURL:   row.MagnetUrl,
 			InfoHash:    row.InfoHash,
@@ -89,7 +93,7 @@ func (s *Service) buildSukebeiFetchStatus(ctx context.Context, javID string) (*t
 	}
 	return &types.MovieFetchSiteStatus{
 		MovieJavID:        row.MovieJavId,
-		MovieCode:         row.MovieCode,
+		MovieName:         row.MovieName,
 		ReleaseDate:       tsToDate(row.ReleaseDate),
 		FetchStatus:       row.FetchStatus,
 		FetchStatusText:   fetchStatusText(row.FetchStatus),
@@ -114,6 +118,7 @@ func (s *Service) buildSukebeiTorrents(ctx context.Context, javID string) ([]*ty
 			continue
 		}
 		out = append(out, &types.MovieSukebeiTorrent{
+			RowID:        row.Id,
 			TorrentTitle: row.TorrentTitle,
 			ViewURL:      row.ViewUrl,
 			TorrentURL:   row.TorrentUrl,
@@ -204,6 +209,48 @@ func applyMatchedFetchSiteHashes(javbusMagnets []*types.MovieJavbusMagnet, sukeb
 		_, ok := javbusHashes[normalizeInfoHash(row.InfoHash)]
 		row.HasMatchedHash = ok
 	}
+}
+
+func (s *Service) applyFetchSiteFavoriteStatus(ctx context.Context, javID string, javbusMagnets []*types.MovieJavbusMagnet, sukebeiTorrents []*types.MovieSukebeiTorrent) error {
+	if len(javbusMagnets) == 0 && len(sukebeiTorrents) == 0 {
+		return nil
+	}
+
+	items, err := s.ListDefaultAlbumItemsByMovieJavID(ctx, javID)
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 {
+		return nil
+	}
+
+	favorited := make(map[string]struct{}, len(items))
+	for _, row := range items {
+		if row == nil {
+			continue
+		}
+		favorited[favoriteKey(row.SourceType, row.SourceRowId)] = struct{}{}
+	}
+
+	for _, row := range javbusMagnets {
+		if row == nil {
+			continue
+		}
+		_, ok := favorited[favoriteKey(sourceTypeJavbusMagnet, row.RowID)]
+		row.IsFavorited = ok
+	}
+	for _, row := range sukebeiTorrents {
+		if row == nil {
+			continue
+		}
+		_, ok := favorited[favoriteKey(sourceTypeSukebei, row.RowID)]
+		row.IsFavorited = ok
+	}
+	return nil
+}
+
+func favoriteKey(sourceType string, sourceRowID int64) string {
+	return strings.TrimSpace(sourceType) + ":" + fmt.Sprintf("%d", sourceRowID)
 }
 
 func normalizeInfoHash(hash string) string {
