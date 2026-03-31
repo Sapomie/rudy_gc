@@ -83,75 +83,93 @@ func chooseYearBucket(mediaRoot string, now time.Time) (string, string, error) {
 	}
 
 	sort.Slice(yearBuckets, func(i, j int) bool { return yearBuckets[i].seq < yearBuckets[j].seq })
-	latest := yearBuckets[len(yearBuckets)-1]
-	canUseLatest, err := canAllocateInYearBucket(latest.path, now)
-	if err != nil {
-		return "", "", err
-	}
-	if canUseLatest {
-		return latest.path, latest.name, nil
+	for _, bucket := range yearBuckets {
+		canUseBucket, err := canAllocateInYearBucket(bucket.path)
+		if err != nil {
+			return "", "", err
+		}
+		if canUseBucket {
+			return bucket.path, bucket.name, nil
+		}
 	}
 
+	latest := yearBuckets[len(yearBuckets)-1]
 	name := fmt.Sprintf("%s%03d", yearPrefix, latest.seq+1)
 	return filepath.Join(mediaRoot, name), name, nil
 }
 
 func chooseDayBucket(yearPath string, now time.Time) (string, error) {
-	dayPrefix := now.Format("2006-01-02")
-	buckets, err := listDayBuckets(yearPath)
+	bucket, _, found, err := firstAvailableDayBucket(yearPath)
 	if err != nil {
 		return "", err
 	}
-
-	todayBuckets := make([]bucketInfo, 0, 8)
-	for _, bucket := range buckets {
-		if strings.HasPrefix(bucket.name, dayPrefix+"-") {
-			todayBuckets = append(todayBuckets, bucket)
-		}
+	if found {
+		return bucket.name, nil
 	}
 
-	sort.Slice(todayBuckets, func(i, j int) bool { return todayBuckets[i].seq > todayBuckets[j].seq })
-	for _, bucket := range todayBuckets {
-		count, err := countVideoFiles(bucket.path)
-		if err != nil {
-			return "", err
-		}
-		if count < maxFilesPerLeafDir {
-			return bucket.name, nil
-		}
-	}
-
-	if len(buckets) >= maxLeafDirsPerYear {
-		return "", fmt.Errorf("year bucket is full: %s", yearPath)
-	}
-
-	next := 1
-	if len(todayBuckets) > 0 {
-		next = todayBuckets[0].seq + 1
-	}
-	return fmt.Sprintf("%s-%03d", dayPrefix, next), nil
+	return nextDayBucketName(yearPath, now)
 }
 
-func canAllocateInYearBucket(yearPath string, now time.Time) (bool, error) {
-	dayPrefix := now.Format("2006-01-02")
+func canAllocateInYearBucket(yearPath string) (bool, error) {
+	_, _, found, err := firstAvailableDayBucket(yearPath)
+	if err != nil {
+		return false, err
+	}
+	if found {
+		return true, nil
+	}
 	buckets, err := listDayBuckets(yearPath)
 	if err != nil {
 		return false, err
 	}
+	return len(buckets) < maxLeafDirsPerYear, nil
+}
 
+func firstAvailableDayBucket(yearPath string) (bucketInfo, int, bool, error) {
+	buckets, err := listDayBuckets(yearPath)
+	if err != nil {
+		return bucketInfo{}, 0, false, err
+	}
+
+	sort.Slice(buckets, func(i, j int) bool {
+		if buckets[i].name == buckets[j].name {
+			return buckets[i].seq < buckets[j].seq
+		}
+		return buckets[i].name < buckets[j].name
+	})
+
+	for _, bucket := range buckets {
+		count, err := countVideoFiles(bucket.path)
+		if err != nil {
+			return bucketInfo{}, 0, false, err
+		}
+		if count < maxFilesPerLeafDir {
+			return bucket, count, true, nil
+		}
+	}
+	return bucketInfo{}, 0, false, nil
+}
+
+func nextDayBucketName(yearPath string, now time.Time) (string, error) {
+	buckets, err := listDayBuckets(yearPath)
+	if err != nil {
+		return "", err
+	}
+	if len(buckets) >= maxLeafDirsPerYear {
+		return "", fmt.Errorf("year bucket is full: %s", yearPath)
+	}
+
+	dayPrefix := now.Format("2006-01-02")
+	next := 1
 	for _, bucket := range buckets {
 		if !strings.HasPrefix(bucket.name, dayPrefix+"-") {
 			continue
 		}
-		count, err := countVideoFiles(bucket.path)
-		if err != nil {
-			return false, err
-		}
-		if count < maxFilesPerLeafDir {
-			return true, nil
+		if bucket.seq >= next {
+			next = bucket.seq + 1
 		}
 	}
-	return len(buckets) < maxLeafDirsPerYear, nil
+	return fmt.Sprintf("%s-%03d", dayPrefix, next), nil
 }
 
 type bucketInfo struct {
@@ -228,6 +246,9 @@ func countVideoFiles(dir string) (int, error) {
 	count := 0
 	for _, entry := range entries {
 		if entry.IsDir() {
+			continue
+		}
+		if shouldSkipIngestEntryName(entry.Name()) {
 			continue
 		}
 		if isVideoName(entry.Name()) {

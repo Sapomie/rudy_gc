@@ -29,6 +29,9 @@
         <div class="page-content">
             <div class="container-fluid" id="fetchSiteListPage" data-movie-jav-id="{{ .movieType.JavId }}" data-movie-name="{{ .movieType.Name }}">
 
+
+
+
                 <div class="row">
                     <!-- 左侧：海报 + 标题 -->
                     <div class="col-lg-7 mb-3">
@@ -94,7 +97,7 @@
                 </div>
 
                 <!-- FilmInfo -->
-                {{ if eq .hasFilm 2 }}
+                {{ if or (eq .hasFilm 2) .media }}
                     <div class="row mt-3">
                         <div class="col-12">
                             {{ template "partials.md.film_info" . }}
@@ -104,7 +107,237 @@
 
                 <div id="fetchSiteListMsg" class="alert d-none mb-3" role="alert"></div>
 
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title mb-3">资源列表</h5>
+                                <ul class="nav nav-tabs nav-tabs-custom mb-3" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="tab-javbus-magnets" data-bs-toggle="tab" data-bs-target="#pane-javbus-magnets" type="button" role="tab" aria-controls="pane-javbus-magnets" aria-selected="true">
+                                            JavBus 磁力
+                                            {{ if .javbusMagnets }}<span class="badge bg-danger-subtle text-danger fs-6 px-2 py-1 ms-1">({{ len .javbusMagnets }})</span>{{ end }}
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="tab-sukebei-torrents" data-bs-toggle="tab" data-bs-target="#pane-sukebei-torrents" type="button" role="tab" aria-controls="pane-sukebei-torrents" aria-selected="false">
+                                            Sukebei 种子
+                                            {{ if .sukebeiRows }}<span class="badge bg-danger-subtle text-danger fs-6 px-2 py-1 ms-1">({{ len .sukebeiRows }})</span>{{ end }}
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="tab-sehuatang-magnets" data-bs-toggle="tab" data-bs-target="#pane-sehuatang-magnets" type="button" role="tab" aria-controls="pane-sehuatang-magnets" aria-selected="false">
+                                            Sehuatang 磁力
+                                            {{ if .sehuatangRows }}<span class="badge bg-danger-subtle text-danger fs-6 px-2 py-1 ms-1">({{ len .sehuatangRows }})</span>{{ end }}
+                                        </button>
+                                    </li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div class="tab-pane fade show active" id="pane-javbus-magnets" role="tabpanel" aria-labelledby="tab-javbus-magnets">
+                                        {{ if .javbusMagnets }}
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover align-middle mb-0" data-sort-table="javbus-magnets">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>名称</th>
+                                                        <th>
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="javbus-magnets" data-sort-key="size">
+                                                                大小
+                                                            </button>
+                                                        </th>
+                                                        <th>
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="javbus-magnets" data-sort-key="date">
+                                                                日期
+                                                            </button>
+                                                        </th>
+                                                        <th>标签</th>
+                                                        <th>Info Hash</th>
+                                                        <th>相册</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {{ range .javbusMagnets }}
+                                                        <tr{{ if .HasMatchedHash }} class="fetch-site-row-match"{{ end }}>
+                                                            <td>{{ .MagnetName }}</td>
+                                                            <td data-sort-key="size">{{ .SizeText }}</td>
+                                                            <td class="text-nowrap" data-sort-key="date">{{ .ShareDate }}</td>
+                                                            <td class="text-nowrap">
+                                                                {{ if .HasSubtitle }}
+                                                                    <span class="fetch-site-tag-subtitle">字幕</span>
+                                                                {{ else }}
+                                                                    <span class="text-muted">-</span>
+                                                                {{ end }}
+                                                            </td>
+                                                            <td class="text-monospace">{{ .InfoHash }}</td>
+                                                            <td class="text-nowrap">
+                                                                <button type="button" class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
+                                                                        data-source-type="javbus_magnet"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-album-name="下载中"
+                                                                        data-favorited="{{ if .IsInDownload }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsInDownload }}移出下载中{{ else }}下载中{{ end }}">
+                                                                    {{ if .IsInDownload }}已在下载中{{ else }}下载中{{ end }}
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm ms-1 {{ if .IsInPending }}btn-info{{ else }}btn-outline-info{{ end }} js-add-favorite"
+                                                                        data-source-type="javbus_magnet"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-album-name="待下载"
+                                                                        data-favorited="{{ if .IsInPending }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsInPending }}移出待下载{{ else }}待下载{{ end }}">
+                                                                    {{ if .IsInPending }}已在待下载{{ else }}待下载{{ end }}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    {{ end }}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {{ else }}
+                                            <div class="text-muted">暂无 JavBus 磁力数据</div>
+                                        {{ end }}
+                                    </div>
+                                    <div class="tab-pane fade" id="pane-sukebei-torrents" role="tabpanel" aria-labelledby="tab-sukebei-torrents">
+                                        {{ if .sukebeiRows }}
+                                            <div class="fetch-site-detail-sukebei-wrap">
+                                                <table class="table table-sm table-hover align-middle mb-0 fetch-site-detail-sukebei-table" data-sort-table="sukebei-torrents">
+                                                    <colgroup>
+                                                        <col style="width: 501px;">
+                                                        <col style="width: 110px;">
+                                                        <col style="width: 130px;">
+                                                        <col style="width: 90px;">
+                                                        <col style="width: 340px;">
+                                                        <col style="width: 90px;">
+                                                    </colgroup>
+                                                    <thead>
+                                                    <tr>
+                                                        <th class="fetch-site-col-title">标题</th>
+                                                        <th class="fetch-site-col-compact">
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sukebei-torrents" data-sort-key="size">
+                                                                大小
+                                                            </button>
+                                                        </th>
+                                                        <th class="fetch-site-col-compact">
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sukebei-torrents" data-sort-key="date">
+                                                                日期
+                                                            </button>
+                                                        </th>
+                                                        <th class="fetch-site-col-compact">
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sukebei-torrents" data-sort-key="downloads">
+                                                                下载
+                                                            </button>
+                                                        </th>
+                                                        <th class="fetch-site-col-hash">Info Hash</th>
+                                                        <th class="fetch-site-col-compact">相册</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {{ range .sukebeiRows }}
+                                                        <tr{{ if .HasMatchedHash }} class="fetch-site-row-match"{{ end }}>
+                                                            <td class="fetch-site-col-title">
+                                                                <div class="fetch-site-title-content">
+                                                                    {{ if .ViewURL }}<a href="{{ .ViewURL }}" target="_blank" rel="noreferrer">{{ .TorrentTitle }}</a>{{ else }}{{ .TorrentTitle }}{{ end }}
+                                                                </div>
+                                                            </td>
+                                                            <td class="fetch-site-col-compact text-nowrap" data-sort-key="size">{{ .SizeText }}</td>
+                                                            <td class="fetch-site-col-compact text-nowrap" data-sort-key="date">{{ .PublishTime }}</td>
+                                                            <td class="fetch-site-col-compact text-nowrap" data-sort-key="downloads">{{ .Completed }}</td>
+                                                            <td class="fetch-site-col-hash text-monospace">
+                                                                <span class="fetch-site-hash-text" title="{{ .InfoHash }}">{{ .InfoHash }}</span>
+                                                            </td>
+                                                            <td class="fetch-site-col-compact text-nowrap">
+                                                                <button type="button" class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
+                                                                        data-source-type="sukebei_torrent"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-album-name="下载中"
+                                                                        data-favorited="{{ if .IsInDownload }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsInDownload }}移出下载中{{ else }}下载中{{ end }}">
+                                                                    {{ if .IsInDownload }}已在下载中{{ else }}下载中{{ end }}
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm ms-1 {{ if .IsInPending }}btn-info{{ else }}btn-outline-info{{ end }} js-add-favorite"
+                                                                        data-source-type="sukebei_torrent"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-album-name="待下载"
+                                                                        data-favorited="{{ if .IsInPending }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsInPending }}移出待下载{{ else }}待下载{{ end }}">
+                                                                    {{ if .IsInPending }}已在待下载{{ else }}待下载{{ end }}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    {{ end }}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {{ else }}
+                                            <div class="text-muted">暂无 Sukebei 种子数据</div>
+                                        {{ end }}
+                                    </div>
+                                    <div class="tab-pane fade" id="pane-sehuatang-magnets" role="tabpanel" aria-labelledby="tab-sehuatang-magnets">
+                                        {{ if .sehuatangRows }}
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover align-middle mb-0" data-sort-table="sehuatang-magnets">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>帖子标题</th>
+                                                        <th>
+                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sehuatang-magnets" data-sort-key="date">
+                                                                发帖时间
+                                                            </button>
+                                                        </th>
+                                                        <th>Info Hash</th>
+                                                        <th>相册</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {{ range .sehuatangRows }}
+                                                        <tr{{ if .HasMatchedHash }} class="fetch-site-row-match"{{ end }}>
+                                                            <td>
+                                                                {{ if .ThreadURL }}
+                                                                    <a href="{{ .ThreadURL }}" target="_blank" rel="noopener noreferrer">{{ .ThreadTitle }}</a>
+                                                                {{ else }}
+                                                                    {{ .ThreadTitle }}
+                                                                {{ end }}
+                                                            </td>
+                                                            <td class="text-nowrap" data-sort-key="date">{{ .PostTime }}</td>
+                                                            <td class="text-monospace">{{ .InfoHash }}</td>
+                                                            <td class="text-nowrap">
+                                                                <button type="button" class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
+                                                                        data-source-type="sehuatang_magnet"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-album-name="下载中"
+                                                                        data-favorited="{{ if .IsInDownload }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsInDownload }}移出下载中{{ else }}下载中{{ end }}">
+                                                                    {{ if .IsInDownload }}已在下载中{{ else }}下载中{{ end }}
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm ms-1 {{ if .IsInPending }}btn-info{{ else }}btn-outline-info{{ end }} js-add-favorite"
+                                                                        data-source-type="sehuatang_magnet"
+                                                                        data-source-row-id="{{ .RowID }}"
+                                                                        data-album-name="待下载"
+                                                                        data-favorited="{{ if .IsInPending }}1{{ else }}0{{ end }}"
+                                                                        title="{{ if .IsInPending }}移出待下载{{ else }}待下载{{ end }}">
+                                                                    {{ if .IsInPending }}已在待下载{{ else }}待下载{{ end }}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    {{ end }}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {{ else }}
+                                            <div class="text-muted">暂无 Sehuatang 磁力数据</div>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
                 <div class="row mt-3">
+                    <div class="col-12 mb-2 d-flex justify-content-end">
+                        <button type="button" class="btn btn-sm btn-primary js-trigger-both">同时触发 JavBus + Sukebei</button>
+                    </div>
                     <div class="col-12 col-xl-6 mb-3">
                         <div class="card shadow-sm h-100">
                             <div class="card-body">
@@ -158,150 +391,6 @@
                                 {{ else }}
                                     <div class="text-muted">暂无 Sukebei 抓取状态</div>
                                 {{ end }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <div class="card shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title mb-3">资源列表</h5>
-                                <ul class="nav nav-tabs nav-tabs-custom mb-3" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="tab-javbus-magnets" data-bs-toggle="tab" data-bs-target="#pane-javbus-magnets" type="button" role="tab" aria-controls="pane-javbus-magnets" aria-selected="true">
-                                            JavBus 磁力
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="tab-sukebei-torrents" data-bs-toggle="tab" data-bs-target="#pane-sukebei-torrents" type="button" role="tab" aria-controls="pane-sukebei-torrents" aria-selected="false">
-                                            Sukebei 种子
-                                        </button>
-                                    </li>
-                                </ul>
-                                <div class="tab-content">
-                                    <div class="tab-pane fade show active" id="pane-javbus-magnets" role="tabpanel" aria-labelledby="tab-javbus-magnets">
-                                        {{ if .javbusMagnets }}
-                                            <div class="table-responsive">
-                                                <table class="table table-sm table-hover align-middle mb-0" data-sort-table="javbus-magnets">
-                                                    <thead>
-                                                    <tr>
-                                                        <th>名称</th>
-                                                        <th>
-                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="javbus-magnets" data-sort-key="size">
-                                                                大小
-                                                            </button>
-                                                        </th>
-                                                        <th>
-                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="javbus-magnets" data-sort-key="date">
-                                                                日期
-                                                            </button>
-                                                        </th>
-                                                        <th>标签</th>
-                                                        <th>Info Hash</th>
-                                                        <th>下载中</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    {{ range .javbusMagnets }}
-                                                        <tr{{ if .HasMatchedHash }} class="fetch-site-row-match"{{ end }}>
-                                                            <td>{{ .MagnetName }}</td>
-                                                            <td data-sort-key="size">{{ .SizeText }}</td>
-                                                            <td class="text-nowrap" data-sort-key="date">{{ .ShareDate }}</td>
-                                                            <td class="text-nowrap">
-                                                                {{ if .HasSubtitle }}
-                                                                    <span class="fetch-site-tag-subtitle">字幕</span>
-                                                                {{ else }}
-                                                                    <span class="text-muted">-</span>
-                                                                {{ end }}
-                                                            </td>
-                                                            <td class="text-monospace">{{ .InfoHash }}</td>
-                                                            <td class="text-nowrap">
-                                                                <button type="button" class="btn btn-sm {{ if .IsFavorited }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
-                                                                        data-source-type="javbus_magnet"
-                                                                        data-source-row-id="{{ .RowID }}"
-                                                                        data-favorited="{{ if .IsFavorited }}1{{ else }}0{{ end }}"
-                                                                        title="{{ if .IsFavorited }}移出下载中{{ else }}加入下载中{{ end }}">
-                                                                    {{ if .IsFavorited }}已在下载中{{ else }}加入下载中{{ end }}
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    {{ end }}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        {{ else }}
-                                            <div class="text-muted">暂无 JavBus 磁力数据</div>
-                                        {{ end }}
-                                    </div>
-                                    <div class="tab-pane fade" id="pane-sukebei-torrents" role="tabpanel" aria-labelledby="tab-sukebei-torrents">
-                                        {{ if .sukebeiRows }}
-                                            <div class="fetch-site-detail-sukebei-wrap">
-                                                <table class="table table-sm table-hover align-middle mb-0 fetch-site-detail-sukebei-table" data-sort-table="sukebei-torrents">
-                                                    <colgroup>
-                                                        <col style="width: 960px;">
-                                                        <col style="width: 110px;">
-                                                        <col style="width: 130px;">
-                                                        <col style="width: 90px;">
-                                                        <col style="width: 340px;">
-                                                        <col style="width: 90px;">
-                                                    </colgroup>
-                                                    <thead>
-                                                    <tr>
-                                                        <th class="fetch-site-col-title">标题</th>
-                                                        <th class="fetch-site-col-compact">
-                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sukebei-torrents" data-sort-key="size">
-                                                                大小
-                                                            </button>
-                                                        </th>
-                                                        <th class="fetch-site-col-compact">
-                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sukebei-torrents" data-sort-key="date">
-                                                                日期
-                                                            </button>
-                                                        </th>
-                                                        <th class="fetch-site-col-compact">
-                                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none js-sort-table" data-table-id="sukebei-torrents" data-sort-key="downloads">
-                                                                下载
-                                                            </button>
-                                                        </th>
-                                                        <th class="fetch-site-col-hash">Info Hash</th>
-                                                        <th class="fetch-site-col-compact">下载中</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    {{ range .sukebeiRows }}
-                                                        <tr{{ if .HasMatchedHash }} class="fetch-site-row-match"{{ end }}>
-                                                            <td class="fetch-site-col-title">
-                                                                <div class="fetch-site-title-content">
-                                                                    {{ if .ViewURL }}<a href="{{ .ViewURL }}" target="_blank" rel="noreferrer">{{ .TorrentTitle }}</a>{{ else }}{{ .TorrentTitle }}{{ end }}
-                                                                </div>
-                                                            </td>
-                                                            <td class="fetch-site-col-compact text-nowrap" data-sort-key="size">{{ .SizeText }}</td>
-                                                            <td class="fetch-site-col-compact text-nowrap" data-sort-key="date">{{ .PublishTime }}</td>
-                                                            <td class="fetch-site-col-compact text-nowrap" data-sort-key="downloads">{{ .Completed }}</td>
-                                                            <td class="fetch-site-col-hash text-monospace">
-                                                                <span class="fetch-site-hash-text" title="{{ .InfoHash }}">{{ .InfoHash }}</span>
-                                                            </td>
-                                                            <td class="fetch-site-col-compact text-nowrap">
-                                                                <button type="button" class="btn btn-sm {{ if .IsFavorited }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
-                                                                        data-source-type="sukebei_torrent"
-                                                                        data-source-row-id="{{ .RowID }}"
-                                                                        data-favorited="{{ if .IsFavorited }}1{{ else }}0{{ end }}"
-                                                                        title="{{ if .IsFavorited }}移出下载中{{ else }}加入下载中{{ end }}">
-                                                                    {{ if .IsFavorited }}已在下载中{{ else }}加入下载中{{ end }}
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    {{ end }}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        {{ else }}
-                                            <div class="text-muted">暂无 Sukebei 种子数据</div>
-                                        {{ end }}
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"rudy_gc/internal/service/fetchsehuatang"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/taskctx"
 )
@@ -23,6 +24,7 @@ const (
 	TaskSpiderBackfillFetchSite  = "spider_backfill_fetch_site"
 	TaskSpiderFetchJavbus        = "spider_fetch_javbus_resources"
 	TaskSpiderFetchSukebei       = "spider_fetch_sukebei_resources"
+	TaskSpiderFetchSehuatang     = "spider_fetch_sehuatang_magnets"
 	TaskFilmRename               = "film_rename"
 	TaskFilmProcess              = "film_process"
 	TaskScRebuildStats           = "sc_rebuild_stats"
@@ -40,6 +42,11 @@ type StartTaskRequest struct {
 	Name           string `json:"name"`
 	ActorName      string `json:"actor_name"`
 	AutoFetchSite  string `json:"auto_fetch_site"`
+	ListURL        string `json:"list_url"`
+	Keyword        string `json:"keyword"`
+	StartPage      int64  `json:"start_page"`
+	EndPage        int64  `json:"end_page"`
+	PersistMode    string `json:"persist_mode"`
 	Number         int64  `json:"number"`
 	MovieJavID     string `json:"movie_jav_id"`
 	MovieName      string `json:"movie_name"`
@@ -61,6 +68,8 @@ type StartTaskRequest struct {
 	LabelName               string `json:"ln"`
 	ReleasingDateStart      string `json:"rs"`
 	ReleasingDateEnd        string `json:"re"`
+	FilmBirthTimeStart      string `json:"bs"`
+	FilmBirthTimeEnd        string `json:"be"`
 	MediaBirthTimeStart     string `json:"mbs"`
 	MediaBirthTimeEnd       string `json:"mbe"`
 	CastAgeMin              string `json:"cay"`
@@ -70,6 +79,7 @@ type StartTaskRequest struct {
 	DaysInRankMin           string `json:"drkmin"`
 	NeedDownload            string `json:"nd"`
 	Word                    string `json:"wd"`
+	Owned                   string `json:"owned"`
 	MediaOwned              string `json:"mowned"`
 	ViewWatchedMin          string `json:"vwmin"`
 	ViewWatchedMax          string `json:"vwmax"`
@@ -81,6 +91,10 @@ type StartTaskRequest struct {
 	ScTimesMax              string `json:"scmax"`
 	ComeTimesMin            string `json:"comin"`
 	ComeTimesMax            string `json:"comax"`
+	Dir1                    string `json:"d1"`
+	Dir2                    string `json:"d2"`
+	Dir3                    string `json:"d3"`
+	Dir4                    string `json:"d4"`
 	MediaDir1               string `json:"md1"`
 	MediaDir2               string `json:"md2"`
 	MediaDir3               string `json:"md3"`
@@ -270,6 +284,8 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartFetchJavbusResources(req)
 	case TaskSpiderFetchSukebei:
 		return l.StartFetchSukebeiResources(req)
+	case TaskSpiderFetchSehuatang:
+		return l.StartFetchSehuatangMagnets(req)
 	case TaskFilmRename:
 		return l.StartFilmRename()
 	case TaskFilmProcess:
@@ -473,6 +489,55 @@ func (l *FetchLoopService) StartFetchSukebeiResources(req StartTaskRequest) (str
 			durationFilter.LastSuccessDurationDays,
 		)
 		return err
+	})
+}
+
+func (l *FetchLoopService) StartFetchSehuatangMagnets(req StartTaskRequest) (string, error) {
+	return l.startManagedTask(TaskSpiderFetchSehuatang, taskRuntimePolicy{}, func(ctx context.Context) error {
+		listURL := strings.TrimSpace(req.ListURL)
+		keyword := strings.TrimSpace(req.Keyword)
+		startPage := req.StartPage
+		endPage := req.EndPage
+		persistMode := fetchsehuatang.NormalizePersistMode(req.PersistMode)
+		if listURL == "" {
+			listURL = fetchsehuatang.DefaultListURL
+		}
+		if startPage <= 0 {
+			startPage = fetchsehuatang.DefaultStartPage
+		}
+		if endPage <= 0 {
+			endPage = fetchsehuatang.DefaultEndPage
+		}
+
+		msg := fmt.Sprintf("开始抓取 色花堂 磁力链接，页码=%d-%d，模式=%s", startPage, endPage, persistMode)
+		if keyword != "" {
+			msg = fmt.Sprintf("开始抓取 色花堂 磁力链接，页码=%d-%d，模式=%s，关键词=%s", startPage, endPage, persistMode, keyword)
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:   "pipeline_pre",
+			Message: msg,
+		})
+
+		result, err := l.fetchSehuatangSvc.FetchMagnetsFromList(ctx, fetchsehuatang.FetchRequest{
+			ListURL:     listURL,
+			Keyword:     keyword,
+			StartPage:   startPage,
+			EndPage:     endPage,
+			PersistMode: persistMode,
+		})
+		if err != nil {
+			return err
+		}
+
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:        "fetch_sehuatang_done",
+			Message:      fmt.Sprintf("色花堂抓取完成：页码=%d-%d，模式=%s，处理页数=%d，跳过置顶=%d，跳过已存在=%d，匹配=%d，成功=%d，失败=%d，新增=%d，更新=%d，入库失败=%d", result.StartPage, result.EndPage, persistMode, result.HandledPageCount, result.SkippedTopCount, result.SkippedExisting, result.MatchedCount, result.SuccessCount, result.FailedCount, result.InsertedCount, result.UpdatedCount, result.PersistFailCount),
+			HandledCount: result.SuccessCount + result.FailedCount + result.SkippedExisting,
+			SuccessCount: result.SuccessCount,
+			FailedCount:  result.FailedCount,
+			QueuedCount:  result.MatchedCount - result.SuccessCount - result.FailedCount - result.SkippedExisting,
+		})
+		return nil
 	})
 }
 

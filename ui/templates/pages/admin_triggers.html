@@ -77,6 +77,34 @@
                                             <label class="form-check-label" for="task_auto_fetch_site">detail 解析完成后自动抓取 JavBus / Sukebei</label>
                                         </div>
                                     </div>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangListURLFieldWrap">
+                                        <label for="task_sehuatang_list_url">列表页 URL</label>
+                                        <input id="task_sehuatang_list_url" name="list_url" class="form-control" type="text" value="{{ .FetchSehuatangList }}" placeholder="输入 色花堂列表页 URL">
+                                    </div>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangKeywordFieldWrap">
+                                        <label for="task_sehuatang_keyword">标题关键词</label>
+                                        <input id="task_sehuatang_keyword" name="keyword" class="form-control" type="text" value="{{ .FetchSehuatangKey }}" placeholder="可选，留空表示抓取全部普通帖">
+                                    </div>
+
+                                    <div class="form-group compact-field is-hidden" id="fetchSehuatangStartPageFieldWrap">
+                                        <label for="task_sehuatang_start_page">起始页</label>
+                                        <input id="task_sehuatang_start_page" name="start_page" class="form-control" type="number" value="{{ .FetchSehuatangStartPage }}" placeholder="输入起始页">
+                                    </div>
+
+                                    <div class="form-group compact-field is-hidden" id="fetchSehuatangEndPageFieldWrap">
+                                        <label for="task_sehuatang_end_page">结束页</label>
+                                        <input id="task_sehuatang_end_page" name="end_page" class="form-control" type="number" value="{{ .FetchSehuatangEndPage }}" placeholder="输入结束页">
+                                    </div>
+
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangPersistModeFieldWrap">
+                                        <label for="task_sehuatang_persist_mode">入库模式</label>
+                                        <select id="task_sehuatang_persist_mode" name="persist_mode" class="form-select">
+                                            <option value="upsert_all" {{ if eq .FetchSehuatangPersistMode "upsert_all" }}selected{{ end }}>upsert 所有帖子</option>
+                                            <option value="skip_existing" {{ if eq .FetchSehuatangPersistMode "skip_existing" }}selected{{ end }}>跳过数据库中已存在的帖子</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {{ if .ShowMovieFilters }}
@@ -120,6 +148,7 @@
                                                             <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "drk" }} active{{ end }}" data-fetch-site-orderby="drk">在榜天数</button>
                                                             <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "hrk" }} active{{ end }}" data-fetch-site-orderby="hrk">最高排名</button>
                                                             <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "bt" }} active{{ end }}" data-fetch-site-orderby="bt">下载时间</button>
+                                                            <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "mbt" }} active{{ end }}" data-fetch-site-orderby="mbt">Media下载时间</button>
                                                             <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "lsct" }} active{{ end }}" data-fetch-site-orderby="lsct">最后sc</button>
                                                             <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "sc" }} active{{ end }}" data-fetch-site-orderby="sc">sc次数</button>
                                                             <button type="button" class="btn btn-outline-primary flex-fill{{ if eq .MovieCardFilter.OrderBy "co" }} active{{ end }}" data-fetch-site-orderby="co">co次数</button>
@@ -219,6 +248,34 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestFetchJavbusProgressCard" data-phase="fetch_javbus">
+                                            <div class="label">JavBus 抓取进度</div>
+                                            <div class="value" id="dailyBestFetchJavbusProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestFetchJavbusResultCard" data-phase="fetch_javbus">
+                                            <div class="label">JavBus 抓取正确/错误</div>
+                                            <div class="value" id="dailyBestFetchJavbusResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestFetchSukebeiProgressCard" data-phase="fetch_sukebei">
+                                            <div class="label">Sukebei 抓取进度</div>
+                                            <div class="value" id="dailyBestFetchSukebeiProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestFetchSukebeiResultCard" data-phase="fetch_sukebei">
+                                            <div class="label">Sukebei 抓取正确/错误</div>
+                                            <div class="value" id="dailyBestFetchSukebeiResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 {{ else if eq .OverviewExtraMode "fetch_site_summary" }}
                                 <div class="row">
                                     <div class="col-md-6 mb-2">
@@ -243,6 +300,27 @@
                                         <div class="overview-item">
                                             <div class="label">Sukebei 结果（成功/失败）</div>
                                             <div class="value" id="fetchSiteSukebeiResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{ else if eq .OverviewExtraMode "sehuatang_progress" }}
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">抓取进度（总/完成）</div>
+                                            <div class="value" id="sehuatangProgressText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">{{ .Labels.Result }}</div>
+                                            <div class="value" id="resultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">{{ .Labels.Elapsed }}</div>
+                                            <div class="value" id="elapsedText">00:00</div>
                                         </div>
                                     </div>
                                 </div>
@@ -317,13 +395,15 @@
                                                     {{ end }}
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    {{ if eq .SourceType "javbus_magnet" }}
-                                                        <span class="badge bg-primary-subtle text-primary">JavBus</span>
-                                                    {{ else if eq .SourceType "sukebei_torrent" }}
-                                                        <span class="badge bg-danger-subtle text-danger">Sukebei</span>
-                                                    {{ else }}
-                                                        <span class="badge bg-secondary-subtle text-secondary">{{ .SourceLabel }}</span>
-                                                    {{ end }}
+                                                {{ if eq .SourceType "javbus_magnet" }}
+                                                    <span class="badge bg-primary-subtle text-primary">JavBus</span>
+                                                {{ else if eq .SourceType "sukebei_torrent" }}
+                                                    <span class="badge bg-danger-subtle text-danger">Sukebei</span>
+                                                {{ else if eq .SourceType "sehuatang_magnet" }}
+                                                    <span class="badge bg-warning-subtle text-warning">Sehuatang</span>
+                                                {{ else }}
+                                                    <span class="badge bg-secondary-subtle text-secondary">{{ .SourceLabel }}</span>
+                                                {{ end }}
                                                 </td>
                                                 <td class="text-nowrap">{{ if .Size }}{{ .Size }}{{ else }}-{{ end }}</td>
                                             </tr>
@@ -374,6 +454,13 @@ window.CRAWLER_JOBS_PAGE_DATA = {
     defaultTaskType: {{ .DefaultTaskType }},
     overviewExtraMode: {{ .OverviewExtraMode }},
     emptyStateText: {{ .EmptyStateText }},
+    fetchSehuatangDefaults: {
+        listUrl: {{ .FetchSehuatangList }},
+        keyword: {{ .FetchSehuatangKey }},
+        startPage: {{ .FetchSehuatangStartPage }},
+        endPage: {{ .FetchSehuatangEndPage }},
+        persistMode: {{ .FetchSehuatangPersistMode }}
+    },
     allowedTaskTypes: [
         {{- range $index, $item := .AllowedTaskTypes }}
         {{- if $index }}, {{ end }}{{ $item }}

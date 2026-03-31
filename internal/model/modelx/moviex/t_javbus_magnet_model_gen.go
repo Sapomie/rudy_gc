@@ -44,13 +44,9 @@ type (
 	TJavbusMagnet struct {
 		Id           int64  `db:"id"`
 		MovieJavId   string `db:"movie_jav_id"`
-		PageUrl      string `db:"page_url"`
 		MagnetName   string `db:"magnet_name"`
-		MagnetUrl    string `db:"magnet_url"`
 		InfoHash     string `db:"info_hash"`
-		Dn           string `db:"dn"`
 		SizeBytes    int64  `db:"size_bytes"`
-		SizeText     string `db:"size_text"`
 		ShareDate    int64  `db:"share_date"`
 		HasHd        int64  `db:"has_hd"`
 		HasSubtitle  int64  `db:"has_subtitle"`
@@ -124,8 +120,8 @@ func (m *defaultTJavbusMagnetModel) Insert(ctx context.Context, data *TJavbusMag
 	rudyGcTJavbusMagnetIdKey := fmt.Sprintf("%s%v", cacheRudyGcTJavbusMagnetIdPrefix, data.Id)
 	rudyGcTJavbusMagnetMovieJavIdInfoHashKey := fmt.Sprintf("%s%v:%v", cacheRudyGcTJavbusMagnetMovieJavIdInfoHashPrefix, data.MovieJavId, data.InfoHash)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tJavbusMagnetRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.PageUrl, data.MagnetName, data.MagnetUrl, data.InfoHash, data.Dn, data.SizeBytes, data.SizeText, data.ShareDate, data.HasHd, data.HasSubtitle, data.RowSort, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tJavbusMagnetRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MagnetName, data.InfoHash, data.SizeBytes, data.ShareDate, data.HasHd, data.HasSubtitle, data.RowSort, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcTJavbusMagnetIdKey, rudyGcTJavbusMagnetMovieJavIdInfoHashKey)
 	return ret, err
 }
@@ -140,7 +136,7 @@ func (m *defaultTJavbusMagnetModel) Update(ctx context.Context, newData *TJavbus
 	rudyGcTJavbusMagnetMovieJavIdInfoHashKey := fmt.Sprintf("%s%v:%v", cacheRudyGcTJavbusMagnetMovieJavIdInfoHashPrefix, data.MovieJavId, data.InfoHash)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, tJavbusMagnetRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.PageUrl, newData.MagnetName, newData.MagnetUrl, newData.InfoHash, newData.Dn, newData.SizeBytes, newData.SizeText, newData.ShareDate, newData.HasHd, newData.HasSubtitle, newData.RowSort, newData.LastSeenTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MagnetName, newData.InfoHash, newData.SizeBytes, newData.ShareDate, newData.HasHd, newData.HasSubtitle, newData.RowSort, newData.LastSeenTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcTJavbusMagnetIdKey, rudyGcTJavbusMagnetMovieJavIdInfoHashKey)
 	return err
 }

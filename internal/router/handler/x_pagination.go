@@ -34,49 +34,65 @@ type OwnedLink struct {
 	Active bool
 }
 type OwnedQuery struct {
-	All      OwnedLink // mowned=0
-	Owned    OwnedLink // mowned=5  (按你旧逻辑)
-	NotOwned OwnedLink // mowned=1
+	All           OwnedLink // owned=1 (按现有逻辑)
+	Owned         OwnedLink // owned=3
+	MediaOwned    OwnedLink // mowned=3
+	NotOwned      OwnedLink // owned=7
+	MediaNotOwned OwnedLink // mowned=7
 }
 
 func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
-	// 当前 mowned
-	curOwned := c.Query("mowned")
+	curOwned := c.Query("owned")
+	curMediaOwned := c.Query("mowned")
 
-	// 工具：基于当前 URL 复制参数、覆写 mowned & page，并返回完整链接
-	makeHref := func(ownedVal string) (href string, active bool) {
-		// 拿到一份可修改的副本
+	makeHref := func(mutator func(q mapSetter)) string {
 		q := c.Request.URL.Query()
-
-		// 切换筛选时回到第一页
 		q.Set("p", "1")
-
-		if ownedVal == "" {
-			q.Del("mowned")
-			active = (curOwned == "" || curOwned == "0") // 无参或0都视为 All
-		} else {
-			q.Set("mowned", ownedVal)
-			active = (curOwned == ownedVal)
-		}
-
+		mutator(q)
 		path := c.Request.URL.Path
 		if enc := q.Encode(); enc != "" {
-			href = path + "?" + enc
-		} else {
-			href = path
+			return path + "?" + enc
 		}
-		return
+		return path
 	}
 
-	allHref, allAct := makeHref("1")
-	ownedHref, ownedAct := makeHref("3")
-	notHref, notAct := makeHref("3")
+	// AllMovie：两维都回到 All（1），避免落回 base 默认值。
+	allHref := makeHref(func(q mapSetter) {
+		q.Set("owned", "1")
+		q.Set("mowned", "1")
+	})
+	ownedHref := makeHref(func(q mapSetter) {
+		q.Set("owned", "3")
+	})
+	mediaOwnedHref := makeHref(func(q mapSetter) {
+		q.Set("mowned", "3")
+	})
+	notHref := makeHref(func(q mapSetter) {
+		q.Set("owned", "7")
+	})
+	mediaNotOwnedHref := makeHref(func(q mapSetter) {
+		q.Set("mowned", "7")
+	})
+
+	allAct := (curOwned == "" || curOwned == "1") && (curMediaOwned == "" || curMediaOwned == "1")
+	ownedAct := curOwned == "3"
+	mediaOwnedAct := curMediaOwned == "3"
+	notAct := curOwned == "7"
+	mediaNotAct := curMediaOwned == "7"
 
 	return &OwnedQuery{
-		All:      OwnedLink{Href: allHref, Active: allAct},
-		Owned:    OwnedLink{Href: ownedHref, Active: ownedAct},
-		NotOwned: OwnedLink{Href: notHref, Active: notAct},
+		All:           OwnedLink{Href: allHref, Active: allAct},
+		Owned:         OwnedLink{Href: ownedHref, Active: ownedAct},
+		MediaOwned:    OwnedLink{Href: mediaOwnedHref, Active: mediaOwnedAct},
+		NotOwned:      OwnedLink{Href: notHref, Active: notAct},
+		MediaNotOwned: OwnedLink{Href: mediaNotOwnedHref, Active: mediaNotAct},
 	}
+}
+
+type mapSetter interface {
+	Del(key string)
+	Set(key, value string)
+	Encode() string
 }
 
 func BuildPageInfo(c *gin.Context, total, page, pageSize int64, window int) *PageInfo {

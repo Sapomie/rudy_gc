@@ -47,7 +47,7 @@ func (s *Service) FetchMovieMagnets(ctx context.Context, movieJavID, movieName s
 		return nil, err
 	}
 
-	magnets, err := parseMagnetRows(movieJavID, ajaxURL, string(resp.Body))
+	magnets, err := parseMagnetRows(movieJavID, string(resp.Body))
 	if err != nil {
 		_ = s.saveFetchFailure(ctx, movieJavID, movieName, ajaxURL, attempts, err)
 		return nil, err
@@ -109,12 +109,8 @@ func (s *Service) saveMagnets(ctx context.Context, movieJavID, movieName, source
 			continue
 		}
 
-		oldRow.PageUrl = magnet.PageUrl
 		oldRow.MagnetName = magnet.MagnetName
-		oldRow.MagnetUrl = magnet.MagnetUrl
-		oldRow.Dn = magnet.Dn
 		oldRow.SizeBytes = magnet.SizeBytes
-		oldRow.SizeText = magnet.SizeText
 		oldRow.ShareDate = magnet.ShareDate
 		oldRow.HasHd = magnet.HasHd
 		oldRow.HasSubtitle = magnet.HasSubtitle

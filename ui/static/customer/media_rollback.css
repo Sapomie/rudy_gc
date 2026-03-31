@@ -1,0 +1,35 @@
+#msgArea {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: none;
+}
+
+.root-list {
+    padding-left: 1rem;
+}
+
+.root-list li {
+    margin-bottom: 0.25rem;
+}
+
+.overview-item .label {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.overview-item .value {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}

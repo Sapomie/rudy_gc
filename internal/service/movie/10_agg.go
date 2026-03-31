@@ -32,10 +32,10 @@ const (
 func (s *Service) BuildOwnedAggView(ctx context.Context, p AggParams) (*AggResult, error) {
 	level := detectLevel(p.Year, p.Quarter, p.Month)
 	req := &types.ListMovieFullRequest{
-		MediaOwned: consts.OwnedAllNotRemoved,
-		OrderBy:    p.OrderBy,
-		Page:       int64(p.Page),
-		PageSize:   int64(p.Size),
+		Owned:    consts.OwnedAllNotRemoved,
+		OrderBy:  p.OrderBy,
+		Page:     int64(p.Page),
+		PageSize: int64(p.Size),
 	}
 
 	var start, end string
@@ -50,7 +50,7 @@ func (s *Service) BuildOwnedAggView(ctx context.Context, p AggParams) (*AggResul
 		end = lastDayOfMonth(p.Year, p.Month).Format("2006-01-02")
 	}
 	if p.Mode == "birth" {
-		req.MediaBirthTimeStart, req.MediaBirthTimeEnd = start, end
+		req.FilmBirthTimeStart, req.FilmBirthTimeEnd = start, end
 	} else {
 		req.ReleasingDateStart, req.ReleasingDateEnd = start, end
 	}
@@ -116,10 +116,10 @@ func (s *Service) BuildOwnedAggView(ctx context.Context, p AggParams) (*AggResul
 func (s *Service) BuildAllReleaseAggView(ctx context.Context, p AggParams) (*AggResult, error) {
 	level := detectLevel(p.Year, p.Quarter, p.Month)
 	req := &types.ListMovieFullRequest{
-		MediaOwned: consts.MovieAll,
-		OrderBy:    p.OrderBy,
-		Page:       int64(p.Page),
-		PageSize:   int64(p.Size),
+		Owned:    consts.MovieAll,
+		OrderBy:  p.OrderBy,
+		Page:     int64(p.Page),
+		PageSize: int64(p.Size),
 	}
 
 	var start, end string
@@ -137,10 +137,10 @@ func (s *Service) BuildAllReleaseAggView(ctx context.Context, p AggParams) (*Agg
 
 	if level == levelRoot {
 		alt := types.ListMovieFullRequest{
-			MediaOwned: consts.OwnedAllNotRemoved,
-			OrderBy:    orderByRelease,
-			Page:       1,
-			PageSize:   999999,
+			Owned:    consts.OwnedAllNotRemoved,
+			OrderBy:  orderByRelease,
+			Page:     1,
+			PageSize: 999999,
 		}
 		altResp, err := s.ListMovieFull(ctx, &alt)
 		if err != nil {

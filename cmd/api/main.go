@@ -27,7 +27,7 @@ func main() {
 	c := config.MustLoad(*configFile)
 
 	// 2) 关闭 go-zero 自带日志（你已有）
-	//logx.DisableStat()
+	logx.DisableStat()
 	logx.Disable()
 
 	// 3) 构建依赖

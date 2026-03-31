@@ -4,6 +4,7 @@
     {{ if .OrderBy }}<input type="hidden" name="od" value="{{ .OrderBy }}" data-explicit="{{ if index $explicit "od" }}1{{ else }}0{{ end }}">{{ end }}
     {{ if .RandomCount }}<input type="hidden" name="n" value="{{ .RandomCount }}" data-explicit="{{ if index $explicit "n" }}1{{ else }}0{{ end }}">{{ end }}
     {{ if .PersonIds }}<input type="hidden" name="pid" value="{{ .PersonIds }}" data-explicit="{{ if index $explicit "pid" }}1{{ else }}0{{ end }}">{{ end }}
+    {{ if .MediaOwned }}<input type="hidden" name="mowned" value="{{ .MediaOwned }}" data-explicit="{{ if index $explicit "mowned" }}1{{ else }}0{{ end }}">{{ end }}
 
     <div class="col-12 col-md-6 col-xl-2">
         <label class="form-label mb-1">演员</label>
@@ -36,14 +37,14 @@
     </div>
     <div class="col-12 col-md-6 col-xl-2">
         <label class="form-label mb-1">库存状态</label>
-        <select class="form-select" name="mowned" data-explicit="{{ if index $explicit "mowned" }}1{{ else }}0{{ end }}">
-            <option value="" {{ if eq .MediaOwned "" }}selected{{ end }}>全部</option>
-            <option value="1" {{ if eq .MediaOwned "1" }}selected{{ end }}>全部电影</option>
-            <option value="2" {{ if eq .MediaOwned "2" }}selected{{ end }}>全部库存</option>
-            <option value="3" {{ if eq .MediaOwned "3" }}selected{{ end }}>已拥有未移除</option>
-            <option value="4" {{ if eq .MediaOwned "4" }}selected{{ end }}>有字幕未移除</option>
-            <option value="5" {{ if eq .MediaOwned "5" }}selected{{ end }}>无字幕未移除</option>
-            <option value="6" {{ if eq .MediaOwned "6" }}selected{{ end }}>已移除</option>
+        <select class="form-select" name="owned" data-explicit="{{ if index $explicit "owned" }}1{{ else }}0{{ end }}">
+            <option value="" {{ if eq .Owned "" }}selected{{ end }}>全部</option>
+            <option value="1" {{ if eq .Owned "1" }}selected{{ end }}>全部电影</option>
+            <option value="2" {{ if eq .Owned "2" }}selected{{ end }}>全部库存</option>
+            <option value="3" {{ if eq .Owned "3" }}selected{{ end }}>已拥有未移除</option>
+            <option value="4" {{ if eq .Owned "4" }}selected{{ end }}>有字幕未移除</option>
+            <option value="5" {{ if eq .Owned "5" }}selected{{ end }}>无字幕未移除</option>
+            <option value="6" {{ if eq .Owned "6" }}selected{{ end }}>已移除</option>
         </select>
     </div>
     <div class="col-12 col-md-6 col-xl-2">
@@ -61,19 +62,19 @@
     {{ if not .HideDirs }}
         <div class="col-12 col-md-6 col-xl-2">
             <label class="form-label mb-1">目录 1</label>
-            <input class="form-control" type="text" name="md1" value="{{ .MediaDir1 }}" placeholder="目录名" data-explicit="{{ if index $explicit "md1" }}1{{ else }}0{{ end }}">
+            <input class="form-control" type="text" name="d1" value="{{ .Dir1 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d1" }}1{{ else }}0{{ end }}">
         </div>
         <div class="col-12 col-md-6 col-xl-2">
             <label class="form-label mb-1">目录 2</label>
-            <input class="form-control" type="text" name="md2" value="{{ .MediaDir2 }}" placeholder="目录名" data-explicit="{{ if index $explicit "md2" }}1{{ else }}0{{ end }}">
+            <input class="form-control" type="text" name="d2" value="{{ .Dir2 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d2" }}1{{ else }}0{{ end }}">
         </div>
         <div class="col-12 col-md-6 col-xl-2">
             <label class="form-label mb-1">目录 3</label>
-            <input class="form-control" type="text" name="md3" value="{{ .MediaDir3 }}" placeholder="目录名" data-explicit="{{ if index $explicit "md3" }}1{{ else }}0{{ end }}">
+            <input class="form-control" type="text" name="d3" value="{{ .Dir3 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d3" }}1{{ else }}0{{ end }}">
         </div>
         <div class="col-12 col-md-6 col-xl-2">
             <label class="form-label mb-1">目录 4</label>
-            <input class="form-control" type="text" name="md4" value="{{ .MediaDir4 }}" placeholder="目录名" data-explicit="{{ if index $explicit "md4" }}1{{ else }}0{{ end }}">
+            <input class="form-control" type="text" name="d4" value="{{ .Dir4 }}" placeholder="目录名" data-explicit="{{ if index $explicit "d4" }}1{{ else }}0{{ end }}">
         </div>
     {{ end }}
 
@@ -92,10 +93,10 @@
         <label class="form-label mb-1">影片时间</label>
         <div class="row g-2">
             <div class="col-6">
-                <input class="form-control" type="date" name="mbs" value="{{ .MediaBirthTimeStart }}" data-explicit="{{ if index $explicit "mbs" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="date" name="bs" value="{{ .FilmBirthTimeStart }}" data-explicit="{{ if index $explicit "bs" }}1{{ else }}0{{ end }}">
             </div>
             <div class="col-6">
-                <input class="form-control" type="date" name="mbe" value="{{ .MediaBirthTimeEnd }}" data-explicit="{{ if index $explicit "mbe" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="date" name="be" value="{{ .FilmBirthTimeEnd }}" data-explicit="{{ if index $explicit "be" }}1{{ else }}0{{ end }}">
             </div>
         </div>
     </div>

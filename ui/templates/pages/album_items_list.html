@@ -63,6 +63,7 @@
                                     <option value="" {{ if eq .Query.SourceType "" }}selected{{ end }}>全部</option>
                                     <option value="javbus_magnet" {{ if eq .Query.SourceType "javbus_magnet" }}selected{{ end }}>JavBus 磁力</option>
                                     <option value="sukebei_torrent" {{ if eq .Query.SourceType "sukebei_torrent" }}selected{{ end }}>Sukebei 种子</option>
+                                    <option value="sehuatang_magnet" {{ if eq .Query.SourceType "sehuatang_magnet" }}selected{{ end }}>Sehuatang 磁力</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
@@ -102,6 +103,9 @@
                             <div class="d-flex flex-wrap gap-2">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btnBatchCopyAlbumHashes" disabled>
                                     批量复制 Hash
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnBatchMoveAlbumItems" disabled>
+                                    批量移动
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" id="btnBatchRemoveAlbumItems" disabled>
                                     批量移除
@@ -155,6 +159,8 @@
                                                     <span class="badge bg-primary-subtle text-primary">JavBus</span>
                                                 {{ else if eq .SourceType "sukebei_torrent" }}
                                                     <span class="badge bg-danger-subtle text-danger">Sukebei</span>
+                                                {{ else if eq .SourceType "sehuatang_magnet" }}
+                                                    <span class="badge bg-warning-subtle text-warning">Sehuatang</span>
                                                 {{ else }}
                                                     <span class="badge bg-secondary-subtle text-secondary">未知</span>
                                                 {{ end }}
@@ -197,6 +203,33 @@
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
                                 <button type="button" class="btn btn-danger" id="albumBatchRemoveConfirmBtn">确认移除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="albumBatchMoveModal" tabindex="-1" aria-labelledby="albumBatchMoveModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="albumBatchMoveModalLabel">批量移动确认</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label class="form-label mb-1" for="albumBatchMoveTarget">目标相册</label>
+                                <select class="form-select" id="albumBatchMoveTarget">
+                                    <option value="">请选择目标相册</option>
+                                    {{ range .Albums }}
+                                        {{ if and (gt .ID 0) (ne .ID $.SelectedAlbumID) }}
+                                            <option value="{{ .ID }}">{{ .Name }}</option>
+                                        {{ end }}
+                                    {{ end }}
+                                </select>
+                                <p class="text-muted small mt-2 mb-0">将已选中的 <span id="albumBatchMoveCount">0</span> 条记录移动到目标相册。</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="albumBatchMoveConfirmBtn">确认移动</button>
                             </div>
                         </div>
                     </div>

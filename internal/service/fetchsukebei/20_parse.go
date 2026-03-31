@@ -12,7 +12,7 @@ import (
 
 var sukebeiViewIDPattern = regexp.MustCompile(`/view/(\d+)`)
 
-func parseTorrentRows(movieJavID, queryText, searchURL, html string) ([]*moviex.TSukebeiTorrent, error) {
+func parseTorrentRows(movieJavID, queryText, html string) ([]*moviex.TSukebeiTorrent, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
 		return nil, err
@@ -43,22 +43,6 @@ func parseTorrentRows(movieJavID, queryText, searchURL, html string) ([]*moviex.
 			return
 		}
 
-		torrentURL := ""
-		magnetURL := ""
-		sel.Find("a").Each(func(_ int, a *goquery.Selection) {
-			href, ok := a.Attr("href")
-			if !ok {
-				return
-			}
-			if strings.HasPrefix(href, "magnet:") {
-				magnetURL = href
-				return
-			}
-			if strings.HasSuffix(href, ".torrent") || strings.Contains(href, "/download/") {
-				torrentURL = href
-			}
-		})
-
 		sizeText := strings.TrimSpace(tds.Eq(3).Text())
 		publishText := strings.TrimSpace(tds.Eq(4).Text())
 		if dataTs, ok := tds.Eq(4).Attr("data-timestamp"); ok && strings.TrimSpace(dataTs) != "" {
@@ -68,16 +52,10 @@ func parseTorrentRows(movieJavID, queryText, searchURL, html string) ([]*moviex.
 		row := &moviex.TSukebeiTorrent{
 			MovieJavId:   movieJavID,
 			QueryText:    queryText,
-			SearchUrl:    searchURL,
 			TorrentTitle: title,
 			ViewId:       viewID,
-			ViewUrl:      absoluteSukebeiURL(viewHref),
-			TorrentUrl:   absoluteSukebeiURL(torrentURL),
-			MagnetUrl:    magnetURL,
-			InfoHash:     fetchsite.ParseInfoHash(magnetURL),
-			Dn:           fetchsite.ParseDN(magnetURL),
+			InfoHash:     extractInfoHash(sel),
 			SizeBytes:    fetchsite.ParseSizeBytes(sizeText),
-			SizeText:     sizeText,
 			PublishTime:  fetchsite.ParseDateTime(publishText),
 			Seeders:      fetchsite.ParseInt64(tds.Eq(5).Text()),
 			Leechers:     fetchsite.ParseInt64(tds.Eq(6).Text()),
@@ -92,6 +70,19 @@ func parseTorrentRows(movieJavID, queryText, searchURL, html string) ([]*moviex.
 	return rows, nil
 }
 
+func extractInfoHash(sel *goquery.Selection) string {
+	infoHash := ""
+	sel.Find("a").EachWithBreak(func(_ int, a *goquery.Selection) bool {
+		href, ok := a.Attr("href")
+		if !ok || !strings.HasPrefix(href, "magnet:") {
+			return true
+		}
+		infoHash = fetchsite.ParseInfoHash(href)
+		return false
+	})
+	return infoHash
+}
+
 func parseViewID(viewHref string) int64 {
 	trimmed := strings.TrimSpace(viewHref)
 	if trimmed == "" {
@@ -102,15 +93,4 @@ func parseViewID(viewHref string) int64 {
 		return 0
 	}
 	return fetchsite.ParseInt64(matches[1])
-}
-
-func absoluteSukebeiURL(raw string) string {
-	text := strings.TrimSpace(raw)
-	if text == "" {
-		return ""
-	}
-	if strings.HasPrefix(text, "http://") || strings.HasPrefix(text, "https://") || strings.HasPrefix(text, "magnet:") {
-		return text
-	}
-	return "https://sukebei.nyaa.si" + text
 }

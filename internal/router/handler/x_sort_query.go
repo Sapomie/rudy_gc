@@ -20,6 +20,7 @@ var allowedOrderBy = map[string]struct{}{
 	consts.OrderByHighestRank:      {},
 	consts.OrderByDaysInRank:       {},
 	consts.OrderByBirthTime:        {},
+	consts.OrderByMediaBirthTime:   {},
 	consts.OrderByScTimes:          {},
 	consts.OrderByComeTimes:        {},
 	consts.OrderByLastScTime:       {},
@@ -49,18 +50,19 @@ type SortLink struct {
 }
 
 type SortQuery struct {
-	ByDetailUpdate SortLink // du  按 detail 更新时间
-	ByReleasing    SortLink // rd  上映日期
-	ByViewer       SortLink // vw  观看人数
-	ByDaysInRank   SortLink // drk 在榜天数
-	ByHighestRank  SortLink // hrk 最高排名
-	ByRankDate     SortLink // rk  首次上榜日期
-	ByScTimes      SortLink // sc  评分次数
-	ByLastScTime   SortLink // lsct 最后评分时间
-	ByBirthTime    SortLink // bt  拍摄时间
-	ByCastAgeDesc  SortLink // cad 年龄倒序
-	ByCastAgeAsc   SortLink // caa 年龄正序
-	ByComeTimes    SortLink // co  出现次数
+	ByDetailUpdate   SortLink // du  按 detail 更新时间
+	ByReleasing      SortLink // rd  上映日期
+	ByViewer         SortLink // vw  观看人数
+	ByDaysInRank     SortLink // drk 在榜天数
+	ByHighestRank    SortLink // hrk 最高排名
+	ByRankDate       SortLink // rk  首次上榜日期
+	ByScTimes        SortLink // sc  评分次数
+	ByLastScTime     SortLink // lsct 最后评分时间
+	ByBirthTime      SortLink // bt  vfilm 下载时间
+	ByMediaBirthTime SortLink // mbt w_media 下载时间
+	ByCastAgeDesc    SortLink // cad 年龄倒序
+	ByCastAgeAsc     SortLink // caa 年龄正序
+	ByComeTimes      SortLink // co  出现次数
 }
 
 // 构造带 od 的链接（保留其它参数，并把 p 重置为 1）
@@ -85,23 +87,25 @@ func buildSortQuery(c *gin.Context, currentOD string) *SortQuery {
 	sc, a6 := makeHref(consts.OrderByScTimes)
 	lsct, a7 := makeHref(consts.OrderByLastScTime)
 	bt, a8 := makeHref(consts.OrderByBirthTime)
-	cad, a9 := makeHref(consts.OrderByCastAgeDesc)
-	caa, a10 := makeHref(consts.OrderByCastAgeAsc)
-	co, a11 := makeHref(consts.OrderByComeTimes)
+	mbt, a9 := makeHref(consts.OrderByMediaBirthTime)
+	cad, a10 := makeHref(consts.OrderByCastAgeDesc)
+	caa, a11 := makeHref(consts.OrderByCastAgeAsc)
+	co, a12 := makeHref(consts.OrderByComeTimes)
 
 	return &SortQuery{
-		ByDetailUpdate: SortLink{Href: du, Active: a0},
-		ByReleasing:    SortLink{Href: rd, Active: a1},
-		ByViewer:       SortLink{Href: vw, Active: a2},
-		ByDaysInRank:   SortLink{Href: drk, Active: a3},
-		ByHighestRank:  SortLink{Href: hrk, Active: a4},
-		ByRankDate:     SortLink{Href: rk, Active: a5},
-		ByScTimes:      SortLink{Href: sc, Active: a6},
-		ByLastScTime:   SortLink{Href: lsct, Active: a7},
-		ByBirthTime:    SortLink{Href: bt, Active: a8},
-		ByCastAgeDesc:  SortLink{Href: cad, Active: a9},
-		ByCastAgeAsc:   SortLink{Href: caa, Active: a10},
-		ByComeTimes:    SortLink{Href: co, Active: a11},
+		ByDetailUpdate:   SortLink{Href: du, Active: a0},
+		ByReleasing:      SortLink{Href: rd, Active: a1},
+		ByViewer:         SortLink{Href: vw, Active: a2},
+		ByDaysInRank:     SortLink{Href: drk, Active: a3},
+		ByHighestRank:    SortLink{Href: hrk, Active: a4},
+		ByRankDate:       SortLink{Href: rk, Active: a5},
+		ByScTimes:        SortLink{Href: sc, Active: a6},
+		ByLastScTime:     SortLink{Href: lsct, Active: a7},
+		ByBirthTime:      SortLink{Href: bt, Active: a8},
+		ByMediaBirthTime: SortLink{Href: mbt, Active: a9},
+		ByCastAgeDesc:    SortLink{Href: cad, Active: a10},
+		ByCastAgeAsc:     SortLink{Href: caa, Active: a11},
+		ByComeTimes:      SortLink{Href: co, Active: a12},
 	}
 }
 

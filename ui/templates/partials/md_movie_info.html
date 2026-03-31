@@ -11,6 +11,13 @@
                 {{else if eq .movieType.Owned 6}}
                     <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-secondary mr-1">Removed</a>
                 {{end}}
+                {{if eq .movieType.OwnedWMedia 5}}
+                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-outline-primary mr-1">MPlay</a>
+                {{else if eq .movieType.OwnedWMedia 4}}
+                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-primary mr-1">MPlay</a>
+                {{else if eq .movieType.OwnedWMedia 6}}
+                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-outline-secondary mr-1">MRemoved</a>
+                {{end}}
                 <small class="text-muted">({{.movieType.EncodeName}})</small>
             </td>
         </tr>

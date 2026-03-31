@@ -231,14 +231,14 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
                                             {{ range $i, $c := .TopCasts }}
-                                                {{ $u := (printf "/cards?cn=%s&mowned=3" (urlquery $c.Name)) }}
-                                                {{ if gt $c.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&mowned=3" $c.PersonId) }}{{ end }}
+                                                {{ $u := (printf "/cards?cn=%s&owned=3" (urlquery $c.Name)) }}
+                                                {{ if gt $c.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&owned=3" $c.PersonId) }}{{ end }}
                                                 {{ if eq $mode "release" }}
                                                     {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                     {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 {{ else }}
-                                                    {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
-                                                    {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
                                                 {{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none" title="{{ $c.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
                                                     <div class="card shadow-sm" style="background-color:#f8f9fa;">
@@ -264,13 +264,13 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
                                             {{ range $i, $it := .TopDirectors }}
-                                                {{ $u := (printf "/cards?dn=%s&mowned=3" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?dn=%s&owned=3" (urlquery $it.Name)) }}
                                                 {{ if eq $mode "release" }}
                                                     {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                     {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 {{ else }}
-                                                    {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
-                                                    {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
                                                 {{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
                                                     <div class="card shadow-sm" style="background-color:#f8f9fa;">
@@ -296,13 +296,13 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
                                             {{ range $i, $it := .TopLabels }}
-                                                {{ $u := (printf "/cards?ln=%s&mowned=3" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?ln=%s&owned=3" (urlquery $it.Name)) }}
                                                 {{ if eq $mode "release" }}
                                                     {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                     {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 {{ else }}
-                                                    {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
-                                                    {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
                                                 {{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
                                                     <div class="card shadow-sm" style="background-color:#f8f9fa;">
@@ -328,13 +328,13 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }} {{ $mode := or .Mode "release" }}
                                             {{ range $i, $it := .TopPrefixes }}
-                                                {{ $u := (printf "/cards?pn=%s&mowned=3" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?pn=%s&owned=3" (urlquery $it.Name)) }}
                                                 {{ if eq $mode "release" }}
                                                     {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                     {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 {{ else }}
-                                                    {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
-                                                    {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                                    {{ if $rs }}{{ $u = (printf "%s&bs=%s" $u $rs) }}{{ end }}
+                                                    {{ if $re }}{{ $u = (printf "%s&be=%s" $u $re) }}{{ end }}
                                                 {{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none" title="{{ $it.Name }}" style="flex:0 0 calc(10% - 8px); min-width:120px;">
                                                     <div class="card shadow-sm" style="background-color:#f8f9fa;">

@@ -39,12 +39,18 @@ func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 
 func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool, autoFetchSite bool) error {
 	start := time.Now()
+	var affected *affectedMovieNumbers
 
 	detailNum, err := func(ctx context.Context) (int64, error) {
 		if err := l.FetchAndParseDailyBestinv(ctx, isSync); err != nil {
 			return 0, err
 		}
-		return l.FetchAndParseDetails(ctx, autoFetchSite, true)
+		detailNum, parsedAffected, err := l.FetchAndParseDetails(ctx)
+		if err != nil {
+			return 0, err
+		}
+		affected = parsedAffected
+		return detailNum, nil
 	}(ctx)
 	if err != nil {
 		return err
@@ -62,14 +68,32 @@ func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool, 
 		return err
 	}
 
-	return l.runParallel(ctx,
+	postSteps := []func(context.Context) error{
 		l.DownLoadAllPicture,
 		l.TranslateTitle,
-	)
+	}
+	if autoFetchSite {
+		postSteps = append(postSteps, func(ctx context.Context) error {
+			return l.runFetchSiteAfterDetail(ctx, affected, true)
+		})
+	}
+
+	return l.runParallel(ctx, postSteps...)
 }
 
 // 活跃 Seeds 流程
 func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context, autoFetchSite bool) error {
+	var affected *affectedMovieNumbers
+	postSteps := []func(context.Context) error{
+		l.DownLoadAllPicture,
+		l.TranslateTitle,
+	}
+	if autoFetchSite {
+		postSteps = append(postSteps, func(ctx context.Context) error {
+			return l.runFetchSiteAfterDetail(ctx, affected, false)
+		})
+	}
+
 	return l.runPipeline(
 		ctx,
 		consts.RecordTypeSeedsActive,
@@ -77,16 +101,31 @@ func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context, autoFetch
 			if err := l.FetchAndParseInventoryBySeedActive(ctx); err != nil {
 				return 0, err
 			}
-			return l.FetchAndParseDetails(ctx, autoFetchSite, false)
+			detailNum, parsedAffected, err := l.FetchAndParseDetails(ctx)
+			if err != nil {
+				return 0, err
+			}
+			affected = parsedAffected
+			return detailNum, nil
 		},
 		false, // ✅ 保持记录
-		l.DownLoadAllPicture,
-		l.TranslateTitle,
+		postSteps...,
 	)
 }
 
 // 指定 Seed 名称流程
 func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string, autoFetchSite bool) error {
+	var affected *affectedMovieNumbers
+	postSteps := []func(context.Context) error{
+		l.DownLoadAllPicture,
+		l.TranslateTitle,
+	}
+	if autoFetchSite {
+		postSteps = append(postSteps, func(ctx context.Context) error {
+			return l.runFetchSiteAfterDetail(ctx, affected, false)
+		})
+	}
+
 	return l.runPipeline(
 		ctx,
 		consts.RecordTypeSeedName,
@@ -94,11 +133,15 @@ func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string, autoFetch
 			if err := l.FetchAndParseInventoryBySeedName(ctx, name); err != nil {
 				return 0, err
 			}
-			return l.FetchAndParseDetails(ctx, autoFetchSite, false)
+			detailNum, parsedAffected, err := l.FetchAndParseDetails(ctx)
+			if err != nil {
+				return 0, err
+			}
+			affected = parsedAffected
+			return detailNum, nil
 		},
 		false, // ✅ 保持记录
-		l.DownLoadAllPicture,
-		l.TranslateTitle,
+		postSteps...,
 	)
 }
 

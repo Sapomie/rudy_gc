@@ -1,6 +1,7 @@
 (function (global) {
     const API_BASE = '/api/crawler/jobs';
     const TASK_FETCH_SITE_BOTH = 'spider_fetch_site_both_resources';
+    const TASK_FETCH_SEHUATANG = 'spider_fetch_sehuatang_magnets';
     const FETCH_SITE_TASK_TYPES = ['spider_fetch_javbus_resources', 'spider_fetch_sukebei_resources'];
     const FETCH_SITE_DEFAULT_NUMBER = 1000000;
     const FETCH_SITE_DEFAULT_DURATION_DAYS = 5;
@@ -16,6 +17,7 @@
         spider_fetch_javbus_resources: 'JavBus 资源抓取',
         spider_fetch_sukebei_resources: 'Sukebei 资源抓取',
         spider_fetch_site_both_resources: 'JavBus + Sukebei 同时抓取',
+        spider_fetch_sehuatang_magnets: '色花堂磁力抓取',
         spider_rebuild_cast_rank: '演员 Rank 回填',
         spider_rebuild_actor_rank: '单演员 Rank',
         film_rename: '影片重命名',
@@ -55,6 +57,8 @@
             labels: {
                 bestinv: '榜单抓取',
                 detail: '详情抓取',
+                fetch_javbus: 'JavBus 抓取',
+                fetch_sukebei: 'Sukebei 抓取',
                 cover: '封面下载',
                 translate: '标题翻译',
             },
@@ -67,6 +71,15 @@
                 detail_item_done: 'detail',
                 detail_fetch_failed: 'detail',
                 detail_parse_failed: 'detail',
+                fetch_site_after_detail_prepare: 'detail',
+                fetch_javbus_queue_ready: 'fetch_javbus',
+                fetch_javbus_done: 'fetch_javbus',
+                fetch_javbus_failed: 'fetch_javbus',
+                fetch_javbus_all_done: 'fetch_javbus',
+                fetch_sukebei_queue_ready: 'fetch_sukebei',
+                fetch_sukebei_done: 'fetch_sukebei',
+                fetch_sukebei_failed: 'fetch_sukebei',
+                fetch_sukebei_all_done: 'fetch_sukebei',
                 cover_queue_ready: 'cover',
                 cover_download_done: 'cover',
                 cover_download_failed: 'cover',
@@ -83,6 +96,8 @@
             labels: {
                 seed: '种子抓取',
                 detail: '详情抓取',
+                fetch_javbus: 'JavBus 抓取',
+                fetch_sukebei: 'Sukebei 抓取',
                 cover: '封面下载',
                 translate: '标题翻译',
             },
@@ -96,6 +111,15 @@
                 detail_item_done: 'detail',
                 detail_fetch_failed: 'detail',
                 detail_parse_failed: 'detail',
+                fetch_site_after_detail_prepare: 'detail',
+                fetch_javbus_queue_ready: 'fetch_javbus',
+                fetch_javbus_done: 'fetch_javbus',
+                fetch_javbus_failed: 'fetch_javbus',
+                fetch_javbus_all_done: 'fetch_javbus',
+                fetch_sukebei_queue_ready: 'fetch_sukebei',
+                fetch_sukebei_done: 'fetch_sukebei',
+                fetch_sukebei_failed: 'fetch_sukebei',
+                fetch_sukebei_all_done: 'fetch_sukebei',
                 cover_queue_ready: 'cover',
                 cover_download_done: 'cover',
                 cover_download_failed: 'cover',
@@ -167,6 +191,7 @@
         runtime.fetchSiteJavbusResultText = document.getElementById('fetchSiteJavbusResultText');
         runtime.fetchSiteSukebeiProgressText = document.getElementById('fetchSiteSukebeiProgressText');
         runtime.fetchSiteSukebeiResultText = document.getElementById('fetchSiteSukebeiResultText');
+        runtime.sehuatangProgressText = document.getElementById('sehuatangProgressText');
         runtime.dailyBestBestinvProgressText = document.getElementById('dailyBestBestinvProgressText');
         runtime.dailyBestBestinvResultText = document.getElementById('dailyBestBestinvResultText');
         runtime.dailyBestDetailProgressText = document.getElementById('dailyBestDetailProgressText');
@@ -175,11 +200,20 @@
         runtime.dailyBestCoverResultText = document.getElementById('dailyBestCoverResultText');
         runtime.dailyBestTranslateProgressText = document.getElementById('dailyBestTranslateProgressText');
         runtime.dailyBestTranslateResultText = document.getElementById('dailyBestTranslateResultText');
+        runtime.dailyBestFetchJavbusProgressText = document.getElementById('dailyBestFetchJavbusProgressText');
+        runtime.dailyBestFetchJavbusResultText = document.getElementById('dailyBestFetchJavbusResultText');
+        runtime.dailyBestFetchSukebeiProgressText = document.getElementById('dailyBestFetchSukebeiProgressText');
+        runtime.dailyBestFetchSukebeiResultText = document.getElementById('dailyBestFetchSukebeiResultText');
         runtime.dailyBestStageCards = page.querySelectorAll('.overview-stage-card[data-phase]');
         runtime.nameFieldWrap = document.getElementById('nameFieldWrap');
         runtime.numberFieldWrap = document.getElementById('numberFieldWrap');
         runtime.actorNameFieldWrap = document.getElementById('actorNameFieldWrap');
         runtime.autoFetchSiteFieldWrap = document.getElementById('autoFetchSiteFieldWrap');
+        runtime.fetchSehuatangListURLFieldWrap = document.getElementById('fetchSehuatangListURLFieldWrap');
+        runtime.fetchSehuatangKeywordFieldWrap = document.getElementById('fetchSehuatangKeywordFieldWrap');
+        runtime.fetchSehuatangStartPageFieldWrap = document.getElementById('fetchSehuatangStartPageFieldWrap');
+        runtime.fetchSehuatangEndPageFieldWrap = document.getElementById('fetchSehuatangEndPageFieldWrap');
+        runtime.fetchSehuatangPersistModeFieldWrap = document.getElementById('fetchSehuatangPersistModeFieldWrap');
         runtime.fetchSiteFilterPanel = document.getElementById('fetchSiteFilterPanel');
         runtime.toggleFetchSiteFilterBtn = document.getElementById('toggleFetchSiteFilterBtn');
         runtime.fetchSiteFilterWrap = document.getElementById('fetchSiteFilterWrap');
@@ -188,6 +222,11 @@
         runtime.numberInput = document.getElementById('task_number');
         runtime.actorNameInput = document.getElementById('task_actor_name');
         runtime.autoFetchSiteInput = document.getElementById('task_auto_fetch_site');
+        runtime.fetchSehuatangListURLInput = document.getElementById('task_sehuatang_list_url');
+        runtime.fetchSehuatangKeywordInput = document.getElementById('task_sehuatang_keyword');
+        runtime.fetchSehuatangStartPageInput = document.getElementById('task_sehuatang_start_page');
+        runtime.fetchSehuatangEndPageInput = document.getElementById('task_sehuatang_end_page');
+        runtime.fetchSehuatangPersistModeInput = document.getElementById('task_sehuatang_persist_mode');
 
         runtime.escapeHtml = function (input) {
             return String(input || '')
@@ -411,6 +450,18 @@
             if (runtime.dailyBestTranslateResultText) {
                 runtime.dailyBestTranslateResultText.textContent = slot4 ? runtime.stageOverviewStageResultText(job, slot4) : '0 / 0';
             }
+            if (runtime.dailyBestFetchJavbusProgressText) {
+                runtime.dailyBestFetchJavbusProgressText.textContent = runtime.stageOverviewStageProgressText(job, 'fetch_javbus');
+            }
+            if (runtime.dailyBestFetchJavbusResultText) {
+                runtime.dailyBestFetchJavbusResultText.textContent = runtime.stageOverviewStageResultText(job, 'fetch_javbus');
+            }
+            if (runtime.dailyBestFetchSukebeiProgressText) {
+                runtime.dailyBestFetchSukebeiProgressText.textContent = runtime.stageOverviewStageProgressText(job, 'fetch_sukebei');
+            }
+            if (runtime.dailyBestFetchSukebeiResultText) {
+                runtime.dailyBestFetchSukebeiResultText.textContent = runtime.stageOverviewStageResultText(job, 'fetch_sukebei');
+            }
 
             runtime.dailyBestStageCards.forEach(function (card) {
                 const phase = card.getAttribute('data-phase') || '';
@@ -503,6 +554,10 @@
                 current === 'spider_seed_by_name';
         };
 
+        runtime.isFetchSehuatangTaskType = function (taskType) {
+            return String(taskType || '').trim() === TASK_FETCH_SEHUATANG;
+        };
+
         runtime.syncFetchSiteFilterToggleText = function () {
             if (!runtime.toggleFetchSiteFilterBtn) {
                 return;
@@ -513,6 +568,7 @@
         runtime.syncTaskFields = function () {
             const taskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '');
             const isFetchSiteTask = runtime.isFetchSiteTaskType(taskType);
+            const isFetchSehuatangTask = runtime.isFetchSehuatangTaskType(taskType);
             runtime.toggleField(runtime.nameFieldWrap, taskType === 'spider_seed_by_name');
             runtime.toggleField(
                 runtime.numberFieldWrap,
@@ -523,6 +579,11 @@
             );
             runtime.toggleField(runtime.actorNameFieldWrap, taskType === 'spider_rebuild_actor_rank');
             runtime.toggleField(runtime.autoFetchSiteFieldWrap, runtime.isAutoFetchSiteTaskType(taskType));
+            runtime.toggleField(runtime.fetchSehuatangListURLFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangKeywordFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangStartPageFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangEndPageFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangPersistModeFieldWrap, isFetchSehuatangTask);
             if (!isFetchSiteTask) {
                 runtime.state.fetchSiteFilterExpanded = false;
             }
@@ -583,6 +644,42 @@
             }
             if (taskType === 'spider_rebuild_actor_rank') {
                 payload.actor_name = String(runtime.actorNameInput && runtime.actorNameInput.value || '').trim();
+            }
+            if (runtime.isFetchSehuatangTaskType(taskType)) {
+                payload.list_url = String(runtime.fetchSehuatangListURLInput && runtime.fetchSehuatangListURLInput.value || '').trim();
+                payload.keyword = String(runtime.fetchSehuatangKeywordInput && runtime.fetchSehuatangKeywordInput.value || '').trim();
+                payload.start_page = String(runtime.fetchSehuatangStartPageInput && runtime.fetchSehuatangStartPageInput.value || '').trim();
+                payload.end_page = String(runtime.fetchSehuatangEndPageInput && runtime.fetchSehuatangEndPageInput.value || '').trim();
+                payload.persist_mode = String(runtime.fetchSehuatangPersistModeInput && runtime.fetchSehuatangPersistModeInput.value || '').trim();
+                const defaults = runtime.config && runtime.config.fetchSehuatangDefaults ? runtime.config.fetchSehuatangDefaults : {};
+                if (payload.list_url === '') {
+                    payload.list_url = String(defaults.listUrl || '').trim();
+                }
+                if (payload.start_page === '') {
+                    payload.start_page = String(defaults.startPage || '').trim();
+                }
+                if (payload.end_page === '') {
+                    payload.end_page = String(defaults.endPage || '').trim();
+                }
+                if (payload.persist_mode === '') {
+                    payload.persist_mode = String(defaults.persistMode || '').trim();
+                }
+                const startPageNumber = Number(payload.start_page);
+                const endPageNumber = Number(payload.end_page);
+                if (!Number.isFinite(startPageNumber) || startPageNumber <= 0) {
+                    throw new Error('请填写合法的起始页');
+                }
+                if (!Number.isFinite(endPageNumber) || endPageNumber <= 0) {
+                    throw new Error('请填写合法的结束页');
+                }
+                if (endPageNumber < startPageNumber) {
+                    throw new Error('结束页不能小于起始页');
+                }
+                payload.start_page = startPageNumber;
+                payload.end_page = endPageNumber;
+                if (payload.persist_mode !== 'skip_existing') {
+                    payload.persist_mode = 'upsert_all';
+                }
             }
             if (runtime.isAutoFetchSiteTaskType(taskType)) {
                 payload.auto_fetch_site = runtime.autoFetchSiteInput && runtime.autoFetchSiteInput.checked ? '1' : '0';
@@ -1017,6 +1114,50 @@
                     const summaryState = runtime.fetchSiteSummaryState(javbusStats, sukebeiStats);
                     runtime.statusMsg.className = summaryState.className;
                     runtime.statusMsg.textContent = summaryState.text;
+                }
+                runtime.updateControls();
+                return;
+            }
+            if (runtime.overviewExtraMode === 'sehuatang_progress') {
+                if (!job) {
+                    const selectedId = runtime.normalizeJobId(runtime.state.selectedJobId);
+                    if (runtime.sehuatangProgressText) runtime.sehuatangProgressText.textContent = '0 / 0';
+                    if (runtime.resultText) runtime.resultText.textContent = '0 / 0';
+                    if (runtime.progressBar) {
+                        runtime.progressBar.style.width = '0%';
+                        runtime.progressBar.textContent = '0%';
+                        runtime.progressBar.setAttribute('aria-valuenow', '0');
+                    }
+                    if (runtime.statusMsg) {
+                        runtime.statusMsg.className = 'text-muted';
+                        runtime.statusMsg.textContent = selectedId ? '正在获取任务状态' : runtime.emptyStateText;
+                    }
+                    if (runtime.elapsedText) runtime.elapsedText.textContent = '00:00';
+                    runtime.updateControls();
+                    return;
+                }
+
+                const handled = Number(job.handled_count || 0);
+                const queued = Number(job.queued_count || 0);
+                const total = handled + queued;
+                if (runtime.sehuatangProgressText) {
+                    runtime.sehuatangProgressText.textContent = String(total) + ' / ' + String(handled);
+                }
+                if (runtime.resultText) {
+                    runtime.resultText.textContent = String(job.success_count || 0) + ' / ' + String(job.failed_count || 0);
+                }
+                if (runtime.progressBar) {
+                    const percent = total > 0 ? Math.max(0, Math.min(100, Math.round(handled * 100 / total))) : 0;
+                    runtime.progressBar.style.width = percent + '%';
+                    runtime.progressBar.textContent = percent + '%';
+                    runtime.progressBar.setAttribute('aria-valuenow', String(percent));
+                }
+                if (runtime.statusMsg) {
+                    runtime.statusMsg.className = job.done && job.stage === 'failed' ? 'err' : (job.done ? 'ok' : 'text-muted');
+                    runtime.statusMsg.textContent = (job.message || runtime.stageLabel(job.stage || '')) || runtime.emptyStateText;
+                }
+                if (runtime.elapsedText) {
+                    runtime.elapsedText.textContent = runtime.formatElapsed(job.started_at);
                 }
                 runtime.updateControls();
                 return;

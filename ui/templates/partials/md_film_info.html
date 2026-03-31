@@ -2,38 +2,56 @@
 <div class="card shadow-sm">
     <div class="card-body">
         <h5 class="card-title mb-3">视频信息</h5>
-        <table class="table table-bordered dt-responsive nowrap" style="width:100%">
+        <table class="table table-bordered dt-responsive nowrap mb-0" style="width:100%">
             <thead>
             <tr class="table-light">
+                <th>Source</th>
                 <th>BirthTime</th>
                 <th>Size</th>
                 <th>Height</th>
                 <th>BitRate</th>
                 <th>Duration</th>
-                <th>Ratio</th>
                 <th>Frame</th>
                 <th>SelfMake</th>
-                <th>Erased</th>
                 <th>Dir</th>
             </tr>
             </thead>
             <tbody>
-            <tr>
-                <td>{{.film.BirthTime}}</td>
-                <td><a href="{{.film.FilePath}}">{{ printf "%.2f" .film.Size }}</a></td>
-                <td>{{.film.Height}}</td>
-                <td>{{ printf "%.0f" .film.BitRate }}</td>
-                <td>{{ printf "%.2f" .film.Duration }}</td>
-                <td>{{.film.SizeDurationRatio}}</td>
-                <td>{{.film.Frame}}</td>
-                <td>{{.film.SelfMake}}</td>
-                <td>{{.film.Erased}}</td>
-                <td>
-                    <a href="#" class="open-in-finder" data-path="{{.film.Directory}}" title="在 Finder 打开">
-                        {{.film.Directory}}
-                    </a>
-                </td>
-            </tr>
+            {{ if .film }}
+                <tr>
+                    <td>VFilm</td>
+                    <td>{{.film.BirthTime}}</td>
+                    <td><a href="{{.film.FilePath}}">{{ printf "%.2f" .film.Size }}</a></td>
+                    <td>{{.film.Height}}</td>
+                    <td>{{ printf "%.0f" .film.BitRate }}</td>
+                    <td>{{ printf "%.2f" .film.Duration }}</td>
+                    <td>{{.film.Frame}}</td>
+                    <td>{{.film.SelfMake}}</td>
+                    <td>
+                        <a href="#" class="open-in-finder" data-path="{{.film.Directory}}" title="在 Finder 打开">
+                            {{.film.Directory}}
+                        </a>
+                    </td>
+                </tr>
+            {{ end }}
+
+            {{ if .media }}
+                <tr>
+                    <td>WMedia</td>
+                    <td>{{.media.BirthTime}}</td>
+                    <td><a href="{{.media.FilePath}}">{{ printf "%.2f" .media.Size }}</a></td>
+                    <td>{{.media.Height}}</td>
+                    <td>{{ printf "%.0f" .media.BitRate }}</td>
+                    <td>{{ printf "%.2f" .media.Duration }}</td>
+                    <td>{{.media.Frame}}</td>
+                    <td>{{.media.SelfMake}}</td>
+                    <td>
+                        <a href="#" class="open-in-finder" data-path="{{.media.Directory}}" title="在 Finder 打开">
+                            {{.media.Directory}}
+                        </a>
+                    </td>
+                </tr>
+            {{ end }}
             </tbody>
         </table>
     </div>

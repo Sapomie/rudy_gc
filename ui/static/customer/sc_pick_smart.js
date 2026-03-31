@@ -36,6 +36,7 @@
     const copyError = document.getElementById('copyError');
     const btnStopCopy = document.getElementById('btnStopCopy');
     if (!form || !groupWrap || !groupTpl || !btnAdd) return;
+    const pageSource = (form.getAttribute('data-source') || 'vfilm').toLowerCase() === 'wmedia' ? 'wmedia' : 'vfilm';
 
     function bindRemove(btn) {
         btn.addEventListener('click', function () {
@@ -421,10 +422,11 @@
 
     function buildReqFromGroup(group) {
         const req = {
-            MediaOwned: 3,
             Page: 1,
             PageSize: 100000,
         };
+        if (pageSource === 'wmedia') req.MediaOwned = 3;
+        else req.Owned = 3;
 
         const inputs = group.querySelectorAll('[data-req-field]');
         inputs.forEach((input) => {
@@ -536,7 +538,7 @@
             });
         }
 
-        return {pickN: n, options, reqs};
+        return {pickN: n, source: pageSource, options, reqs};
     }
 
     function runPick(url, actionLabel) {

@@ -13,6 +13,7 @@ import (
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
+	"rudy_gc/internal/service/sehuatang"
 	"rudy_gc/internal/svc"
 	"rudy_gc/internal/types"
 )
@@ -20,6 +21,7 @@ import (
 type CrawlerPages struct {
 	runtime   *loop.FetchLoopService
 	fetchSite *fetchsite.Service
+	sehuatang *sehuatang.Service
 	deps      *svc.Deps
 	scRootDir string
 }
@@ -41,24 +43,29 @@ type crawlerJobsPageLink struct {
 }
 
 type crawlerJobsPageConfig struct {
-	Title             string
-	PageTitle         string
-	TaskPanelTitle    string
-	PageNote          string
-	TaskTableTitle    string
-	EventTitle        string
-	StorageKey        string
-	DefaultTaskType   string
-	OverviewExtraMode string
-	EmptyStateText    string
-	AllowedTaskTypes  []string
-	TaskButtons       []crawlerJobsPageTask
-	HeaderLinks       []crawlerJobsPageLink
-	Labels            crawlerJobsPageLabels
-	MovieCardFilter   *movieCardFilterView
-	ShowMovieFilters  bool
-	ShowFavoriteAlbum bool
-	FavoriteRows      []*favoriteAlbumItemRow
+	Title                     string
+	PageTitle                 string
+	TaskPanelTitle            string
+	PageNote                  string
+	TaskTableTitle            string
+	EventTitle                string
+	StorageKey                string
+	DefaultTaskType           string
+	OverviewExtraMode         string
+	EmptyStateText            string
+	AllowedTaskTypes          []string
+	TaskButtons               []crawlerJobsPageTask
+	HeaderLinks               []crawlerJobsPageLink
+	Labels                    crawlerJobsPageLabels
+	MovieCardFilter           *movieCardFilterView
+	ShowMovieFilters          bool
+	ShowFavoriteAlbum         bool
+	FavoriteRows              []*favoriteAlbumItemRow
+	FetchSehuatangList        string
+	FetchSehuatangKey         string
+	FetchSehuatangStartPage   int64
+	FetchSehuatangEndPage     int64
+	FetchSehuatangPersistMode string
 }
 
 type favoriteAlbumItemRow struct {
@@ -80,6 +87,7 @@ func NewCrawlerPages(deps *svc.Deps) *CrawlerPages {
 	return &CrawlerPages{
 		runtime:   newCrawlerRuntime(deps),
 		fetchSite: newFetchSitePageService(deps),
+		sehuatang: sehuatang.NewService(deps),
 		deps:      deps,
 		scRootDir: deps.Config.Film.ScRootDir,
 	}
@@ -192,6 +200,16 @@ func (h *CrawlerPages) MediaPage(c *gin.Context) {
 	})
 }
 
+func (h *CrawlerPages) MediaRollbackPage(c *gin.Context) {
+	rootDirs := h.deps.Config.Media.RootDirs
+	c.HTML(http.StatusOK, "page.media_rollback", gin.H{
+		"Title":     "媒体回滚",
+		"PageTitle": "媒体回滚（名称还原）",
+		"PageNote":  "将 004_rollback 中的文件名还原后移回 001_ingest_new。",
+		"RootDirs":  rootDirs,
+	})
+}
+
 func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
 	req, err := parseMovieCardRequest(c, types.ListMovieFullRequest{
 		OrderBy: consts.OrderByReleasingDate,
@@ -289,26 +307,31 @@ func (h *CrawlerPages) DetailLoopPage(c *gin.Context) {
 
 func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig) {
 	c.HTML(http.StatusOK, "page.admin_triggers", gin.H{
-		"Title":             cfg.Title,
-		"PageTitle":         cfg.PageTitle,
-		"TaskPanelTitle":    cfg.TaskPanelTitle,
-		"PageNote":          cfg.PageNote,
-		"TaskTableTitle":    cfg.TaskTableTitle,
-		"EventTitle":        cfg.EventTitle,
-		"StorageKey":        cfg.StorageKey,
-		"DefaultTaskType":   cfg.DefaultTaskType,
-		"AllowedTaskTypes":  cfg.AllowedTaskTypes,
-		"OverviewExtraMode": cfg.OverviewExtraMode,
-		"EmptyStateText":    cfg.EmptyStateText,
-		"TaskButtons":       cfg.TaskButtons,
-		"HeaderLinks":       cfg.HeaderLinks,
-		"Labels":            cfg.Labels,
-		"MovieCardFilter":   cfg.MovieCardFilter,
-		"ShowMovieFilters":  cfg.ShowMovieFilters,
-		"ShowFavoriteAlbum": cfg.ShowFavoriteAlbum,
-		"FavoriteRows":      cfg.FavoriteRows,
-		"ScRootDir":         h.scRootDir,
-		"JobID":             strings.TrimSpace(c.Query("job_id")),
+		"Title":                     cfg.Title,
+		"PageTitle":                 cfg.PageTitle,
+		"TaskPanelTitle":            cfg.TaskPanelTitle,
+		"PageNote":                  cfg.PageNote,
+		"TaskTableTitle":            cfg.TaskTableTitle,
+		"EventTitle":                cfg.EventTitle,
+		"StorageKey":                cfg.StorageKey,
+		"DefaultTaskType":           cfg.DefaultTaskType,
+		"AllowedTaskTypes":          cfg.AllowedTaskTypes,
+		"OverviewExtraMode":         cfg.OverviewExtraMode,
+		"EmptyStateText":            cfg.EmptyStateText,
+		"TaskButtons":               cfg.TaskButtons,
+		"HeaderLinks":               cfg.HeaderLinks,
+		"Labels":                    cfg.Labels,
+		"MovieCardFilter":           cfg.MovieCardFilter,
+		"ShowMovieFilters":          cfg.ShowMovieFilters,
+		"ShowFavoriteAlbum":         cfg.ShowFavoriteAlbum,
+		"FavoriteRows":              cfg.FavoriteRows,
+		"FetchSehuatangList":        cfg.FetchSehuatangList,
+		"FetchSehuatangKey":         cfg.FetchSehuatangKey,
+		"FetchSehuatangStartPage":   cfg.FetchSehuatangStartPage,
+		"FetchSehuatangEndPage":     cfg.FetchSehuatangEndPage,
+		"FetchSehuatangPersistMode": cfg.FetchSehuatangPersistMode,
+		"ScRootDir":                 h.scRootDir,
+		"JobID":                     strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -349,6 +372,8 @@ func favoriteSourceTypeLabel(sourceType string) string {
 		return "JavBus"
 	case "sukebei_torrent":
 		return "Sukebei"
+	case "sehuatang_magnet":
+		return "Sehuatang"
 	default:
 		return "未知"
 	}

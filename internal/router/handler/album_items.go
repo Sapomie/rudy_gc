@@ -64,7 +64,7 @@ func (h *MovieHTMLHandler) AlbumItemsPage(c *gin.Context) {
 	}
 	switch strings.TrimSpace(q.SourceType) {
 	case "":
-	case "javbus_magnet", "sukebei_torrent":
+	case "javbus_magnet", "sukebei_torrent", "sehuatang_magnet":
 		request.SourceType = strings.TrimSpace(q.SourceType)
 	default:
 		c.String(http.StatusBadRequest, "来源类型参数错误")

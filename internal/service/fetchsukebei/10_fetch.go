@@ -41,7 +41,7 @@ func (s *Service) FetchMovieTorrents(ctx context.Context, movieJavID, movieName 
 		return nil, err
 	}
 
-	rows, err := parseTorrentRows(movieJavID, queryText, searchURL, string(resp.Body))
+	rows, err := parseTorrentRows(movieJavID, queryText, string(resp.Body))
 	if err != nil {
 		_ = s.saveFetchFailure(ctx, movieJavID, movieName, searchURL, attempts, err)
 		return nil, err
@@ -88,15 +88,9 @@ func (s *Service) saveTorrents(ctx context.Context, movieJavID, movieName, sourc
 
 		oldRow.MovieJavId = row.MovieJavId
 		oldRow.QueryText = row.QueryText
-		oldRow.SearchUrl = row.SearchUrl
 		oldRow.TorrentTitle = row.TorrentTitle
-		oldRow.ViewUrl = row.ViewUrl
-		oldRow.TorrentUrl = row.TorrentUrl
-		oldRow.MagnetUrl = row.MagnetUrl
 		oldRow.InfoHash = row.InfoHash
-		oldRow.Dn = row.Dn
 		oldRow.SizeBytes = row.SizeBytes
-		oldRow.SizeText = row.SizeText
 		oldRow.PublishTime = row.PublishTime
 		oldRow.Seeders = row.Seeders
 		oldRow.Leechers = row.Leechers

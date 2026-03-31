@@ -28,12 +28,14 @@ func (h *MovieHTMLHandler) MovieDetail(c *gin.Context) {
 		"movieType":     md.MovieType,
 		"hasFilm":       md.HasFilm,
 		"film":          md.FilmInfo,
+		"media":         md.MediaInfo,
 		"rankInfos":     md.RankInfos,
 		"sc":            md.SC,
 		"javbusFetch":   md.JavbusFetch,
 		"javbusMagnets": md.JavbusMagnets,
 		"sukebeiFetch":  md.SukebeiFetch,
 		"sukebeiRows":   md.SukebeiTorrents,
+		"sehuatangRows": md.SehuatangMagnets,
 		"magUpdateDate": md.MovieType.UpdateDate,
 	}
 

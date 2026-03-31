@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	FetchSiteCodeJavbus  = "javbus"
-	FetchSiteCodeSukebei = "sukebei"
+	FetchSiteCodeJavbus    = "javbus"
+	FetchSiteCodeSukebei   = "sukebei"
+	FetchSiteCodeSehuatang = "sehuatang"
 
 	fetchSiteStatusEnabled    int64 = 1
 	legacyFetchSiteRetryTimes int64 = 45
@@ -63,6 +64,19 @@ func defaultFetchSiteConfigs(cfg config.Config) map[string]FetchSiteConfig {
 			UserAgent:     cfg.Fetcher.UserAgent,
 			Cookie:        "",
 			Proxy:         cfg.Fetcher.Proxy,
+			Timeout:       timeout,
+			RequestSleep:  legacyFetchSiteRequestSleep,
+			RetrySleep:    legacyFetchSiteRetrySleep,
+			MaxRetryTimes: legacyFetchSiteRetryTimes,
+			Status:        fetchSiteStatusEnabled,
+		},
+		FetchSiteCodeSehuatang: {
+			SiteCode:      FetchSiteCodeSehuatang,
+			SiteName:      "Sehuatang",
+			BaseURL:       normalizeFetchSiteBaseURL("https://vzzr.qnc8.net"),
+			UserAgent:     cfg.Fetcher.UserAgent,
+			Cookie:        "",
+			Proxy:         "",
 			Timeout:       timeout,
 			RequestSleep:  legacyFetchSiteRequestSleep,
 			RetrySleep:    legacyFetchSiteRetrySleep,

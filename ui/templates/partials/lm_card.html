@@ -33,7 +33,7 @@
                     {{ end }}
                 </li>
 
-                {{ if ge .Owned 2 }}
+                {{ if or (ge .Owned 2) (ge .OwnedWMedia 2) }}
                     <li class="list-group-item d-flex align-items-center">
                         {{ if eq .Owned 5 }}
                             <a href="{{ .VideoUrl }}" class="btn btn-sm btn-info me-2">Play</a>
@@ -42,7 +42,15 @@
                         {{ else if eq .Owned 6 }}
                             <a href="{{ .VideoUrl }}" class="btn btn-sm btn-secondary me-2">ReMoved</a>
                         {{ end }}
+                        {{ if eq .OwnedWMedia 5 }}
+                            <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-outline-primary me-2">MPlay</a>
+                        {{ else if eq .OwnedWMedia 4 }}
+                            <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
+                        {{ else if eq .OwnedWMedia 6 }}
+                            <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-outline-secondary me-2">MRemoved</a>
+                        {{ end }}
                         {{ if .FilmBirthDate }}<span class="text-muted small">| {{ .FilmBirthDate }}</span>{{ end }}
+                        {{ if .FilmBirthDateWMedia }}<span class="text-muted small ms-2">| M {{ .FilmBirthDateWMedia }}</span>{{ end }}
                     </li>
                 {{ end }}
 

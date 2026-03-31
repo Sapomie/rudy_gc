@@ -414,6 +414,34 @@ func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.F
 	return filmInfo, nil
 }
 
+func (s *Service) findMediaInfo(ctx context.Context, movieJavId string) (*types.FilmInfo, error) {
+	wm, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, movieJavId)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	durationMinutes := float64(wm.Duration) / 60
+	mediaInfo := &types.FilmInfo{
+		Name:              wm.MovieName,
+		BirthTime:         time.Unix(wm.BirthTime, 0).Format(time.DateTime),
+		Size:              float64(wm.Size) / 1e9,
+		FilePath:          wm.FullDir + string(filepath.Separator) + wm.FileName,
+		FileName:          wm.FileName,
+		Directory:         wm.FullDir,
+		Height:            wm.Height,
+		BitRate:           float64(wm.BitRate) / 1e3,
+		Duration:          durationMinutes,
+		Frame:             wm.FrameAverage,
+		SizeDurationRatio: calcFilmSizeDurationRatio(wm.Size, wm.Duration),
+		SelfMake:          formatMovieFilmSelfMake(wm.SelfMake),
+		Erased:            formatMovieFilmErased(wm.HasMask),
+	}
+	return mediaInfo, nil
+}
+
 func (s *Service) findScInfo(ctx context.Context, movieJavId string) ([]*types.MovieScEvent, error) {
 	gLists, err := s.deps.GListModel.ListByMovieJavId(ctx, movieJavId)
 	if err != nil {
@@ -496,11 +524,15 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 	if err != nil {
 		return nil, err
 	}
+	mediaInfo, err := s.findMediaInfo(ctx, m.JavId)
+	if err != nil {
+		return nil, err
+	}
 	scInfo, err := s.findScInfo(ctx, m.JavId)
 	if err != nil {
 		return nil, err
 	}
-	javbusFetch, javbusMagnets, sukebeiFetch, sukebeiTorrents, err := s.buildMovieFetchSiteDetail(ctx, m.JavId)
+	javbusFetch, javbusMagnets, sukebeiFetch, sukebeiTorrents, sehuatangMagnets, err := s.buildMovieFetchSiteDetail(ctx, m.JavId, m.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -509,14 +541,16 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 		hasFilm = 1
 	}
 	return &types.MovieDetail{
-		MovieType:       movieType,
-		FilmInfo:        filmInfo,
-		HasFilm:         hasFilm,
-		RankInfos:       rankInfos,
-		SC:              scInfo,
-		JavbusFetch:     javbusFetch,
-		JavbusMagnets:   javbusMagnets,
-		SukebeiFetch:    sukebeiFetch,
-		SukebeiTorrents: sukebeiTorrents,
+		MovieType:        movieType,
+		FilmInfo:         filmInfo,
+		MediaInfo:        mediaInfo,
+		HasFilm:          hasFilm,
+		RankInfos:        rankInfos,
+		SC:               scInfo,
+		JavbusFetch:      javbusFetch,
+		JavbusMagnets:    javbusMagnets,
+		SukebeiFetch:     sukebeiFetch,
+		SukebeiTorrents:  sukebeiTorrents,
+		SehuatangMagnets: sehuatangMagnets,
 	}, nil
 }

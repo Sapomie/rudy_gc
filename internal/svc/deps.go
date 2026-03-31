@@ -59,6 +59,7 @@ type Deps struct {
 	AlbumModel               moviex.TAlbumModel
 	AlbumItemModel           moviex.TmAlbumItemModel
 	JavbusMagnetModel        moviex.TJavbusMagnetModel
+	SehuatangMagnetModel     moviex.TSehuatangMagnetModel
 	JavbusMagnetFetchModel   moviex.TJavbusMagnetFetchModel
 	SukebeiTorrentModel      moviex.TSukebeiTorrentModel
 	SukebeiTorrentFetchModel moviex.TSukebeiTorrentFetchModel
@@ -97,6 +98,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		albumModel               = moviex.NewTAlbumModel(conn, c)
 		albumItemModel           = moviex.NewTmAlbumItemModel(conn, c)
 		javbusMagnetModel        = moviex.NewTJavbusMagnetModel(conn, c)
+		sehuatangMagnetModel     = moviex.NewTSehuatangMagnetModel(conn, c)
 		javbusMagnetFetchModel   = moviex.NewTJavbusMagnetFetchModel(conn, c)
 		sukebeiTorrentModel      = moviex.NewTSukebeiTorrentModel(conn, c)
 		sukebeiTorrentFetchModel = moviex.NewTSukebeiTorrentFetchModel(conn, c)
@@ -187,6 +189,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		AlbumModel:               albumModel,
 		AlbumItemModel:           albumItemModel,
 		JavbusMagnetModel:        javbusMagnetModel,
+		SehuatangMagnetModel:     sehuatangMagnetModel,
 		JavbusMagnetFetchModel:   javbusMagnetFetchModel,
 		SukebeiTorrentModel:      sukebeiTorrentModel,
 		SukebeiTorrentFetchModel: sukebeiTorrentFetchModel,

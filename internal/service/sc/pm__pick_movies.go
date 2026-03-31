@@ -49,9 +49,9 @@ func (l *ScService) PickProcession() error {
 		return err
 	}
 
-	l.LogPicks(movieTypes)
+	l.LogPicksBySource(movieTypes, SmartPickSourceWMedia)
 
-	err = l.copyMovieRank(movieTypes)
+	err = l.copyMovieRank(movieTypes, SmartPickSourceWMedia)
 	if err != nil {
 		return err
 	}
@@ -81,14 +81,18 @@ func (l *ScService) PickFromRequests(ctx context.Context, reqs []PickRequestWith
 		return nil, err
 	}
 
-	l.LogPicks(movieTypes)
+	l.LogPicksBySource(movieTypes, SmartPickSourceVFilm)
 	return movieTypes, nil
 }
 
-func (l *ScService) copyMovieRank(mfs []*types.MovieType) error {
+func (l *ScService) copyMovieRank(mfs []*types.MovieType, source string) error {
 	var count int
 	for _, mf := range mfs {
-		if err := l.copyFileToDestination(mf.VideoUrl); err != nil {
+		videoURL := SmartPickMovieVideoURL(mf, source)
+		if videoURL == "" {
+			continue
+		}
+		if err := l.copyFileToDestination(videoURL); err != nil {
 			l.deps.Log.Error("copy err: ", err)
 		}
 		count++
@@ -105,6 +109,10 @@ func (l *ScService) copyFileToDestination(srcFilePath string) error {
 	return nil
 }
 func (l *ScService) LogPicks(mts []*types.MovieType) {
+	l.LogPicksBySource(mts, SmartPickSourceVFilm)
+}
+
+func (l *ScService) LogPicksBySource(mts []*types.MovieType, source string) {
 	if len(mts) == 0 {
 		l.deps.Log.Info("没有可打印的 picks")
 		return
@@ -112,8 +120,8 @@ func (l *ScService) LogPicks(mts []*types.MovieType) {
 
 	// ---------- 排序 ----------
 	sort.Slice(mts, func(i, j int) bool {
-		ti := parseDate(mts[i].FilmBirthDate)
-		tj := parseDate(mts[j].FilmBirthDate)
+		ti := parseDate(SmartPickMovieBirthDate(mts[i], source))
+		tj := parseDate(SmartPickMovieBirthDate(mts[j], source))
 		return ti.Before(tj)
 	})
 
@@ -145,14 +153,12 @@ func (l *ScService) LogPicks(mts []*types.MovieType) {
 			}
 		}
 
-		filmDate := mt.FilmBirthDate
+		filmDate := SmartPickMovieBirthDate(mt, source)
 		releasingDate := mt.ReleasingDate
 		scTimes := mt.ScTimes
 
 		// 累加 Size
-		if mt.VFilm != nil {
-			totalSize += mt.VFilm.Size
-		}
+		totalSize += SmartPickMovieSize(mt, source)
 
 		l.deps.Log.Infof("%-25s | %-15s | %-12s | %-8d | %-12s | %-19s",
 			name, cast0, filmDate, scTimes, releasingDate, castLastSc)
@@ -161,6 +167,52 @@ func (l *ScService) LogPicks(mts []*types.MovieType) {
 	// ---------- 打印总大小 ----------
 	gb := float64(totalSize) / (1024 * 1024 * 1024)
 	l.deps.Log.Infof("总文件大小: %.2f GB", gb)
+}
+
+func SmartPickMovieBirthDate(mt *types.MovieType, source string) string {
+	if mt == nil {
+		return ""
+	}
+	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
+		return mt.FilmBirthDateWMedia
+	}
+	return mt.FilmBirthDate
+}
+
+func SmartPickMovieVideoURL(mt *types.MovieType, source string) string {
+	if mt == nil {
+		return ""
+	}
+	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
+		return mt.VideoUrlWMedia
+	}
+	return mt.VideoUrl
+}
+
+func SmartPickMovieOwned(mt *types.MovieType, source string) int64 {
+	if mt == nil {
+		return 0
+	}
+	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
+		return mt.OwnedWMedia
+	}
+	return mt.Owned
+}
+
+func SmartPickMovieSize(mt *types.MovieType, source string) int64 {
+	if mt == nil {
+		return 0
+	}
+	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
+		if mt.WMedia != nil {
+			return mt.WMedia.Size
+		}
+		return 0
+	}
+	if mt.VFilm != nil {
+		return mt.VFilm.Size
+	}
+	return 0
 }
 
 // 辅助：解析日期字符串（支持 "2006-01-02" / "20060102"）

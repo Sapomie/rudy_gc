@@ -11,14 +11,15 @@ type sortLink struct {
 	Active bool
 }
 type dirSortQuery struct {
-	ByBirthTime  sortLink
-	ByLastScTime sortLink
-	ByScTimes    sortLink
-	ByComeTimes  sortLink
-	ByReleasing  sortLink
+	ByBirthTime      sortLink
+	ByMediaBirthTime sortLink
+	ByLastScTime     sortLink
+	ByScTimes        sortLink
+	ByComeTimes      sortLink
+	ByReleasing      sortLink
 }
 
-// 目录页排序栏：只构造 bt/lsct/sc/co/rd 5 个
+// 目录页排序栏：只构造 bt/mbt/lsct/sc/co/rd 6 个
 func buildDirSortQuery(c *gin.Context, current string) *dirSortQuery {
 	// 复制当前 URL query，修改 od，并且切换排序时回到第一页 p=1
 	makeHref := func(od string) (href string, active bool) {
@@ -41,16 +42,18 @@ func buildDirSortQuery(c *gin.Context, current string) *dirSortQuery {
 	}
 
 	btHref, btAct := makeHref(consts.OrderByBirthTime)
+	mbtHref, mbtAct := makeHref(consts.OrderByMediaBirthTime)
 	lsctHref, lsctAct := makeHref(consts.OrderByLastScTime)
 	scHref, scAct := makeHref(consts.OrderByScTimes)
 	coHref, coAct := makeHref(consts.OrderByComeTimes)
 	rdHref, rdAct := makeHref(consts.OrderByReleasingDate)
 
 	return &dirSortQuery{
-		ByBirthTime:  sortLink{Href: btHref, Active: btAct},
-		ByLastScTime: sortLink{Href: lsctHref, Active: lsctAct},
-		ByScTimes:    sortLink{Href: scHref, Active: scAct},
-		ByComeTimes:  sortLink{Href: coHref, Active: coAct},
-		ByReleasing:  sortLink{Href: rdHref, Active: rdAct},
+		ByBirthTime:      sortLink{Href: btHref, Active: btAct},
+		ByMediaBirthTime: sortLink{Href: mbtHref, Active: mbtAct},
+		ByLastScTime:     sortLink{Href: lsctHref, Active: lsctAct},
+		ByScTimes:        sortLink{Href: scHref, Active: scAct},
+		ByComeTimes:      sortLink{Href: coHref, Active: coAct},
+		ByReleasing:      sortLink{Href: rdHref, Active: rdAct},
 	}
 }

@@ -33,7 +33,7 @@ type CopyStatus struct {
 	LastError  string `json:"last_error"`
 }
 
-func (l *ScService) StartCopyAsync(movies []*types.MovieType) (bool, CopyStatus) {
+func (l *ScService) StartCopyAsync(movies []*types.MovieType, source string) (bool, CopyStatus) {
 	l.copyMu.Lock()
 	defer l.copyMu.Unlock()
 
@@ -51,7 +51,7 @@ func (l *ScService) StartCopyAsync(movies []*types.MovieType) (bool, CopyStatus)
 		startedAt: time.Now().Unix(),
 		cancel:    cancel,
 	}
-	go l.runCopyTask(ctx, movies)
+	go l.runCopyTask(ctx, movies, source)
 	return true, l.copyStatusLocked()
 }
 
@@ -91,7 +91,7 @@ func (l *ScService) copyStatusLocked() CopyStatus {
 	}
 }
 
-func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType) {
+func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType, source string) {
 	for _, mf := range movies {
 		if ctx.Err() != nil {
 			l.finishCopy(true)
@@ -101,9 +101,15 @@ func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType) 
 			l.incCopyDone("")
 			continue
 		}
-		current := filepath.Base(mf.VideoUrl)
+		videoURL := SmartPickMovieVideoURL(mf, source)
+		current := filepath.Base(videoURL)
 		l.setCopyCurrent(current)
-		if err := l.copyFileToDestinationCtx(ctx, mf.VideoUrl); err != nil {
+		if videoURL == "" {
+			l.setCopyError("缺少可复制的视频路径")
+			l.incCopyDone("")
+			continue
+		}
+		if err := l.copyFileToDestinationCtx(ctx, videoURL); err != nil {
 			if errors.Is(err, context.Canceled) {
 				l.finishCopy(true)
 				return

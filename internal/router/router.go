@@ -116,6 +116,7 @@ func New(d *dep.Dep) *gin.Engine {
 	r.Static("/static", "ui/static")
 	r.Static("/Volumes/Expansion", "/Volumes/Expansion")
 	r.Static("/Volumes/Getea", "/Volumes/Getea")
+	r.Static("/Volumes/movie-un", "/Volumes/movie-un")
 	r.Static("/Volumes/T7/data", "/Volumes/T7/data")
 	r.Static("/text", "z_text")
 
@@ -130,6 +131,7 @@ func New(d *dep.Dep) *gin.Engine {
 	r.GET("/cardstoday", movieHTML.ListMovieCardToday)
 	r.GET("/cardshasrank", movieHTML.ListMovieCardHasRank)
 	r.GET("/cardsowned", movieHTML.ListMovieCardOwned)
+	r.GET("/cardsmediamowned", movieHTML.ListMovieCardMediaOwned)
 	r.GET("/cardsneeddownload", movieHTML.ListMovieCardNeedDownload)
 	r.GET("/moviecarddayrank", movieHTML.ListMovieCardDayRank)
 	r.GET("/moviecardperiodrank", movieHTML.ListMovieCardPeriodRank)
@@ -150,18 +152,22 @@ func New(d *dep.Dep) *gin.Engine {
 	r.GET("/album-items", movieHTML.AlbumItemsPage)
 	r.GET("/fetch-site-javbus-list", crawlerPages.FetchSiteJavbusListPageMain)
 	r.GET("/fetch-site-sukebei-list", crawlerPages.FetchSiteSukebeiListPageMain)
+	r.GET("/fetch-site-sehuatang-list", crawlerPages.FetchSiteSehuatangListPageMain)
 	r.GET("/dir/:id", dirHTML.DirDetail)
 	r.GET("/triggers", crawlerPages.JobsPage)
 	r.GET("/triggers/dailybest", crawlerPages.DailyBestPage)
 	r.GET("/triggers/seeds", crawlerPages.SeedsPage)
 	r.GET("/triggers/film", crawlerPages.FilmPage)
 	r.GET("/triggers/media", crawlerPages.MediaPage)
+	r.GET("/triggers/media-rollback", crawlerPages.MediaRollbackPage)
 	r.GET("/triggers/fetch-site", crawlerPages.FetchSitePage)
+	r.GET("/triggers/fetch-sehuatang", crawlerPages.FetchSehuatangPage)
 	r.GET("/triggers/backfill", crawlerPages.BackfillPage)
 	r.GET("/crawler/tasks", crawlerPages.TasksPage)
 	r.GET("/crawler/detail-loop", crawlerPages.DetailLoopPage)
 	r.GET("/triggers/sc", movieHTML.ScTriggersPage)
 	r.GET("/sc-pick-smart", movieHTML.ScPickSmartPage)
+	r.GET("/sc-pick-smart-media", movieHTML.ScPickSmartMediaPage)
 	r.GET("/movie-agg-owned/release", aggHTML.MovieAggOwnedReleaseYears)
 	r.GET("/movie-agg-owned/release/:year", aggHTML.MovieAggOwnedReleaseMonths)
 	r.GET("/movie-agg-owned/release/:year/q/:q", aggHTML.MovieAggOwnedReleaseQuarter)
@@ -188,6 +194,7 @@ func New(d *dep.Dep) *gin.Engine {
 		api.DELETE("/movie/:movie/album-item", movieAPI.RemoveFetchResourceFromAlbum)
 		api.POST("/albums/:albumID/items/remove", movieAPI.RemoveAlbumItem)
 		api.POST("/albums/:albumID/items/batch-remove", movieAPI.BatchRemoveAlbumItems)
+		api.POST("/albums/:albumID/items/batch-move", movieAPI.BatchMoveAlbumItems)
 		api.POST("/films/:id/probe-meta", movieHTML.ProbeFilmMeta)
 		api.GET("/persons/:id/merge-candidates", personAPI.MergeCandidates)
 		api.POST("/persons/merge-preview", personAPI.MergePreview)
@@ -198,6 +205,8 @@ func New(d *dep.Dep) *gin.Engine {
 		api.POST("/open-finder", movieAPI.OpenFinderHandler([]string{
 			"/Volumes/Getea",
 			"/Volumes/Expansion",
+			"/Volumes/movie-un",
+			"/Volumes/T7/data",
 		}))
 
 		triggerAPI := handler.NewTriggerAPI(d)
@@ -218,6 +227,7 @@ func New(d *dep.Dep) *gin.Engine {
 		api.POST("/triggers/media/precheck", mediaTriggerAPI.Precheck)
 		api.POST("/triggers/media/commit", mediaTriggerAPI.Commit)
 		api.POST("/triggers/media/return", mediaTriggerAPI.Return)
+		api.POST("/triggers/media/rollback", mediaTriggerAPI.Rollback)
 
 		scTriggerAPI := handler.NewScTriggerAPI(d)
 		api.POST("/triggers/sc/move", scTriggerAPI.Move)
@@ -228,7 +238,6 @@ func New(d *dep.Dep) *gin.Engine {
 		api.POST("/triggers/sc/pick-smart-only", scTriggerAPI.PickSmartOnly)
 		api.GET("/triggers/sc/copy-status", scTriggerAPI.CopyStatus)
 		api.POST("/triggers/sc/copy-stop", scTriggerAPI.CopyStop)
-
 		api.POST("/crawler/jobs/start", crawlerAPI.Start)
 		api.GET("/crawler/jobs", crawlerAPI.ListJobs)
 		api.GET("/crawler/jobs/stream", crawlerAPI.StreamAll)

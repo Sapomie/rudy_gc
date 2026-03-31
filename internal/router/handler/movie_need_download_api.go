@@ -86,6 +86,7 @@ type addMovieAlbumItemReq struct {
 	SourceType  string `json:"source_type"`
 	SourceRowID int64  `json:"source_row_id"`
 	MovieJavID  string `json:"movie_jav_id"`
+	AlbumName   string `json:"album_name"`
 }
 
 type removeAlbumItemReq struct {
@@ -94,6 +95,11 @@ type removeAlbumItemReq struct {
 
 type batchRemoveAlbumItemReq struct {
 	ItemIDs []int64 `json:"item_ids"`
+}
+
+type batchMoveAlbumItemReq struct {
+	ItemIDs       []int64 `json:"item_ids"`
+	TargetAlbumID int64   `json:"target_album_id"`
 }
 
 // POST /api/movie/:movie/add-cast
@@ -201,7 +207,7 @@ func (h *MovieAPI) AddFetchResourceToAlbum(c *gin.Context) {
 		return
 	}
 
-	created, err := h.movieSvc.AddFetchResourceToDefaultAlbum(c.Request.Context(), javID, req.SourceType, req.SourceRowID)
+	created, albumName, err := h.movieSvc.AddFetchResourceToAlbum(c.Request.Context(), req.AlbumName, javID, req.SourceType, req.SourceRowID)
 	if err != nil {
 		switch {
 		case errors.Is(err, movie.ErrInvalidSourceType), errors.Is(err, movie.ErrInvalidSourceRow), errors.Is(err, movie.ErrSourceMovieMiss):
@@ -215,10 +221,10 @@ func (h *MovieAPI) AddFetchResourceToAlbum(c *gin.Context) {
 	}
 
 	if created {
-		c.JSON(http.StatusOK, gin.H{"ok": true, "created": true, "favorited": true, "message": "已加入相册：下载中"})
+		c.JSON(http.StatusOK, gin.H{"ok": true, "created": true, "favorited": true, "album_name": albumName, "message": "已加入相册：" + albumName})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true, "created": false, "favorited": true, "message": "该资源已在相册：下载中"})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "created": false, "favorited": true, "album_name": albumName, "message": "该资源已在相册：" + albumName})
 }
 
 // DELETE /api/movie/:movie/album-item
@@ -240,7 +246,7 @@ func (h *MovieAPI) RemoveFetchResourceFromAlbum(c *gin.Context) {
 		return
 	}
 
-	removed, err := h.movieSvc.RemoveFetchResourceFromDefaultAlbum(c.Request.Context(), javID, req.SourceType, req.SourceRowID)
+	removed, albumName, err := h.movieSvc.RemoveFetchResourceFromAlbum(c.Request.Context(), req.AlbumName, javID, req.SourceType, req.SourceRowID)
 	if err != nil {
 		switch {
 		case errors.Is(err, movie.ErrInvalidSourceType), errors.Is(err, movie.ErrInvalidSourceRow), errors.Is(err, movie.ErrSourceMovieMiss):
@@ -254,10 +260,10 @@ func (h *MovieAPI) RemoveFetchResourceFromAlbum(c *gin.Context) {
 	}
 
 	if removed {
-		c.JSON(http.StatusOK, gin.H{"ok": true, "removed": true, "favorited": false, "message": "已从相册下载中移除"})
+		c.JSON(http.StatusOK, gin.H{"ok": true, "removed": true, "favorited": false, "album_name": albumName, "message": "已从相册移除：" + albumName})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true, "removed": false, "favorited": false, "message": "该资源不在相册：下载中"})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "removed": false, "favorited": false, "album_name": albumName, "message": "该资源不在相册：" + albumName})
 }
 
 // POST /api/albums/:albumID/items/remove
@@ -322,6 +328,40 @@ func (h *MovieAPI) BatchRemoveAlbumItems(c *gin.Context) {
 		"removed_count": removedCount,
 		"failed_ids":    failedIDs,
 		"message":       "批量移除完成",
+	})
+}
+
+// POST /api/albums/:albumID/items/batch-move
+func (h *MovieAPI) BatchMoveAlbumItems(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req batchMoveAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	movedCount, failedIDs, err := h.movieSvc.MoveAlbumItemsByIDs(c.Request.Context(), albumID, req.TargetAlbumID, req.ItemIDs)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrInvalidAlbumID), errors.Is(err, movie.ErrTargetAlbumID), errors.Is(err, movie.ErrTargetAlbumSame):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":           true,
+		"moved_count":  movedCount,
+		"failed_ids":   failedIDs,
+		"target_album": req.TargetAlbumID,
+		"message":      "批量移动完成",
 	})
 }
 

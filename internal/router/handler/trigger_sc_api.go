@@ -211,6 +211,7 @@ type scPickReq struct {
 
 type scSmartPickReq struct {
 	PickN   int                 `json:"pickN"`
+	Source  string              `json:"source"`
 	Options sc.SmartPickOptions `json:"options"`
 	Reqs    []scPickReq         `json:"reqs"`
 }
@@ -242,10 +243,11 @@ type scPickCopyMovie struct {
 	HighestRank          int64            `json:"highest_rank"`
 }
 
-func buildPickCopyMovies(movies []*types.MovieType) []scPickCopyMovie {
+func buildPickCopyMovies(movies []*types.MovieType, source string) []scPickCopyMovie {
 	if len(movies) == 0 {
 		return nil
 	}
+	source = sc.NormalizeSmartPickSource(source)
 	resp := make([]scPickCopyMovie, 0, len(movies))
 	for _, m := range movies {
 		if m == nil {
@@ -265,18 +267,18 @@ func buildPickCopyMovies(movies []*types.MovieType) []scPickCopyMovie {
 			Name:                 m.Name,
 			Title:                m.Title,
 			ReleasingDate:        m.ReleasingDate,
-			FilmBirthDate:        m.FilmBirthDate,
+			FilmBirthDate:        sc.SmartPickMovieBirthDate(m, source),
 			Score:                m.Score,
 			ViewersNumberWatched: m.ViewersNumberWatched,
 			Director:             m.Director,
 			Genre:                m.Genre,
 			Cast:                 casts,
 			JavUrl:               m.JavUrl,
-			VideoUrl:             m.VideoUrl,
+			VideoUrl:             sc.SmartPickMovieVideoURL(m, source),
 			SearchUrl:            m.SearchUrl,
 			BusUrl:               m.BusUrl,
 			JacketImg:            m.JacketImg,
-			Owned:                m.Owned,
+			Owned:                sc.SmartPickMovieOwned(m, source),
 			Prefix:               m.Prefix,
 			ScTimes:              m.ScTimes,
 			ComeTimes:            m.ComeTimes,
@@ -286,13 +288,10 @@ func buildPickCopyMovies(movies []*types.MovieType) []scPickCopyMovie {
 	return resp
 }
 
-func buildPickedTotalSizeGB(movies []*types.MovieType) string {
+func buildPickedTotalSizeGB(movies []*types.MovieType, source string) string {
 	var totalBytes int64
 	for _, m := range movies {
-		if m == nil || m.VFilm == nil {
-			continue
-		}
-		totalBytes += m.VFilm.Size
+		totalBytes += sc.SmartPickMovieSize(m, source)
 	}
 	return fmt.Sprintf("%.2f", float64(totalBytes)/(1024*1024*1024))
 }
@@ -317,15 +316,17 @@ func (h *ScTriggerAPI) PickSmartOnly(c *gin.Context) {
 		})
 	}
 
-	movies, err := h.scSvc.SmartPickFromRequests(c.Request.Context(), converted, req.PickN, req.Options)
+	source := sc.NormalizeSmartPickSource(req.Source)
+	movies, err := h.scSvc.SmartPickFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"picked":        len(movies),
-		"movies":        buildPickCopyMovies(movies),
-		"total_size_gb": buildPickedTotalSizeGB(movies),
+		"movies":        buildPickCopyMovies(movies, source),
+		"total_size_gb": buildPickedTotalSizeGB(movies, source),
+		"source":        source,
 	})
 }
 
@@ -349,16 +350,18 @@ func (h *ScTriggerAPI) PickSmartCopy(c *gin.Context) {
 		})
 	}
 
-	movies, err := h.scSvc.SmartPickCopyFromRequests(c.Request.Context(), converted, req.PickN, req.Options)
+	source := sc.NormalizeSmartPickSource(req.Source)
+	movies, err := h.scSvc.SmartPickCopyFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	started, status := h.scSvc.StartCopyAsync(movies)
+	started, status := h.scSvc.StartCopyAsync(movies, source)
 	c.JSON(http.StatusOK, gin.H{
 		"picked":        len(movies),
-		"movies":        buildPickCopyMovies(movies),
-		"total_size_gb": buildPickedTotalSizeGB(movies),
+		"movies":        buildPickCopyMovies(movies, source),
+		"total_size_gb": buildPickedTotalSizeGB(movies, source),
+		"source":        source,
 		"copy_started":  started,
 		"copy_status":   status,
 	})

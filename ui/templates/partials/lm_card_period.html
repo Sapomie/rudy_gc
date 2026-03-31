@@ -44,7 +44,7 @@
                     </div>
                 </li>
 
-                {{ if ge .Movie.Owned 2 }}
+                {{ if or (ge .Movie.Owned 2) (ge .Movie.OwnedWMedia 2) }}
                     <li class="list-group-item d-flex align-items-center">
                         {{ if eq .Movie.Owned 5 }}
                             <a href="{{ .Movie.VideoUrl }}" class="btn btn-sm btn-info me-2">Play</a>
@@ -53,7 +53,15 @@
                         {{ else if eq .Movie.Owned 6 }}
                             <a href="{{ .Movie.VideoUrl }}" class="btn btn-sm btn-secondary me-2">ReMoved</a>
                         {{ end }}
+                        {{ if eq .Movie.OwnedWMedia 5 }}
+                            <a href="{{ .Movie.VideoUrlWMedia }}" class="btn btn-sm btn-outline-primary me-2">MPlay</a>
+                        {{ else if eq .Movie.OwnedWMedia 4 }}
+                            <a href="{{ .Movie.VideoUrlWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
+                        {{ else if eq .Movie.OwnedWMedia 6 }}
+                            <a href="{{ .Movie.VideoUrlWMedia }}" class="btn btn-sm btn-outline-secondary me-2">MRemoved</a>
+                        {{ end }}
                         {{ if .Movie.FilmBirthDate }}<span class="text-muted small">| {{ .Movie.FilmBirthDate }}</span>{{ end }}
+                        {{ if .Movie.FilmBirthDateWMedia }}<span class="text-muted small ms-2">| M {{ .Movie.FilmBirthDateWMedia }}</span>{{ end }}
                     </li>
                 {{ end }}
 

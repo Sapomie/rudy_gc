@@ -235,8 +235,8 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
                                             {{ range $i, $it := .TopCastsAll }}
-                                                {{ $u := (printf "/cards?cn=%s&mowned=1" (urlquery $it.Name)) }}
-                                                {{ if gt $it.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&mowned=1" $it.PersonId) }}{{ end }}
+                                                {{ $u := (printf "/cards?cn=%s&owned=1" (urlquery $it.Name)) }}
+                                                {{ if gt $it.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&owned=1" $it.PersonId) }}{{ end }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -266,7 +266,7 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
                                             {{ range $i, $it := .TopDirectorsAll }}
-                                                {{ $u := (printf "/cards?dn=%s&mowned=1" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?dn=%s&owned=1" (urlquery $it.Name)) }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -296,7 +296,7 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
                                             {{ range $i, $it := .TopLabelsAll }}
-                                                {{ $u := (printf "/cards?ln=%s&mowned=1" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?ln=%s&owned=1" (urlquery $it.Name)) }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -326,7 +326,7 @@
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
                                             {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
                                             {{ range $i, $it := .TopPrefixesAll }}
-                                                {{ $u := (printf "/cards?pn=%s&mowned=1" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?pn=%s&owned=1" (urlquery $it.Name)) }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"

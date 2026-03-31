@@ -93,8 +93,8 @@
 }
 
 .fetch-site-detail-sukebei-table .fetch-site-col-title {
-    width: 960px;
-    min-width: 960px;
+    width: 501px; /* 约占 1670px 表格宽度的 30% */
+    min-width: 501px;
 }
 
 .fetch-site-detail-sukebei-table th.fetch-site-col-title,
@@ -105,7 +105,7 @@
 
 .fetch-site-detail-sukebei-table .fetch-site-title-content {
     display: block;
-    min-width: 960px;
+    min-width: 501px;
 }
 
 .fetch-site-detail-sukebei-table .fetch-site-title-content a {
@@ -139,4 +139,38 @@
     display: inline;
     overflow: visible;
     white-space: nowrap;
+}
+
+.fetch-site-time-cell {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.fetch-site-date {
+    color: #273444;
+    font-weight: 600;
+}
+
+.fetch-site-clock {
+    color: #0d6efd;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.fetch-site-day-group-a > td,
+.fetch-site-day-group-a > th {
+    background: #fffdf7 !important;
+}
+
+.fetch-site-day-group-b > td,
+.fetch-site-day-group-b > th {
+    background: #f7fbff !important;
+}
+
+.fetch-site-day-group-a:hover > td,
+.fetch-site-day-group-a:hover > th,
+.fetch-site-day-group-b:hover > td,
+.fetch-site-day-group-b:hover > th {
+    filter: brightness(0.985);
 }

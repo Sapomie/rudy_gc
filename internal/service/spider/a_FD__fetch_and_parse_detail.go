@@ -10,24 +10,17 @@ import (
 	"github.com/zeromicro/go-zero/core/threading"
 )
 
-func (l *CrawlLogic) FetchAndParseDetails(ctx context.Context, autoFetchSite bool, onlyReleased bool) (int64, error) {
+func (l *CrawlLogic) FetchAndParseDetails(ctx context.Context) (int64, *affectedMovieNumbers, error) {
 	detailNum, err := l.FetchDetailsByItemDetailStatus(ctx)
 	if err != nil {
 		l.deps.Log.WithContext(ctx).Errorf("FetchDetailsByItemDetailStatus: %v", err)
-		return 0, err
+		return 0, nil, err
 	}
 
 	affected, err := l.ParseDetails(ctx)
 	if err != nil {
 		l.deps.Log.WithContext(ctx).Errorf("ParseDetails: %v", err)
-		return 0, err
-	}
-
-	if autoFetchSite {
-		if err := l.runFetchSiteAfterDetail(ctx, affected, onlyReleased); err != nil {
-			l.deps.Log.WithContext(ctx).Errorf("runFetchSiteAfterDetail: %v", err)
-			return 0, err
-		}
+		return 0, nil, err
 	}
 
 	threading.GoSafe(func() {
@@ -36,7 +29,7 @@ func (l *CrawlLogic) FetchAndParseDetails(ctx context.Context, autoFetchSite boo
 		}
 	})
 
-	return detailNum, nil
+	return detailNum, affected, nil
 }
 
 func (l *CrawlLogic) saveRecord(ctx context.Context, typ string, start, end time.Time, detailNum int64) {

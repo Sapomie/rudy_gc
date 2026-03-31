@@ -45,16 +45,10 @@ type (
 		Id           int64  `db:"id"`
 		MovieJavId   string `db:"movie_jav_id"`
 		QueryText    string `db:"query_text"`
-		SearchUrl    string `db:"search_url"`
 		TorrentTitle string `db:"torrent_title"`
 		ViewId       int64  `db:"view_id"`
-		ViewUrl      string `db:"view_url"`
-		TorrentUrl   string `db:"torrent_url"`
-		MagnetUrl    string `db:"magnet_url"`
 		InfoHash     string `db:"info_hash"`
-		Dn           string `db:"dn"`
 		SizeBytes    int64  `db:"size_bytes"`
-		SizeText     string `db:"size_text"`
 		PublishTime  int64  `db:"publish_time"`
 		Seeders      int64  `db:"seeders"`
 		Leechers     int64  `db:"leechers"`
@@ -128,8 +122,8 @@ func (m *defaultTSukebeiTorrentModel) Insert(ctx context.Context, data *TSukebei
 	rudyGcTSukebeiTorrentIdKey := fmt.Sprintf("%s%v", cacheRudyGcTSukebeiTorrentIdPrefix, data.Id)
 	rudyGcTSukebeiTorrentViewIdKey := fmt.Sprintf("%s%v", cacheRudyGcTSukebeiTorrentViewIdPrefix, data.ViewId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tSukebeiTorrentRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.QueryText, data.SearchUrl, data.TorrentTitle, data.ViewId, data.ViewUrl, data.TorrentUrl, data.MagnetUrl, data.InfoHash, data.Dn, data.SizeBytes, data.SizeText, data.PublishTime, data.Seeders, data.Leechers, data.Completed, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tSukebeiTorrentRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.QueryText, data.TorrentTitle, data.ViewId, data.InfoHash, data.SizeBytes, data.PublishTime, data.Seeders, data.Leechers, data.Completed, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcTSukebeiTorrentIdKey, rudyGcTSukebeiTorrentViewIdKey)
 	return ret, err
 }
@@ -144,7 +138,7 @@ func (m *defaultTSukebeiTorrentModel) Update(ctx context.Context, newData *TSuke
 	rudyGcTSukebeiTorrentViewIdKey := fmt.Sprintf("%s%v", cacheRudyGcTSukebeiTorrentViewIdPrefix, data.ViewId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, tSukebeiTorrentRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.QueryText, newData.SearchUrl, newData.TorrentTitle, newData.ViewId, newData.ViewUrl, newData.TorrentUrl, newData.MagnetUrl, newData.InfoHash, newData.Dn, newData.SizeBytes, newData.SizeText, newData.PublishTime, newData.Seeders, newData.Leechers, newData.Completed, newData.LastSeenTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.QueryText, newData.TorrentTitle, newData.ViewId, newData.InfoHash, newData.SizeBytes, newData.PublishTime, newData.Seeders, newData.Leechers, newData.Completed, newData.LastSeenTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcTSukebeiTorrentIdKey, rudyGcTSukebeiTorrentViewIdKey)
 	return err
 }

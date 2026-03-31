@@ -4,7 +4,12 @@
     const checkAll = document.getElementById('albumItemCheckAll');
     const selectedCountEl = document.getElementById('albumBatchSelectedCount');
     const batchCopyBtn = document.getElementById('btnBatchCopyAlbumHashes');
+    const batchMoveBtn = document.getElementById('btnBatchMoveAlbumItems');
     const batchRemoveBtn = document.getElementById('btnBatchRemoveAlbumItems');
+    const batchMoveModalEl = document.getElementById('albumBatchMoveModal');
+    const batchMoveTargetEl = document.getElementById('albumBatchMoveTarget');
+    const batchMoveCountEl = document.getElementById('albumBatchMoveCount');
+    const batchMoveConfirmBtn = document.getElementById('albumBatchMoveConfirmBtn');
     const batchRemoveModalEl = document.getElementById('albumBatchRemoveModal');
     const batchRemoveCountEl = document.getElementById('albumBatchRemoveCount');
     const batchRemoveConfirmBtn = document.getElementById('albumBatchRemoveConfirmBtn');
@@ -13,9 +18,13 @@
     }
 
     const albumID = parseInt(String(page.getAttribute('data-album-id') || '0'), 10);
+    const batchMoveModal = (batchMoveModalEl && window.bootstrap && window.bootstrap.Modal)
+        ? window.bootstrap.Modal.getOrCreateInstance(batchMoveModalEl)
+        : null;
     const batchRemoveModal = (batchRemoveModalEl && window.bootstrap && window.bootstrap.Modal)
         ? window.bootstrap.Modal.getOrCreateInstance(batchRemoveModalEl)
         : null;
+    let pendingBatchMoveIDs = [];
     let pendingBatchRemoveIDs = [];
 
     function showMsg(text, ok) {
@@ -110,6 +119,9 @@
         if (batchCopyBtn) {
             batchCopyBtn.disabled = checkedIDs.length === 0;
         }
+        if (batchMoveBtn) {
+            batchMoveBtn.disabled = checkedIDs.length === 0 || albumID <= 0;
+        }
         if (batchRemoveBtn) {
             batchRemoveBtn.disabled = checkedIDs.length === 0 || albumID <= 0;
         }
@@ -193,6 +205,67 @@
         });
     }
 
+    function batchMoveAlbumItems(itemIDs, targetAlbumID) {
+        if (albumID <= 0) {
+            showMsg('当前相册无效，无法批量移动', false);
+            return;
+        }
+        if (!Array.isArray(itemIDs) || itemIDs.length === 0) {
+            showMsg('请先选择要移动的条目', false);
+            return;
+        }
+        if (targetAlbumID <= 0) {
+            showMsg('请选择目标相册', false);
+            return;
+        }
+        if (targetAlbumID === albumID) {
+            showMsg('目标相册不能与当前相册相同', false);
+            return;
+        }
+        if (batchMoveBtn) {
+            batchMoveBtn.disabled = true;
+        }
+        request('/api/albums/' + albumID + '/items/batch-move', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({item_ids: itemIDs, target_album_id: targetAlbumID})
+        }).then(function (data) {
+            const failedIDs = Array.isArray(data.failed_ids) ? data.failed_ids.map(parseItemID).filter(function (id) { return id > 0; }) : [];
+            const failedMap = {};
+            failedIDs.forEach(function (id) { failedMap[id] = true; });
+            const movedIDs = itemIDs.filter(function (id) { return !failedMap[id]; });
+            if (movedIDs.length > 0) {
+                removeRowsByIDs(movedIDs);
+            }
+            if (failedIDs.length > 0) {
+                showMsg('已移动 ' + (data.moved_count || movedIDs.length) + ' 条，失败 ' + failedIDs.length + ' 条', false);
+            } else {
+                showMsg('已批量移动 ' + (data.moved_count || movedIDs.length) + ' 条', true);
+            }
+            if (batchMoveBtn) {
+                batchMoveBtn.disabled = false;
+            }
+        }).catch(function (error) {
+            showMsg(error && error.message ? error.message : '批量移动失败', false);
+            if (batchMoveBtn) {
+                batchMoveBtn.disabled = false;
+            }
+        });
+    }
+
+    function openBatchMoveModal(itemIDs) {
+        if (!batchMoveModal || !batchMoveConfirmBtn || !batchMoveTargetEl) {
+            showMsg('确认弹框未初始化，无法批量移动', false);
+            return;
+        }
+        pendingBatchMoveIDs = itemIDs.slice();
+        if (batchMoveCountEl) {
+            batchMoveCountEl.textContent = String(pendingBatchMoveIDs.length);
+        }
+        batchMoveTargetEl.value = '';
+        batchMoveModal.show();
+    }
+
     function openBatchRemoveModal(itemIDs) {
         if (!batchRemoveModal || !batchRemoveModalEl || !batchRemoveConfirmBtn) {
             showMsg('确认弹框未初始化，无法批量移除', false);
@@ -226,6 +299,17 @@
         });
     }
 
+    if (batchMoveBtn) {
+        batchMoveBtn.addEventListener('click', function () {
+            const ids = getCheckedItemIDs();
+            if (ids.length === 0) {
+                showMsg('请先选择要移动的条目', false);
+                return;
+            }
+            openBatchMoveModal(ids);
+        });
+    }
+
     if (batchCopyBtn) {
         batchCopyBtn.addEventListener('click', function () {
             const hashes = getCheckedHashes();
@@ -238,6 +322,48 @@
             }).catch(function (error) {
                 showMsg(error && error.message ? error.message : '复制失败', false);
             });
+        });
+    }
+
+    if (batchMoveModalEl) {
+        batchMoveModalEl.addEventListener('hidden.bs.modal', function () {
+            pendingBatchMoveIDs = [];
+            if (batchMoveCountEl) {
+                batchMoveCountEl.textContent = '0';
+            }
+            if (batchMoveTargetEl) {
+                batchMoveTargetEl.value = '';
+            }
+            if (batchMoveConfirmBtn) {
+                batchMoveConfirmBtn.disabled = false;
+            }
+        });
+    }
+
+    if (batchMoveConfirmBtn) {
+        batchMoveConfirmBtn.addEventListener('click', function () {
+            if (!Array.isArray(pendingBatchMoveIDs) || pendingBatchMoveIDs.length === 0) {
+                showMsg('缺少待移动条目', false);
+                if (batchMoveModal) {
+                    batchMoveModal.hide();
+                }
+                return;
+            }
+            const targetAlbumID = parseItemID(batchMoveTargetEl ? batchMoveTargetEl.value : '');
+            if (targetAlbumID <= 0) {
+                showMsg('请选择目标相册', false);
+                return;
+            }
+            if (targetAlbumID === albumID) {
+                showMsg('目标相册不能与当前相册相同', false);
+                return;
+            }
+            batchMoveConfirmBtn.disabled = true;
+            const ids = pendingBatchMoveIDs.slice();
+            batchMoveAlbumItems(ids, targetAlbumID);
+            if (batchMoveModal) {
+                batchMoveModal.hide();
+            }
         });
     }
 

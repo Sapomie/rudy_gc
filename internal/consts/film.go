@@ -39,4 +39,5 @@ const (
 	OwnedHasSubNotRemoved int64 = 4 // has_sub=2, is_removed=1
 	OwnedNoSubNotRemoved  int64 = 5 // has_sub=1, is_removed=1
 	OwnedRemoved          int64 = 6 // is_removed=2
+	OwnedNotOwned         int64 = 7 // 对应表无记录
 )

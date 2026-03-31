@@ -21,6 +21,12 @@
         button.disabled = loading;
     }
 
+    function setTriggerButtonsLoading(loading) {
+        document.querySelectorAll('.js-trigger-javbus, .js-trigger-sukebei, .js-trigger-both').forEach(function (button) {
+            setButtonState(button, loading);
+        });
+    }
+
     function request(url, options) {
         return fetch(url, options).then(async function (response) {
             const data = await response.json().catch(function () {
@@ -33,9 +39,8 @@
         });
     }
 
-    function startTask(taskType, movieJavID, movieName, button) {
-        setButtonState(button, true);
-        request('/api/crawler/jobs/start', {
+    function requestStartTask(taskType, movieJavID, movieName) {
+        return request('/api/crawler/jobs/start', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -43,28 +48,86 @@
                 movie_jav_id: movieJavID,
                 movie_name: movieName
             })
-        }).then(function () {
-            const siteLabel = taskType === 'spider_fetch_javbus_resources' ? 'JavBus' : 'Sukebei';
-            showMsg('已开启' + siteLabel + '抓取：' + movieName, true);
-            setButtonState(button, false);
-        }).catch(function (error) {
-            showMsg(error && error.message ? error.message : '启动失败', false);
-            setButtonState(button, false);
         });
     }
 
-    function applyFavoriteButtonState(button, favorited) {
+    function siteLabelByTaskType(taskType) {
+        return taskType === 'spider_fetch_javbus_resources' ? 'JavBus' : 'Sukebei';
+    }
+
+    function startTask(taskType, movieJavID, movieName) {
+        setTriggerButtonsLoading(true);
+        requestStartTask(taskType, movieJavID, movieName).then(function () {
+            showMsg('已开启' + siteLabelByTaskType(taskType) + '抓取：' + movieName, true);
+        }).catch(function (error) {
+            showMsg(error && error.message ? error.message : '启动失败', false);
+        }).finally(function () {
+            setTriggerButtonsLoading(false);
+        });
+    }
+
+    function startBothTasks(movieJavID, movieName) {
+        setTriggerButtonsLoading(true);
+        Promise.allSettled([
+            requestStartTask('spider_fetch_javbus_resources', movieJavID, movieName),
+            requestStartTask('spider_fetch_sukebei_resources', movieJavID, movieName)
+        ]).then(function (results) {
+            const successSites = [];
+            const failedSites = [];
+            results.forEach(function (result, index) {
+                const siteLabel = index === 0 ? 'JavBus' : 'Sukebei';
+                if (result.status === 'fulfilled') {
+                    successSites.push(siteLabel);
+                    return;
+                }
+                const reason = result.reason && result.reason.message ? result.reason.message : '启动失败';
+                failedSites.push(siteLabel + '：' + reason);
+            });
+
+            if (successSites.length === 2) {
+                showMsg('已同时开启 JavBus + Sukebei 抓取：' + movieName, true);
+                return;
+            }
+            if (successSites.length === 1) {
+                showMsg('部分成功：已开启' + successSites[0] + '；' + failedSites.join('；'), false);
+                return;
+            }
+            showMsg('同时触发失败：' + failedSites.join('；'), false);
+        }).finally(function () {
+            setTriggerButtonsLoading(false);
+        });
+    }
+
+    function resolveAlbumName(button, fallback) {
+        const raw = button ? String(button.getAttribute('data-album-name') || '').trim() : '';
+        if (raw) {
+            return raw;
+        }
+        const base = String(fallback || '').trim();
+        return base || '下载中';
+    }
+
+    function applyFavoriteButtonState(button, favorited, albumName) {
         if (!button) {
             return;
         }
+        const targetAlbumName = resolveAlbumName(button, albumName);
         button.setAttribute('data-favorited', favorited ? '1' : '0');
-        button.classList.toggle('btn-warning', favorited);
-        button.classList.toggle('btn-outline-warning', !favorited);
-        button.textContent = favorited ? '已在下载中' : '加入下载中';
-        button.title = favorited ? '移出下载中' : '加入下载中';
+        button.setAttribute('data-album-name', targetAlbumName);
+        button.classList.remove('btn-warning', 'btn-outline-warning', 'btn-info', 'btn-outline-info');
+
+        const pendingAlbum = targetAlbumName === '待下载';
+        if (pendingAlbum) {
+            button.classList.add(favorited ? 'btn-info' : 'btn-outline-info');
+        } else {
+            button.classList.add(favorited ? 'btn-warning' : 'btn-outline-warning');
+        }
+        button.textContent = favorited ? ('已在' + targetAlbumName) : targetAlbumName;
+        button.title = favorited ? ('移出' + targetAlbumName) : targetAlbumName;
     }
 
-    function switchAlbumFavorite(movieJavID, sourceType, sourceRowID, currentFavorited, button) {
+    function switchAlbumFavorite(movieJavID, sourceType, sourceRowID, currentFavorited, button, albumName) {
+        const targetAlbumName = resolveAlbumName(button, albumName);
         const method = currentFavorited ? 'DELETE' : 'POST';
         setButtonState(button, true);
         request('/api/movie/' + encodeURIComponent(movieJavID) + '/album-item', {
@@ -73,16 +136,18 @@
             body: JSON.stringify({
                 movie_jav_id: movieJavID,
                 source_type: sourceType,
-                source_row_id: sourceRowID
+                source_row_id: sourceRowID,
+                album_name: targetAlbumName
             })
         }).then(function (data) {
             const favorited = data && typeof data.favorited === 'boolean' ? data.favorited : !currentFavorited;
-            applyFavoriteButtonState(button, favorited);
+            const responseAlbumName = data && data.album_name ? String(data.album_name).trim() : targetAlbumName;
+            applyFavoriteButtonState(button, favorited, responseAlbumName);
             const message = data && data.message ? String(data.message) : '操作成功';
             showMsg(message, true);
             setButtonState(button, false);
         }).catch(function (error) {
-            showMsg(error && error.message ? error.message : '下载中操作失败', false);
+            showMsg(error && error.message ? error.message : (targetAlbumName + '操作失败'), false);
             setButtonState(button, false);
         });
     }
@@ -233,8 +298,9 @@
 
         const javbusButton = event.target.closest('.js-trigger-javbus');
         const sukebeiButton = event.target.closest('.js-trigger-sukebei');
+        const bothButton = event.target.closest('.js-trigger-both');
         const favoriteButton = event.target.closest('.js-add-favorite');
-        if (!javbusButton && !sukebeiButton && !favoriteButton) {
+        if (!javbusButton && !sukebeiButton && !bothButton && !favoriteButton) {
             return;
         }
 
@@ -244,15 +310,16 @@
             const sourceType = String(favoriteButton.getAttribute('data-source-type') || '').trim();
             const sourceRowID = parseInt(String(favoriteButton.getAttribute('data-source-row-id') || '0'), 10);
             const currentFavorited = String(favoriteButton.getAttribute('data-favorited') || '').trim() === '1';
+            const albumName = resolveAlbumName(favoriteButton);
             if (!movieJavID || !sourceType || !Number.isInteger(sourceRowID) || sourceRowID <= 0) {
-                showMsg('缺少下载中参数，无法执行', false);
+                showMsg('缺少' + albumName + '参数，无法执行', false);
                 return;
             }
-            switchAlbumFavorite(movieJavID, sourceType, sourceRowID, currentFavorited, favoriteButton);
+            switchAlbumFavorite(movieJavID, sourceType, sourceRowID, currentFavorited, favoriteButton, albumName);
             return;
         }
 
-        const button = javbusButton || sukebeiButton;
+        const button = javbusButton || sukebeiButton || bothButton;
         const target = readMovieTarget(button);
         const movieJavID = target.movieJavID;
         const movieName = target.movieName;
@@ -261,10 +328,15 @@
             return;
         }
 
-        if (javbusButton) {
-            startTask('spider_fetch_javbus_resources', movieJavID, movieName, javbusButton);
+        if (bothButton) {
+            startBothTasks(movieJavID, movieName);
             return;
         }
-        startTask('spider_fetch_sukebei_resources', movieJavID, movieName, sukebeiButton);
+
+        if (javbusButton) {
+            startTask('spider_fetch_javbus_resources', movieJavID, movieName);
+            return;
+        }
+        startTask('spider_fetch_sukebei_resources', movieJavID, movieName);
     });
 })();

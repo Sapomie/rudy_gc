@@ -31,6 +31,24 @@
             Owned
         </a>
 
+        <a href="{{ .ownedQuery.MediaOwned.Href }}"
+           class="btn btn-sm btn-success waves-effect waves-light {{ if .ownedQuery.MediaOwned.Active }}active disabled{{ end }}"
+           aria-current="{{ if .ownedQuery.MediaOwned.Active }}true{{ else }}false{{ end }}">
+            MOwned
+        </a>
+
+        <a href="{{ .ownedQuery.NotOwned.Href }}"
+           class="btn btn-sm btn-warning waves-effect waves-light {{ if .ownedQuery.NotOwned.Active }}active disabled{{ end }}"
+           aria-current="{{ if .ownedQuery.NotOwned.Active }}true{{ else }}false{{ end }}">
+            NotOwned
+        </a>
+
+        <a href="{{ .ownedQuery.MediaNotOwned.Href }}"
+           class="btn btn-sm btn-secondary waves-effect waves-light {{ if .ownedQuery.MediaNotOwned.Active }}active disabled{{ end }}"
+           aria-current="{{ if .ownedQuery.MediaNotOwned.Active }}true{{ else }}false{{ end }}">
+            MNotOwned
+        </a>
+
         <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: {{ .total }}</span>
     </div>
 {{ end }}

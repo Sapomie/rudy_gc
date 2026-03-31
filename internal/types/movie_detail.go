@@ -1,15 +1,17 @@
 package types
 
 type MovieDetail struct {
-	MovieType       *MovieType
-	FilmInfo        *FilmInfo
-	HasFilm         int64
-	RankInfos       []*RankInfo
-	SC              []*MovieScEvent
-	JavbusFetch     *MovieFetchSiteStatus
-	JavbusMagnets   []*MovieJavbusMagnet
-	SukebeiFetch    *MovieFetchSiteStatus
-	SukebeiTorrents []*MovieSukebeiTorrent
+	MovieType        *MovieType
+	FilmInfo         *FilmInfo
+	MediaInfo        *FilmInfo
+	HasFilm          int64
+	RankInfos        []*RankInfo
+	SC               []*MovieScEvent
+	JavbusFetch      *MovieFetchSiteStatus
+	JavbusMagnets    []*MovieJavbusMagnet
+	SukebeiFetch     *MovieFetchSiteStatus
+	SukebeiTorrents  []*MovieSukebeiTorrent
+	SehuatangMagnets []*MovieSehuatangMagnet
 }
 
 type RankInfo struct {
@@ -35,23 +37,21 @@ type MovieFetchSiteStatus struct {
 type MovieJavbusMagnet struct {
 	RowID          int64
 	MagnetName     string
-	MagnetURL      string
 	InfoHash       string
 	SizeText       string
 	ShareDate      string
 	HasHD          bool
 	HasSubtitle    bool
-	PageURL        string
 	HasMatchedHash bool
 	IsFavorited    bool
+	IsInDownload   bool
+	IsInPending    bool
 }
 
 type MovieSukebeiTorrent struct {
 	RowID          int64
 	TorrentTitle   string
 	ViewURL        string
-	TorrentURL     string
-	MagnetURL      string
 	InfoHash       string
 	SizeText       string
 	PublishTime    string
@@ -60,4 +60,18 @@ type MovieSukebeiTorrent struct {
 	Completed      int64
 	HasMatchedHash bool
 	IsFavorited    bool
+	IsInDownload   bool
+	IsInPending    bool
+}
+
+type MovieSehuatangMagnet struct {
+	RowID          int64
+	ThreadTitle    string
+	ThreadURL      string
+	InfoHash       string
+	PostTime       string
+	HasMatchedHash bool
+	IsFavorited    bool
+	IsInDownload   bool
+	IsInPending    bool
 }

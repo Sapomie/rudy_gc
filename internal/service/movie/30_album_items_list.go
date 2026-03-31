@@ -10,6 +10,7 @@ import (
 const (
 	albumSourceTypeJavbusMagnet = "javbus_magnet"
 	albumSourceTypeSukebei      = "sukebei_torrent"
+	albumSourceTypeSehuatang    = "sehuatang_magnet"
 )
 
 type AlbumItemsPageQuery struct {
@@ -199,6 +200,8 @@ func albumItemSourceTypeText(sourceType string) string {
 		return "JavBus 磁力"
 	case albumSourceTypeSukebei:
 		return "Sukebei 种子"
+	case albumSourceTypeSehuatang:
+		return "Sehuatang 磁力"
 	default:
 		return "-"
 	}

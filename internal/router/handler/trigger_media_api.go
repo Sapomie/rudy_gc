@@ -49,6 +49,17 @@ type mediaIngestResponse struct {
 	CommitPreview   []mediaIngestItemRow     `json:"commit_preview"`
 }
 
+type mediaRollbackResponse struct {
+	Phase           string               `json:"phase"`
+	Message         string               `json:"message"`
+	Total           int                  `json:"total"`
+	Success         int                  `json:"success"`
+	Failed          int                  `json:"failed"`
+	RollbackSuccess []mediaIngestItemRow `json:"rollback_success"`
+	RollbackFail    []mediaIngestItemRow `json:"rollback_fail"`
+	RollbackPreview []mediaIngestItemRow `json:"rollback_preview"`
+}
+
 func (h *MediaTriggerAPI) Precheck(c *gin.Context) {
 	result, err := h.mediaSvc.IngestPrecheck(c.Request.Context())
 	resp := buildMediaPrecheckResponse("precheck", result)
@@ -145,6 +156,19 @@ func (h *MediaTriggerAPI) Return(c *gin.Context) {
 	})
 }
 
+func (h *MediaTriggerAPI) Rollback(c *gin.Context) {
+	result, err := h.mediaSvc.RollbackName(c.Request.Context())
+	resp := buildMediaRollbackResponse("rollback", result)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  err.Error(),
+			"result": resp,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 func buildMediaPrecheckResponse(phase string, result *media.IngestNewResult) mediaIngestResponse {
 	resp := mediaIngestResponse{
 		Phase:           phase,
@@ -220,6 +244,42 @@ func buildMediaCommitResponse(phase string, result *media.IngestNewResult) media
 		} else {
 			resp.CommitFail = append(resp.CommitFail, row)
 		}
+	}
+	return resp
+}
+
+func buildMediaRollbackResponse(phase string, result *media.IngestNewResult) mediaRollbackResponse {
+	resp := mediaRollbackResponse{
+		Phase:           phase,
+		RollbackSuccess: []mediaIngestItemRow{},
+		RollbackFail:    []mediaIngestItemRow{},
+		RollbackPreview: []mediaIngestItemRow{},
+	}
+	if result == nil {
+		resp.Message = "回滚未返回数据"
+		return resp
+	}
+
+	resp.Total = result.Total
+	resp.Success = result.Success
+	resp.Failed = result.Failed
+	switch {
+	case result.Total == 0:
+		resp.Message = "回滚完成：没有可处理文件"
+	case result.Failed == 0:
+		resp.Message = "回滚完成：全部成功"
+	default:
+		resp.Message = "回滚完成：部分失败"
+	}
+
+	for _, item := range result.Items {
+		row := buildMediaIngestRow(item)
+		if strings.TrimSpace(row.Error) == "" {
+			resp.RollbackSuccess = append(resp.RollbackSuccess, row)
+			resp.RollbackPreview = append(resp.RollbackPreview, row)
+			continue
+		}
+		resp.RollbackFail = append(resp.RollbackFail, row)
 	}
 	return resp
 }

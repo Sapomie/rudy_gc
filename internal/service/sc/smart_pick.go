@@ -24,6 +24,11 @@ type SmartPickOptions struct {
 	RandomSeed                   int64   `json:"randomSeed,omitempty"`
 }
 
+const (
+	SmartPickSourceVFilm  = "vfilm"
+	SmartPickSourceWMedia = "wmedia"
+)
+
 type smartPickGroup struct {
 	req        *types.ListMovieFullRequest
 	weight     float64
@@ -53,11 +58,20 @@ type smartBucketPlan struct {
 	label  string
 }
 
-func (l *ScService) SmartPickCopyFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int, opt SmartPickOptions) ([]*types.MovieType, error) {
-	return l.SmartPickFromRequests(ctx, reqs, n, opt)
+func NormalizeSmartPickSource(source string) string {
+	switch source {
+	case SmartPickSourceWMedia:
+		return SmartPickSourceWMedia
+	default:
+		return SmartPickSourceVFilm
+	}
 }
 
-func (l *ScService) SmartPickFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int, opt SmartPickOptions) ([]*types.MovieType, error) {
+func (l *ScService) SmartPickCopyFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int, opt SmartPickOptions, source string) ([]*types.MovieType, error) {
+	return l.SmartPickFromRequests(ctx, reqs, n, opt, source)
+}
+
+func (l *ScService) SmartPickFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int, opt SmartPickOptions, source string) ([]*types.MovieType, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("reqs is empty")
 	}
@@ -70,7 +84,9 @@ func (l *ScService) SmartPickFromRequests(ctx context.Context, reqs []PickReques
 		return nil, err
 	}
 
-	groups, err := l.buildSmartPickGroups(ctx, reqs)
+	source = NormalizeSmartPickSource(source)
+
+	groups, err := l.buildSmartPickGroups(ctx, reqs, source)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +134,7 @@ func (l *ScService) SmartPickFromRequests(ctx context.Context, reqs []PickReques
 		}
 	}
 
-	l.LogPicks(selected)
+	l.LogPicksBySource(selected, source)
 	return selected, nil
 }
 
@@ -138,11 +154,11 @@ func normalizeSmartPickOptions(n int, opt SmartPickOptions) (SmartPickOptions, e
 	return opt, nil
 }
 
-func (l *ScService) buildSmartPickGroups(ctx context.Context, reqs []PickRequestWithWeight) ([]*smartPickGroup, error) {
+func (l *ScService) buildSmartPickGroups(ctx context.Context, reqs []PickRequestWithWeight, source string) ([]*smartPickGroup, error) {
 	groups := make([]*smartPickGroup, 0, len(reqs))
 	for i := range reqs {
 		req := reqs[i].Req
-		normalizeSmartPickReq(&req)
+		normalizeSmartPickReq(&req, source)
 
 		cands, err := l.fetchCandidates(ctx, &req)
 		if err != nil {
@@ -172,8 +188,14 @@ func (l *ScService) buildSmartPickGroups(ctx context.Context, reqs []PickRequest
 	return groups, nil
 }
 
-func normalizeSmartPickReq(req *types.ListMovieFullRequest) {
-	req.MediaOwned = consts.OwnedAllNotRemoved
+func normalizeSmartPickReq(req *types.ListMovieFullRequest, source string) {
+	req.Owned = consts.MovieAll
+	req.MediaOwned = consts.MovieAll
+	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
+		req.MediaOwned = consts.OwnedAllNotRemoved
+	} else {
+		req.Owned = consts.OwnedAllNotRemoved
+	}
 	req.Page = 1
 	req.PageSize = 100000
 	ensureReqDefaults(req)

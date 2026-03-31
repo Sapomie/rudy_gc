@@ -252,7 +252,11 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 	if existing != nil {
 		row.Id = existing.Id
 		row.CreatedOn = existing.CreatedOn
-		return s.deps.WMediaModel.Update(ctx, row)
+		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
+			return err
+		}
+		s.invalidateMovieTypeCaches(ctx, existing.MovieJavId, row.MovieJavId)
+		return nil
 	}
 
 	if _, err := s.deps.WMediaModel.Insert(ctx, row); err != nil {
@@ -269,9 +273,39 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		}
 		row.Id = dup.Id
 		row.CreatedOn = dup.CreatedOn
-		return s.deps.WMediaModel.Update(ctx, row)
+		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
+			return err
+		}
+		s.invalidateMovieTypeCaches(ctx, dup.MovieJavId, row.MovieJavId)
+		return nil
 	}
+	s.invalidateMovieTypeCaches(ctx, row.MovieJavId)
 	return nil
+}
+
+func (s *Service) invalidateMovieTypeCaches(ctx context.Context, javIDs ...string) {
+	if s.deps.MovieTypeCache == nil || len(javIDs) == 0 {
+		return
+	}
+
+	seen := make(map[string]struct{}, len(javIDs))
+	log := s.deps.Log.WithContext(ctx)
+	for _, javID := range javIDs {
+		javID = strings.TrimSpace(javID)
+		if javID == "" {
+			continue
+		}
+		if _, ok := seen[javID]; ok {
+			continue
+		}
+		seen[javID] = struct{}{}
+
+		if err := s.deps.MovieTypeCache.DelMovieType(ctx, javID); err != nil {
+			log.Errorf("del MovieType cache failed, javId=%s, err=%v", javID, err)
+			continue
+		}
+		log.Infof("del MovieType cache ok, javId=%s", javID)
+	}
 }
 
 func (s *Service) findMediaForUpsert(ctx context.Context, row *moviex.WMedia) (*moviex.WMedia, error) {
@@ -411,10 +445,7 @@ func buildEncodedMovieCode(meta rawMovieMeta) string {
 	}
 
 	prefix := match[1]
-	serial := strings.TrimLeft(match[2], "0")
-	if serial == "" {
-		serial = "0"
-	}
+	serial := match[2]
 
 	var b strings.Builder
 	for _, ch := range prefix {

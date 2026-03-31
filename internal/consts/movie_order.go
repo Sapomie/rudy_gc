@@ -14,10 +14,11 @@ const (
 	OrderByHighestRank = "hrk" // 按最高排名
 	OrderByDaysInRank  = "drk" // 在榜天数
 
-	OrderByBirthTime  = "bt"   // 按影片拍摄时间
-	OrderByScTimes    = "sc"   // 按评分次数
-	OrderByComeTimes  = "co"   // 按出现次数
-	OrderByLastScTime = "lsct" // 按最后评分时间
+	OrderByBirthTime      = "bt"   // 按 vfilm 下载时间
+	OrderByMediaBirthTime = "mbt"  // 按 w_media 下载时间
+	OrderByScTimes        = "sc"   // 按评分次数
+	OrderByComeTimes      = "co"   // 按出现次数
+	OrderByLastScTime     = "lsct" // 按最后评分时间
 )
 
 // 允许的排序字段枚举（防止前端乱传）

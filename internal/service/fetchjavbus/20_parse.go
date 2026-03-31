@@ -84,7 +84,7 @@ func (p *detailPagePayload) buildAjaxURL(siteSvc *fetchsite.Service) (string, er
 	return baseURL + "?" + values.Encode(), nil
 }
 
-func parseMagnetRows(movieJavID, pageURL, html string) ([]*moviex.TJavbusMagnet, error) {
+func parseMagnetRows(movieJavID, html string) ([]*moviex.TJavbusMagnet, error) {
 	wrappedHTML := html
 	if !strings.Contains(strings.ToLower(html), "<html") {
 		wrappedHTML = "<table><tbody>" + html + "</tbody></table>"
@@ -120,13 +120,9 @@ func parseMagnetRows(movieJavID, pageURL, html string) ([]*moviex.TJavbusMagnet,
 
 		row := &moviex.TJavbusMagnet{
 			MovieJavId:   movieJavID,
-			PageUrl:      pageURL,
 			MagnetName:   name,
-			MagnetUrl:    magnetURL,
 			InfoHash:     infoHash,
-			Dn:           fetchsite.ParseDN(magnetURL),
 			SizeBytes:    fetchsite.ParseSizeBytes(sizeText),
-			SizeText:     sizeText,
 			ShareDate:    fetchsite.ParseDateTime(shareText),
 			HasHd:        boolToInt64(strings.Contains(sel.Text(), "高清")),
 			HasSubtitle:  boolToInt64(strings.Contains(sel.Text(), "字幕")),
