@@ -19,6 +19,7 @@ type (
 		vFilmModel
 
 		FindAll(ctx context.Context, removedStatus int64) ([]*VFilm, error)
+		ListByMovieJavIds(ctx context.Context, movieJavIds []string) ([]*VFilm, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string, filter types.FilmListFilter) ([]*VFilm, error)
 		CountAll(ctx context.Context, filter types.FilmListFilter) (int64, error)
 		TableName() string
@@ -59,6 +60,30 @@ func (m *customVFilmModel) FindAll(ctx context.Context, removedStatus int64) ([]
 		return nil, err
 	}
 	return list, nil
+}
+
+func (m *customVFilmModel) ListByMovieJavIds(ctx context.Context, movieJavIds []string) ([]*VFilm, error) {
+	if len(movieJavIds) == 0 {
+		return []*VFilm{}, nil
+	}
+
+	query, args, err := squirrel.
+		Select(vFilmRows).
+		From(m.table).
+		Where(squirrel.Eq{"movie_jav_id": movieJavIds}).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*VFilm
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*VFilm{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
 }
 
 func (m *customVFilmModel) TableName() string { return m.table }

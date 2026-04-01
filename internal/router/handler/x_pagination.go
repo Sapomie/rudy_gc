@@ -34,10 +34,11 @@ type OwnedLink struct {
 	Active bool
 }
 type OwnedQuery struct {
-	All           OwnedLink // owned=1 (按现有逻辑)
+	All           OwnedLink // owned=1
 	Owned         OwnedLink // owned=3
-	MediaOwned    OwnedLink // mowned=3
 	NotOwned      OwnedLink // owned=7
+	MediaAll      OwnedLink // mowned=1
+	MediaOwned    OwnedLink // mowned=3
 	MediaNotOwned OwnedLink // mowned=7
 }
 
@@ -56,9 +57,10 @@ func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
 		return path
 	}
 
-	// AllMovie：两维都回到 All（1），避免落回 base 默认值。
 	allHref := makeHref(func(q mapSetter) {
 		q.Set("owned", "1")
+	})
+	mediaAllHref := makeHref(func(q mapSetter) {
 		q.Set("mowned", "1")
 	})
 	ownedHref := makeHref(func(q mapSetter) {
@@ -74,8 +76,9 @@ func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
 		q.Set("mowned", "7")
 	})
 
-	allAct := (curOwned == "" || curOwned == "1") && (curMediaOwned == "" || curMediaOwned == "1")
+	allAct := curOwned == "" || curOwned == "1"
 	ownedAct := curOwned == "3"
+	mediaAllAct := curMediaOwned == "" || curMediaOwned == "1"
 	mediaOwnedAct := curMediaOwned == "3"
 	notAct := curOwned == "7"
 	mediaNotAct := curMediaOwned == "7"
@@ -83,6 +86,7 @@ func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
 	return &OwnedQuery{
 		All:           OwnedLink{Href: allHref, Active: allAct},
 		Owned:         OwnedLink{Href: ownedHref, Active: ownedAct},
+		MediaAll:      OwnedLink{Href: mediaAllHref, Active: mediaAllAct},
 		MediaOwned:    OwnedLink{Href: mediaOwnedHref, Active: mediaOwnedAct},
 		NotOwned:      OwnedLink{Href: notHref, Active: notAct},
 		MediaNotOwned: OwnedLink{Href: mediaNotOwnedHref, Active: mediaNotAct},

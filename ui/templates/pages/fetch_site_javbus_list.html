@@ -125,7 +125,7 @@
                                 {{ if .Rows }}
                                     {{ range .Rows }}
                                         <tr data-movie-jav-id="{{ .MovieJavID }}" data-movie-name="{{ .MovieName }}">
-                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieName }}">{{ .MovieName }}</a></div><div class="text-muted small">{{ .MovieJavID }}</div></td>
+                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieName }}">{{ .MovieName }}</a></div></td>
                                             <td class="text-nowrap">{{ .ReleaseDateText }}</td>
                                             <td><span class="badge fetch-site-badge">{{ .FetchStatusText }}</span></td>
                                             <td>{{ .TryCount }}</td>

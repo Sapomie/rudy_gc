@@ -24,6 +24,7 @@ const (
 	TaskSpiderBackfillFetchSite  = "spider_backfill_fetch_site"
 	TaskSpiderFetchJavbus        = "spider_fetch_javbus_resources"
 	TaskSpiderFetchSukebei       = "spider_fetch_sukebei_resources"
+	TaskSpiderFetchSukebeiFilter = "spider_fetch_sukebei_filtered_resources"
 	TaskSpiderFetchSehuatang     = "spider_fetch_sehuatang_magnets"
 	TaskFilmRename               = "film_rename"
 	TaskFilmProcess              = "film_process"
@@ -38,26 +39,39 @@ const (
 )
 
 type StartTaskRequest struct {
-	TaskType       string `json:"task_type"`
-	Name           string `json:"name"`
-	ActorName      string `json:"actor_name"`
-	AutoFetchSite  string `json:"auto_fetch_site"`
-	ListURL        string `json:"list_url"`
-	Keyword        string `json:"keyword"`
-	StartPage      int64  `json:"start_page"`
-	EndPage        int64  `json:"end_page"`
-	PersistMode    string `json:"persist_mode"`
-	Number         int64  `json:"number"`
-	MovieJavID     string `json:"movie_jav_id"`
-	MovieName      string `json:"movie_name"`
-	ScName         string `json:"sc_name"`
-	Dir            string `json:"dir"`
-	ComeMovieJavID string `json:"come_movie_jav_id"`
-	MovieCast      string `json:"movie_cast"`
-	Duration       int64  `json:"duration"`
-	Fg             string `json:"fg"`
-	Vessel         string `json:"vessel"`
-	Remarks        string `json:"remarks"`
+	TaskType        string   `json:"task_type"`
+	Name            string   `json:"name"`
+	ActorName       string   `json:"actor_name"`
+	AutoFetchSite   string   `json:"auto_fetch_site"`
+	ListURL         string   `json:"list_url"`
+	Keyword         string   `json:"keyword"`
+	Sort            string   `json:"sort"`
+	Status          string   `json:"status"`
+	Statuses        []string `json:"statuses"`
+	TriggerSort     string   `json:"trigger_sort"`
+	TriggerOrder    string   `json:"trigger_order"`
+	LastFetchFrom   string   `json:"last_fetch_from"`
+	LastFetchTo     string   `json:"last_fetch_to"`
+	ReleaseDateFrom string   `json:"release_date_from"`
+	ReleaseDateTo   string   `json:"release_date_to"`
+	FilmBirthFrom   string   `json:"film_birth_from"`
+	FilmBirthTo     string   `json:"film_birth_to"`
+	MediaBirthFrom  string   `json:"media_birth_from"`
+	MediaBirthTo    string   `json:"media_birth_to"`
+	StartPage       int64    `json:"start_page"`
+	EndPage         int64    `json:"end_page"`
+	PersistMode     string   `json:"persist_mode"`
+	Number          int64    `json:"number"`
+	MovieJavID      string   `json:"movie_jav_id"`
+	MovieName       string   `json:"movie_name"`
+	ScName          string   `json:"sc_name"`
+	Dir             string   `json:"dir"`
+	ComeMovieJavID  string   `json:"come_movie_jav_id"`
+	MovieCast       string   `json:"movie_cast"`
+	Duration        int64    `json:"duration"`
+	Fg              string   `json:"fg"`
+	Vessel          string   `json:"vessel"`
+	Remarks         string   `json:"remarks"`
 
 	CastNames               string `json:"cn"`
 	PersonIds               string `json:"pid"`
@@ -284,6 +298,8 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartFetchJavbusResources(req)
 	case TaskSpiderFetchSukebei:
 		return l.StartFetchSukebeiResources(req)
+	case TaskSpiderFetchSukebeiFilter:
+		return l.StartFetchSukebeiFilteredResources(req)
 	case TaskSpiderFetchSehuatang:
 		return l.StartFetchSehuatangMagnets(req)
 	case TaskFilmRename:
@@ -492,6 +508,24 @@ func (l *FetchLoopService) StartFetchSukebeiResources(req StartTaskRequest) (str
 	})
 }
 
+func (l *FetchLoopService) StartFetchSukebeiFilteredResources(req StartTaskRequest) (string, error) {
+	return l.startManagedTask(TaskSpiderFetchSukebeiFilter, taskRuntimePolicy{}, func(ctx context.Context) error {
+		query, err := buildSukebeiPageQueryFromTask(req)
+		if err != nil {
+			return err
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:   "pipeline_pre",
+			Message: fmt.Sprintf("开始按列表筛选抓取 Sukebei，排序=%s %s", query.Sort, strings.ToUpper(query.Order)),
+		})
+		tasks, err := l.fetchSiteSvc.ListSukebeiFetchTasksByPageQuery(ctx, query)
+		if err != nil {
+			return err
+		}
+		return l.runSukebeiFilteredQueue(ctx, tasks)
+	})
+}
+
 func (l *FetchLoopService) StartFetchSehuatangMagnets(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchSehuatang, taskRuntimePolicy{}, func(ctx context.Context) error {
 		listURL := strings.TrimSpace(req.ListURL)
@@ -624,15 +658,7 @@ func (l *FetchLoopService) startManagedTask(taskType string, policy taskRuntimeP
 		l.applyTaskStartPolicy(jobID, policy)
 
 		if err := l.jobs.waitIfPaused(ctx, jobID); err != nil {
-			l.jobs.finish(jobID, JobEvent{
-				Kind:     JobEventKindProgress,
-				JobID:    jobID,
-				TaskType: taskType,
-				Stage:    "failed",
-				Message:  err.Error(),
-				Done:     true,
-				At:       time.Now().Unix(),
-			})
+			l.jobs.finish(jobID, l.buildManagedTaskFinalEvent(jobID, taskType, "failed", err.Error()))
 			return
 		}
 
@@ -664,27 +690,11 @@ func (l *FetchLoopService) startManagedTask(taskType string, policy taskRuntimeP
 		}
 
 		if err != nil {
-			l.jobs.finish(jobID, JobEvent{
-				Kind:     JobEventKindProgress,
-				JobID:    jobID,
-				TaskType: taskType,
-				Stage:    "failed",
-				Message:  err.Error(),
-				Done:     true,
-				At:       time.Now().Unix(),
-			})
+			l.jobs.finish(jobID, l.buildManagedTaskFinalEvent(jobID, taskType, "failed", err.Error()))
 			return
 		}
 
-		l.jobs.finish(jobID, JobEvent{
-			Kind:     JobEventKindProgress,
-			JobID:    jobID,
-			TaskType: taskType,
-			Stage:    "done",
-			Message:  "任务完成",
-			Done:     true,
-			At:       time.Now().Unix(),
-		})
+		l.jobs.finish(jobID, l.buildManagedTaskFinalEvent(jobID, taskType, "done", "任务完成"))
 	}()
 
 	return jobID, nil

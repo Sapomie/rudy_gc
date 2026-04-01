@@ -2,6 +2,8 @@
     const page = document.getElementById('albumItemsPage');
     const msgEl = document.getElementById('albumItemsMsg');
     const checkAll = document.getElementById('albumItemCheckAll');
+    const filterForm = document.getElementById('albumItemsFilterForm');
+    const albumNameSelect = document.getElementById('albumItemsAlbumName');
     const selectedCountEl = document.getElementById('albumBatchSelectedCount');
     const batchCopyBtn = document.getElementById('btnBatchCopyAlbumHashes');
     const batchMoveBtn = document.getElementById('btnBatchMoveAlbumItems');
@@ -405,6 +407,22 @@
     });
 
     document.addEventListener('click', function (event) {
+        const quickFilterButton = event.target.closest('.js-album-quick-filter');
+        if (quickFilterButton) {
+            const targetAlbumName = String(quickFilterButton.getAttribute('data-album-name') || '').trim();
+            if (!targetAlbumName) {
+                showMsg('缺少相册参数，无法快捷筛选', false);
+                return;
+            }
+            if (!filterForm || !albumNameSelect) {
+                showMsg('筛选表单未初始化，无法快捷筛选', false);
+                return;
+            }
+            albumNameSelect.value = targetAlbumName;
+            filterForm.submit();
+            return;
+        }
+
         const copyButton = event.target.closest('.js-copy-hash');
         if (copyButton) {
             const hash = String(copyButton.getAttribute('data-hash') || '').trim();

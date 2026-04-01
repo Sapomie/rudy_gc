@@ -46,6 +46,7 @@ type crawlerJobsPageConfig struct {
 	Title                     string
 	PageTitle                 string
 	TaskPanelTitle            string
+	TaskHelperText            string
 	PageNote                  string
 	TaskTableTitle            string
 	EventTitle                string
@@ -57,6 +58,7 @@ type crawlerJobsPageConfig struct {
 	TaskButtons               []crawlerJobsPageTask
 	HeaderLinks               []crawlerJobsPageLink
 	Labels                    crawlerJobsPageLabels
+	HideTaskForm              bool
 	MovieCardFilter           *movieCardFilterView
 	ShowMovieFilters          bool
 	ShowFavoriteAlbum         bool
@@ -254,6 +256,35 @@ func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
 	})
 }
 
+func (h *CrawlerPages) FetchSiteSukebeiFilteredPage(c *gin.Context) {
+	h.renderJobsPage(c, crawlerJobsPageConfig{
+		Title:             "Sukebei 筛选抓取任务",
+		PageTitle:         "Sukebei 列表筛选抓取",
+		TaskPanelTitle:    "筛选结果抓取任务",
+		TaskHelperText:    "本页用于展示从 Sukebei 列表页按当前筛选结果触发的批量抓取任务。请在列表页点击“触发当前筛选结果”后回到这里查看队列、进度和日志流。",
+		PageNote:          "队列会按列表筛选快照固定下来，并实时展示待入列、处理中、已完成的影片。",
+		TaskTableTitle:    "Sukebei 筛选抓取任务",
+		EventTitle:        "Sukebei 筛选抓取事件流",
+		StorageKey:        "crawler_jobs_fetch_site_sukebei_filtered_selected_job",
+		DefaultTaskType:   loop.TaskSpiderFetchSukebeiFilter,
+		OverviewExtraMode: "sukebei_filtered_queue",
+		EmptyStateText:    "等待 Sukebei 列表页触发筛选抓取任务",
+		AllowedTaskTypes: []string{
+			loop.TaskSpiderFetchSukebeiFilter,
+		},
+		HeaderLinks: []crawlerJobsPageLink{
+			{Href: "/fetch-site-sukebei-list", Label: "返回 Sukebei 列表"},
+			{Href: "/fetch-site-javbus-list", Label: "JavBus 列表"},
+		},
+		Labels: crawlerJobsPageLabels{
+			Extra:   "队列",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+		HideTaskForm: true,
+	})
+}
+
 func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "回填任务",
@@ -310,6 +341,7 @@ func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig)
 		"Title":                     cfg.Title,
 		"PageTitle":                 cfg.PageTitle,
 		"TaskPanelTitle":            cfg.TaskPanelTitle,
+		"TaskHelperText":            cfg.TaskHelperText,
 		"PageNote":                  cfg.PageNote,
 		"TaskTableTitle":            cfg.TaskTableTitle,
 		"EventTitle":                cfg.EventTitle,
@@ -321,6 +353,7 @@ func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig)
 		"TaskButtons":               cfg.TaskButtons,
 		"HeaderLinks":               cfg.HeaderLinks,
 		"Labels":                    cfg.Labels,
+		"HideTaskForm":              cfg.HideTaskForm,
 		"MovieCardFilter":           cfg.MovieCardFilter,
 		"ShowMovieFilters":          cfg.ShowMovieFilters,
 		"ShowFavoriteAlbum":         cfg.ShowFavoriteAlbum,

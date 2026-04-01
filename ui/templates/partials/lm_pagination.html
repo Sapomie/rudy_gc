@@ -18,36 +18,48 @@
 {{ end }}
 
 {{ define "owned_filter" }}
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        <a href="{{ .ownedQuery.All.Href }}"
-           class="btn btn-sm btn-primary waves-effect waves-light {{ if .ownedQuery.All.Active }}active disabled{{ end }}"
-           aria-current="{{ if .ownedQuery.All.Active }}true{{ else }}false{{ end }}">
-            AllMovie
-        </a>
+    <div class="d-flex flex-wrap align-items-center gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="btn btn-sm btn-outline-dark disabled">VFilm</span>
+            <a href="{{ .ownedQuery.All.Href }}"
+               class="btn btn-sm btn-primary waves-effect waves-light {{ if .ownedQuery.All.Active }}active disabled{{ end }}"
+               aria-current="{{ if .ownedQuery.All.Active }}true{{ else }}false{{ end }}">
+                All
+            </a>
 
-        <a href="{{ .ownedQuery.Owned.Href }}"
-           class="btn btn-sm btn-danger waves-effect waves-light {{ if .ownedQuery.Owned.Active }}active disabled{{ end }}"
-           aria-current="{{ if .ownedQuery.Owned.Active }}true{{ else }}false{{ end }}">
-            Owned
-        </a>
+            <a href="{{ .ownedQuery.Owned.Href }}"
+               class="btn btn-sm btn-danger waves-effect waves-light {{ if .ownedQuery.Owned.Active }}active disabled{{ end }}"
+               aria-current="{{ if .ownedQuery.Owned.Active }}true{{ else }}false{{ end }}">
+                Owned
+            </a>
 
-        <a href="{{ .ownedQuery.MediaOwned.Href }}"
-           class="btn btn-sm btn-success waves-effect waves-light {{ if .ownedQuery.MediaOwned.Active }}active disabled{{ end }}"
-           aria-current="{{ if .ownedQuery.MediaOwned.Active }}true{{ else }}false{{ end }}">
-            MOwned
-        </a>
+            <a href="{{ .ownedQuery.NotOwned.Href }}"
+               class="btn btn-sm btn-warning waves-effect waves-light {{ if .ownedQuery.NotOwned.Active }}active disabled{{ end }}"
+               aria-current="{{ if .ownedQuery.NotOwned.Active }}true{{ else }}false{{ end }}">
+                NotOwned
+            </a>
+        </div>
 
-        <a href="{{ .ownedQuery.NotOwned.Href }}"
-           class="btn btn-sm btn-warning waves-effect waves-light {{ if .ownedQuery.NotOwned.Active }}active disabled{{ end }}"
-           aria-current="{{ if .ownedQuery.NotOwned.Active }}true{{ else }}false{{ end }}">
-            NotOwned
-        </a>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="btn btn-sm btn-outline-dark disabled">Media</span>
+            <a href="{{ .ownedQuery.MediaAll.Href }}"
+               class="btn btn-sm btn-primary waves-effect waves-light {{ if .ownedQuery.MediaAll.Active }}active disabled{{ end }}"
+               aria-current="{{ if .ownedQuery.MediaAll.Active }}true{{ else }}false{{ end }}">
+                MAll
+            </a>
 
-        <a href="{{ .ownedQuery.MediaNotOwned.Href }}"
-           class="btn btn-sm btn-secondary waves-effect waves-light {{ if .ownedQuery.MediaNotOwned.Active }}active disabled{{ end }}"
-           aria-current="{{ if .ownedQuery.MediaNotOwned.Active }}true{{ else }}false{{ end }}">
-            MNotOwned
-        </a>
+            <a href="{{ .ownedQuery.MediaOwned.Href }}"
+               class="btn btn-sm btn-success waves-effect waves-light {{ if .ownedQuery.MediaOwned.Active }}active disabled{{ end }}"
+               aria-current="{{ if .ownedQuery.MediaOwned.Active }}true{{ else }}false{{ end }}">
+                MOwned
+            </a>
+
+            <a href="{{ .ownedQuery.MediaNotOwned.Href }}"
+               class="btn btn-sm btn-secondary waves-effect waves-light {{ if .ownedQuery.MediaNotOwned.Active }}active disabled{{ end }}"
+               aria-current="{{ if .ownedQuery.MediaNotOwned.Active }}true{{ else }}false{{ end }}">
+                MNotOwned
+            </a>
+        </div>
 
         <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: {{ .total }}</span>
     </div>

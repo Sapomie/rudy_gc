@@ -1,6 +1,7 @@
 (function (global) {
     const API_BASE = '/api/crawler/jobs';
     const TASK_FETCH_SITE_BOTH = 'spider_fetch_site_both_resources';
+    const TASK_FETCH_SUKEBEI_FILTERED = 'spider_fetch_sukebei_filtered_resources';
     const TASK_FETCH_SEHUATANG = 'spider_fetch_sehuatang_magnets';
     const FETCH_SITE_TASK_TYPES = ['spider_fetch_javbus_resources', 'spider_fetch_sukebei_resources'];
     const FETCH_SITE_DEFAULT_NUMBER = 1000000;
@@ -16,6 +17,7 @@
         spider_backfill_fetch_site: '外站任务回填',
         spider_fetch_javbus_resources: 'JavBus 资源抓取',
         spider_fetch_sukebei_resources: 'Sukebei 资源抓取',
+        spider_fetch_sukebei_filtered_resources: 'Sukebei 列表筛选抓取',
         spider_fetch_site_both_resources: 'JavBus + Sukebei 同时抓取',
         spider_fetch_sehuatang_magnets: '色花堂磁力抓取',
         spider_rebuild_cast_rank: '演员 Rank 回填',
@@ -192,6 +194,12 @@
         runtime.fetchSiteSukebeiProgressText = document.getElementById('fetchSiteSukebeiProgressText');
         runtime.fetchSiteSukebeiResultText = document.getElementById('fetchSiteSukebeiResultText');
         runtime.sehuatangProgressText = document.getElementById('sehuatangProgressText');
+        runtime.sukebeiFilteredTotalText = document.getElementById('sukebeiFilteredTotalText');
+        runtime.sukebeiFilteredPendingText = document.getElementById('sukebeiFilteredPendingText');
+        runtime.sukebeiFilteredSuccessText = document.getElementById('sukebeiFilteredSuccessText');
+        runtime.sukebeiFilteredFailedText = document.getElementById('sukebeiFilteredFailedText');
+        runtime.sukebeiFilteredPendingList = document.getElementById('sukebeiFilteredPendingList');
+        runtime.sukebeiFilteredDoneList = document.getElementById('sukebeiFilteredDoneList');
         runtime.dailyBestBestinvProgressText = document.getElementById('dailyBestBestinvProgressText');
         runtime.dailyBestBestinvResultText = document.getElementById('dailyBestBestinvResultText');
         runtime.dailyBestDetailProgressText = document.getElementById('dailyBestDetailProgressText');
@@ -244,6 +252,24 @@
         runtime.pickNumber = function (value, fallback) {
             const picked = runtime.pickValue(value, fallback);
             return Number(picked || 0);
+        };
+
+        runtime.normalizeQueueItems = function (items) {
+            if (!Array.isArray(items)) {
+                return [];
+            }
+            return items.map(function (item) {
+                return {
+                    movie_jav_id: String(item && item.movie_jav_id || '').trim(),
+                    movie_name: String(item && item.movie_name || '').trim(),
+                    seq: Number(item && item.seq || 0),
+                    state: String(item && item.state || '').trim(),
+                    error: String(item && item.error || '').trim(),
+                    completed_at: Number(item && item.completed_at || 0),
+                };
+            }).filter(function (item) {
+                return item.movie_jav_id !== '' || item.movie_name !== '';
+            });
         };
 
         runtime.normalizeJobId = function (value) {
@@ -543,7 +569,23 @@
 
         runtime.isFetchSiteTaskType = function (taskType) {
             const current = String(taskType || '').trim();
-            return FETCH_SITE_TASK_TYPES.indexOf(current) >= 0 || current === TASK_FETCH_SITE_BOTH;
+            return FETCH_SITE_TASK_TYPES.indexOf(current) >= 0 || current === TASK_FETCH_SITE_BOTH || current === TASK_FETCH_SUKEBEI_FILTERED;
+        };
+
+        runtime.fetchSiteStatsFromJob = function (job) {
+            if (!job) {
+                return {job: null, handled: 0, queued: 0, total: 0, success: 0, failed: 0};
+            }
+            const handled = Number(job.handled_count || 0);
+            const queued = Number(job.queued_count || 0);
+            return {
+                job: job,
+                handled: handled,
+                queued: queued,
+                total: handled + queued,
+                success: Number(job.success_count || 0),
+                failed: Number(job.failed_count || 0),
+            };
         };
 
         runtime.isAutoFetchSiteTaskType = function (taskType) {
@@ -1008,19 +1050,7 @@
 
         runtime.fetchSiteStatsForTask = function (taskType) {
             const job = runtime.pickLatestJobByTaskType(taskType);
-            if (!job) {
-                return {job: null, handled: 0, queued: 0, total: 0, success: 0, failed: 0};
-            }
-            const handled = Number(job.handled_count || 0);
-            const queued = Number(job.queued_count || 0);
-            return {
-                job: job,
-                handled: handled,
-                queued: queued,
-                total: handled + queued,
-                success: Number(job.success_count || 0),
-                failed: Number(job.failed_count || 0),
-            };
+            return runtime.fetchSiteStatsFromJob(job);
         };
 
         runtime.fetchSiteSummaryState = function (javbusStats, sukebeiStats) {
@@ -1043,6 +1073,67 @@
                 return {className: 'text-muted', text: '任务运行中'};
             }
             return {className: 'ok', text: '任务完成'};
+        };
+
+        runtime.queueBadgeClass = function (state) {
+            switch (String(state || '').trim()) {
+                case 'running':
+                    return 'is-running';
+                case 'success':
+                    return 'is-success';
+                case 'failed':
+                    return 'is-failed';
+                default:
+                    return 'is-pending';
+            }
+        };
+
+        runtime.queueBadgeText = function (state) {
+            switch (String(state || '').trim()) {
+                case 'running':
+                    return '处理中';
+                case 'success':
+                    return '成功';
+                case 'failed':
+                    return '失败';
+                default:
+                    return '待入列';
+            }
+        };
+
+        runtime.renderQueueItems = function (element, items, emptyText, reverseOrder) {
+            if (!element) {
+                return;
+            }
+            const safeItems = runtime.normalizeQueueItems(items);
+            const renderItems = reverseOrder ? safeItems.slice().reverse() : safeItems;
+            if (!safeItems.length) {
+                element.innerHTML = '<div class="queue-empty">' + runtime.escapeHtml(emptyText) + '</div>';
+                return;
+            }
+            element.innerHTML = renderItems.map(function (item, index) {
+                const movieLabel = item.movie_name || '-';
+                const movieHref = item.movie_name ? ('/movie/' + encodeURIComponent(item.movie_name)) : '';
+                const indexText = String(item.seq > 0 ? item.seq : (index + 1)).padStart(2, '0');
+                const titleHtml = movieHref
+                    ? '<a class="queue-item-name" href="' + movieHref + '">' + runtime.escapeHtml(movieLabel) + '</a>'
+                    : '<div class="queue-item-name">' + runtime.escapeHtml(movieLabel) + '</div>';
+                const completeHtml = item.completed_at > 0
+                    ? '<div class="queue-item-meta">完成时间：' + runtime.escapeHtml(runtime.timeText(item.completed_at)) + '</div>'
+                    : '';
+                const errorHtml = item.error
+                    ? '<div class="queue-item-error">' + runtime.escapeHtml(item.error) + '</div>'
+                    : '';
+                return '' +
+                    '<div class="queue-item">' +
+                    '<div class="queue-item-top">' +
+                    '<div class="queue-item-left"><span class="queue-item-index">' + runtime.escapeHtml(indexText) + '</span>' + titleHtml + '</div>' +
+                    '<span class="queue-badge ' + runtime.queueBadgeClass(item.state) + '">' + runtime.escapeHtml(runtime.queueBadgeText(item.state)) + '</span>' +
+                    '</div>' +
+                    completeHtml +
+                    errorHtml +
+                    '</div>';
+            }).join('');
         };
 
         runtime.renderOverview = function (payload) {
@@ -1114,6 +1205,56 @@
                     const summaryState = runtime.fetchSiteSummaryState(javbusStats, sukebeiStats);
                     runtime.statusMsg.className = summaryState.className;
                     runtime.statusMsg.textContent = summaryState.text;
+                }
+                runtime.updateControls();
+                return;
+            }
+            if (runtime.overviewExtraMode === 'sukebei_filtered_queue') {
+                const pendingItems = runtime.normalizeQueueItems(job && job.pending_items);
+                const runningItems = runtime.normalizeQueueItems(job && job.running_items);
+                const doneItems = runtime.normalizeQueueItems(job && job.done_items);
+                const total = pendingItems.length + runningItems.length + doneItems.length;
+                const successCount = Number((job || {}).success_count || 0);
+                const failedCount = Number((job || {}).failed_count || 0);
+                const selectedId = runtime.normalizeJobId(runtime.state.selectedJobId);
+
+                if (runtime.sukebeiFilteredTotalText) runtime.sukebeiFilteredTotalText.textContent = String(total);
+                if (runtime.sukebeiFilteredPendingText) runtime.sukebeiFilteredPendingText.textContent = String(pendingItems.length);
+                if (runtime.sukebeiFilteredSuccessText) runtime.sukebeiFilteredSuccessText.textContent = String(successCount);
+                if (runtime.sukebeiFilteredFailedText) runtime.sukebeiFilteredFailedText.textContent = String(failedCount);
+
+                runtime.renderQueueItems(runtime.sukebeiFilteredPendingList, pendingItems, selectedId ? '当前任务没有待入列影片' : '等待任务启动', false);
+                runtime.renderQueueItems(runtime.sukebeiFilteredDoneList, doneItems, selectedId ? '当前还没有处理完成的影片' : '等待任务启动', true);
+
+                if (!job) {
+                    if (runtime.progressBar) {
+                        runtime.progressBar.style.width = '0%';
+                        runtime.progressBar.textContent = '0%';
+                        runtime.progressBar.setAttribute('aria-valuenow', '0');
+                    }
+                    if (runtime.statusMsg) {
+                        runtime.statusMsg.className = 'text-muted';
+                        runtime.statusMsg.textContent = selectedId ? '正在获取任务状态' : runtime.emptyStateText;
+                    }
+                    if (runtime.elapsedText) {
+                        runtime.elapsedText.textContent = '00:00';
+                    }
+                    runtime.updateControls();
+                    return;
+                }
+
+                if (runtime.progressBar) {
+                    const percent = total > 0 ? Math.max(0, Math.min(100, Math.round(doneItems.length * 100 / total))) : 0;
+                    runtime.progressBar.style.width = percent + '%';
+                    runtime.progressBar.textContent = percent + '%';
+                    runtime.progressBar.setAttribute('aria-valuenow', String(percent));
+                }
+                if (runtime.statusMsg) {
+                    runtime.statusMsg.className = job.done && job.stage === 'failed' ? 'err' : (job.done ? 'ok' : 'text-muted');
+                    runtime.statusMsg.textContent = (job.message || runtime.stageLabel(job.stage || '')) || runtime.emptyStateText;
+                }
+                if (runtime.elapsedText) {
+                    runtime.elapsedText.textContent = runtime.formatElapsed(job.started_at);
                 }
                 runtime.updateControls();
                 return;
@@ -1387,6 +1528,9 @@
                 success_count: runtime.pickNumber(event.success_count, current.success_count),
                 failed_count: runtime.pickNumber(event.failed_count, current.failed_count),
                 queued_count: runtime.pickNumber(event.queued_count, current.queued_count),
+                pending_items: event.pending_items !== undefined ? runtime.normalizeQueueItems(event.pending_items) : runtime.normalizeQueueItems(current.pending_items),
+                running_items: event.running_items !== undefined ? runtime.normalizeQueueItems(event.running_items) : runtime.normalizeQueueItems(current.running_items),
+                done_items: event.done_items !== undefined ? runtime.normalizeQueueItems(event.done_items) : runtime.normalizeQueueItems(current.done_items),
                 current_phase_key: String(runtime.pickValue(event.current_phase_key, current.current_phase_key) || ''),
                 phase_stats: runtime.pickValue(event.phase_stats, current.phase_stats) || null,
                 started_at: runtime.pickNumber(event.started_at, current.started_at),
@@ -1414,6 +1558,9 @@
                 success_count: runtime.pickNumber(event.success_count, current.success_count),
                 failed_count: runtime.pickNumber(event.failed_count, current.failed_count),
                 queued_count: runtime.pickNumber(event.queued_count, current.queued_count),
+                pending_items: event.pending_items !== undefined ? runtime.normalizeQueueItems(event.pending_items) : runtime.normalizeQueueItems(current.pending_items),
+                running_items: event.running_items !== undefined ? runtime.normalizeQueueItems(event.running_items) : runtime.normalizeQueueItems(current.running_items),
+                done_items: event.done_items !== undefined ? runtime.normalizeQueueItems(event.done_items) : runtime.normalizeQueueItems(current.done_items),
                 current_phase_key: String(runtime.pickValue(event.current_phase_key, current.current_phase_key) || ''),
                 phase_stats: runtime.pickValue(event.phase_stats, current.phase_stats) || null,
                 started_at: runtime.pickNumber(event.started_at, current.started_at),

@@ -8,6 +8,79 @@
     background: #fff;
 }
 
+.fetch-site-filter-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.fetch-site-filter-grid-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.fetch-site-filter-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fetch-site-filter-grid-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.fetch-site-filter-item {
+    min-width: 0;
+}
+
+.fetch-site-sukebei-filter-top {
+    grid-template-columns: minmax(220px, 1.2fr) minmax(360px, 1.45fr) minmax(170px, 0.82fr) minmax(170px, 0.82fr) minmax(220px, 1fr);
+}
+
+.fetch-site-status-group {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.fetch-site-status-group .btn {
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    white-space: nowrap;
+    flex: 1 1 0;
+}
+
+.fetch-site-status-clear.active {
+    color: #fff;
+    background: #6c757d;
+    border-color: #6c757d;
+}
+
+@media (max-width: 1399.98px) {
+    .fetch-site-filter-grid-4,
+    .fetch-site-filter-grid-5,
+    .fetch-site-filter-grid-6 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991.98px) {
+    .fetch-site-filter-grid-4,
+    .fetch-site-filter-grid-5,
+    .fetch-site-filter-grid-6 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .fetch-site-filter-grid-4,
+    .fetch-site-filter-grid-5,
+    .fetch-site-filter-grid-6 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .fetch-site-summary-label {
     font-size: 13px;
     color: #6c757d;
@@ -36,12 +109,25 @@
 }
 
 .fetch-site-error-cell {
-    min-width: 220px;
-    max-width: 280px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 120px;
     white-space: normal;
     color: #b42318;
     font-size: 12px;
     line-height: 1.45;
+}
+
+.fetch-site-error-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #b42318;
+    list-style: none;
+    white-space: nowrap;
+}
+
+.fetch-site-error-details summary::-webkit-details-marker {
+    display: none;
 }
 
 .fetch-site-empty-state {

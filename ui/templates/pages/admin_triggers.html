@@ -43,10 +43,15 @@
                         <div class="card-body">
                             <h4 class="card-title mb-3">{{ if .TaskPanelTitle }}{{ .TaskPanelTitle }}{{ else }}任务触发与实时进度{{ end }}</h4>
                             <form id="crawlerTaskForm">
+                                <input type="hidden" id="task_type" name="task_type" value="{{ .DefaultTaskType }}">
+                                {{ if .HideTaskForm }}
+                                    {{ if .TaskHelperText }}
+                                        <div class="alert alert-light border mb-3">{{ .TaskHelperText }}</div>
+                                    {{ end }}
+                                {{ else }}
                                 <div class="form-grid">
                                     <div class="form-group compact-field grid-span-2">
                                         <label>触发任务</label>
-                                        <input type="hidden" id="task_type" name="task_type" value="{{ .DefaultTaskType }}">
                                         <div class="btn-group btn-group-toggle d-flex flex-wrap task-type-toggle" role="group" aria-label="crawler task type">
                                             {{ $defaultTaskType := .DefaultTaskType }}
                                             {{ range .TaskButtons }}
@@ -167,9 +172,12 @@
                                         </div>
                                     </div>
                                 {{ end }}
+                                {{ end }}
 
                                 <div class="d-flex align-items-center flex-wrap action-row">
-                                    <button type="submit" id="submitBtn" class="btn btn-primary">开始执行</button>
+                                    {{ if not .HideTaskForm }}
+                                        <button type="submit" id="submitBtn" class="btn btn-primary">开始执行</button>
+                                    {{ end }}
                                     <button type="button" id="pauseBtn" class="btn btn-outline-warning ml-2" disabled>暂停</button>
                                     <button type="button" id="resumeBtn" class="btn btn-outline-success ml-2" disabled>继续</button>
                                     <button type="button" id="stopBtn" class="btn btn-outline-danger ml-2" disabled>停止</button>
@@ -324,6 +332,33 @@
                                         </div>
                                     </div>
                                 </div>
+                                {{ else if eq .OverviewExtraMode "sukebei_filtered_queue" }}
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">总数</div>
+                                            <div class="value" id="sukebeiFilteredTotalText">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">待入列</div>
+                                            <div class="value" id="sukebeiFilteredPendingText">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">成功数目</div>
+                                            <div class="value" id="sukebeiFilteredSuccessText">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">失败数目</div>
+                                            <div class="value" id="sukebeiFilteredFailedText">0</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 {{ else }}
                                 <div class="row">
                                     <div class="col-md-4 mb-2">
@@ -438,10 +473,36 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
+
+            {{ if eq .OverviewExtraMode "sukebei_filtered_queue" }}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title mb-3">抓取队列</h4>
+                            <div class="queue-panel">
+                                <div class="queue-column">
+                                    <div class="queue-title">待入列</div>
+                                    <div class="queue-list" id="sukebeiFilteredPendingList">
+                                        <div class="queue-empty">等待任务启动</div>
+                                    </div>
+                                </div>
+                                <div class="queue-column">
+                                    <div class="queue-title">已完成</div>
+                                    <div class="queue-list" id="sukebeiFilteredDoneList">
+                                        <div class="queue-empty">等待任务启动</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
         </div>
-    </div>
-</main>
+    </main>
 
 <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
 

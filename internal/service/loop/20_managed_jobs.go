@@ -7,6 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"rudy_gc/internal/taskctx"
 )
 
 const (
@@ -26,6 +28,9 @@ type JobEvent struct {
 	SuccessCount      int                     `json:"success_count,omitempty"`
 	FailedCount       int                     `json:"failed_count,omitempty"`
 	QueuedCount       int                     `json:"queued_count,omitempty"`
+	PendingItems      []taskctx.QueueItem     `json:"pending_items,omitempty"`
+	RunningItems      []taskctx.QueueItem     `json:"running_items,omitempty"`
+	DoneItems         []taskctx.QueueItem     `json:"done_items,omitempty"`
 	CurrentPhaseKey   string                  `json:"current_phase_key,omitempty"`
 	PhaseKey          string                  `json:"phase_key,omitempty"`
 	PhaseHandledCount int                     `json:"phase_handled_count,omitempty"`
@@ -59,6 +64,9 @@ type JobSnapshot struct {
 	SuccessCount    int                     `json:"success_count"`
 	FailedCount     int                     `json:"failed_count"`
 	QueuedCount     int                     `json:"queued_count"`
+	PendingItems    []taskctx.QueueItem     `json:"pending_items,omitempty"`
+	RunningItems    []taskctx.QueueItem     `json:"running_items,omitempty"`
+	DoneItems       []taskctx.QueueItem     `json:"done_items,omitempty"`
 	CurrentPhaseKey string                  `json:"current_phase_key,omitempty"`
 	PhaseStats      map[string]JobPhaseStat `json:"phase_stats,omitempty"`
 	At              int64                   `json:"at"`
@@ -622,6 +630,9 @@ func snapshotManagedJob(job *managedJob) JobSnapshot {
 		item.SuccessCount = event.SuccessCount
 		item.FailedCount = event.FailedCount
 		item.QueuedCount = event.QueuedCount
+		item.PendingItems = cloneManagedQueueItems(event.PendingItems)
+		item.RunningItems = cloneManagedQueueItems(event.RunningItems)
+		item.DoneItems = cloneManagedQueueItems(event.DoneItems)
 		item.At = event.At
 		if item.CurrentPhaseKey == "" {
 			item.CurrentPhaseKey = event.CurrentPhaseKey
@@ -632,4 +643,13 @@ func snapshotManagedJob(job *managedJob) JobSnapshot {
 	}
 
 	return item
+}
+
+func cloneManagedQueueItems(in []taskctx.QueueItem) []taskctx.QueueItem {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]taskctx.QueueItem, len(in))
+	copy(out, in)
+	return out
 }

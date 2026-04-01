@@ -14,7 +14,7 @@
     {{ template "menu" . }}
     <main class="main-content">
         <div class="page-content">
-            <div class="container-fluid" id="fetchSiteListPage">
+            <div class="container-fluid" id="fetchSiteListPage" data-task-page-url="{{ .TaskPageURL }}" data-filtered-sukebei-task-type="{{ .FilteredSukebeiTaskType }}">
                 <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
                     <div>
                         <h4 class="mb-1">{{ .PageTitle }}</h4>
@@ -30,9 +30,23 @@
                 <div id="fetchSiteListMsg" class="alert d-none mb-3" role="alert"></div>
 
                 <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-                    <div class="fetch-site-summary-card">
-                        <span class="fetch-site-summary-label">Sukebei 总任务数</span>
-                        <span class="fetch-site-summary-value">{{ .Total }}</span>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="fetch-site-summary-card">
+                            <span class="fetch-site-summary-label">Sukebei 总任务数</span>
+                            <span class="fetch-site-summary-value">{{ .Total }}</span>
+                        </div>
+                        <div class="fetch-site-summary-card">
+                            <span class="fetch-site-summary-label">成功数目</span>
+                            <span class="fetch-site-summary-value">{{ .SuccessCount }}</span>
+                        </div>
+                        <div class="fetch-site-summary-card">
+                            <span class="fetch-site-summary-label">待抓取数目</span>
+                            <span class="fetch-site-summary-value">{{ .PendingCount }}</span>
+                        </div>
+                        <div class="fetch-site-summary-card">
+                            <span class="fetch-site-summary-label">失败数目</span>
+                            <span class="fetch-site-summary-value">{{ .FailedCount }}</span>
+                        </div>
                     </div>
                     {{ if .Rows }}
                         <nav class="mb-0" aria-label="Sukebei Page navigation">
@@ -53,53 +67,96 @@
 
                 <div class="card mb-3">
                     <div class="card-body">
-                        <form class="row g-3 align-items-end" method="get" action="/fetch-site-sukebei-list">
+                        <form class="row g-3 align-items-end" method="get" action="/fetch-site-sukebei-list" id="fetchSiteSukebeiFilterForm">
                             <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
                             {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
                             {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <label class="form-label mb-1">Sukebei 影片编号 / JavID</label>
-                                <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_name 或 movie_jav_id">
+                            {{ if .Query.Owned }}<input type="hidden" name="owned" value="{{ .Query.Owned }}">{{ end }}
+                            {{ if .Query.MediaOwned }}<input type="hidden" name="mowned" value="{{ .Query.MediaOwned }}">{{ end }}
+                            <div class="col-12">
+                                <div class="fetch-site-filter-grid fetch-site-filter-grid-5 fetch-site-sukebei-filter-top">
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">Sukebei 影片编号 / JavID</label>
+                                        <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_name 或 movie_jav_id">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">Sukebei 状态</label>
+                                        <div class="fetch-site-status-group" data-status-group>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary fetch-site-status-clear {{ if .StatusAllActive }}active{{ end }}" data-status-clear>全部</button>
+
+                                            <input type="checkbox" class="btn-check" id="sukebei-status-1" name="statuses" value="1" autocomplete="off" {{ if index .StatusSelected "1" }}checked{{ end }}>
+                                            <label class="btn btn-sm btn-outline-primary" for="sukebei-status-1">待抓取</label>
+
+                                            <input type="checkbox" class="btn-check" id="sukebei-status-2" name="statuses" value="2" autocomplete="off" {{ if index .StatusSelected "2" }}checked{{ end }}>
+                                            <label class="btn btn-sm btn-outline-info" for="sukebei-status-2">抓取中</label>
+
+                                            <input type="checkbox" class="btn-check" id="sukebei-status-3" name="statuses" value="3" autocomplete="off" {{ if index .StatusSelected "3" }}checked{{ end }}>
+                                            <label class="btn btn-sm btn-outline-success" for="sukebei-status-3">成功</label>
+
+                                            <input type="checkbox" class="btn-check" id="sukebei-status-4" name="statuses" value="4" autocomplete="off" {{ if index .StatusSelected "4" }}checked{{ end }}>
+                                            <label class="btn btn-sm btn-outline-danger" for="sukebei-status-4">失败</label>
+                                        </div>
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">最后抓取开始</label>
+                                        <input class="form-control" type="text" name="last_fetch_from" value="{{ .Query.LastFetchFrom }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">最后抓取结束</label>
+                                        <input class="form-control" type="text" name="last_fetch_to" value="{{ .Query.LastFetchTo }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">触发抓取顺序</label>
+                                        <select class="form-select" name="trigger_sort_key">
+                                            <option value="last_fetch_time:asc" {{ if or (eq .Query.TriggerSortKey "") (eq .Query.TriggerSortKey "last_fetch_time:asc") }}selected{{ end }}>最后抓取时间升序</option>
+                                            <option value="last_fetch_time:desc" {{ if eq .Query.TriggerSortKey "last_fetch_time:desc" }}selected{{ end }}>最后抓取时间降序</option>
+                                            <option value="release_date:asc" {{ if eq .Query.TriggerSortKey "release_date:asc" }}selected{{ end }}>发行时间升序</option>
+                                            <option value="release_date:desc" {{ if eq .Query.TriggerSortKey "release_date:desc" }}selected{{ end }}>发行时间降序</option>
+                                            <option value="latest_publish_time:asc" {{ if eq .Query.TriggerSortKey "latest_publish_time:asc" }}selected{{ end }}>最新日期升序</option>
+                                            <option value="latest_publish_time:desc" {{ if eq .Query.TriggerSortKey "latest_publish_time:desc" }}selected{{ end }}>最新日期降序</option>
+                                            <option value="movie_name:asc" {{ if eq .Query.TriggerSortKey "movie_name:asc" }}selected{{ end }}>影片名升序</option>
+                                            <option value="movie_name:desc" {{ if eq .Query.TriggerSortKey "movie_name:desc" }}selected{{ end }}>影片名降序</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <label class="form-label mb-1">Sukebei 状态</label>
-                                <select class="form-select" name="status">
-                                    <option value="" {{ if eq .Query.Status "" }}selected{{ end }}>全部</option>
-                                    <option value="1" {{ if eq .Query.Status "1" }}selected{{ end }}>待抓取</option>
-                                    <option value="2" {{ if eq .Query.Status "2" }}selected{{ end }}>抓取中</option>
-                                    <option value="3" {{ if eq .Query.Status "3" }}selected{{ end }}>成功</option>
-                                    <option value="4" {{ if eq .Query.Status "4" }}selected{{ end }}>失败</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <label class="form-label mb-1">Sukebei 错误筛选</label>
-                                <select class="form-select" name="has_error">
-                                    <option value="" {{ if eq .Query.HasError "" }}selected{{ end }}>全部</option>
-                                    <option value="error" {{ if eq .Query.HasError "error" }}selected{{ end }}>仅错误</option>
-                                    <option value="clean" {{ if eq .Query.HasError "clean" }}selected{{ end }}>仅无错误</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-3">
-                                <label class="form-label mb-1">最后抓取开始</label>
-                                <input class="form-control" type="date" name="last_fetch_from" value="{{ .Query.LastFetchFrom }}">
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-3">
-                                <label class="form-label mb-1">最后抓取结束</label>
-                                <input class="form-control" type="date" name="last_fetch_to" value="{{ .Query.LastFetchTo }}">
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-3">
-                                <label class="form-label mb-1">发行时间开始</label>
-                                <input class="form-control" type="date" name="release_date_from" value="{{ .Query.ReleaseDateFrom }}">
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-3">
-                                <label class="form-label mb-1">发行时间结束</label>
-                                <input class="form-control" type="date" name="release_date_to" value="{{ .Query.ReleaseDateTo }}">
+                            <div class="col-12">
+                                <div class="fetch-site-filter-grid fetch-site-filter-grid-6">
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">发行时间开始</label>
+                                        <input class="form-control" type="text" name="release_date_from" value="{{ .Query.ReleaseDateFrom }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">发行时间结束</label>
+                                        <input class="form-control" type="text" name="release_date_to" value="{{ .Query.ReleaseDateTo }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">下载时间开始</label>
+                                        <input class="form-control" type="text" name="film_birth_from" value="{{ .Query.FilmBirthFrom }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">下载时间结束</label>
+                                        <input class="form-control" type="text" name="film_birth_to" value="{{ .Query.FilmBirthTo }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">M下载时间开始</label>
+                                        <input class="form-control" type="text" name="media_birth_from" value="{{ .Query.MediaBirthFrom }}">
+                                    </div>
+                                    <div class="fetch-site-filter-item">
+                                        <label class="form-label mb-1">M下载时间结束</label>
+                                        <input class="form-control" type="text" name="media_birth_to" value="{{ .Query.MediaBirthTo }}">
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-12 d-flex gap-2">
                                 <button class="btn btn-primary" type="submit">筛选</button>
                                 <a class="btn btn-outline-secondary" href="/fetch-site-sukebei-list">清空</a>
+                                <button class="btn btn-outline-danger js-trigger-filtered-sukebei" type="button">触发筛选结果抓取</button>
                             </div>
                         </form>
+                        <div class="mt-3">
+                            {{ template "owned_filter" . }}
+                        </div>
                     </div>
                 </div>
 
@@ -110,13 +167,14 @@
                                 <thead>
                                 <tr>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMovieName.Active }}active{{ end }}" href="{{ .SortQuery.ByMovieName.Href }}">影片{{ if .SortQuery.ByMovieName.Active }}{{ if .SortQuery.ByMovieName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
-                                    <th>发行时间</th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByReleaseDate.Active }}active{{ end }}" href="{{ .SortQuery.ByReleaseDate.Href }}">发行时间{{ if .SortQuery.ByReleaseDate.Active }}{{ if .SortQuery.ByReleaseDate.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByFetchStatus.Active }}active{{ end }}" href="{{ .SortQuery.ByFetchStatus.Href }}">状态{{ if .SortQuery.ByFetchStatus.Active }}{{ if .SortQuery.ByFetchStatus.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th>重试</th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByLastFetchTime.Active }}active{{ end }}" href="{{ .SortQuery.ByLastFetchTime.Href }}">最后抓取{{ if .SortQuery.ByLastFetchTime.Active }}{{ if .SortQuery.ByLastFetchTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
-                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByResultCount.Active }}active{{ end }}" href="{{ .SortQuery.ByResultCount.Href }}">结果数{{ if .SortQuery.ByResultCount.Active }}{{ if .SortQuery.ByResultCount.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByHashCount.Active }}active{{ end }}" href="{{ .SortQuery.ByHashCount.Href }}">Hash 数{{ if .SortQuery.ByHashCount.Active }}{{ if .SortQuery.ByHashCount.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByLatestPublish.Active }}active{{ end }}" href="{{ .SortQuery.ByLatestPublish.Href }}">最新日期{{ if .SortQuery.ByLatestPublish.Active }}{{ if .SortQuery.ByLatestPublish.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByFilmBirthTime.Active }}active{{ end }}" href="{{ .SortQuery.ByFilmBirthTime.Href }}">下载时间{{ if .SortQuery.ByFilmBirthTime.Active }}{{ if .SortQuery.ByFilmBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMediaBirthTime.Active }}active{{ end }}" href="{{ .SortQuery.ByMediaBirthTime.Href }}">M下载时间{{ if .SortQuery.ByMediaBirthTime.Active }}{{ if .SortQuery.ByMediaBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th>错误</th>
                                     <th class="text-nowrap">操作</th>
                                 </tr>
@@ -125,20 +183,52 @@
                                 {{ if .Rows }}
                                     {{ range .Rows }}
                                         <tr data-movie-jav-id="{{ .MovieJavID }}" data-movie-name="{{ .MovieName }}">
-                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieName }}">{{ .MovieName }}</a></div><div class="text-muted small">{{ .MovieJavID }}</div></td>
+                                            <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/{{ .MovieName }}">{{ .MovieName }}</a></div></td>
                                             <td class="text-nowrap">{{ .ReleaseDateText }}</td>
                                             <td><span class="badge fetch-site-badge">{{ .FetchStatusText }}</span></td>
                                             <td>{{ .TryCount }}</td>
                                             <td class="text-nowrap">{{ .LastFetchText }}</td>
-                                            <td>{{ .LastResultCount }}</td>
                                             <td>{{ .TorrentHashCount }}</td>
                                             <td class="text-nowrap">{{ .LatestPublishText }}</td>
-                                            <td class="fetch-site-error-cell">{{ if .LastError }}{{ .LastError }}{{ else }}-{{ end }}</td>
+                                            <td class="text-nowrap">
+                                                {{ if eq .Owned 5 }}
+                                                    <a href="{{ .VideoURL }}" class="btn btn-sm btn-info me-2">Play</a>
+                                                {{ else if eq .Owned 4 }}
+                                                    <a href="{{ .VideoURL }}" class="btn btn-sm btn-success me-2">Play</a>
+                                                {{ else if eq .Owned 6 }}
+                                                    <a href="{{ .VideoURL }}" class="btn btn-sm btn-secondary me-2">ReMoved</a>
+                                                {{ else }}
+                                                    -
+                                                {{ end }}
+                                                {{ if .FilmBirthDate }}<span class="text-muted small ms-1">{{ .FilmBirthDate }}</span>{{ end }}
+                                            </td>
+                                            <td class="text-nowrap">
+                                                {{ if eq .OwnedWMedia 5 }}
+                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-outline-primary me-2">MPlay</a>
+                                                {{ else if eq .OwnedWMedia 4 }}
+                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
+                                                {{ else if eq .OwnedWMedia 6 }}
+                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-outline-secondary me-2">MRemoved</a>
+                                                {{ else }}
+                                                    -
+                                                {{ end }}
+                                                {{ if .FilmBirthDateWMedia }}<span class="text-muted small ms-1">{{ .FilmBirthDateWMedia }}</span>{{ end }}
+                                            </td>
+                                            <td class="fetch-site-error-cell">
+                                                {{ if .LastError }}
+                                                    <details class="fetch-site-error-details">
+                                                        <summary>有错误</summary>
+                                                        <div class="mt-2">{{ .LastError }}</div>
+                                                    </details>
+                                                {{ else }}
+                                                    <span class="text-muted">无错误</span>
+                                                {{ end }}
+                                            </td>
                                             <td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-danger js-trigger-sukebei">触发 Sukebei</button></td>
                                         </tr>
                                     {{ end }}
                                 {{ else }}
-                                    <tr><td colspan="10"><div class="fetch-site-empty-state">当前筛选下没有 Sukebei 抓取任务。</div></td></tr>
+                                    <tr><td colspan="11"><div class="fetch-site-empty-state">当前筛选下没有 Sukebei 抓取任务。</div></td></tr>
                                 {{ end }}
                                 </tbody>
                             </table>

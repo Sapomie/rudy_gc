@@ -12,12 +12,24 @@ type Progress struct {
 	SuccessCount      int
 	FailedCount       int
 	QueuedCount       int
+	PendingItems      []QueueItem
+	RunningItems      []QueueItem
+	DoneItems         []QueueItem
 	CurrentPhaseKey   string
 	PhaseKey          string
 	PhaseHandledCount int
 	PhaseTotalCount   int
 	PhaseSuccessCount int
 	PhaseFailedCount  int
+}
+
+type QueueItem struct {
+	MovieJavID  string `json:"movie_jav_id"`
+	MovieName   string `json:"movie_name"`
+	Seq         int64  `json:"seq,omitempty"`
+	State       string `json:"state,omitempty"`
+	Error       string `json:"error,omitempty"`
+	CompletedAt int64  `json:"completed_at,omitempty"`
 }
 
 type Log struct {

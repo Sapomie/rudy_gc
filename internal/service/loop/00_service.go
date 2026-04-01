@@ -7,6 +7,7 @@ import (
 
 	"rudy_gc/internal/service/fetchqueue"
 	"rudy_gc/internal/service/fetchsehuatang"
+	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/service/spider"
@@ -23,6 +24,7 @@ type FetchLoopService struct {
 	deps              *svc.Deps
 	crawlLogic        *spider.CrawlLogic
 	fetchQueue        *fetchqueue.Service
+	fetchSiteSvc      *fetchsite.Service
 	fetchSehuatangSvc *fetchsehuatang.Service
 	movieSvc          *movie.Service
 	filmSvc           *vfilm.FilmService
@@ -66,6 +68,7 @@ func NewFetchLoopService(deps *svc.Deps) *FetchLoopService {
 		deps:              deps,
 		crawlLogic:        spider.NewCrawlLogic(deps),
 		fetchQueue:        fetchqueue.NewService(deps),
+		fetchSiteSvc:      fetchsite.NewService(deps),
 		fetchSehuatangSvc: fetchsehuatang.NewService(deps),
 		movieSvc:          movie.NewService(deps),
 		filmSvc:           vfilm.NewFilmService(deps),

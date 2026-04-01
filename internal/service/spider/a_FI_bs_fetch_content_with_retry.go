@@ -12,7 +12,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const maxRetries = 45
+const maxRetries = 20
 
 type inventoryFetchOptions struct {
 	successMessage func(attempts int, content string) string
@@ -114,18 +114,26 @@ func truncateBody(body string) string {
 	return body
 }
 
-// 与老代码相同：每 20 次长退避；超过 maxRetries 终止；其余每次 3s。
+// 重试策略：
+// - 最大重试 20 次
+// - 前 5 次失败每次 sleep 5 秒
+// - 第 6 次失败开始每次在 5 秒基础上增加 2 秒（7s, 9s, 11s...）
 func (l *CrawlLogic) retryHandler(ctx context.Context, attempts int, err error, response string) bool {
-	if attempts%20 == 0 {
-		mylog.Warn(ctx, "多次重试失败(第%d次)，10分钟后重试。resp=%.200s", attempts, response)
-		return l.sleepWithContext(ctx, 10*time.Minute) == nil
-	}
 	if attempts >= maxRetries {
 		mylog.Warn(ctx, "多次重试失败(到达上限%d)，停止。resp=%.200s", maxRetries, response)
 		return false
 	}
-	mylog.Warn(ctx, "GetHttpResponse error: %v（3秒后重试）", err)
-	return l.sleepWithContext(ctx, 3*time.Second) == nil
+
+	sleepDur := retrySleepDuration(attempts)
+	mylog.Warn(ctx, "GetHttpResponse error: %v（%d秒后重试）", err, int(sleepDur/time.Second))
+	return l.sleepWithContext(ctx, sleepDur) == nil
+}
+
+func retrySleepDuration(attempts int) time.Duration {
+	if attempts <= 5 {
+		return 5 * time.Second
+	}
+	return time.Duration(5+(attempts-5)*2) * time.Second
 }
 
 // 与老代码一致的“有效页面”判定：包含 videothumblist，且不含“搜寻没有结果/空的列表”

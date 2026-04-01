@@ -146,6 +146,31 @@ func (s *Service) BuildSukebeiFetchTasksByMovies(ctx context.Context, movies []*
 	return out, nil
 }
 
+func (s *Service) BuildSukebeiFetchTasksByRows(rows []*moviex.TSukebeiTorrentFetch) []*SukebeiFetchTask {
+	out := make([]*SukebeiFetchTask, 0, len(rows))
+	seen := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		movieJavID := strings.TrimSpace(row.MovieJavId)
+		movieName := strings.TrimSpace(row.MovieName)
+		if movieJavID == "" || movieName == "" {
+			continue
+		}
+		if _, ok := seen[movieJavID]; ok {
+			continue
+		}
+		seen[movieJavID] = struct{}{}
+		out = append(out, &SukebeiFetchTask{
+			MovieJavID: movieJavID,
+			MovieName:  movieName,
+			Row:        row,
+		})
+	}
+	return out
+}
+
 func (s *Service) MarkJavbusRunning(ctx context.Context, row *moviex.TJavbusMagnetFetch) error {
 	if row == nil {
 		return nil

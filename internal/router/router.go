@@ -161,6 +161,7 @@ func New(d *dep.Dep) *gin.Engine {
 	r.GET("/triggers/media", crawlerPages.MediaPage)
 	r.GET("/triggers/media-rollback", crawlerPages.MediaRollbackPage)
 	r.GET("/triggers/fetch-site", crawlerPages.FetchSitePage)
+	r.GET("/triggers/fetch-site-sukebei-filtered", crawlerPages.FetchSiteSukebeiFilteredPage)
 	r.GET("/triggers/fetch-sehuatang", crawlerPages.FetchSehuatangPage)
 	r.GET("/triggers/backfill", crawlerPages.BackfillPage)
 	r.GET("/crawler/tasks", crawlerPages.TasksPage)

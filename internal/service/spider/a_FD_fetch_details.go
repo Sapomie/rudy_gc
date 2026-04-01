@@ -117,9 +117,12 @@ func isValidDetail(content string) bool {
 	return len(content) >= 5000 && strings.Contains(content, "video_title")
 }
 
-// 专用详情重试：每 20 次休眠 10 分钟，其余 3 秒；打印中文日志
+// 专用详情重试：
+// - 最大重试 20 次
+// - 前 5 次失败每次 sleep 5 秒
+// - 第 6 次失败开始每次在 5 秒基础上增加 2 秒（7s, 9s, 11s...）
 func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string) (string, error) {
-	const maxRetries = 45
+	const maxRetries = 20
 	var body []byte
 	var err error
 	log := l.deps.Log.WithContext(ctx)
@@ -139,20 +142,13 @@ func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string)
 				name, attempts, url, err,
 			)
 
-			if attempts%20 == 0 {
+			if attempts < maxRetries {
+				sleepDur := detailRetrySleepDuration(attempts)
 				log.Warnf(
-					"多次重试失败，10分钟后重试 - name: %s, attempts: %d, url: %s, last_error: %v",
-					name, attempts, url, err,
+					"请求错误，%d秒后重试 - name: %s, attempts: %d, url: %s, error: %v",
+					int(sleepDur/time.Second), name, attempts, url, err,
 				)
-				if sleepErr := l.sleepWithContext(ctx, 10*time.Minute); sleepErr != nil {
-					return "", sleepErr
-				}
-			} else {
-				log.Warnf(
-					"请求错误，3秒后重试 - name: %s, attempts: %d, url: %s, error: %v",
-					name, attempts, url, err,
-				)
-				if sleepErr := l.sleepWithContext(ctx, 3*time.Second); sleepErr != nil {
+				if sleepErr := l.sleepWithContext(ctx, sleepDur); sleepErr != nil {
 					return "", sleepErr
 				}
 			}
@@ -192,6 +188,13 @@ func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string)
 		name, url, maxRetries, err,
 	)
 	return "", fmt.Errorf("达到最大重试次数 %d，无法获取 URL %s: %v", maxRetries, url, err)
+}
+
+func detailRetrySleepDuration(attempts int) time.Duration {
+	if attempts <= 5 {
+		return 5 * time.Second
+	}
+	return time.Duration(5+(attempts-5)*2) * time.Second
 }
 
 func (l *CrawlLogic) logItemProgress(ctx context.Context, done, total int, name string, lastQuery int64, start time.Time) {

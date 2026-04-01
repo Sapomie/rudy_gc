@@ -17,3 +17,8 @@
     white-space: nowrap;
     color: #425466;
 }
+
+.album-quick-filter-group .btn {
+    min-width: 88px;
+    font-weight: 600;
+}

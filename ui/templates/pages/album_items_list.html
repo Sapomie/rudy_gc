@@ -41,13 +41,21 @@
 
                 <div class="card mb-3">
                     <div class="card-body">
-                        <form class="row g-3 align-items-end" method="get" action="/album-items">
+                        <form class="row g-3 align-items-end" id="albumItemsFilterForm" method="get" action="/album-items">
                             <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
                             {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
                             {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+                            <div class="col-12">
+                                <label class="form-label mb-1">快捷相册</label>
+                                <div class="d-flex flex-wrap gap-2 album-quick-filter-group">
+                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "下载中" }}btn-warning{{ else }}btn-outline-warning{{ end }} js-album-quick-filter" data-album-name="下载中">下载中</button>
+                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "待下载" }}btn-info{{ else }}btn-outline-info{{ end }} js-album-quick-filter" data-album-name="待下载">待下载</button>
+                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "Media" }}btn-primary{{ else }}btn-outline-primary{{ end }} js-album-quick-filter" data-album-name="Media">Media</button>
+                                </div>
+                            </div>
                             <div class="col-12 col-md-6 col-xl-3">
                                 <label class="form-label mb-1">相册</label>
-                                <select class="form-select" name="album_name">
+                                <select class="form-select" id="albumItemsAlbumName" name="album_name">
                                     {{ range .Albums }}
                                         <option value="{{ .Name }}" {{ if eq $.SelectedAlbumName .Name }}selected{{ end }}>{{ .Name }}</option>
                                     {{ end }}
