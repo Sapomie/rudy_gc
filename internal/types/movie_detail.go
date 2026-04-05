@@ -19,6 +19,14 @@ type RankInfo struct {
 	Rank int64
 }
 
+type MovieScEvent struct {
+	ScName   string
+	ScTime   int64
+	Cooldown int64
+	IsCome   bool
+	Href     string
+}
+
 type MovieFetchSiteStatus struct {
 	MovieJavID        string
 	MovieName         string

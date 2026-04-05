@@ -21,6 +21,14 @@
                         <p class="text-muted mb-0">{{ .PageNote }}</p>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm"
+                                id="btnEditShtTime"
+                                data-item-key="sht_time"
+                                data-item-label="SHT时间"
+                                data-item-value="{{ .ShtTimeValue }}">
+                            SHT时间：{{ .ShtTimeDisplay }}
+                        </button>
                         <a class="btn btn-outline-primary btn-sm" href="/fetch-site-sehuatang-list">Sehuatang 列表</a>
                         <a class="btn btn-outline-secondary btn-sm" href="{{ .TaskPageURL }}">抓取任务页</a>
                         <a class="btn btn-outline-secondary btn-sm" href="{{ .TasksPageURL }}">任务列表</a>
@@ -52,21 +60,41 @@
 
                 <div class="card mb-3">
                     <div class="card-body">
-                        <form class="row g-3 align-items-end" method="get" action="/fetch-site-sehuatang-list">
+                        <form class="row g-3 align-items-end" id="sehuatangMagnetFilterForm" method="get" action="/fetch-site-sehuatang-list">
                             <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
                             {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
                             {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
-                            <div class="col-12 col-md-6 col-xl-4">
+                            <div class="col-12 col-md-6 col-xl-3">
                                 <label class="form-label mb-1">关键词</label>
                                 <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_name / movie_jav_id / thread_title">
                             </div>
-                            <div class="col-12 col-md-6 col-xl-4">
+                            <div class="col-12 col-md-6 col-xl-3">
                                 <label class="form-label mb-1">movie_jav_id</label>
                                 <input class="form-control" type="text" name="movie_jav_id" value="{{ .Query.MovieJavID }}" placeholder="JavLib 编号">
                             </div>
-                            <div class="col-12 col-md-6 col-xl-4">
+                            <div class="col-12 col-md-6 col-xl-3">
                                 <label class="form-label mb-1">info_hash</label>
                                 <input class="form-control" type="text" name="info_hash" value="{{ .Query.InfoHash }}" placeholder="BTIH">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">tag</label>
+                                <input class="form-control" id="sehuatangMagnetTagInput" type="text" name="tag" value="{{ .Query.Tag }}" placeholder="标签">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发帖时间开始</label>
+                                <input class="form-control" type="text" name="post_time_from" value="{{ .Query.PostTimeFrom }}" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发帖时间结束</label>
+                                <input class="form-control" type="text" name="post_time_to" value="{{ .Query.PostTimeTo }}" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-1">快捷 tag</label>
+                                <div class="d-flex flex-wrap gap-2 album-quick-filter-group">
+                                    {{ range .QuickTags }}
+                                        <a class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}" href="{{ .Href }}">{{ .Label }}</a>
+                                    {{ end }}
+                                </div>
                             </div>
                             <div class="col-12 d-flex gap-2">
                                 <button class="btn btn-primary" type="submit">筛选</button>
@@ -106,9 +134,9 @@
                                             </td>
                                             <td>
                                                 {{ if .ThreadURL }}
-                                                    <a href="{{ .ThreadURL }}" target="_blank" rel="noopener noreferrer">{{ .ThreadTitle }}</a>
+                                                    <a class="fetch-site-title-ellipsis" href="{{ .ThreadURL }}" target="_blank" rel="noopener noreferrer" title="{{ .ThreadTitle }}">{{ .ThreadTitle }}</a>
                                                 {{ else }}
-                                                    {{ .ThreadTitle }}
+                                                    <span class="fetch-site-title-ellipsis" title="{{ .ThreadTitle }}">{{ .ThreadTitle }}</span>
                                                 {{ end }}
                                             </td>
                                             <td class="text-nowrap">
@@ -119,7 +147,7 @@
                                                 {{ end }}
                                             </td>
                                             <td class="text-nowrap">
-                                                <div class="d-flex flex-wrap gap-2">
+                                                <div class="fetch-site-album-inline">
                                                     <button type="button"
                                                             class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
                                                             data-source-type="sehuatang_magnet"
@@ -127,7 +155,7 @@
                                                             data-favorited="{{ if .IsInDownload }}1{{ else }}0{{ end }}"
                                                             data-album-name="下载中"
                                                             {{ if not .CanFavorite }}disabled title="缺少影片标识，暂不可加入相册"{{ end }}>
-                                                        {{ if .IsInDownload }}已在下载中{{ else }}下载中{{ end }}
+                                                        下载中
                                                     </button>
                                                     <button type="button"
                                                             class="btn btn-sm {{ if .IsInPending }}btn-info{{ else }}btn-outline-info{{ end }} js-add-favorite"
@@ -136,7 +164,14 @@
                                                             data-favorited="{{ if .IsInPending }}1{{ else }}0{{ end }}"
                                                             data-album-name="待下载"
                                                             {{ if not .CanFavorite }}disabled title="缺少影片标识，暂不可加入相册"{{ end }}>
-                                                        {{ if .IsInPending }}已在待下载{{ else }}待下载{{ end }}
+                                                        待下载
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary js-open-other-album-modal"
+                                                            data-source-type="sehuatang_magnet"
+                                                            data-source-row-id="{{ .Id }}"
+                                                            {{ if not .CanFavorite }}disabled title="缺少影片标识，暂不可加入相册"{{ end }}>
+                                                        其他相册
                                                     </button>
                                                 </div>
                                             </td>
@@ -164,6 +199,61 @@
     <script src="/static/js/waves.min.js"></script>
     <script src="/static/js/jquery.sparkline.min.js"></script>
     <script src="/static/js/app.js"></script>
+    <div class="modal fade" id="sehuatangOtherAlbumModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">选择其他相册</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body">
+                    {{ if .Albums }}
+                        <div class="fetch-site-other-album-list" id="sehuatangOtherAlbumList">
+                            {{ range .Albums }}
+                                <button type="button" class="btn btn-outline-secondary js-other-album-option" data-album-name="{{ . }}">{{ . }}</button>
+                            {{ end }}
+                        </div>
+                    {{ else }}
+                        <div class="text-muted small">当前没有可选的其他相册。</div>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="sehuatangDateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="sehuatangDateForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sehuatangDateModalTitle">修改日期</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="sehuatangDateItemKey" value="">
+                        <div class="mb-3">
+                            <label class="form-label mb-1" for="sehuatangDateInput">日期</label>
+                            <input class="form-control"
+                                   id="sehuatangDateInput"
+                                   type="text"
+                                   value=""
+                                   placeholder="YYYY-MM-DD"
+                                   inputmode="numeric"
+                                   maxlength="10"
+                                   pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="sehuatangDateTodayBtn">今天</button>
+                            </div>
+                        </div>
+                        <div class="alert d-none mb-0" id="sehuatangDateMsg" role="alert"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary" id="sehuatangDateSubmit">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <script src="/static/customer/sehuatang_magnet_list.js"></script>
     </body>
     </html>

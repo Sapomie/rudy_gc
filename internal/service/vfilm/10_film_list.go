@@ -64,8 +64,6 @@ func (s *Service) buildFilmListItem(ctx context.Context, film *types.Film) *type
 		FrameAverage:    formatFilmFrameAverage(film.FrameAverage),
 		SelfMakeText:    formatFilmSelfMake(film.SelfMake),
 		HasMaskText:     formatFilmHasMask(film.HasMask),
-		ScTimes:         film.ScTimes,
-		LastScTime:      film.LastScTime,
 		BirthTime:       film.BirthTime,
 		ReleasingDate:   film.ReleasingDate,
 	}
@@ -87,6 +85,8 @@ func (s *Service) buildFilmListItem(ctx context.Context, film *types.Film) *type
 		item.Casts = casts
 		item.CastName = buildFilmListCastName(casts)
 	}
+	item.ScTimes = mt.ScTimes
+	item.LastScTime = mt.LastScTime
 	item.VideoURL, item.PlayButtonClass, item.PlayButtonText, item.ShowPlayButton = buildFilmListPlayButton(mt)
 	return item
 }

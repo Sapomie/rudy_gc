@@ -1,0 +1,186 @@
+{{ define "page.movie_release_bucket_list" }}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/icons.min.css" rel="stylesheet">
+    <link href="/static/css/app.min.css" rel="stylesheet">
+    <link href="/static/customer/movie_release_bucket_list.css" rel="stylesheet">
+</head>
+
+<body data-sidebar="dark">
+{{ template "menu" . }}
+
+<main class="main-content">
+    <div class="page-content">
+        <div class="container-fluid movie-release-bucket-list-page" id="movieReleaseBucketListPage">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                <div>
+                    <h4 class="mb-1">{{ .PageTitle }}</h4>
+                    <p class="text-muted mb-0">{{ .PageNote }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ .AggPageHref }}" class="btn btn-outline-primary btn-sm">返回聚合页</a>
+                    <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">去回填入口</a>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                <div class="bucket-list-summary">
+                    <span class="bucket-list-summary-label">总行数</span>
+                    <span class="bucket-list-summary-value">{{ .Total }}</span>
+                </div>
+                {{ if .Rows }}
+                    <div class="ms-xl-auto">
+                        {{ template "pagination" . }}
+                    </div>
+                {{ end }}
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form class="row g-2 align-items-end" method="get" action="/movie-agg-all/release-bucket-list">
+                        <input type="hidden" name="sort" value="{{ .Query.Sort }}">
+                        <input type="hidden" name="dir" value="{{ .Query.Dir }}">
+                        <input type="hidden" name="level" value="{{ .Query.Level }}">
+
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <label class="form-label mb-1">时间桶关键字</label>
+                            <input class="form-control" type="text" name="scope_key" value="{{ .Query.ScopeKey }}" placeholder="如 2026-04、2026-Q02">
+                        </div>
+                        <div class="col-12 col-md-4 col-xl-2">
+                            <label class="form-label mb-1">Year</label>
+                            <input class="form-control" type="number" name="year" value="{{ .Query.Year }}" placeholder="如 2026">
+                        </div>
+                        <div class="col-12 col-md-4 col-xl-1">
+                            <label class="form-label mb-1">Quarter</label>
+                            <input class="form-control" type="number" name="quarter" value="{{ .Query.Quarter }}" placeholder="1-4">
+                        </div>
+                        <div class="col-12 col-md-4 col-xl-1">
+                            <label class="form-label mb-1">Month</label>
+                            <input class="form-control" type="number" name="month" value="{{ .Query.Month }}" placeholder="1-12">
+                        </div>
+                        <div class="col-12 col-md-4 col-xl-1">
+                            <label class="form-label mb-1">Day</label>
+                            <input class="form-control" type="number" name="day" value="{{ .Query.Day }}" placeholder="1-31">
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-2">
+                            <label class="form-label mb-1">每页条数</label>
+                            <select class="form-select" id="releaseBucketPageSize" name="ps">
+                                <option value="24" {{ if eq .Query.PageSize 24 }}selected{{ end }}>24</option>
+                                <option value="50" {{ if eq .Query.PageSize 50 }}selected{{ end }}>50</option>
+                                <option value="100" {{ if eq .Query.PageSize 100 }}selected{{ end }}>100</option>
+                                <option value="200" {{ if eq .Query.PageSize 200 }}selected{{ end }}>200</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-xl-2 d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">筛选</button>
+                            <a class="btn btn-outline-secondary" href="{{ .ClearHref }}">清空</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="text-muted small me-1">排序</span>
+                            {{ range .SortLinks }}
+                                <a href="{{ .Href }}" class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                    {{ .Label }}
+                                </a>
+                            {{ end }}
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center justify-content-xl-end gap-2 bucket-level-switch">
+                            <span class="text-muted small me-1">层级</span>
+                            {{ range .LevelLinks }}
+                                <a href="{{ .Href }}" class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                    {{ .Label }}
+                                </a>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 bucket-table">
+                            <thead>
+                            <tr>
+                                <th class="text-nowrap">
+                                    <a class="bucket-sort-link {{ if .HeaderLinks.Bucket.Active }}is-active{{ end }}" href="{{ .HeaderLinks.Bucket.Href }}">{{ .HeaderLinks.Bucket.Label }}{{ if .HeaderLinks.Bucket.Active }}<span class="bucket-sort-indicator">{{ if .HeaderLinks.Bucket.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}</a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="bucket-sort-link {{ if .HeaderLinks.CountAll.Active }}is-active{{ end }}" href="{{ .HeaderLinks.CountAll.Href }}">{{ .HeaderLinks.CountAll.Label }}{{ if .HeaderLinks.CountAll.Active }}<span class="bucket-sort-indicator">{{ if .HeaderLinks.CountAll.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}</a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="bucket-sort-link {{ if .HeaderLinks.CountOwned.Active }}is-active{{ end }}" href="{{ .HeaderLinks.CountOwned.Href }}">{{ .HeaderLinks.CountOwned.Label }}{{ if .HeaderLinks.CountOwned.Active }}<span class="bucket-sort-indicator">{{ if .HeaderLinks.CountOwned.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}</a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="bucket-sort-link {{ if .HeaderLinks.Size.Active }}is-active{{ end }}" href="{{ .HeaderLinks.Size.Href }}">{{ .HeaderLinks.Size.Label }}{{ if .HeaderLinks.Size.Active }}<span class="bucket-sort-indicator">{{ if .HeaderLinks.Size.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}</a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="bucket-sort-link {{ if .HeaderLinks.LatestRelease.Active }}is-active{{ end }}" href="{{ .HeaderLinks.LatestRelease.Href }}">{{ .HeaderLinks.LatestRelease.Label }}{{ if .HeaderLinks.LatestRelease.Active }}<span class="bucket-sort-indicator">{{ if .HeaderLinks.LatestRelease.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}</a>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{ if .Rows }}
+                                {{ range .Rows }}
+                                    <tr>
+                                        <td class="text-nowrap">
+                                            {{ if .ViewHref }}
+                                                <a class="bucket-name-link" href="{{ .ViewHref }}">{{ .BucketDisplay }}</a>
+                                            {{ else }}
+                                                <span class="bucket-name">{{ .BucketDisplay }}</span>
+                                            {{ end }}
+                                        </td>
+                                        <td class="text-nowrap">{{ .CountAll }}</td>
+                                        <td class="text-nowrap">{{ .CountOwned }}</td>
+                                        <td class="text-nowrap">{{ humanSize .SizeBytes }}</td>
+                                        <td class="text-nowrap">{{ formatUnixDate .LatestReleasingDate }}</td>
+                                    </tr>
+                                {{ end }}
+                            {{ else }}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="bucket-empty-state">
+                                            当前筛选下没有 `movie_release_bucket_stat` 数据。若刚建表，请先去
+                                            <a href="/triggers/media-rescan">媒体重扫页</a>
+                                            执行一次“回填上映日时间聚合”。
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{ if .Rows }}
+                <div class="d-flex justify-content-end mt-3">
+                    {{ template "pagination" . }}
+                </div>
+            {{ end }}
+        </div>
+    </div>
+</main>
+
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/metisMenu.min.js"></script>
+<script src="/static/js/simplebar.min.js"></script>
+<script src="/static/js/waves.min.js"></script>
+<script src="/static/js/jquery.sparkline.min.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/customer/movie_release_bucket_list.js"></script>
+</body>
+</html>
+{{ end }}

@@ -53,6 +53,26 @@ document.addEventListener('click', async function (e) {
             btnCover.classList.remove('disabled');
         }
     }
+
+    // === WMedia 移动到 Removed ===
+    const btnMoveWMedia = e.target.closest('.js-move-wmedia-removed');
+    if (btnMoveWMedia) {
+        const javId = (btnMoveWMedia.dataset.jav || '').trim();
+        if (!javId) return;
+        const modalEl = document.getElementById('moveWMediaRemovedModal');
+        if (modalEl) {
+            modalEl.dataset.jav = javId;
+            const msgEl = modalEl.querySelector('#moveWMediaRemovedMsg');
+            if (msgEl) {
+                msgEl.style.display = 'none';
+                msgEl.textContent = '';
+                msgEl.className = 'small mt-2';
+            }
+            if (window.bootstrap && window.bootstrap.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+        }
+    }
 });
 
 document.addEventListener('submit', async function (e) {
@@ -106,6 +126,44 @@ document.addEventListener('submit', async function (e) {
         showMsg(err.message || '网络错误，请稍后重试', false);
     } finally {
         if (btn) btn.disabled = false;
+    }
+});
+
+document.addEventListener('click', async function (e) {
+    const btnDo = e.target.closest('#btnMoveWMediaRemovedDo');
+    if (!btnDo) return;
+    const modalEl = document.getElementById('moveWMediaRemovedModal');
+    const javId = modalEl ? (modalEl.dataset.jav || '').trim() : '';
+    if (!javId) return;
+
+    btnDo.disabled = true;
+    try {
+        const res = await fetch(`/api/movie/${encodeURIComponent(javId)}/move-wmedia-removed`, {method: 'POST'});
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+            throw new Error(data.error || '移动失败');
+        }
+        const msgEl = modalEl ? modalEl.querySelector('#moveWMediaRemovedMsg') : null;
+        if (msgEl) {
+            msgEl.textContent = '已移动到 005_removed';
+            msgEl.className = 'small mt-2 text-success';
+            msgEl.style.display = 'block';
+        }
+        window.setTimeout(function () {
+            if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+            }
+            window.location.reload();
+        }, 400);
+    } catch (err) {
+        const msgEl = modalEl ? modalEl.querySelector('#moveWMediaRemovedMsg') : null;
+        if (msgEl) {
+            msgEl.textContent = err.message || '网络错误，请稍后重试';
+            msgEl.className = 'small mt-2 text-danger';
+            msgEl.style.display = 'block';
+        }
+    } finally {
+        btnDo.disabled = false;
     }
 });
 

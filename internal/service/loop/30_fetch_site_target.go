@@ -15,6 +15,35 @@ func (l *FetchLoopService) runJavbusFetchTasksWithFilterTarget(
 	lastFetchDurationDays int64,
 	lastSuccessDurationDays int64,
 ) (*fetchsite.RunFetchTasksResult, error) {
+	selected, err := l.buildFilteredJavbusFetchTasksWithFilterTarget(ctx, baseReq, targetCount, lastFetchDurationDays, lastSuccessDurationDays)
+	if err != nil {
+		return nil, err
+	}
+	return l.fetchQueue.RunPreparedJavbusFetchTasks(ctx, selected, "JavBus 筛选任务已加载")
+}
+
+func (l *FetchLoopService) runSukebeiFetchTasksWithFilterTarget(
+	ctx context.Context,
+	baseReq *types.ListMovieFullRequest,
+	targetCount int64,
+	lastFetchDurationDays int64,
+	lastSuccessDurationDays int64,
+) (*fetchsite.RunFetchTasksResult, error) {
+	selected, err := l.buildFilteredSukebeiFetchTasksWithFilterTarget(ctx, baseReq, targetCount, lastFetchDurationDays, lastSuccessDurationDays)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.fetchQueue.RunPreparedSukebeiFetchTasks(ctx, selected, "Sukebei 筛选任务已加载")
+}
+
+func (l *FetchLoopService) buildFilteredJavbusFetchTasksWithFilterTarget(
+	ctx context.Context,
+	baseReq *types.ListMovieFullRequest,
+	targetCount int64,
+	lastFetchDurationDays int64,
+	lastSuccessDurationDays int64,
+) ([]*fetchsite.JavbusFetchTask, error) {
 	basePageSize := int64(0)
 	if baseReq != nil {
 		basePageSize = baseReq.PageSize
@@ -36,7 +65,7 @@ func (l *FetchLoopService) runJavbusFetchTasksWithFilterTarget(
 
 		pageTasks, _, _, err := l.fetchQueue.BuildFilteredJavbusFetchTasksByMovies(ctx, resp.List, lastFetchDurationDays, lastSuccessDurationDays)
 		if err != nil {
-			return nil, err
+			return []*fetchsite.JavbusFetchTask{}, err
 		}
 		for _, task := range pageTasks {
 			if task == nil {
@@ -61,16 +90,16 @@ func (l *FetchLoopService) runJavbusFetchTasksWithFilterTarget(
 		page++
 	}
 
-	return l.fetchQueue.RunPreparedJavbusFetchTasks(ctx, selected, "JavBus 筛选任务已加载")
+	return selected, nil
 }
 
-func (l *FetchLoopService) runSukebeiFetchTasksWithFilterTarget(
+func (l *FetchLoopService) buildFilteredSukebeiFetchTasksWithFilterTarget(
 	ctx context.Context,
 	baseReq *types.ListMovieFullRequest,
 	targetCount int64,
 	lastFetchDurationDays int64,
 	lastSuccessDurationDays int64,
-) (*fetchsite.RunFetchTasksResult, error) {
+) ([]*fetchsite.SukebeiFetchTask, error) {
 	basePageSize := int64(0)
 	if baseReq != nil {
 		basePageSize = baseReq.PageSize
@@ -92,7 +121,7 @@ func (l *FetchLoopService) runSukebeiFetchTasksWithFilterTarget(
 
 		pageTasks, _, _, err := l.fetchQueue.BuildFilteredSukebeiFetchTasksByMovies(ctx, resp.List, lastFetchDurationDays, lastSuccessDurationDays)
 		if err != nil {
-			return nil, err
+			return []*fetchsite.SukebeiFetchTask{}, err
 		}
 		for _, task := range pageTasks {
 			if task == nil {
@@ -117,7 +146,7 @@ func (l *FetchLoopService) runSukebeiFetchTasksWithFilterTarget(
 		page++
 	}
 
-	return l.fetchQueue.RunPreparedSukebeiFetchTasks(ctx, selected, "Sukebei 筛选任务已加载")
+	return selected, nil
 }
 
 func cloneFetchSiteMovieRequest(baseReq *types.ListMovieFullRequest, page int64, pageSize int64) *types.ListMovieFullRequest {

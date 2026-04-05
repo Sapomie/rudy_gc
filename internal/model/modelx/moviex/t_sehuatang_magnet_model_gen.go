@@ -45,6 +45,7 @@ type (
 		Id           int64  `db:"id"`
 		MovieJavId   string `db:"movie_jav_id"`
 		MovieName    string `db:"movie_name"`
+		Tag          string `db:"tag"`
 		ThreadTitle  string `db:"thread_title"`
 		ThreadUrl    string `db:"thread_url"`
 		PostTime     int64  `db:"post_time"`
@@ -119,8 +120,8 @@ func (m *defaultTSehuatangMagnetModel) Insert(ctx context.Context, data *TSehuat
 	rudyGcTSehuatangMagnetIdKey := fmt.Sprintf("%s%v", cacheRudyGcTSehuatangMagnetIdPrefix, data.Id)
 	rudyGcTSehuatangMagnetInfoHashKey := fmt.Sprintf("%s%v", cacheRudyGcTSehuatangMagnetInfoHashPrefix, data.InfoHash)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tSehuatangMagnetRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.ThreadTitle, data.ThreadUrl, data.PostTime, data.PostDate, data.InfoHash, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, tSehuatangMagnetRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.Tag, data.ThreadTitle, data.ThreadUrl, data.PostTime, data.PostDate, data.InfoHash, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcTSehuatangMagnetIdKey, rudyGcTSehuatangMagnetInfoHashKey)
 	return ret, err
 }
@@ -136,7 +137,7 @@ func (m *defaultTSehuatangMagnetModel) Update(ctx context.Context, newData *TSeh
 	rudyGcTSehuatangMagnetNewInfoHashKey := fmt.Sprintf("%s%v", cacheRudyGcTSehuatangMagnetInfoHashPrefix, newData.InfoHash)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, tSehuatangMagnetRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.ThreadTitle, newData.ThreadUrl, newData.PostTime, newData.PostDate, newData.InfoHash, newData.LastSeenTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.Tag, newData.ThreadTitle, newData.ThreadUrl, newData.PostTime, newData.PostDate, newData.InfoHash, newData.LastSeenTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcTSehuatangMagnetIdKey, rudyGcTSehuatangMagnetOldInfoHashKey, rudyGcTSehuatangMagnetNewInfoHashKey)
 	return err
 }

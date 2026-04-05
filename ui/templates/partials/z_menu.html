@@ -58,7 +58,6 @@
                             <li><a href="/moviecarddayrank">DayRank</a></li>
                             <li><a href="/moviecardperiodrank">PeriodRank</a></li>
                             <li><a href="/cardsowned">Owned</a></li>
-                            <li><a href="/cardsmediamowned">MediaOwned</a></li>
                             <li><a href="/cardsneeddownload">NeedDownload</a></li>
                             <li><a href="/cardsrandom">Random</a></li>
                         </ul>
@@ -71,9 +70,23 @@
                         </a>
                         <ul class="sub-menu" aria-expanded="false">
                             <li><a href="/movie-agg-all/release">Agg-All-Release</a></li>
+                            <li><a href="/movie-agg-all/release-bucket-list">Agg-All-Release-Bucket</a></li>
                             <li><a href="/movie-agg-owned/release">Agg-Own-Release</a></li>
                             <li><a href="/movie-agg-owned/birth">Agg-Own-Birth</a></li>
                             <li><a href="/dir/1">Directory</a></li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <a href="javascript: void(0);" class="has-arrow waves-effect">
+                            <i class="mdi mdi-view-grid-outline"></i><span>WMedia</span>
+                        </a>
+                        <ul class="sub-menu" aria-expanded="false">
+                            <li><a href="/w-media-agg/bucket-list">Agg-WMedia-Bucket</a></li>
+                            <li><a href="/w-media-agg/birth">Agg-WMedia-Birth</a></li>
+                            <li><a href="/wdir/1">WDirectory</a></li>
+                            <li><a href="/cardsmediamowned">MediaOwned</a></li>
+                            <li><a href="/album-items">AlbumItems</a></li>
                         </ul>
                     </li>
 
@@ -86,7 +99,6 @@
 	                            <li><a href="/casts">Casts</a></li>
 	                            <li><a href="/films">Films</a></li>
 	                            <li><a href="/e-items">EItems</a></li>
-	                            <li><a href="/album-items">AlbumItems</a></li>
                             <li><a href="/records">Records</a></li>
                         </ul>
                     </li>
@@ -97,10 +109,19 @@
                         </a>
                         <ul class="sub-menu" aria-expanded="false">
                             <li><a href="/sc-events">ScEvents</a></li>
-                            <li><a href="/sc-agg">ScAgg</a></li>
                             <li><a href="/sc-pick-smart">ScPickSmart</a></li>
                             <li><a href="/sc-pick-smart-media">ScPickSmartMedia</a></li>
                             <li><a href="/triggers/sc">ScPreview</a></li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <a href="javascript: void(0);" class="has-arrow waves-effect">
+                            <i class="mdi mdi-filmstrip"></i><span>Film操作</span>
+                        </a>
+                        <ul class="sub-menu" aria-expanded="false">
+                            <li><a href="/triggers/film">Film</a></li>
+                            <li><a href="/triggers/film-move">FilmMove</a></li>
                         </ul>
                     </li>
 
@@ -111,7 +132,7 @@
 	                        <ul class="sub-menu" aria-expanded="false">
 	                            <li><a href="/triggers/dailybest">DailyBest</a></li>
 	                            <li><a href="/triggers/seeds">Seeds</a></li>
-	                            <li><a href="/triggers/film">Film</a></li>
+	                            <li><a href="/triggers/post-process">PostProcess</a></li>
 	                            <li><a href="/triggers/backfill">Backfill</a></li>
 	                            <li><a href="/crawler/detail-loop">DetailLoop</a></li>
 	                            <li><a href="/crawler/tasks">CrawlerTasks</a></li>
@@ -125,9 +146,9 @@
                         <ul class="sub-menu" aria-expanded="false">
                             <li><a href="/triggers/fetch-site">FetchSite</a></li>
                             <li><a href="/triggers/fetch-sehuatang">FetchSehuatang</a></li>
-                            <li><a href="/fetch-site-javbus-list">FetchSiteJavbusList</a></li>
-                            <li><a href="/fetch-site-sukebei-list">FetchSiteSukebeiList</a></li>
-                            <li><a href="/fetch-site-sehuatang-list">FetchSiteSehuatangList</a></li>
+                            <li><a href="/fetch-site-javbus-list">JavbusList</a></li>
+                            <li><a href="/fetch-site-sukebei-list">SukebeiList</a></li>
+                            <li><a href="/fetch-site-sehuatang-list">SehuatangList</a></li>
                         </ul>
                     </li>
 
@@ -137,6 +158,8 @@
                         </a>
                         <ul class="sub-menu" aria-expanded="false">
                             <li><a href="/triggers/media">Media</a></li>
+                            <li><a href="/triggers/sc-media">ScMediaMove</a></li>
+                            <li><a href="/triggers/media-rescan">MediaRescan</a></li>
                             <li><a href="/triggers/media-rollback">MediaRollback</a></li>
                         </ul>
                     </li>

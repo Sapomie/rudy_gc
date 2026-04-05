@@ -15,6 +15,10 @@
     const batchRemoveModalEl = document.getElementById('albumBatchRemoveModal');
     const batchRemoveCountEl = document.getElementById('albumBatchRemoveCount');
     const batchRemoveConfirmBtn = document.getElementById('albumBatchRemoveConfirmBtn');
+    const openCreateAlbumBtn = document.getElementById('btnOpenCreateAlbumModal');
+    const createAlbumModalEl = document.getElementById('albumCreateModal');
+    const createAlbumNameEl = document.getElementById('albumCreateName');
+    const createAlbumConfirmBtn = document.getElementById('albumCreateConfirmBtn');
     if (!page) {
         return;
     }
@@ -25,6 +29,9 @@
         : null;
     const batchRemoveModal = (batchRemoveModalEl && window.bootstrap && window.bootstrap.Modal)
         ? window.bootstrap.Modal.getOrCreateInstance(batchRemoveModalEl)
+        : null;
+    const createAlbumModal = (createAlbumModalEl && window.bootstrap && window.bootstrap.Modal)
+        ? window.bootstrap.Modal.getOrCreateInstance(createAlbumModalEl)
         : null;
     let pendingBatchMoveIDs = [];
     let pendingBatchRemoveIDs = [];
@@ -280,6 +287,77 @@
         batchRemoveModal.show();
     }
 
+    function upsertSelectOption(selectEl, value, text) {
+        if (!selectEl) {
+            return;
+        }
+        const stringValue = String(value || '').trim();
+        const stringText = String(text || '').trim();
+        if (!stringValue || !stringText) {
+            return;
+        }
+        let targetOption = null;
+        Array.from(selectEl.options || []).forEach(function (option) {
+            if (String(option.value || '').trim() === stringValue) {
+                targetOption = option;
+            }
+        });
+        if (!targetOption) {
+            targetOption = document.createElement('option');
+            targetOption.value = stringValue;
+            targetOption.textContent = stringText;
+            selectEl.appendChild(targetOption);
+            return;
+        }
+        targetOption.textContent = stringText;
+    }
+
+    function submitFilterWithAlbumName(albumName) {
+        const targetAlbumName = String(albumName || '').trim();
+        if (!targetAlbumName || !filterForm || !albumNameSelect) {
+            return;
+        }
+        upsertSelectOption(albumNameSelect, targetAlbumName, targetAlbumName);
+        albumNameSelect.value = targetAlbumName;
+        filterForm.submit();
+    }
+
+    function createAlbum(albumName) {
+        const name = String(albumName || '').trim();
+        if (!name) {
+            showMsg('相册名称不能为空', false);
+            return;
+        }
+        if (!createAlbumConfirmBtn) {
+            showMsg('创建按钮未初始化，无法新增相册', false);
+            return;
+        }
+        createAlbumConfirmBtn.disabled = true;
+        request('/api/albums', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name})
+        }).then(function (data) {
+            const newAlbumName = String(data && data.album_name ? data.album_name : '').trim();
+            const newAlbumID = parseItemID(data && data.album_id ? data.album_id : '0');
+            if (!newAlbumName || newAlbumID <= 0) {
+                throw new Error('新增相册返回数据无效');
+            }
+            upsertSelectOption(albumNameSelect, newAlbumName, newAlbumName);
+            upsertSelectOption(batchMoveTargetEl, String(newAlbumID), newAlbumName);
+            showMsg(data.message || '相册创建成功', true);
+            if (createAlbumModal) {
+                createAlbumModal.hide();
+            }
+            submitFilterWithAlbumName(newAlbumName);
+        }).catch(function (error) {
+            showMsg(error && error.message ? error.message : '新增相册失败', false);
+            if (createAlbumConfirmBtn) {
+                createAlbumConfirmBtn.disabled = false;
+            }
+        });
+    }
+
     if (checkAll) {
         checkAll.addEventListener('change', function () {
             const checked = !!checkAll.checked;
@@ -396,6 +474,48 @@
             if (batchRemoveModal) {
                 batchRemoveModal.hide();
             }
+        });
+    }
+
+    if (openCreateAlbumBtn) {
+        openCreateAlbumBtn.addEventListener('click', function () {
+            if (!createAlbumModal || !createAlbumNameEl || !createAlbumConfirmBtn) {
+                showMsg('新增相册弹框未初始化', false);
+                return;
+            }
+            createAlbumNameEl.value = '';
+            createAlbumConfirmBtn.disabled = false;
+            createAlbumModal.show();
+            window.setTimeout(function () {
+                createAlbumNameEl.focus();
+            }, 50);
+        });
+    }
+
+    if (createAlbumModalEl) {
+        createAlbumModalEl.addEventListener('hidden.bs.modal', function () {
+            if (createAlbumNameEl) {
+                createAlbumNameEl.value = '';
+            }
+            if (createAlbumConfirmBtn) {
+                createAlbumConfirmBtn.disabled = false;
+            }
+        });
+    }
+
+    if (createAlbumConfirmBtn) {
+        createAlbumConfirmBtn.addEventListener('click', function () {
+            createAlbum(createAlbumNameEl ? createAlbumNameEl.value : '');
+        });
+    }
+
+    if (createAlbumNameEl) {
+        createAlbumNameEl.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter') {
+                return;
+            }
+            event.preventDefault();
+            createAlbum(createAlbumNameEl.value);
         });
     }
 

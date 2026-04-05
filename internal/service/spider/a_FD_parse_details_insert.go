@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/service/moviereleaseagg"
 	"rudy_gc/internal/types"
 	"strconv"
 	"time"
@@ -151,9 +153,20 @@ func (l *CrawlLogic) saveParsedMovie(ctx context.Context, raw *RawJavMovie) (*sa
 	}
 
 	//todo:1.事物        2.BatchTryLink(movieId, ids []int64)
+	var oldMovie *moviex.AMovie
+	oldMovie, err = l.deps.Deps.MovieModel.FindOneByJavId(ctx, raw.JavId)
+	if err != nil && err != moviex.ErrNotFound {
+		return nil, fmt.Errorf("读取旧电影失败: %w", err)
+	}
+
 	mvSaved, movieChanged, err := l.deps.MovieRepo.UpsertByJavId(ctx, mv)
 	if err != nil {
 		return nil, fmt.Errorf("保存电影失败: %w", err)
+	}
+	if oldMovie != nil && oldMovie.ReleasingDate != mvSaved.ReleasingDate {
+		if err := moviereleaseagg.NewService(l.deps.Deps).MarkReleaseTimesDirty(ctx, oldMovie.ReleasingDate, mvSaved.ReleasingDate); err != nil {
+			return nil, fmt.Errorf("标记上映日聚合脏月失败: %w", err)
+		}
 	}
 
 	// ===== 4) Upsert bm_murl（海报/小图）=====

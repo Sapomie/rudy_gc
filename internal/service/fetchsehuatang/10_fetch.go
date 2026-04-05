@@ -262,6 +262,7 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 		}
 		postTime := parsePostTime(detailBody, topic.ListPostAt, now)
 		postDate := parsePostDate(postTime, now)
+		tag := parseThreadTag(threadTitle)
 		parsedMagnets := parseMagnets(detailBody)
 
 		item.Title = threadTitle
@@ -296,6 +297,7 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 			action, persistErr := s.upsertMagnet(ctx, &moviex.TSehuatangMagnet{
 				MovieJavId:   item.MovieJavID,
 				MovieName:    item.MovieName,
+				Tag:          tag,
 				ThreadTitle:  item.Title,
 				ThreadUrl:    item.DetailURL,
 				PostTime:     item.PostTime,

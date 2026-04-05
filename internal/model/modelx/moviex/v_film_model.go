@@ -97,12 +97,13 @@ func (m *customVFilmModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, qu
 func (m *customVFilmModel) ListPage(ctx context.Context, offset, limit int64, orderBy string, filter types.FilmListFilter) ([]*VFilm, error) {
 	orderParts := splitOrder(orderBy)
 	if len(orderParts) == 0 {
-		orderParts = []string{"birth_time DESC", "movie_name DESC"}
+		orderParts = []string{"f.birth_time DESC", "f.movie_name DESC"}
 	}
 
 	builder := applyVFilmListFilter(squirrel.
-		Select(vFilmRows).
-		From(m.table+" AS f"), filter).
+		Select("f.*").
+		From(m.table+" AS f").
+		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = f.movie_jav_id"), filter).
 		OrderBy(orderParts...)
 
 	if limit > 0 {
@@ -130,7 +131,8 @@ func (m *customVFilmModel) ListPage(ctx context.Context, offset, limit int64, or
 func (m *customVFilmModel) CountAll(ctx context.Context, filter types.FilmListFilter) (int64, error) {
 	q, args, err := applyVFilmListFilter(squirrel.
 		Select("COUNT(1)").
-		From(m.table+" AS f"), filter).
+		From(m.table+" AS f").
+		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = f.movie_jav_id"), filter).
 		ToSql()
 	if err != nil {
 		return 0, err
@@ -155,13 +157,14 @@ func (m *customVFilmModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int6
 	// ✅ 直接使用上层传入的 orderBy
 	orderParts := splitOrder(orderBy)
 	if len(orderParts) == 0 {
-		orderParts = []string{"birth_time DESC"} // 兜底，防止为空
+		orderParts = []string{"f.birth_time DESC"} // 兜底，防止为空
 	}
 
 	// 拉取全部匹配（仅 is_removed=0）
 	qAll, argsAll, e := squirrel.
-		Select(vFilmRows).
+		Select("f.*").
 		From(m.table + " AS f").
+		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = f.movie_jav_id").
 		Where(squirrel.Eq{"f.is_removed": consts.FilmIsNotRemoved}).
 		Where(squirrel.Eq{"f.directory_id": dirIDs}).
 		OrderBy(orderParts...).
@@ -258,17 +261,17 @@ func applyVFilmListFilter(builder squirrel.SelectBuilder, filter types.FilmListF
 	}
 
 	if filter.HasScTimesMin {
-		builder = builder.Where(squirrel.GtOrEq{"f.sc_times": filter.ScTimesMin})
+		builder = builder.Where(squirrel.Expr("COALESCE(gss.sc_times, 0) >= ?", filter.ScTimesMin))
 	}
 	if filter.HasScTimesMax {
-		builder = builder.Where(squirrel.LtOrEq{"f.sc_times": filter.ScTimesMax})
+		builder = builder.Where(squirrel.Expr("COALESCE(gss.sc_times, 0) <= ?", filter.ScTimesMax))
 	}
 
 	if filter.HasLastScFrom {
-		builder = builder.Where(squirrel.GtOrEq{"f.last_sc_time": filter.LastScFrom})
+		builder = builder.Where(squirrel.Expr("COALESCE(gss.last_sc_time, 0) >= ?", filter.LastScFrom))
 	}
 	if filter.HasLastScTo {
-		builder = builder.Where(squirrel.LtOrEq{"f.last_sc_time": filter.LastScTo})
+		builder = builder.Where(squirrel.Expr("COALESCE(gss.last_sc_time, 0) <= ? AND COALESCE(gss.last_sc_time, 0) <> 0", filter.LastScTo))
 	}
 
 	if filter.HasBirthTimeFrom {

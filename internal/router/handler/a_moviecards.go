@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/service/wkv"
 	"rudy_gc/internal/types"
 )
 
@@ -34,13 +35,44 @@ func (h *MovieHTMLHandler) ListMovieCardToday(c *gin.Context) {
 
 // /moviecardrank：在榜（≥1 天），按榜单日期倒序
 func (h *MovieHTMLHandler) ListMovieCardHasRank(c *gin.Context) {
-	h.renderMovieCard(c,
-		types.ListMovieFullRequest{
-			OrderBy:       consts.OrderByRankDate,
-			DaysInRankMin: 1,
-		},
-		"MovieCard", "Movies",
-	)
+	req, err := parseMovieCardRequest(c, types.ListMovieFullRequest{
+		OrderBy:       consts.OrderByRankDate,
+		DaysInRankMin: 1,
+	})
+	if err != nil {
+		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
+		return
+	}
+
+	data, err := h.loadMovieCardPageData(c, req, "", "")
+	if err != nil {
+		c.String(http.StatusInternalServerError, "查询失败: %v", err)
+		return
+	}
+
+	hrkTimeValue, err := h.wkvSvc.GetValue(c.Request.Context(), wkv.ItemKeyHRKTime)
+	if err != nil {
+		hrkTimeValue = ""
+	}
+	data.PageDateEdit = &movieCardPageDateEditView{
+		ItemKey:      wkv.ItemKeyHRKTime,
+		Label:        "HRK时间",
+		Value:        hrkTimeValue,
+		DisplayValue: displayWKvDateValue(hrkTimeValue),
+	}
+
+	c.HTML(http.StatusOK, "page.list_movie_card", gin.H{
+		"Title":           "MovieCard",
+		"movies":          data.Movies,
+		"total":           data.Total,
+		"PageInfo":        data.PageInfo,
+		"pageInfo":        data.PageInfo,
+		"ownedQuery":      data.OwnedQuery,
+		"sortQuery":       data.SortQuery,
+		"CurrentSort":     data.CurrentSort,
+		"MovieCardFilter": data.MovieCardFilter,
+		"PageDateEdit":    data.PageDateEdit,
+	})
 }
 
 // /moviecardowned：仅已拥有，按拍摄/生成时间倒序
@@ -86,6 +118,14 @@ type movieCardPageData struct {
 	SortQuery       *SortQuery
 	CurrentSort     string
 	MovieCardFilter *movieCardFilterView
+	PageDateEdit    *movieCardPageDateEditView
+}
+
+type movieCardPageDateEditView struct {
+	ItemKey      string
+	Label        string
+	Value        string
+	DisplayValue string
 }
 
 func parseMovieCardRequest(c *gin.Context, base types.ListMovieFullRequest) (types.ListMovieFullRequest, error) {
@@ -190,4 +230,11 @@ func uniqueNonEmpty(in []string) []string {
 		out = append(out, s)
 	}
 	return out
+}
+
+func displayWKvDateValue(v string) string {
+	if strings.TrimSpace(v) == "" {
+		return "未设置"
+	}
+	return strings.TrimSpace(v)
 }

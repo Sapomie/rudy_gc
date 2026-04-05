@@ -15,6 +15,9 @@ import (
 	"strings"
 	"time"
 
+	"rudy_gc/internal/service/moviereleaseagg"
+	"rudy_gc/internal/service/wmediaagg"
+
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -39,22 +42,33 @@ func (s *Service) GetMovieType(ctx context.Context, javId string) (*types.MovieT
 }
 
 func (s *Service) InvalidateMovieType(ctx context.Context, javId string) {
-	if s.deps.MovieTypeCache == nil || javId == "" {
+	javId = strings.TrimSpace(javId)
+	if javId == "" {
 		return
 	}
-	if err := s.deps.MovieTypeCache.DelMovieType(ctx, javId); err != nil {
-		logx.WithContext(ctx).Errorf("del MovieType cache failed, javId=%s, err=%v", javId, err)
-		return
+	if s.deps.MovieTypeCache != nil {
+		if err := s.deps.MovieTypeCache.DelMovieType(ctx, javId); err != nil {
+			logx.WithContext(ctx).Errorf("del MovieType cache failed, javId=%s, err=%v", javId, err)
+		} else {
+			logx.WithContext(ctx).Infof("del MovieType cache ok, javId=%s", javId)
+		}
 	}
-	logx.WithContext(ctx).Infof("del MovieType cache ok, javId=%s", javId)
+	if err := wmediaagg.NewService(s.deps).MarkMovieDirty(ctx, javId); err != nil {
+		logx.WithContext(ctx).Errorf("mark w_media agg dirty failed, javId=%s, err=%v", javId, err)
+	}
+	if err := moviereleaseagg.NewService(s.deps).MarkMovieDirty(ctx, javId); err != nil {
+		logx.WithContext(ctx).Errorf("mark movie release agg dirty failed, javId=%s, err=%v", javId, err)
+	}
 }
 
 func (s *Service) InvalidateMovieTypes(ctx context.Context, javIds ...string) {
-	if s.deps.MovieTypeCache == nil || len(javIds) == 0 {
+	if len(javIds) == 0 {
 		return
 	}
 	seen := make(map[string]struct{}, len(javIds))
+	dirtyIDs := make([]string, 0, len(javIds))
 	for _, id := range javIds {
+		id = strings.TrimSpace(id)
 		if id == "" {
 			continue
 		}
@@ -62,12 +76,27 @@ func (s *Service) InvalidateMovieTypes(ctx context.Context, javIds ...string) {
 			continue
 		}
 		seen[id] = struct{}{}
+		dirtyIDs = append(dirtyIDs, id)
 
-		if err := s.deps.MovieTypeCache.DelMovieType(ctx, id); err != nil {
-			logx.WithContext(ctx).Errorf("del MovieType cache failed, javId=%s, err=%v", id, err)
-		} else {
-			logx.WithContext(ctx).Infof("del MovieType cache ok, javId=%s", id)
+		if s.deps.MovieTypeCache != nil {
+			if err := s.deps.MovieTypeCache.DelMovieType(ctx, id); err != nil {
+				logx.WithContext(ctx).Errorf("del MovieType cache failed, javId=%s, err=%v", id, err)
+			} else {
+				logx.WithContext(ctx).Infof("del MovieType cache ok, javId=%s", id)
+			}
 		}
+	}
+	if len(dirtyIDs) == 0 {
+		return
+	}
+	if err := wmediaagg.NewService(s.deps).MarkMoviesDirty(ctx, dirtyIDs...); err != nil {
+		logx.WithContext(ctx).Errorf("mark w_media agg dirty failed, javIds=%v, err=%v", dirtyIDs, err)
+	}
+	if err := moviereleaseagg.NewService(s.deps).MarkMoviesDirty(ctx, dirtyIDs...); err != nil {
+		logx.WithContext(ctx).Errorf("mark movie release agg dirty failed, javIds=%v, err=%v", dirtyIDs, err)
+	}
+	if err := s.rebuildAggsAfterFlow(ctx, "movie_type_refresh"); err != nil {
+		logx.WithContext(ctx).Errorf("rebuild aggs after movie type refresh failed, javIds=%v, err=%v", dirtyIDs, err)
 	}
 }
 
@@ -155,6 +184,16 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		BmMurl:               murl,
 	}
 
+	scStatRow, err := s.deps.GScStatModel.FindOneByMovieJavId(ctx, mv.JavId)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return nil, fmt.Errorf("GScStatModel.FindOneByMovieJavId failed: %w", err)
+	}
+	if scStatRow != nil {
+		out.ScTimes = scStatRow.ScTimes
+		out.ComeTimes = scStatRow.ComeTimes
+		out.LastScTime = scStatRow.LastScTime
+	}
+
 	filmRow, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, mv.JavId)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
 		return nil, fmt.Errorf("FilmModel.FindOneByMovieJavId failed: %w", err)
@@ -164,8 +203,6 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		out.VFilm = film
 		out.FilmBirthDate = tsToDate(film.BirthTime)
 		out.VideoUrl = film.FullDir + string(filepath.Separator) + film.FileName
-		out.ScTimes = film.ScTimes
-		out.ComeTimes = film.ComeTimes
 		out.Owned = determineOwnership(film)
 	}
 
@@ -176,9 +213,11 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 	if mediaRow != nil {
 		media := mapWMediaToTypes(mediaRow)
 		out.WMedia = media
-		out.FilmBirthDateWMedia = tsToDate(media.BirthTime)
 		out.OwnedWMedia = determineOwnershipByState(media.IsRemoved, media.HasSub)
-		out.VideoUrlWMedia = media.FullDir + string(filepath.Separator) + media.FileName
+		if media.IsRemoved != consts.FilmIsRemoved {
+			out.FilmBirthDateWMedia = tsToDate(media.BirthTime)
+			out.VideoUrlWMedia = media.FullDir + string(filepath.Separator) + media.FileName
+		}
 	}
 
 	if minfo.HighestRank < 1000 {

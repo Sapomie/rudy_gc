@@ -286,12 +286,13 @@ func (m *customCPersonModel) CountOwnedScMovieNumbersByIDs(ctx context.Context, 
 	sqlStr, args, err := squirrel.
 		Select(
 			"p.id AS id",
-			"COUNT(DISTINCT CASE WHEN vf.is_removed = ? AND vf.sc_times > 0 THEN amr.movie_jav_id END) AS owned_sc_movie_number",
+			"COUNT(DISTINCT CASE WHEN vf.is_removed = ? AND COALESCE(gss.sc_times, 0) > 0 THEN amr.movie_jav_id END) AS owned_sc_movie_number",
 		).
 		From(m.table + " p").
 		LeftJoin("`am_cast` ac ON ac.person_id = p.id").
 		LeftJoin("`amr_movie_cast` amr ON amr.cast_id = ac.id").
 		LeftJoin("`v_film` vf ON vf.movie_jav_id = amr.movie_jav_id").
+		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = amr.movie_jav_id").
 		Where(squirrel.Eq{"p.id": uniq}).
 		GroupBy("p.id").
 		PlaceholderFormat(squirrel.Question).

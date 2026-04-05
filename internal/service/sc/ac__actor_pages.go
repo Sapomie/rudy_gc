@@ -121,7 +121,6 @@ func (s *ScService) buildActorScPageWithMovies(ctx context.Context, actor *types
 		TotalMovies:   len(resp.List),
 		ActorPageHref: actorHref,
 		CardsHref:     cardsHref,
-		ScAggHref:     "/sc-agg",
 	}, nil
 }
 
@@ -255,10 +254,10 @@ func movieOwnedRank(movieType *types.MovieType) int {
 }
 
 func movieLastScTime(movieType *types.MovieType) int64 {
-	if movieType == nil || movieType.VFilm == nil {
+	if movieType == nil {
 		return 0
 	}
-	return movieType.VFilm.LastScTime
+	return movieType.LastScTime
 }
 
 func buildActorPageHrefByName(name string) string {
@@ -335,6 +334,14 @@ func flattenActorScMovies(movieMap map[string]*types.ActorScEventMovie) []*types
 	})
 
 	return out
+}
+
+func buildScEventHref(name string) string {
+	return "/sc-events/" + url.PathEscape(name)
+}
+
+func actorMovieIsCome(gl *types.GList) bool {
+	return gl != nil && gl.IsCome == consts.GListIsCome
 }
 
 func buildMovieHref(name string) string {

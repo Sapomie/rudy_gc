@@ -1,0 +1,81 @@
+.w-media-bucket-list-page .bucket-list-summary {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .65rem;
+    padding: .75rem 1rem;
+    border-radius: .9rem;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+}
+
+.w-media-bucket-list-page .bucket-list-summary-label {
+    color: #6c757d;
+    font-size: .9rem;
+}
+
+.w-media-bucket-list-page .bucket-list-summary-value {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #212529;
+}
+
+.w-media-bucket-list-page .bucket-table th {
+    white-space: nowrap;
+}
+
+.w-media-bucket-list-page .bucket-sort-link {
+    color: #495057;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.w-media-bucket-list-page .bucket-sort-link:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+.w-media-bucket-list-page .bucket-sort-link.is-active {
+    color: #0d6efd;
+}
+
+.w-media-bucket-list-page .bucket-sort-indicator {
+    margin-left: .25rem;
+    font-size: .8rem;
+}
+
+.w-media-bucket-list-page .bucket-name {
+    font-weight: 600;
+    color: #212529;
+}
+
+.w-media-bucket-list-page .bucket-name-link {
+    color: #212529;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.w-media-bucket-list-page .bucket-name-link:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+.w-media-bucket-list-page .bucket-empty-state {
+    padding: 1.25rem;
+    text-align: center;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: .75rem;
+}
+
+@media (max-width: 767.98px) {
+    .w-media-bucket-list-page .bucket-list-summary {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (min-width: 1200px) {
+    .w-media-bucket-list-page .bucket-level-switch {
+        margin-left: auto;
+    }
+}

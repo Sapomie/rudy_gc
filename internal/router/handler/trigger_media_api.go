@@ -7,15 +7,23 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/service/media"
+	"rudy_gc/internal/service/moviereleaseagg"
+	"rudy_gc/internal/service/wmediaagg"
 	"rudy_gc/internal/svc"
 )
 
 type MediaTriggerAPI struct {
-	mediaSvc *media.Service
+	mediaSvc      *media.Service
+	wMediaAggSvc  *wmediaagg.Service
+	releaseAggSvc *moviereleaseagg.Service
 }
 
 func NewMediaTriggerAPI(deps *svc.Deps) *MediaTriggerAPI {
-	return &MediaTriggerAPI{mediaSvc: media.NewService(deps)}
+	return &MediaTriggerAPI{
+		mediaSvc:      media.NewService(deps),
+		wMediaAggSvc:  wmediaagg.NewService(deps),
+		releaseAggSvc: moviereleaseagg.NewService(deps),
+	}
 }
 
 type mediaIngestItemRow struct {
@@ -58,6 +66,20 @@ type mediaRollbackResponse struct {
 	RollbackSuccess []mediaIngestItemRow `json:"rollback_success"`
 	RollbackFail    []mediaIngestItemRow `json:"rollback_fail"`
 	RollbackPreview []mediaIngestItemRow `json:"rollback_preview"`
+}
+
+type mediaRescanRequest struct {
+	Selections []media.LibraryRescanSelection `json:"selections"`
+}
+
+type mediaAggBackfillResponse struct {
+	Message string                    `json:"message"`
+	Result  *wmediaagg.BackfillResult `json:"result"`
+}
+
+type movieReleaseAggBackfillResponse struct {
+	Message string                          `json:"message"`
+	Result  *moviereleaseagg.BackfillResult `json:"result"`
 }
 
 func (h *MediaTriggerAPI) Precheck(c *gin.Context) {
@@ -159,6 +181,56 @@ func (h *MediaTriggerAPI) Return(c *gin.Context) {
 func (h *MediaTriggerAPI) Rollback(c *gin.Context) {
 	result, err := h.mediaSvc.RollbackName(c.Request.Context())
 	resp := buildMediaRollbackResponse("rollback", result)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  err.Error(),
+			"result": resp,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *MediaTriggerAPI) Rescan(c *gin.Context) {
+	var req mediaRescanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	result, err := h.mediaSvc.RescanLibrary(c.Request.Context(), req.Selections)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  err.Error(),
+			"result": result,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *MediaTriggerAPI) BackfillWMediaAgg(c *gin.Context) {
+	result, err := h.wMediaAggSvc.BackfillAll(c.Request.Context())
+	resp := mediaAggBackfillResponse{
+		Message: "WMedia 时间聚合回填完成",
+		Result:  result,
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  err.Error(),
+			"result": resp,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *MediaTriggerAPI) BackfillMovieReleaseAgg(c *gin.Context) {
+	result, err := h.releaseAggSvc.BackfillAll(c.Request.Context())
+	resp := movieReleaseAggBackfillResponse{
+		Message: "上映日时间聚合回填完成",
+		Result:  result,
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":  err.Error(),

@@ -168,6 +168,24 @@
     box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .25);
 }
 
+.card-play-stack {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.card-play-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    min-height: 31px;
+}
+
+.card-play-date {
+    line-height: 1.2;
+    word-break: break-all;
+}
+
 @media (min-width: 1400px) {
     .picked-grid-8 > * {
         flex: 0 0 auto;

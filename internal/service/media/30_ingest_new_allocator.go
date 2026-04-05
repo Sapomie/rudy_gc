@@ -2,9 +2,6 @@ package media
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/service/wfoldertree"
 )
 
 var (
@@ -23,18 +20,28 @@ var (
 )
 
 func (s *Service) allocateTargetDirectory(ctx context.Context, layout rootLayout, now time.Time) (string, int64, error) {
-	mediaRoot := layout.media
+	return s.allocateTargetDirectoryUnder(ctx, layout.media, now)
+}
+
+func (s *Service) allocateWatchedTargetDirectory(ctx context.Context, layout rootLayout, now time.Time) (string, int64, error) {
+	return s.allocateTargetDirectoryUnder(ctx, layout.watched, now)
+}
+
+func (s *Service) allocateTargetDirectoryUnder(ctx context.Context, baseDir string, now time.Time) (string, int64, error) {
+	mediaRoot := filepath.Clean(strings.TrimSpace(baseDir))
+	if mediaRoot == "" {
+		return "", 0, fmt.Errorf("base media dir is empty")
+	}
 	if err := os.MkdirAll(mediaRoot, defaultFilePerm); err != nil {
 		return "", 0, err
 	}
 
 	nowUnix := now.Unix()
-	rootFolder, err := s.ensureFolder(ctx, 0, 0, mediaRoot, mediaRootFolderName(layout.rootDir), nowUnix)
-	if err != nil {
+	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, mediaRoot, nowUnix); err != nil {
 		return "", 0, err
 	}
 
-	yearPath, yearName, err := chooseYearBucket(mediaRoot, now)
+	yearPath, _, err := chooseYearBucket(mediaRoot, now)
 	if err != nil {
 		return "", 0, err
 	}
@@ -42,8 +49,7 @@ func (s *Service) allocateTargetDirectory(ctx context.Context, layout rootLayout
 		return "", 0, err
 	}
 
-	yearFolder, err := s.ensureFolder(ctx, rootFolder.Id, 1, yearPath, yearName, nowUnix)
-	if err != nil {
+	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, yearPath, nowUnix); err != nil {
 		return "", 0, err
 	}
 
@@ -56,7 +62,7 @@ func (s *Service) allocateTargetDirectory(ctx context.Context, layout rootLayout
 		return "", 0, err
 	}
 
-	dayFolder, err := s.ensureFolder(ctx, yearFolder.Id, 2, dayPath, dayName, nowUnix)
+	dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, dayPath, nowUnix)
 	if err != nil {
 		return "", 0, err
 	}
@@ -64,10 +70,33 @@ func (s *Service) allocateTargetDirectory(ctx context.Context, layout rootLayout
 	return dayPath, dayFolder.Id, nil
 }
 
-func mediaRootFolderName(root string) string {
-	cleaned := filepath.Clean(root)
-	sum := md5.Sum([]byte(cleaned))
-	return "root_" + hex.EncodeToString(sum[:6])
+func previewTargetDirectory(layout rootLayout, now time.Time) (string, error) {
+	return previewTargetDirectoryUnder(layout.media, now)
+}
+
+func previewWatchedTargetDirectory(layout rootLayout, now time.Time) (string, error) {
+	return previewTargetDirectoryUnder(layout.watched, now)
+}
+
+func previewTargetDirectoryUnder(baseDir string, now time.Time) (string, error) {
+	mediaRoot := filepath.Clean(strings.TrimSpace(baseDir))
+	if mediaRoot == "" {
+		return "", fmt.Errorf("base media dir is empty")
+	}
+
+	yearPath, yearName, err := chooseYearBucket(mediaRoot, now)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		yearName = fmt.Sprintf("%04d-001", now.Year())
+		yearPath = filepath.Join(mediaRoot, yearName)
+	}
+	dayName, err := chooseDayBucket(yearPath, now)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(mediaRoot, yearName, dayName), nil
 }
 
 func chooseYearBucket(mediaRoot string, now time.Time) (string, string, error) {
@@ -277,36 +306,4 @@ func ensureUniqueFileName(dir, baseName string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("too many filename conflicts in %s for %s", dir, baseName)
-}
-
-func (s *Service) ensureFolder(ctx context.Context, parentID, depth int64, path, name string, nowUnix int64) (*moviex.WFolder, error) {
-	path = filepath.Clean(path)
-
-	row, err := s.deps.WFolderModel.FindOneByPath(ctx, path)
-	if err == nil {
-		return row, nil
-	}
-	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return nil, err
-	}
-
-	sum := md5.Sum([]byte(path))
-	insert := &moviex.WFolder{
-		ParentId:  parentID,
-		Name:      name,
-		Depth:     depth,
-		Path:      path,
-		PathHash:  string(sum[:]),
-		CreatedOn: nowUnix,
-		UpdatedOn: nowUnix,
-	}
-	if _, err := s.deps.WFolderModel.Insert(ctx, insert); err != nil {
-		// 并发场景下可能被先插入，回查一次。
-		row, findErr := s.deps.WFolderModel.FindOneByPath(ctx, path)
-		if findErr == nil {
-			return row, nil
-		}
-		return nil, err
-	}
-	return s.deps.WFolderModel.FindOneByPath(ctx, path)
 }

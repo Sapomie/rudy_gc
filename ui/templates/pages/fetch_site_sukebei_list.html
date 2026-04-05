@@ -208,7 +208,7 @@
                                                 {{ else if eq .OwnedWMedia 4 }}
                                                     <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
                                                 {{ else if eq .OwnedWMedia 6 }}
-                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-outline-secondary me-2">MRemoved</a>
+                                                    <span class="btn btn-sm btn-outline-secondary me-2 disabled" aria-disabled="true">MRemoved</span>
                                                 {{ else }}
                                                     -
                                                 {{ end }}

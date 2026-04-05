@@ -15,6 +15,7 @@ type rootLayout struct {
 	failed    string
 	rollback  string
 	media     string
+	watched   string
 }
 
 func buildRootLayout(root string) rootLayout {
@@ -27,6 +28,7 @@ func buildRootLayout(root string) rootLayout {
 		failed:    filepath.Join(process, failedDirName),
 		rollback:  filepath.Join(process, rollbackDirName),
 		media:     filepath.Join(root, mediaDirName),
+		watched:   filepath.Join(root, watchedDirName),
 	}
 }
 
@@ -37,6 +39,7 @@ func ensureRootLayout(layout rootLayout) error {
 		layout.failed,
 		layout.rollback,
 		layout.media,
+		layout.watched,
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, defaultFilePerm); err != nil {

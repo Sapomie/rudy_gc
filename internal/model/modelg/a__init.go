@@ -2,6 +2,7 @@ package modelg
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -27,10 +28,22 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateDropSehuatangRedundantColumns(db); err != nil {
 		return err
 	}
+	if err := migrateAddSehuatangTagColumn(db); err != nil {
+		return err
+	}
+	if err := backfillSehuatangTags(db); err != nil {
+		return err
+	}
 	if err := migrateDropJavbusRedundantColumns(db); err != nil {
 		return err
 	}
 	if err := migrateDropSukebeiRedundantColumns(db); err != nil {
+		return err
+	}
+	if err := migrateAddGScStatRedundantColumns(db); err != nil {
+		return err
+	}
+	if err := migrateDropWMediaAggRedundantColumns(db); err != nil {
 		return err
 	}
 
@@ -46,6 +59,7 @@ func AutoMigrate(db *gorm.DB) error {
 		new(RankPeriodItem),
 		new(Cafo),
 		new(Person),
+		new(GScStat),
 
 		new(Movie),
 		new(Murl),
@@ -68,7 +82,15 @@ func AutoMigrate(db *gorm.DB) error {
 		new(Directory),
 		new(Film),
 		new(Folder),
+		new(Kv),
 		new(Media),
+		new(MediaBirthBucketStat),
+		new(MediaBirthTopStat),
+		new(MediaAggDirty),
+		new(MovieReleaseBucketStat),
+		new(MovieReleaseTopStat),
+		new(MovieReleaseAggDirty),
+		new(AggEvent),
 		new(FetchSite),
 		new(Album),
 		new(AlbumItem),
@@ -80,8 +102,192 @@ func AutoMigrate(db *gorm.DB) error {
 	); err != nil {
 		return err
 	}
+	if err := ensureBaiduFanyiFetchSite(db); err != nil {
+		return err
+	}
+	if err := backfillGScStatRedundantColumns(db); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func migrateDropWMediaAggRedundantColumns(db *gorm.DB) error {
+	type target struct {
+		table  string
+		column string
+	}
+
+	targets := []target{
+		{table: "w_media_birth_bucket_stat", column: "movie_count"},
+		{table: "w_media_birth_top_stat", column: "movie_count"},
+	}
+
+	for _, item := range targets {
+		hasTbl, err := hasTable(db, item.table)
+		if err != nil {
+			return err
+		}
+		if !hasTbl {
+			continue
+		}
+
+		hasCol, err := hasColumn(db, item.table, item.column)
+		if err != nil {
+			return err
+		}
+		if !hasCol {
+			continue
+		}
+
+		sql := fmt.Sprintf("ALTER TABLE `%s` DROP COLUMN `%s`", item.table, item.column)
+		if err := db.Exec(sql).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func migrateAddGScStatRedundantColumns(db *gorm.DB) error {
+	tableName := "g_sc_stat"
+
+	hasTableFlag, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableFlag {
+		return nil
+	}
+
+	type columnDef struct {
+		name     string
+		ddl      string
+		indexDDL string
+	}
+
+	columns := []columnDef{
+		{
+			name:     "releasing_date",
+			ddl:      "ALTER TABLE `g_sc_stat` ADD COLUMN `releasing_date` bigint NOT NULL DEFAULT 0 AFTER `last_sc_time`",
+			indexDDL: "ALTER TABLE `g_sc_stat` ADD INDEX `idx_gss_release_name` (`releasing_date` DESC, `movie_name` DESC)",
+		},
+		{
+			name:     "media_birth_time",
+			ddl:      "ALTER TABLE `g_sc_stat` ADD COLUMN `media_birth_time` bigint NOT NULL DEFAULT 0 AFTER `releasing_date`",
+			indexDDL: "ALTER TABLE `g_sc_stat` ADD INDEX `idx_gss_media_birth_name` (`media_birth_time` DESC, `movie_name` DESC)",
+		},
+	}
+
+	for _, item := range columns {
+		hasCol, err := hasColumn(db, tableName, item.name)
+		if err != nil {
+			return err
+		}
+		if !hasCol {
+			if err := db.Exec(item.ddl).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	if hasIdx, err := hasIndex(db, tableName, "idx_gss_release_name"); err != nil {
+		return err
+	} else if !hasIdx {
+		if err := db.Exec(columns[0].indexDDL).Error; err != nil {
+			return err
+		}
+	}
+
+	if hasIdx, err := hasIndex(db, tableName, "idx_gss_media_birth_name"); err != nil {
+		return err
+	} else if !hasIdx {
+		if err := db.Exec(columns[1].indexDDL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func backfillGScStatRedundantColumns(db *gorm.DB) error {
+	tableName := "g_sc_stat"
+
+	hasTableFlag, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableFlag {
+		return nil
+	}
+
+	hasRelease, err := hasColumn(db, tableName, "releasing_date")
+	if err != nil {
+		return err
+	}
+	hasMediaBirth, err := hasColumn(db, tableName, "media_birth_time")
+	if err != nil {
+		return err
+	}
+	if !hasRelease || !hasMediaBirth {
+		return nil
+	}
+
+	sql := `
+UPDATE ` + "`g_sc_stat` gss" + `
+LEFT JOIN ` + "`a_movie` am" + ` ON am.jav_id = gss.movie_jav_id
+LEFT JOIN ` + "`w_media` wm" + ` ON wm.movie_jav_id = gss.movie_jav_id
+SET
+	gss.releasing_date = COALESCE(am.releasing_date, 0),
+	gss.media_birth_time = COALESCE(wm.birth_time, 0)
+`
+	return db.Exec(sql).Error
+}
+
+func ensureBaiduFanyiFetchSite(db *gorm.DB) error {
+	const (
+		siteCode       = "baidu_fanyi"
+		siteName       = "BaiduFanyi"
+		baseURL        = "https://api.fanyi.baidu.com"
+		defaultUA      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+		defaultProxy   = "http://127.0.0.1:7897/"
+		timeoutSeconds = int64(60)
+		requestSleepMs = int64(3000)
+		retrySleepMs   = int64(3000)
+		maxRetryTimes  = int64(45)
+		statusEnabled  = int8(1)
+	)
+
+	nowUnix := time.Now().Unix()
+	var count int64
+	if err := db.Model(&FetchSite{}).Where("site_code = ?", siteCode).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return db.Model(&FetchSite{}).
+			Where("site_code = ?", siteCode).
+			Updates(map[string]any{
+				"proxy":      defaultProxy,
+				"updated_on": nowUnix,
+			}).Error
+	}
+
+	row := &FetchSite{
+		SiteCode:       siteCode,
+		SiteName:       siteName,
+		BaseURL:        baseURL,
+		UserAgent:      defaultUA,
+		Cookie:         "",
+		Proxy:          defaultProxy,
+		TimeoutSeconds: timeoutSeconds,
+		RequestSleepMs: requestSleepMs,
+		RetrySleepMs:   retrySleepMs,
+		MaxRetryTimes:  maxRetryTimes,
+		Status:         statusEnabled,
+		CreatedOn:      nowUnix,
+		UpdatedOn:      nowUnix,
+	}
+	return db.Create(row).Error
 }
 
 func migrateDropSehuatangRedundantColumns(db *gorm.DB) error {
@@ -105,6 +311,69 @@ func migrateDropSehuatangRedundantColumns(db *gorm.DB) error {
 
 	sql := fmt.Sprintf("ALTER TABLE `%s` DROP COLUMN `magnet_url`", tableName)
 	return db.Exec(sql).Error
+}
+
+func migrateAddSehuatangTagColumn(db *gorm.DB) error {
+	tableName := "t_sehuatang_magnet"
+
+	hasSehuatangTable, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasSehuatangTable {
+		return nil
+	}
+
+	hasCol, err := hasColumn(db, tableName, "tag")
+	if err != nil {
+		return err
+	}
+	if hasCol {
+		return nil
+	}
+
+	sql := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `tag` varchar(100) NOT NULL DEFAULT '' AFTER `movie_name`", tableName)
+	return db.Exec(sql).Error
+}
+
+func backfillSehuatangTags(db *gorm.DB) error {
+	tableName := "t_sehuatang_magnet"
+
+	hasSehuatangTable, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasSehuatangTable {
+		return nil
+	}
+
+	hasCol, err := hasColumn(db, tableName, "tag")
+	if err != nil {
+		return err
+	}
+	if !hasCol {
+		return nil
+	}
+
+	if err := db.Exec(
+		fmt.Sprintf(
+			"UPDATE `%s` SET `tag` = 'FC2PPV' WHERE (`tag` = '' OR `tag` IS NULL) AND UPPER(`thread_title`) LIKE '%%FC2PPV%%'",
+			tableName,
+		),
+	).Error; err != nil {
+		return err
+	}
+
+	if err := db.Exec(
+		fmt.Sprintf(
+			"UPDATE `%s` SET `tag` = '自提征用' WHERE (`tag` = '' OR `tag` IS NULL) AND (`thread_title` LIKE '%%[自译征用]%%' OR `thread_title` LIKE '%%[自提征用]%%')",
+			tableName,
+		),
+	).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func migrateDropJavbusRedundantColumns(db *gorm.DB) error {

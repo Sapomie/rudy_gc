@@ -42,6 +42,7 @@ func (s *Service) upsertMagnet(ctx context.Context, row *moviex.TSehuatangMagnet
 
 	oldRow.MovieJavId = row.MovieJavId
 	oldRow.MovieName = row.MovieName
+	oldRow.Tag = row.Tag
 	oldRow.ThreadTitle = row.ThreadTitle
 	oldRow.ThreadUrl = row.ThreadUrl
 	oldRow.PostTime = row.PostTime

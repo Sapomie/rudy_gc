@@ -31,9 +31,14 @@ type (
 	}
 
 	SehuatangMagnetListFilter struct {
-		Keyword    string
-		MovieJavID string
-		InfoHash   string
+		Keyword         string
+		MovieJavID      string
+		InfoHash        string
+		Tag             string
+		PostTimeFrom    int64
+		HasPostTimeFrom bool
+		PostTimeTo      int64
+		HasPostTimeTo   bool
 	}
 )
 
@@ -177,6 +182,7 @@ func applySehuatangMagnetListFilter(builder squirrel.SelectBuilder, filter Sehua
 		builder = builder.Where(squirrel.Or{
 			squirrel.Like{"movie_name": like},
 			squirrel.Like{"movie_jav_id": like},
+			squirrel.Like{"tag": like},
 			squirrel.Like{"thread_title": like},
 		})
 	}
@@ -185,6 +191,15 @@ func applySehuatangMagnetListFilter(builder squirrel.SelectBuilder, filter Sehua
 	}
 	if infoHash := strings.TrimSpace(filter.InfoHash); infoHash != "" {
 		builder = builder.Where(squirrel.Like{"info_hash": "%" + infoHash + "%"})
+	}
+	if tag := strings.TrimSpace(filter.Tag); tag != "" {
+		builder = builder.Where(squirrel.Like{"tag": "%" + tag + "%"})
+	}
+	if filter.HasPostTimeFrom {
+		builder = builder.Where(squirrel.GtOrEq{"post_time": filter.PostTimeFrom})
+	}
+	if filter.HasPostTimeTo {
+		builder = builder.Where(squirrel.LtOrEq{"post_time": filter.PostTimeTo})
 	}
 	return builder
 }

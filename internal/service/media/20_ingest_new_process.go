@@ -335,22 +335,6 @@ func buildPrecheckPreviewItem(layout rootLayout, prepared *ingestPreparedItem, n
 	}, nil
 }
 
-func previewTargetDirectory(layout rootLayout, now time.Time) (string, error) {
-	yearPath, yearName, err := chooseYearBucket(layout.media, now)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return "", err
-		}
-		yearName = fmt.Sprintf("%04d-001", now.Year())
-		yearPath = filepath.Join(layout.media, yearName)
-	}
-	dayName, err := chooseDayBucket(yearPath, now)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(layout.media, yearName, dayName), nil
-}
-
 func moveIntoDirUnique(sourcePath, targetDir string) (string, error) {
 	if err := os.MkdirAll(targetDir, defaultFilePerm); err != nil {
 		return "", err

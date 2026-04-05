@@ -175,8 +175,10 @@ func (s *Service) fillSukebeiInventory(ctx context.Context, items []*SukebeiPage
 		}
 		if mediaRow != nil {
 			item.OwnedWMedia = buildOwnedState(mediaRow.IsRemoved, mediaRow.HasSub)
-			item.VideoURLWMedia = mediaRow.FullDir + string(filepath.Separator) + mediaRow.FileName
-			item.FilmBirthDateWMedia = pageFormatDate(mediaRow.BirthTime)
+			if mediaRow.IsRemoved != consts.FilmIsRemoved {
+				item.VideoURLWMedia = mediaRow.FullDir + string(filepath.Separator) + mediaRow.FileName
+				item.FilmBirthDateWMedia = pageFormatDate(mediaRow.BirthTime)
+			}
 		} else {
 			item.OwnedWMedia = consts.OwnedNotOwned
 		}

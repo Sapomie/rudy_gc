@@ -3,7 +3,10 @@ package sc
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"rudy_gc/internal/types"
@@ -102,14 +105,17 @@ func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType, 
 			continue
 		}
 		videoURL := SmartPickMovieVideoURL(mf, source)
-		current := filepath.Base(videoURL)
+		current := l.smartPickCopyFileName(mf, videoURL, source)
+		if strings.TrimSpace(current) == "" {
+			current = filepath.Base(videoURL)
+		}
 		l.setCopyCurrent(current)
 		if videoURL == "" {
 			l.setCopyError("缺少可复制的视频路径")
 			l.incCopyDone("")
 			continue
 		}
-		if err := l.copyFileToDestinationCtx(ctx, videoURL); err != nil {
+		if err := l.copyFileToDestinationCtx(ctx, mf, videoURL, source); err != nil {
 			if errors.Is(err, context.Canceled) {
 				l.finishCopy(true)
 				return
@@ -122,9 +128,51 @@ func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType, 
 	l.finishCopy(false)
 }
 
-func (l *ScService) copyFileToDestinationCtx(ctx context.Context, srcFilePath string) error {
-	destFilePath := filepath.Join(l.deps.Config.Film.CopyDestinationPath, filepath.Base(srcFilePath))
+func (l *ScService) copyFileToDestinationCtx(ctx context.Context, movie *types.MovieType, srcFilePath, source string) error {
+	destDir := strings.TrimSpace(l.deps.Config.Film.CopyDestinationPath)
+	if destDir == "" {
+		return fmt.Errorf("copy destination path is empty")
+	}
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return fmt.Errorf("create copy destination dir failed: %w", err)
+	}
+
+	fileName := l.smartPickCopyFileName(movie, srcFilePath, source)
+	destFilePath, err := nextAvailableTargetPath(destDir, fileName)
+	if err != nil {
+		return err
+	}
 	return filetool.CopyFileWithProgressCtx(ctx, srcFilePath, destFilePath)
+}
+
+func nextAvailableTargetPath(destDir, fileName string) (string, error) {
+	destDir = filepath.Clean(strings.TrimSpace(destDir))
+	fileName = strings.TrimSpace(fileName)
+	if destDir == "" {
+		return "", fmt.Errorf("empty destination dir")
+	}
+	if fileName == "" {
+		return "", fmt.Errorf("empty file name")
+	}
+
+	base := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	ext := filepath.Ext(fileName)
+	for i := 1; i <= 10000; i++ {
+		candidateName := fileName
+		if i > 1 {
+			candidateName = fmt.Sprintf("%s_%d%s", base, i, ext)
+		}
+		candidatePath := filepath.Join(destDir, candidateName)
+		_, err := os.Stat(candidatePath)
+		if err == nil {
+			continue
+		}
+		if os.IsNotExist(err) {
+			return candidatePath, nil
+		}
+		return "", fmt.Errorf("stat destination file failed: %w", err)
+	}
+	return "", fmt.Errorf("too many duplicated target file names: %s", fileName)
 }
 
 func (l *ScService) setCopyCurrent(name string) {

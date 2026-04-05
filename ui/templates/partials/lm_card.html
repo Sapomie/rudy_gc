@@ -33,24 +33,30 @@
                     {{ end }}
                 </li>
 
-                {{ if or (ge .Owned 2) (ge .OwnedWMedia 2) }}
-                    <li class="list-group-item d-flex align-items-center">
-                        {{ if eq .Owned 5 }}
-                            <a href="{{ .VideoUrl }}" class="btn btn-sm btn-info me-2">Play</a>
-                        {{ else if eq .Owned 4 }}
-                            <a href="{{ .VideoUrl }}" class="btn btn-sm btn-success me-2">Play</a>
-                        {{ else if eq .Owned 6 }}
-                            <a href="{{ .VideoUrl }}" class="btn btn-sm btn-secondary me-2">ReMoved</a>
-                        {{ end }}
-                        {{ if eq .OwnedWMedia 5 }}
-                            <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-outline-primary me-2">MPlay</a>
-                        {{ else if eq .OwnedWMedia 4 }}
-                            <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
-                        {{ else if eq .OwnedWMedia 6 }}
-                            <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-outline-secondary me-2">MRemoved</a>
-                        {{ end }}
-                        {{ if .FilmBirthDate }}<span class="text-muted small">| {{ .FilmBirthDate }}</span>{{ end }}
-                        {{ if .FilmBirthDateWMedia }}<span class="text-muted small ms-2">| M {{ .FilmBirthDateWMedia }}</span>{{ end }}
+                {{ if or (eq .Owned 4) (eq .Owned 5) (eq .OwnedWMedia 4) (eq .OwnedWMedia 5) }}
+                    <li class="list-group-item py-2">
+                        <div class="card-play-stack">
+                            {{ if or (eq .Owned 4) (eq .Owned 5) }}
+                                <div class="card-play-row">
+                                    {{ if eq .Owned 5 }}
+                                        <a href="{{ .VideoUrl }}" class="btn btn-sm btn-info">Play</a>
+                                    {{ else if eq .Owned 4 }}
+                                        <a href="{{ .VideoUrl }}" class="btn btn-sm btn-success">Play</a>
+                                    {{ end }}
+                                    {{ if .FilmBirthDate }}<span class="text-muted small card-play-date">{{ .FilmBirthDate }}</span>{{ end }}
+                                </div>
+                            {{ end }}
+                            {{ if or (eq .OwnedWMedia 4) (eq .OwnedWMedia 5) }}
+                                <div class="card-play-row">
+                                    {{ if eq .OwnedWMedia 5 }}
+                                        <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-outline-primary">MPlay</a>
+                                    {{ else if eq .OwnedWMedia 4 }}
+                                        <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-primary">MPlay</a>
+                                    {{ end }}
+                                    {{ if .FilmBirthDateWMedia }}<span class="text-muted small card-play-date">{{ .FilmBirthDateWMedia }}</span>{{ end }}
+                                </div>
+                            {{ end }}
+                        </div>
                     </li>
                 {{ end }}
 

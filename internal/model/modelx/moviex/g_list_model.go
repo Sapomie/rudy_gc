@@ -28,6 +28,7 @@ type (
 		QueryRowNoCacheCtx(ctx context.Context, v any, query string, args ...any) error
 		ListByMovieJavIds(ctx context.Context, javIds []string) ([]*GList, error)
 		ListByMovieJavId(ctx context.Context, javId string) ([]*GList, error)
+		ListDistinctMovieJavIds(ctx context.Context) ([]string, error)
 	}
 
 	customGListModel struct {
@@ -133,6 +134,26 @@ func (m *customGListModel) ListByMovieJavId(ctx context.Context, javId string) (
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGListModel) ListDistinctMovieJavIds(ctx context.Context) ([]string, error) {
+	sqlStr, args, err := squirrel.
+		Select("DISTINCT `movie_jav_id`").
+		From(m.table).
+		Where("movie_jav_id <> ''").
+		Where("sc_name <> ''").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []string
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []string{}, nil
 		}
 		return nil, err
 	}

@@ -2,8 +2,9 @@
     const page = document.getElementById('fetchSiteListPage');
     const msgEl = document.getElementById('fetchSiteListMsg');
     const taskPageUrl = String(page && page.getAttribute('data-task-page-url') || '/triggers/fetch-site').trim() || '/triggers/fetch-site';
-    const filteredSukebeiTaskType = String(page && page.getAttribute('data-filtered-sukebei-task-type') || '').trim();
-    const sukebeiFilterForm = document.getElementById('fetchSiteSukebeiFilterForm');
+    const filteredTaskType = String(page && (page.getAttribute('data-filtered-task-type') || page.getAttribute('data-filtered-sukebei-task-type')) || '').trim();
+    const filterFormID = String(page && page.getAttribute('data-filter-form-id') || '').trim();
+    const fetchSiteFilterForm = document.getElementById(filterFormID || 'fetchSiteSukebeiFilterForm') || document.querySelector('form[data-fetch-site-filter-form]');
 
     if (!page) {
         return;
@@ -25,7 +26,7 @@
     }
 
     function setTriggerButtonsLoading(loading) {
-        document.querySelectorAll('.js-trigger-javbus, .js-trigger-sukebei, .js-trigger-both, .js-trigger-filtered-sukebei').forEach(function (button) {
+        document.querySelectorAll('.js-trigger-javbus, .js-trigger-sukebei, .js-trigger-both, .js-trigger-filtered-fetch-site, .js-trigger-filtered-sukebei').forEach(function (button) {
             setButtonState(button, loading);
         });
     }
@@ -105,16 +106,16 @@
         });
     }
 
-    function buildFilteredSukebeiTaskPayload() {
-        if (!filteredSukebeiTaskType) {
+    function buildFilteredFetchSiteTaskPayload() {
+        if (!filteredTaskType) {
             throw new Error('缺少筛选任务类型，无法触发');
         }
-        if (!sukebeiFilterForm) {
+        if (!fetchSiteFilterForm) {
             throw new Error('缺少筛选表单，无法触发');
         }
 
-        const payload = {task_type: filteredSukebeiTaskType};
-        const formData = new FormData(sukebeiFilterForm);
+        const payload = {task_type: filteredTaskType};
+        const formData = new FormData(fetchSiteFilterForm);
         [
             'keyword',
             'last_fetch_from',
@@ -158,10 +159,10 @@
         return payload;
     }
 
-    function startFilteredSukebeiTask() {
+    function startFilteredFetchSiteTask() {
         let payload;
         try {
-            payload = buildFilteredSukebeiTaskPayload();
+            payload = buildFilteredFetchSiteTaskPayload();
         } catch (error) {
             showMsg(error && error.message ? error.message : '构造筛选任务失败', false);
             return;
@@ -185,7 +186,7 @@
         if (!clearButton) {
             return;
         }
-        const checkedCount = document.querySelectorAll('#fetchSiteSukebeiFilterForm input[name="statuses"]:checked').length;
+        const checkedCount = fetchSiteFilterForm ? fetchSiteFilterForm.querySelectorAll('input[name="statuses"]:checked').length : 0;
         clearButton.classList.toggle('active', checkedCount === 0);
     }
 
@@ -390,17 +391,19 @@
         const javbusButton = event.target.closest('.js-trigger-javbus');
         const sukebeiButton = event.target.closest('.js-trigger-sukebei');
         const bothButton = event.target.closest('.js-trigger-both');
-        const filteredSukebeiButton = event.target.closest('.js-trigger-filtered-sukebei');
+        const filteredFetchSiteButton = event.target.closest('.js-trigger-filtered-fetch-site') || event.target.closest('.js-trigger-filtered-sukebei');
         const clearStatusButton = event.target.closest('[data-status-clear]');
         const favoriteButton = event.target.closest('.js-add-favorite');
-        if (!javbusButton && !sukebeiButton && !bothButton && !filteredSukebeiButton && !clearStatusButton && !favoriteButton) {
+        if (!javbusButton && !sukebeiButton && !bothButton && !filteredFetchSiteButton && !clearStatusButton && !favoriteButton) {
             return;
         }
 
         if (clearStatusButton) {
-            document.querySelectorAll('#fetchSiteSukebeiFilterForm input[name="statuses"]').forEach(function (input) {
-                input.checked = false;
-            });
+            if (fetchSiteFilterForm) {
+                fetchSiteFilterForm.querySelectorAll('input[name="statuses"]').forEach(function (input) {
+                    input.checked = false;
+                });
+            }
             refreshSukebeiStatusClearButton();
             return;
         }
@@ -420,8 +423,8 @@
             return;
         }
 
-        if (filteredSukebeiButton) {
-            startFilteredSukebeiTask();
+        if (filteredFetchSiteButton) {
+            startFilteredFetchSiteTask();
             return;
         }
 
@@ -446,9 +449,11 @@
         startTask('spider_fetch_sukebei_resources', movieJavID, movieName);
     });
 
-    document.querySelectorAll('#fetchSiteSukebeiFilterForm input[name="statuses"]').forEach(function (input) {
-        input.addEventListener('change', refreshSukebeiStatusClearButton);
-    });
+    if (fetchSiteFilterForm) {
+        fetchSiteFilterForm.querySelectorAll('input[name="statuses"]').forEach(function (input) {
+            input.addEventListener('change', refreshSukebeiStatusClearButton);
+        });
+    }
 
     refreshSukebeiStatusClearButton();
 })();

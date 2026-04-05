@@ -3,9 +3,11 @@ package loop
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/service/fetchsehuatang"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/taskctx"
@@ -17,14 +19,19 @@ const (
 	TaskSpiderSeeds              = "spider_seeds"
 	TaskSpiderSeedByName         = "spider_seed_by_name"
 	TaskSpiderRefreshOldest      = "spider_refresh_oldest_detail"
+	TaskSpiderDownloadCover      = "spider_download_cover"
+	TaskSpiderTranslateTitle     = "spider_translate_title"
+	TaskSpiderPostProcess        = "spider_post_process"
 	TaskSpiderRebuildCastRank    = "spider_rebuild_cast_rank"
 	TaskSpiderRebuildActorRank   = "spider_rebuild_actor_rank"
 	TaskSpiderBackfillPerson     = "spider_backfill_person"
 	TaskSpiderBackfillRankPeriod = "spider_backfill_rank_period"
 	TaskSpiderBackfillFetchSite  = "spider_backfill_fetch_site"
 	TaskSpiderFetchJavbus        = "spider_fetch_javbus_resources"
+	TaskSpiderFetchJavbusFilter  = "spider_fetch_javbus_filtered_resources"
 	TaskSpiderFetchSukebei       = "spider_fetch_sukebei_resources"
 	TaskSpiderFetchSukebeiFilter = "spider_fetch_sukebei_filtered_resources"
+	TaskSpiderFetchSiteBoth      = "spider_fetch_site_both_resources"
 	TaskSpiderFetchSehuatang     = "spider_fetch_sehuatang_magnets"
 	TaskFilmRename               = "film_rename"
 	TaskFilmProcess              = "film_process"
@@ -280,6 +287,20 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 			return "", fmt.Errorf("number is required")
 		}
 		return l.StartRefreshOldestDetail(req.Number)
+	case TaskSpiderDownloadCover:
+		return l.StartDownloadCover()
+	case TaskSpiderTranslateTitle:
+		statuses, err := parseTranslateStatuses(req)
+		if err != nil {
+			return "", err
+		}
+		return l.StartTranslateTitle(statuses)
+	case TaskSpiderPostProcess:
+		statuses, err := parseTranslateStatuses(req)
+		if err != nil {
+			return "", err
+		}
+		return l.StartPostProcess(statuses)
 	case TaskSpiderRebuildCastRank:
 		return l.StartRebuildCastRank()
 	case TaskSpiderRebuildActorRank:
@@ -296,10 +317,14 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartBackfillFetchSite()
 	case TaskSpiderFetchJavbus:
 		return l.StartFetchJavbusResources(req)
+	case TaskSpiderFetchJavbusFilter:
+		return l.StartFetchJavbusFilteredResources(req)
 	case TaskSpiderFetchSukebei:
 		return l.StartFetchSukebeiResources(req)
 	case TaskSpiderFetchSukebeiFilter:
 		return l.StartFetchSukebeiFilteredResources(req)
+	case TaskSpiderFetchSiteBoth:
+		return l.StartFetchSiteBothResources(req)
 	case TaskSpiderFetchSehuatang:
 		return l.StartFetchSehuatangMagnets(req)
 	case TaskFilmRename:
@@ -395,6 +420,96 @@ func (l *FetchLoopService) StartRefreshOldestDetail(number int64) (string, error
 		_, err := l.crawlLogic.RefreshOldestDetail(ctx, number)
 		return err
 	})
+}
+
+func (l *FetchLoopService) StartDownloadCover() (string, error) {
+	return l.startManagedTask(TaskSpiderDownloadCover, taskRuntimePolicy{}, func(ctx context.Context) error {
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:           "pipeline_pre",
+			Message:         "开始单独执行封面抓取",
+			CurrentPhaseKey: "cover",
+		})
+		return l.crawlLogic.RunPostProcess(ctx, true, false, nil)
+	})
+}
+
+func (l *FetchLoopService) StartTranslateTitle(statuses []int64) (string, error) {
+	return l.startManagedTask(TaskSpiderTranslateTitle, taskRuntimePolicy{}, func(ctx context.Context) error {
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:           "pipeline_pre",
+			Message:         fmt.Sprintf("开始单独执行标题翻译，状态=%s", joinTranslateStatuses(statuses)),
+			CurrentPhaseKey: "translate",
+		})
+		return l.crawlLogic.RunPostProcess(ctx, false, true, statuses)
+	})
+}
+
+func (l *FetchLoopService) StartPostProcess(statuses []int64) (string, error) {
+	return l.startManagedTask(TaskSpiderPostProcess, taskRuntimePolicy{}, func(ctx context.Context) error {
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:           "pipeline_pre",
+			Message:         fmt.Sprintf("开始执行封面抓取与标题翻译，翻译状态=%s", joinTranslateStatuses(statuses)),
+			CurrentPhaseKey: "cover",
+		})
+		return l.crawlLogic.RunPostProcess(ctx, true, true, statuses)
+	})
+}
+
+func parseTranslateStatuses(req StartTaskRequest) ([]int64, error) {
+	rawValues := make([]string, 0, len(req.Statuses)+1)
+	for _, value := range req.Statuses {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		rawValues = append(rawValues, trimmed)
+	}
+	if len(rawValues) == 0 {
+		if single := strings.TrimSpace(req.Status); single != "" {
+			rawValues = append(rawValues, single)
+		}
+	}
+	if len(rawValues) == 0 {
+		return []int64{consts.ItemChineseNone}, nil
+	}
+
+	allowed := map[int64]struct{}{
+		consts.ItemChineseNone:      {},
+		consts.ItemChineseOK:        {},
+		consts.ItemChineseError:     {},
+		consts.ItemChineseSensitive: {},
+	}
+	out := make([]int64, 0, len(rawValues))
+	seen := make(map[int64]struct{}, len(rawValues))
+	for _, raw := range rawValues {
+		value, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("statuses 参数无效: %s", raw)
+		}
+		if _, ok := allowed[value]; !ok {
+			return nil, fmt.Errorf("statuses 参数不支持: %d", value)
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return []int64{consts.ItemChineseNone}, nil
+	}
+	return out, nil
+}
+
+func joinTranslateStatuses(statuses []int64) string {
+	if len(statuses) == 0 {
+		return "1"
+	}
+	parts := make([]string, 0, len(statuses))
+	for _, status := range statuses {
+		parts = append(parts, strconv.FormatInt(status, 10))
+	}
+	return strings.Join(parts, ",")
 }
 
 func (l *FetchLoopService) StartRebuildCastRank() (string, error) {
@@ -505,6 +620,70 @@ func (l *FetchLoopService) StartFetchSukebeiResources(req StartTaskRequest) (str
 			durationFilter.LastSuccessDurationDays,
 		)
 		return err
+	})
+}
+
+func (l *FetchLoopService) StartFetchSiteBothResources(req StartTaskRequest) (string, error) {
+	return l.startManagedTask(TaskSpiderFetchSiteBoth, taskRuntimePolicy{}, func(ctx context.Context) error {
+		movieJavID := strings.TrimSpace(req.MovieJavID)
+		movieName := strings.TrimSpace(req.MovieName)
+		msg := "开始同时抓取 JavBus + Sukebei 资源"
+		if movieJavID != "" {
+			msg = fmt.Sprintf("开始同时抓取 JavBus + Sukebei 资源：%s", movieName)
+			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
+			if _, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieName); err != nil {
+				return err
+			}
+			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieName)
+			return err
+		}
+
+		movieReq, err := buildFetchSiteMovieRequest(req)
+		if err != nil {
+			return err
+		}
+		durationFilter, err := buildFetchSiteDurationFilter(req)
+		if err != nil {
+			return err
+		}
+		targetCount := normalizeFetchSiteNumber(req.Number)
+		msg = fmt.Sprintf("开始同时抓取 JavBus + Sukebei 资源，目标数量=%d，排序=%s", targetCount, movieReq.OrderBy)
+		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
+		if _, err = l.runJavbusFetchTasksWithFilterTarget(
+			ctx,
+			movieReq,
+			targetCount,
+			durationFilter.LastFetchDurationDays,
+			durationFilter.LastSuccessDurationDays,
+		); err != nil {
+			return err
+		}
+		_, err = l.runSukebeiFetchTasksWithFilterTarget(
+			ctx,
+			movieReq,
+			targetCount,
+			durationFilter.LastFetchDurationDays,
+			durationFilter.LastSuccessDurationDays,
+		)
+		return err
+	})
+}
+
+func (l *FetchLoopService) StartFetchJavbusFilteredResources(req StartTaskRequest) (string, error) {
+	return l.startManagedTask(TaskSpiderFetchJavbusFilter, taskRuntimePolicy{}, func(ctx context.Context) error {
+		query, err := buildJavbusPageQueryFromTask(req)
+		if err != nil {
+			return err
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:   "pipeline_pre",
+			Message: fmt.Sprintf("开始按列表筛选抓取 JavBus，排序=%s %s", query.Sort, strings.ToUpper(query.Order)),
+		})
+		tasks, err := l.fetchSiteSvc.ListJavbusFetchTasksByPageQuery(ctx, query)
+		if err != nil {
+			return err
+		}
+		return l.runJavbusFilteredQueue(ctx, tasks)
 	})
 }
 

@@ -95,9 +95,9 @@ SELECT
 	pm.person_id AS person_id,
 	COUNT(*) AS movie_number,
 	COALESCE(SUM(CASE WHEN vf.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_movie_number,
-	COALESCE(SUM(COALESCE(vf.sc_times, 0)), 0) AS sc_times,
-	COALESCE(SUM(COALESCE(vf.come_times, 0)), 0) AS come_times,
-	COALESCE(MAX(COALESCE(vf.last_sc_time, 0)), 0) AS last_sc_time,
+	COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
+	COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
+	COALESCE(MAX(COALESCE(gss.last_sc_time, 0)), 0) AS last_sc_time,
 	COALESCE(MIN(CASE WHEN mi.highest_rank > 0 AND mi.highest_rank < 1000 THEN mi.highest_rank END), 0) AS highest_rank,
 	COALESCE(SUM(CASE WHEN mi.days_in_rank > 0 THEN mi.days_in_rank ELSE 0 END), 0) AS rank_times
 FROM (
@@ -107,6 +107,7 @@ FROM (
 	WHERE ac.person_id IN (` + placeholders + `)
 ) pm
 LEFT JOIN v_film vf ON vf.movie_jav_id = pm.movie_jav_id
+LEFT JOIN g_sc_stat gss ON gss.movie_jav_id = pm.movie_jav_id
 LEFT JOIN bm_minfo mi ON mi.jav_id = pm.movie_jav_id
 GROUP BY pm.person_id
 `
@@ -414,11 +415,12 @@ func (m *customAmCastModel) CountOwnedScMovieNumbersByNames(ctx context.Context,
 	sqlStr, args, err := squirrel.
 		Select(
 			"ac.name AS name",
-			"COUNT(DISTINCT CASE WHEN vf.is_removed = ? AND vf.sc_times > 0 THEN amr.movie_jav_id END) AS owned_sc_movie_number",
+			"COUNT(DISTINCT CASE WHEN vf.is_removed = ? AND COALESCE(gss.sc_times, 0) > 0 THEN amr.movie_jav_id END) AS owned_sc_movie_number",
 		).
 		From(m.table + " ac").
 		LeftJoin("`amr_movie_cast` amr ON amr.cast_id = ac.id").
 		LeftJoin("`v_film` vf ON vf.movie_jav_id = amr.movie_jav_id").
+		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = amr.movie_jav_id").
 		Where(squirrel.Eq{"ac.name": uniq}).
 		GroupBy("ac.name").
 		PlaceholderFormat(squirrel.Question).

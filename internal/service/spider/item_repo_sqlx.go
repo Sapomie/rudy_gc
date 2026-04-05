@@ -157,6 +157,46 @@ func (r *ItemRepoSqlx) FindByTranslateStatus(ctx context.Context, translateStatu
 	return r.listBy(ctx, "ListByTranslateStatus", r.m.ListByTranslateStatus, translateStatus)
 }
 
+func (r *ItemRepoSqlx) FindByTranslateStatuses(ctx context.Context, statuses []int64) ([]*types.Item, error) {
+	if len(statuses) == 0 {
+		return []*types.Item{}, nil
+	}
+
+	seen := make(map[int64]struct{}, len(statuses))
+	dedupStatuses := make([]int64, 0, len(statuses))
+	for _, status := range statuses {
+		if _, ok := seen[status]; ok {
+			continue
+		}
+		seen[status] = struct{}{}
+		dedupStatuses = append(dedupStatuses, status)
+	}
+
+	out := make([]*types.Item, 0)
+	seenJavIDs := make(map[string]struct{})
+	for _, status := range dedupStatuses {
+		rows, err := r.listBy(ctx, "ListByTranslateStatus", r.m.ListByTranslateStatus, status)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range rows {
+			if item == nil {
+				continue
+			}
+			javID := item.JavId
+			if javID == "" {
+				continue
+			}
+			if _, ok := seenJavIDs[javID]; ok {
+				continue
+			}
+			seenJavIDs[javID] = struct{}{}
+			out = append(out, item)
+		}
+	}
+	return out, nil
+}
+
 func (r *ItemRepoSqlx) FindByDetailStatus(ctx context.Context, status int64) ([]*types.Item, error) {
 	return r.listBy(ctx, "ListByDetailStatus", r.m.ListByDetailStatus, status)
 }

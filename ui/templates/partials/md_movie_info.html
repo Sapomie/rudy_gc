@@ -16,7 +16,7 @@
                 {{else if eq .movieType.OwnedWMedia 4}}
                     <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-primary mr-1">MPlay</a>
                 {{else if eq .movieType.OwnedWMedia 6}}
-                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-outline-secondary mr-1">MRemoved</a>
+                    <span class="btn btn-sm btn-outline-secondary mr-1 disabled" aria-disabled="true">MRemoved</span>
                 {{end}}
                 <small class="text-muted">({{.movieType.EncodeName}})</small>
             </td>

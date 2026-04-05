@@ -459,18 +459,18 @@ func mapFilmTypesToModel(in *types.Film) *moviex.VFilm {
 }
 
 func mapFilmOrderBy(orderBy string) string {
-	order := "birth_time DESC"
+	order := "f.birth_time DESC"
 	switch orderBy {
 	case consts.OrderByBirthTime:
-		order = "birth_time DESC,movie_name DESC"
+		order = "f.birth_time DESC,f.movie_name DESC"
 	case consts.OrderByScTimes:
-		order = "sc_times DESC,last_sc_time DESC,movie_name DESC"
+		order = "COALESCE(gss.sc_times, 0) DESC,COALESCE(gss.last_sc_time, 0) DESC,f.movie_name DESC"
 	case consts.OrderByComeTimes:
-		order = "come_times DESC,last_sc_time DESC,movie_name DESC"
+		order = "COALESCE(gss.come_times, 0) DESC,COALESCE(gss.last_sc_time, 0) DESC,f.movie_name DESC"
 	case consts.OrderByLastScTime:
-		order = "last_sc_time DESC,movie_name DESC"
+		order = "COALESCE(gss.last_sc_time, 0) DESC,f.movie_name DESC"
 	case consts.OrderByReleasingDate:
-		order = "releasing_date DESC,movie_name DESC"
+		order = "f.releasing_date DESC,f.movie_name DESC"
 	}
 	return order
 }

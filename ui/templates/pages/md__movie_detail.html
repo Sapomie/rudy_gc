@@ -97,7 +97,7 @@
                 </div>
 
                 <!-- FilmInfo -->
-                {{ if or (eq .hasFilm 2) .media }}
+                {{ if or (eq .hasFilm 2) (and .media (ne .movieType.OwnedWMedia 6)) }}
                     <div class="row mt-3">
                         <div class="col-12">
                             {{ template "partials.md.film_info" . }}
@@ -399,6 +399,25 @@
             </div><!-- /.container-fluid -->
         </div><!-- /.page-content -->
     </main>
+
+    <div class="modal fade" id="moveWMediaRemovedModal" tabindex="-1" aria-labelledby="moveWMediaRemovedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="moveWMediaRemovedModalLabel">移动到 Removed</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    将 w_media 移到 001_process/005_removed。
+                    <div id="moveWMediaRemovedMsg" class="small mt-2" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="btnMoveWMediaRemovedDo">继续</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/customer/movie_downloadlater.js"></script>
     <!-- JS -->

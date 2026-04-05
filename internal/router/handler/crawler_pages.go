@@ -13,7 +13,9 @@ import (
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
+	"rudy_gc/internal/service/media"
 	"rudy_gc/internal/service/sehuatang"
+	"rudy_gc/internal/service/wkv"
 	"rudy_gc/internal/svc"
 	"rudy_gc/internal/types"
 )
@@ -21,7 +23,9 @@ import (
 type CrawlerPages struct {
 	runtime   *loop.FetchLoopService
 	fetchSite *fetchsite.Service
+	mediaSvc  *media.Service
 	sehuatang *sehuatang.Service
+	wkvSvc    *wkv.Service
 	deps      *svc.Deps
 	scRootDir string
 }
@@ -89,7 +93,9 @@ func NewCrawlerPages(deps *svc.Deps) *CrawlerPages {
 	return &CrawlerPages{
 		runtime:   newCrawlerRuntime(deps),
 		fetchSite: newFetchSitePageService(deps),
+		mediaSvc:  media.NewService(deps),
 		sehuatang: sehuatang.NewService(deps),
+		wkvSvc:    wkv.NewService(deps),
 		deps:      deps,
 		scRootDir: deps.Config.Film.ScRootDir,
 	}
@@ -190,6 +196,36 @@ func (h *CrawlerPages) FilmPage(c *gin.Context) {
 	})
 }
 
+func (h *CrawlerPages) PostProcessPage(c *gin.Context) {
+	h.renderJobsPage(c, crawlerJobsPageConfig{
+		Title:             "后处理任务",
+		PageTitle:         "图片抓取 / 标题翻译",
+		TaskPanelTitle:    "后处理任务",
+		PageNote:          "单独触发封面抓取、标题翻译，或两者一起执行。这里不重跑榜单、种子和详情抓取。",
+		TaskTableTitle:    "后处理任务",
+		EventTitle:        "后处理事件流",
+		StorageKey:        "crawler_jobs_post_process_selected_job",
+		DefaultTaskType:   loop.TaskSpiderPostProcess,
+		OverviewExtraMode: "post_process_stages",
+		EmptyStateText:    "等待后处理任务触发",
+		AllowedTaskTypes: []string{
+			loop.TaskSpiderDownloadCover,
+			loop.TaskSpiderTranslateTitle,
+			loop.TaskSpiderPostProcess,
+		},
+		TaskButtons: []crawlerJobsPageTask{
+			{TaskType: loop.TaskSpiderDownloadCover, Label: "图片抓取"},
+			{TaskType: loop.TaskSpiderTranslateTitle, Label: "标题翻译"},
+			{TaskType: loop.TaskSpiderPostProcess, Label: "图片 + 标题翻译"},
+		},
+		Labels: crawlerJobsPageLabels{
+			Extra:   "当前阶段",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+	})
+}
+
 func (h *CrawlerPages) MediaPage(c *gin.Context) {
 	favoriteRows, _ := h.loadFavoriteAlbumRows(c.Request.Context())
 	rootDirs := h.deps.Config.Media.RootDirs
@@ -212,6 +248,62 @@ func (h *CrawlerPages) MediaRollbackPage(c *gin.Context) {
 	})
 }
 
+func (h *CrawlerPages) ScMediaMovePage(c *gin.Context) {
+	scName := strings.TrimSpace(c.Query("sc_name"))
+	rootDirs := h.deps.Config.Media.RootDirs
+	scDetailHref := ""
+	if scName != "" {
+		scDetailHref = "/sc-events/" + url.PathEscape(scName)
+	}
+
+	c.HTML(http.StatusOK, "page.sc_media_move", gin.H{
+		"Title":        "SC Media 移动",
+		"PageTitle":    "SC Media 移动（两段执行）",
+		"PageNote":     "第一段只做预处理预览；第二段仅移动预处理通过的 WMedia 到 watched 目录。",
+		"RootDirs":     rootDirs,
+		"ScName":       scName,
+		"ScDetailHref": scDetailHref,
+	})
+}
+
+func (h *CrawlerPages) FilmMovePage(c *gin.Context) {
+	base := types.ListMovieFullRequest{
+		OrderBy:  consts.OrderByReleasingDate,
+		Page:     1,
+		PageSize: maxPageSize,
+	}
+	req, err := parseMovieCardRequest(c, base)
+	if err != nil {
+		req = base
+		req.Order = normalizeOrder(c.Query("order"))
+	}
+
+	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
+	filterView.Action = "/triggers/film-move"
+	filterView.ClearHref = "/triggers/film-move"
+
+	c.HTML(http.StatusOK, "page.film_move", gin.H{
+		"Title":           "影片批量移动",
+		"PageTitle":       "影片批量移动（两步执行）",
+		"PageNote":        "第一步按 Cards 同款筛选列出影片；第二步将第一步结果移动到 SC Movie 同款目标目录。",
+		"MovieCardFilter": filterView,
+	})
+}
+
+func (h *CrawlerPages) MediaRescanPage(c *gin.Context) {
+	rootOptions, err := h.mediaSvc.ListLibraryRescanRootOptions(c.Request.Context())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "加载媒体重扫页面失败: %v", err)
+		return
+	}
+	c.HTML(http.StatusOK, "page.media_rescan", gin.H{
+		"Title":       "媒体重扫",
+		"PageTitle":   "媒体重扫（位置与删除状态同步）",
+		"PageNote":    "同一个 root 下可分别勾选 media 与 watched；若勾选二级目录，则只扫描该子树。未挂载或不存在的范围会直接跳过，并保持现有 w_media 不变。这里也可以手动回填旧的 WMedia 时间聚合数据和上映日时间聚合数据。",
+		"RootOptions": rootOptions,
+	})
+}
+
 func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
 	req, err := parseMovieCardRequest(c, types.ListMovieFullRequest{
 		OrderBy: consts.OrderByReleasingDate,
@@ -222,6 +314,7 @@ func (h *CrawlerPages) FetchSitePage(c *gin.Context) {
 	}
 	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
 	filterView.HideDirs = true
+	filterView.TextDateInputs = true
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "抓取站点任务",
 		PageTitle:         "JavBus / Sukebei 资源抓取",
@@ -275,6 +368,35 @@ func (h *CrawlerPages) FetchSiteSukebeiFilteredPage(c *gin.Context) {
 		HeaderLinks: []crawlerJobsPageLink{
 			{Href: "/fetch-site-sukebei-list", Label: "返回 Sukebei 列表"},
 			{Href: "/fetch-site-javbus-list", Label: "JavBus 列表"},
+		},
+		Labels: crawlerJobsPageLabels{
+			Extra:   "队列",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+		HideTaskForm: true,
+	})
+}
+
+func (h *CrawlerPages) FetchSiteJavbusFilteredPage(c *gin.Context) {
+	h.renderJobsPage(c, crawlerJobsPageConfig{
+		Title:             "JavBus 筛选抓取任务",
+		PageTitle:         "JavBus 列表筛选抓取",
+		TaskPanelTitle:    "筛选结果抓取任务",
+		TaskHelperText:    "本页用于展示从 JavBus 列表页按当前筛选结果触发的批量抓取任务。请在列表页点击“触发筛选结果抓取”后回到这里查看队列、进度和日志流。",
+		PageNote:          "队列会按列表筛选快照固定下来，并实时展示待入列和已完成的影片。",
+		TaskTableTitle:    "JavBus 筛选抓取任务",
+		EventTitle:        "JavBus 筛选抓取事件流",
+		StorageKey:        "crawler_jobs_fetch_site_javbus_filtered_selected_job",
+		DefaultTaskType:   loop.TaskSpiderFetchJavbusFilter,
+		OverviewExtraMode: "javbus_filtered_queue",
+		EmptyStateText:    "等待 JavBus 列表页触发筛选抓取任务",
+		AllowedTaskTypes: []string{
+			loop.TaskSpiderFetchJavbusFilter,
+		},
+		HeaderLinks: []crawlerJobsPageLink{
+			{Href: "/fetch-site-javbus-list", Label: "返回 JavBus 列表"},
+			{Href: "/fetch-site-sukebei-list", Label: "Sukebei 列表"},
 		},
 		Labels: crawlerJobsPageLabels{
 			Extra:   "队列",

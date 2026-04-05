@@ -200,8 +200,8 @@ func (m *customTSukebeiTorrentFetchModel) CountByFetchStatus(ctx context.Context
 }
 
 func applySukebeiPageFilter(queryBuilder squirrel.SelectBuilder, filter SukebeiFetchPageFilter) squirrel.SelectBuilder {
-	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, filter.Owned, "v_film", "vf")
-	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, filter.MediaOwned, "w_media", "wm")
+	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "sf", filter.Owned, "v_film", "vf")
+	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "sf", filter.MediaOwned, "w_media", "wm")
 	if filter.RequireVFilm {
 		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `v_film` vf_sort WHERE vf_sort.movie_jav_id = sf.movie_jav_id)")
 	}
@@ -247,22 +247,23 @@ func applySukebeiPageFilter(queryBuilder squirrel.SelectBuilder, filter SukebeiF
 	return queryBuilder
 }
 
-func applyFetchSiteOwnedFilter(queryBuilder squirrel.SelectBuilder, owned int64, tableName string, alias string) squirrel.SelectBuilder {
+func applyFetchSiteOwnedFilter(queryBuilder squirrel.SelectBuilder, outerAlias string, owned int64, tableName string, alias string) squirrel.SelectBuilder {
+	outerMovieJavID := outerAlias + ".movie_jav_id"
 	switch owned {
 	case 0, consts.MovieAll:
 		return queryBuilder
 	case consts.OwnedAll:
-		return queryBuilder.Where("EXISTS (SELECT 1 FROM `" + tableName + "` " + alias + " WHERE " + alias + ".movie_jav_id = sf.movie_jav_id)")
+		return queryBuilder.Where("EXISTS (SELECT 1 FROM `" + tableName + "` " + alias + " WHERE " + alias + ".movie_jav_id = " + outerMovieJavID + ")")
 	case consts.OwnedAllNotRemoved:
-		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = sf.movie_jav_id AND "+alias+".is_removed = ?)", consts.FilmIsNotRemoved)
+		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = "+outerMovieJavID+" AND "+alias+".is_removed = ?)", consts.FilmIsNotRemoved)
 	case consts.OwnedHasSubNotRemoved:
-		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = sf.movie_jav_id AND "+alias+".is_removed = ? AND "+alias+".has_sub = ?)", consts.FilmIsNotRemoved, consts.FilmHasSub)
+		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = "+outerMovieJavID+" AND "+alias+".is_removed = ? AND "+alias+".has_sub = ?)", consts.FilmIsNotRemoved, consts.FilmHasSub)
 	case consts.OwnedNoSubNotRemoved:
-		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = sf.movie_jav_id AND "+alias+".is_removed = ? AND "+alias+".has_sub = ?)", consts.FilmIsNotRemoved, consts.FilmNoSub)
+		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = "+outerMovieJavID+" AND "+alias+".is_removed = ? AND "+alias+".has_sub = ?)", consts.FilmIsNotRemoved, consts.FilmNoSub)
 	case consts.OwnedRemoved:
-		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = sf.movie_jav_id AND "+alias+".is_removed = ?)", consts.FilmIsRemoved)
+		return queryBuilder.Where("EXISTS (SELECT 1 FROM `"+tableName+"` "+alias+" WHERE "+alias+".movie_jav_id = "+outerMovieJavID+" AND "+alias+".is_removed = ?)", consts.FilmIsRemoved)
 	case consts.OwnedNotOwned:
-		return queryBuilder.Where("NOT EXISTS (SELECT 1 FROM `" + tableName + "` " + alias + " WHERE " + alias + ".movie_jav_id = sf.movie_jav_id)")
+		return queryBuilder.Where("NOT EXISTS (SELECT 1 FROM `" + tableName + "` " + alias + " WHERE " + alias + ".movie_jav_id = " + outerMovieJavID + ")")
 	default:
 		return queryBuilder
 	}

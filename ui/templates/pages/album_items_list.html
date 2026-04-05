@@ -32,6 +32,9 @@
                         <span class="sc-page-summary-label ms-3">总数</span>
                         <span class="sc-page-summary-value">{{ .Total }}</span>
                     </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenCreateAlbumModal">新增相册</button>
+                    </div>
                     {{ if .Rows }}
                         <div class="ms-xl-auto">
                             {{ template "pagination" . }}
@@ -238,6 +241,26 @@
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
                                 <button type="button" class="btn btn-primary" id="albumBatchMoveConfirmBtn">确认移动</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="albumCreateModal" tabindex="-1" aria-labelledby="albumCreateModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="albumCreateModalLabel">新增相册</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label class="form-label mb-1" for="albumCreateName">相册名称</label>
+                                <input type="text" class="form-control" id="albumCreateName" maxlength="128" placeholder="请输入相册名称">
+                                <p class="text-muted small mt-2 mb-0">创建成功后会自动切换到该相册并刷新列表。</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="albumCreateConfirmBtn">确认创建</button>
                             </div>
                         </div>
                     </div>

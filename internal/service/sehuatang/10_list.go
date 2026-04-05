@@ -2,25 +2,32 @@ package sehuatang
 
 import (
 	"context"
+	"sort"
 	"strings"
 
 	"rudy_gc/internal/model/modelx/moviex"
 )
 
 type ListRequest struct {
-	Page       int64
-	PageSize   int64
-	Sort       string
-	Order      string
-	Keyword    string
-	MovieJavID string
-	InfoHash   string
+	Page            int64
+	PageSize        int64
+	Sort            string
+	Order           string
+	Keyword         string
+	MovieJavID      string
+	InfoHash        string
+	Tag             string
+	PostTimeFrom    int64
+	HasPostTimeFrom bool
+	PostTimeTo      int64
+	HasPostTimeTo   bool
 }
 
 type ListRow struct {
 	Id            int64
 	MovieJavID    string
 	MovieName     string
+	Tag           string
 	MovieRouteKey string
 	ThreadTitle   string
 	ThreadURL     string
@@ -40,6 +47,7 @@ type ListResult struct {
 	PageSize int64
 	Total    int64
 	Items    []*ListRow
+	Albums   []string
 }
 
 func (s *Service) ListPage(ctx context.Context, req ListRequest) (*ListResult, error) {
@@ -51,9 +59,14 @@ func (s *Service) ListPage(ctx context.Context, req ListRequest) (*ListResult, e
 	}
 
 	filter := moviex.SehuatangMagnetListFilter{
-		Keyword:    strings.TrimSpace(req.Keyword),
-		MovieJavID: strings.TrimSpace(req.MovieJavID),
-		InfoHash:   strings.TrimSpace(req.InfoHash),
+		Keyword:         strings.TrimSpace(req.Keyword),
+		MovieJavID:      strings.TrimSpace(req.MovieJavID),
+		InfoHash:        strings.TrimSpace(req.InfoHash),
+		Tag:             strings.TrimSpace(req.Tag),
+		PostTimeFrom:    req.PostTimeFrom,
+		HasPostTimeFrom: req.HasPostTimeFrom,
+		PostTimeTo:      req.PostTimeTo,
+		HasPostTimeTo:   req.HasPostTimeTo,
 	}
 
 	total, err := s.deps.SehuatangMagnetModel.CountAll(ctx, filter)
@@ -83,6 +96,7 @@ func (s *Service) ListPage(ctx context.Context, req ListRequest) (*ListResult, e
 			Id:            row.Id,
 			MovieJavID:    row.MovieJavId,
 			MovieName:     row.MovieName,
+			Tag:           row.Tag,
 			MovieRouteKey: routeKey,
 			ThreadTitle:   row.ThreadTitle,
 			ThreadURL:     row.ThreadUrl,
@@ -99,12 +113,43 @@ func (s *Service) ListPage(ctx context.Context, req ListRequest) (*ListResult, e
 		return nil, err
 	}
 
+	albums, err := s.listSelectableAlbums(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ListResult{
 		Page:     req.Page,
 		PageSize: req.PageSize,
 		Total:    total,
 		Items:    items,
+		Albums:   albums,
 	}, nil
+}
+
+func (s *Service) listSelectableAlbums(ctx context.Context) ([]string, error) {
+	rows, err := s.deps.AlbumModel.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]struct{}, len(rows))
+	out := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		name := strings.TrimSpace(row.Name)
+		if name == "" || name == downloadAlbumName || name == pendingDownloadName {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out, nil
 }
 
 func buildOrderBy(sort, order string) string {

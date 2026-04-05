@@ -284,6 +284,18 @@ func (s *Service) glFindByMovieJavID(ctx context.Context, javID string) ([]*type
 	return out, nil
 }
 
+func (s *Service) glListDistinctMovieJavIDs(ctx context.Context) ([]string, error) {
+	return s.deps.GListModel.ListDistinctMovieJavIds(ctx)
+}
+
+func (s *Service) movieFindOneByJavID(ctx context.Context, javID string) (*moviex.AMovie, error) {
+	row, err := s.deps.MovieModel.FindOneByJavId(ctx, javID)
+	if err != nil {
+		return nil, err
+	}
+	return row, nil
+}
+
 func (s *Service) filmFindOneByMovieJavID(ctx context.Context, javID string) (*types.Film, error) {
 	row, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, javID)
 	if err != nil {
@@ -310,6 +322,101 @@ func (s *Service) filmFindAll(ctx context.Context, removedStatus int64) ([]*type
 		out = append(out, mapFilmModelToTypes(row))
 	}
 	return out, nil
+}
+
+func (s *Service) gScStatFindOneByMovieJavID(ctx context.Context, javID string) (*moviex.GScStat, error) {
+	row, err := s.deps.GScStatModel.FindOneByMovieJavId(ctx, javID)
+	if err != nil {
+		return nil, err
+	}
+	return row, nil
+}
+
+func (s *Service) wMediaFindOneByMovieJavID(ctx context.Context, javID string) (*moviex.WMedia, error) {
+	row, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, javID)
+	if err != nil {
+		return nil, err
+	}
+	return row, nil
+}
+
+func (s *Service) wMediaFindOneByMovieName(ctx context.Context, name string) (*moviex.WMedia, error) {
+	row, err := s.deps.WMediaModel.FindOneByMovieName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return row, nil
+}
+
+func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName string, releasingDate, mediaBirthTime int64, info movieScInfo) (*moviex.GScStat, consts.UpsertStatus, error) {
+	movieJavID = strings.TrimSpace(movieJavID)
+	if movieJavID == "" {
+		return nil, 0, errors.New("empty movie jav id")
+	}
+	now := time.Now().Unix()
+
+	old, err := s.gScStatFindOneByMovieJavID(ctx, movieJavID)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return nil, 0, err
+	}
+	if old != nil {
+		changed := false
+		if old.MovieName != movieName {
+			old.MovieName = movieName
+			changed = true
+		}
+		if old.ScTimes != info.ScTimes {
+			old.ScTimes = info.ScTimes
+			changed = true
+		}
+		if old.ComeTimes != info.ComeTimes {
+			old.ComeTimes = info.ComeTimes
+			changed = true
+		}
+		if old.LastScTime != info.LastScTime {
+			old.LastScTime = info.LastScTime
+			changed = true
+		}
+		if old.ReleasingDate != releasingDate {
+			old.ReleasingDate = releasingDate
+			changed = true
+		}
+		if old.MediaBirthTime != mediaBirthTime {
+			old.MediaBirthTime = mediaBirthTime
+			changed = true
+		}
+		if changed {
+			old.UpdatedOn = now
+			if err := s.deps.GScStatModel.Update(ctx, old); err != nil {
+				return nil, 0, err
+			}
+			return old, consts.UpsertUpdated, nil
+		}
+		return old, consts.UpsertUnchanged, nil
+	}
+
+	row := &moviex.GScStat{
+		MovieJavId:     movieJavID,
+		MovieName:      movieName,
+		ScTimes:        info.ScTimes,
+		ComeTimes:      info.ComeTimes,
+		LastScTime:     info.LastScTime,
+		ReleasingDate:  releasingDate,
+		MediaBirthTime: mediaBirthTime,
+		CreatedOn:      now,
+		UpdatedOn:      now,
+	}
+	if _, err := s.deps.GScStatModel.Insert(ctx, row); err != nil {
+		if again, e2 := s.gScStatFindOneByMovieJavID(ctx, movieJavID); e2 == nil && again != nil {
+			return again, consts.UpsertUpdated, nil
+		}
+		return nil, 0, err
+	}
+	ins, err := s.gScStatFindOneByMovieJavID(ctx, movieJavID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return ins, consts.UpsertInserted, nil
 }
 
 func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, consts.UpsertStatus, error) {

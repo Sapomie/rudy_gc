@@ -24,6 +24,12 @@ func NewCrawlerAPI(deps *svc.Deps) *CrawlerAPI {
 	}
 }
 
+type fetchSitePreviewRequest struct {
+	loop.StartTaskRequest
+	Page     int64 `json:"page"`
+	PageSize int64 `json:"page_size"`
+}
+
 func (h *CrawlerAPI) Start(c *gin.Context) {
 	var req loop.StartTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -37,6 +43,21 @@ func (h *CrawlerAPI) Start(c *gin.Context) {
 		return
 	}
 	writeCrawlerJobStarted(c, jobID, strings.TrimSpace(req.TaskType))
+}
+
+func (h *CrawlerAPI) PreviewFetchSite(c *gin.Context) {
+	var req fetchSitePreviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeCrawlerError(c, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	result, err := h.runtime.PreviewFetchSiteTargets(c.Request.Context(), req.StartTaskRequest, req.Page, req.PageSize)
+	if err != nil {
+		writeCrawlerError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *CrawlerAPI) ListJobs(c *gin.Context) {

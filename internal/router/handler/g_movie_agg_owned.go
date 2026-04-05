@@ -6,18 +6,21 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/service/movie"
+	"rudy_gc/internal/service/moviereleaseagg"
 	"rudy_gc/internal/svc"
 )
 
 type MovieAggHTMLHandler struct {
-	deps     *svc.Deps
-	movieSvc *movie.Service
+	deps          *svc.Deps
+	movieSvc      *movie.Service
+	releaseAggSvc *moviereleaseagg.Service
 }
 
 func NewMovieAggHTMLHandler(deps *svc.Deps) *MovieAggHTMLHandler {
 	return &MovieAggHTMLHandler{
-		deps:     deps,
-		movieSvc: movie.NewService(deps),
+		deps:          deps,
+		movieSvc:      movie.NewService(deps),
+		releaseAggSvc: moviereleaseagg.NewService(deps),
 	}
 }
 

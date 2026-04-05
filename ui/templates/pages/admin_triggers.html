@@ -75,6 +75,28 @@
                                         <input id="task_actor_name" name="actor_name" class="form-control" type="text" placeholder="输入演员名称">
                                     </div>
 
+                                    <div class="form-group compact-field grid-span-2 is-hidden" id="translateStatusesFieldWrap">
+                                        <label class="d-block mb-2">标题翻译状态（可多选）</label>
+                                        <div class="d-flex flex-wrap gap-3">
+                                            <div class="form-check">
+                                                <input id="translate_status_1" name="statuses" class="form-check-input" type="checkbox" value="1" checked>
+                                                <label class="form-check-label" for="translate_status_1">无中文字幕(1)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input id="translate_status_2" name="statuses" class="form-check-input" type="checkbox" value="2">
+                                                <label class="form-check-label" for="translate_status_2">有中文字幕(2)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input id="translate_status_3" name="statuses" class="form-check-input" type="checkbox" value="3">
+                                                <label class="form-check-label" for="translate_status_3">翻译错误(3)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input id="translate_status_4" name="statuses" class="form-check-input" type="checkbox" value="4">
+                                                <label class="form-check-label" for="translate_status_4">敏感词(4)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group compact-field grid-span-2 is-hidden" id="autoFetchSiteFieldWrap">
                                         <label class="d-block mb-2">详情后自动抓取外站</label>
                                         <div class="form-check">
@@ -176,6 +198,9 @@
 
                                 <div class="d-flex align-items-center flex-wrap action-row">
                                     {{ if not .HideTaskForm }}
+                                        {{ if .ShowMovieFilters }}
+                                            <button type="button" id="previewFetchSiteBtn" class="btn btn-outline-info mr-2">预览筛选结果</button>
+                                        {{ end }}
                                         <button type="submit" id="submitBtn" class="btn btn-primary">开始执行</button>
                                     {{ end }}
                                     <button type="button" id="pauseBtn" class="btn btn-outline-warning ml-2" disabled>暂停</button>
@@ -284,6 +309,44 @@
                                         </div>
                                     </div>
                                 </div>
+                                {{ else if eq .OverviewExtraMode "post_process_stages" }}
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-12 mb-2">
+                                        <div class="overview-item">
+                                            <div class="label">当前阶段</div>
+                                            <div class="value" id="currentStageText">-</div>
+                                            <div class="subvalue" id="elapsedText">已运行时长 00:00</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestBestinvProgressCard" data-phase="cover">
+                                            <div class="label">封面下载进度</div>
+                                            <div class="value" id="dailyBestBestinvProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestBestinvResultCard" data-phase="cover">
+                                            <div class="label">封面下载正确/错误</div>
+                                            <div class="value" id="dailyBestBestinvResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row dailybest-stage-row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestDetailProgressCard" data-phase="translate">
+                                            <div class="label">标题翻译进度</div>
+                                            <div class="value" id="dailyBestDetailProgressText">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="overview-item overview-stage-card" id="dailyBestDetailResultCard" data-phase="translate">
+                                            <div class="label">标题翻译正确/错误</div>
+                                            <div class="value" id="dailyBestDetailResultText">0 / 0</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 {{ else if eq .OverviewExtraMode "fetch_site_summary" }}
                                 <div class="row">
                                     <div class="col-md-6 mb-2">
@@ -332,30 +395,30 @@
                                         </div>
                                     </div>
                                 </div>
-                                {{ else if eq .OverviewExtraMode "sukebei_filtered_queue" }}
+                                {{ else if or (eq .OverviewExtraMode "sukebei_filtered_queue") (eq .OverviewExtraMode "javbus_filtered_queue") }}
                                 <div class="row">
                                     <div class="col-md-6 mb-2">
                                         <div class="overview-item">
                                             <div class="label">总数</div>
-                                            <div class="value" id="sukebeiFilteredTotalText">0</div>
+                                            <div class="value" id="filteredQueueTotalText">0</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-2">
                                         <div class="overview-item">
                                             <div class="label">待入列</div>
-                                            <div class="value" id="sukebeiFilteredPendingText">0</div>
+                                            <div class="value" id="filteredQueuePendingText">0</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-2">
                                         <div class="overview-item">
                                             <div class="label">成功数目</div>
-                                            <div class="value" id="sukebeiFilteredSuccessText">0</div>
+                                            <div class="value" id="filteredQueueSuccessText">0</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-2">
                                         <div class="overview-item">
                                             <div class="label">失败数目</div>
-                                            <div class="value" id="sukebeiFilteredFailedText">0</div>
+                                            <div class="value" id="filteredQueueFailedText">0</div>
                                         </div>
                                     </div>
                                 </div>
@@ -476,7 +539,52 @@
                 </div>
             </div>
 
-            {{ if eq .OverviewExtraMode "sukebei_filtered_queue" }}
+            {{ if .ShowMovieFilters }}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card is-hidden" id="fetchSitePreviewPanel">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div>
+                                    <h4 class="card-title mb-0">筛选结果预览</h4>
+                                    <div class="text-muted small mt-1" id="fetchSitePreviewSummary">当前还没有预览数据</div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-light text-dark mr-2" id="fetchSitePreviewMetaText">共 0 条</span>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="hideFetchSitePreviewBtn">收起</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 88px;">序号</th>
+                                        <th>影片</th>
+                                        <th style="width: 240px;">JavID</th>
+                                        <th style="width: 180px;">来源</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="fetchSitePreviewTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">等待预览</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-3">
+                                <div class="text-muted small" id="fetchSitePreviewPageText">第 0/0 页</div>
+                                <div>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm mr-2" id="fetchSitePreviewPrevBtn" disabled>上一页</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="fetchSitePreviewNextBtn" disabled>下一页</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+
+            {{ if or (eq .OverviewExtraMode "sukebei_filtered_queue") (eq .OverviewExtraMode "javbus_filtered_queue") }}
             <div class="row">
                 <div class="col-12">
                     <div class="card">
@@ -485,13 +593,13 @@
                             <div class="queue-panel">
                                 <div class="queue-column">
                                     <div class="queue-title">待入列</div>
-                                    <div class="queue-list" id="sukebeiFilteredPendingList">
+                                    <div class="queue-list" id="filteredQueuePendingList">
                                         <div class="queue-empty">等待任务启动</div>
                                     </div>
                                 </div>
                                 <div class="queue-column">
                                     <div class="queue-title">已完成</div>
-                                    <div class="queue-list" id="sukebeiFilteredDoneList">
+                                    <div class="queue-list" id="filteredQueueDoneList">
                                         <div class="queue-empty">等待任务启动</div>
                                     </div>
                                 </div>

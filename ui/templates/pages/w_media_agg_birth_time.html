@@ -1,0 +1,372 @@
+{{ define "page.w_media_agg_birth_time" }}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .Title }} - Rudy-GC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/icons.min.css" rel="stylesheet">
+    <link href="/static/css/app.min.css" rel="stylesheet">
+    <link href="/static/css/dataTables.bootstrap4.min.css" rel="stylesheet">
+    <link href="/static/css/buttons.bootstrap4.min.css" rel="stylesheet">
+    <link href="/static/css/responsive.bootstrap4.min.css" rel="stylesheet">
+    <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+    <link href="/static/customer/w_media_agg_birth.css" rel="stylesheet">
+</head>
+
+<body data-sidebar="dark">
+{{ template "menu" . }}
+
+<main class="main-content">
+    <div class="page-content">
+        <div class="container-fluid w-media-agg-page">
+
+            <div class="section-card">
+                {{ if .Breadcrumbs }}
+                    <div class="page-subtitle mb-2">
+                        {{ range .Breadcrumbs }}
+                            {{ if .Href }}
+                                <a href="{{ .Href }}" class="text-muted text-decoration-none me-1">{{ .Title }}</a> /
+                            {{ else }}
+                                <span class="text-dark">{{ .Title }}</span>
+                            {{ end }}
+                        {{ end }}
+                    </div>
+                {{ end }}
+
+                <h4 class="section-title">{{ .Title }}</h4>
+
+                {{ $hasQ := .BucketsQ }}
+                {{ $hasM := .BucketsM }}
+                {{ if and (eq .Level "year") (or $hasQ $hasM) }}
+                    <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                        {{ if $hasQ }}
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab-wmagg-quarters" role="tab">季度</a>
+                            </li>
+                        {{ end }}
+                        {{ if $hasM }}
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab-wmagg-months" role="tab">月份</a>
+                            </li>
+                        {{ end }}
+                    </ul>
+
+                    <div class="tab-content pt-3">
+                        {{ if $hasQ }}
+                            <div class="tab-pane p-2" id="tab-wmagg-quarters" role="tabpanel">
+                                <div class="row row-cols-2 row-cols-sm-2 row-cols-lg-4 g-3">
+                                    {{ range .BucketsQ }}
+                                        <div class="col">
+                                            <a href="{{ .Href }}" class="text-decoration-none">
+                                                <div class="card bucket-card h-100 shadow-sm">
+                                                    <div class="card-body py-2">
+                                                        <div class="fw-semibold">{{ .Label }}</div>
+                                                        <div class="text-muted small">
+                                                            <span class="count">{{ .Count }}</span> 部，
+                                                            <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </div>
+                        {{ end }}
+
+                        {{ if $hasM }}
+                            <div class="tab-pane p-2" id="tab-wmagg-months" role="tabpanel">
+                                <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
+                                    {{ range .BucketsM }}
+                                        <div class="col">
+                                            <a href="{{ .Href }}" class="text-decoration-none">
+                                                <div class="card bucket-card h-100 shadow-sm">
+                                                    <div class="card-body py-2">
+                                                        <div class="fw-semibold">{{ .Label }}</div>
+                                                        <div class="text-muted small">
+                                                            <span class="count">{{ .Count }}</span> 部，
+                                                            <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </div>
+                        {{ end }}
+                    </div>
+                {{ else }}
+                    {{ if .BucketsY }}
+                        <section class="bucket-section" aria-label="Years">
+                            <div class="bucket-section-title">年份</div>
+                            <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-6 g-3">
+                                {{ range .BucketsY }}
+                                    <div class="col">
+                                        <a href="{{ .Href }}" class="text-decoration-none">
+                                            <div class="card bucket-card h-100 shadow-sm">
+                                                <div class="card-body py-2">
+                                                    <div class="fw-semibold">{{ .Label }}</div>
+                                                    <div class="text-muted small">
+                                                        <span class="count">{{ .Count }}</span> 部，
+                                                        <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </section>
+                    {{ end }}
+
+                    {{ if .BucketsQ }}
+                        <section class="bucket-section" aria-label="Quarters">
+                            <div class="bucket-section-title">季度</div>
+                            <div class="row row-cols-2 row-cols-sm-2 row-cols-lg-4 g-3">
+                                {{ range .BucketsQ }}
+                                    <div class="col">
+                                        <a href="{{ .Href }}" class="text-decoration-none">
+                                            <div class="card bucket-card h-100 shadow-sm">
+                                                <div class="card-body py-2">
+                                                    <div class="fw-semibold">{{ .Label }}</div>
+                                                    <div class="text-muted small">
+                                                        <span class="count">{{ .Count }}</span> 部，
+                                                        <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </section>
+                    {{ end }}
+
+                    {{ if .BucketsM }}
+                        <section class="bucket-section" aria-label="Months">
+                            <div class="bucket-section-title">月份</div>
+                            <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
+                                {{ range .BucketsM }}
+                                    <div class="col">
+                                        <a href="{{ .Href }}" class="text-decoration-none">
+                                            <div class="card bucket-card h-100 shadow-sm">
+                                                <div class="card-body py-2">
+                                                    <div class="fw-semibold">{{ .Label }}</div>
+                                                    <div class="text-muted small">
+                                                        <span class="count">{{ .Count }}</span> 部，
+                                                        <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </section>
+                    {{ end }}
+
+                    {{ if .BucketsD }}
+                        <section class="bucket-section" aria-label="Days">
+                            <div class="bucket-section-title">日期</div>
+                            <div class="row row-cols-3 row-cols-sm-4 row-cols-lg-6 g-3">
+                                {{ range .BucketsD }}
+                                    <div class="col">
+                                        <a href="{{ .Href }}" class="text-decoration-none">
+                                            <div class="card bucket-card h-100 shadow-sm">
+                                                <div class="card-body py-2">
+                                                    <div class="fw-semibold">{{ .Label }}</div>
+                                                    <div class="text-muted small">
+                                                        <span class="count">{{ .Count }}</span> 部，
+                                                        <span class="sizegb">{{ printf "%.1f" .SizeGB }} GB</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </section>
+                    {{ end }}
+
+                    {{ if not (or (or .BucketsY .BucketsQ) (or .BucketsM .BucketsD)) }}
+                        <div class="alert alert-info mb-0">
+                            当前范围暂无可展示的时间桶。
+                            <a href="/triggers/media-rescan" class="alert-link">如为新建统计表，请先到媒体重扫页执行 WMedia 时间聚合回填。</a>
+                        </div>
+                    {{ end }}
+                {{ end }}
+            </div>
+
+            {{ $hasAnyTop := or (or .TopCasts .TopDirectors) (or .TopLabels .TopPrefixes) }}
+            {{ if $hasAnyTop }}
+                <div class="section-card">
+                    <div class="d-flex align-items-center justify-content-start mb-2">
+                        <h4 class="section-title mb-0 me-3">Top 聚合</h4>
+                        <button id="toggleTopAgg"
+                                type="button"
+                                class="btn btn-outline-info waves-effect waves-light btn-sm"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#topAggCollapse"
+                                aria-expanded="false"
+                                aria-controls="topAggCollapse">展开
+                        </button>
+                    </div>
+
+                    <div class="collapse" id="topAggCollapse">
+                        <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                            {{ if .TopCasts }}<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-top-casts" role="tab">演员</a></li>{{ end }}
+                            {{ if .TopDirectors }}<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-top-directors" role="tab">导演</a></li>{{ end }}
+                            {{ if .TopLabels }}<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-top-labels" role="tab">Label</a></li>{{ end }}
+                            {{ if .TopPrefixes }}<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-top-prefixes" role="tab">Prefix</a></li>{{ end }}
+                        </ul>
+
+                        <div class="tab-content pt-3">
+                            {{ if .TopCasts }}
+                                <div class="tab-pane p-2" id="tab-top-casts" role="tabpanel">
+                                    <div class="top-stat-grid">
+                                        {{ $rs := or .RangeStart "" }}{{ $re := or .RangeEnd "" }}
+                                        {{ range $i, $it := .TopCasts }}
+                                            {{ $u := (printf "/cards?cn=%s&mowned=3" (urlquery $it.Name)) }}
+                                            {{ if gt $it.AggID 0 }}{{ $u = (printf "/cards?pid=%d&mowned=3" $it.AggID) }}{{ end }}
+                                            {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
+                                            {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                            <a href="{{ $u }}" class="top-stat-card text-decoration-none" title="{{ $it.Name }}">
+                                                <div class="card shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="top-stat-rank">#{{ add $i 1 }}</div>
+                                                        <div class="top-stat-name text-primary">{{ $it.Name }}</div>
+                                                        <div class="top-stat-meta">出现：{{ $it.Count }}</div>
+                                                        <div class="top-stat-meta">体积：{{ humanSize $it.SizeBytes }}</div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            {{ end }}
+
+                            {{ if .TopDirectors }}
+                                <div class="tab-pane p-2" id="tab-top-directors" role="tabpanel">
+                                    <div class="top-stat-grid">
+                                        {{ $rs := or .RangeStart "" }}{{ $re := or .RangeEnd "" }}
+                                        {{ range $i, $it := .TopDirectors }}
+                                            {{ $u := (printf "/cards?dn=%s&mowned=3" (urlquery $it.Name)) }}
+                                            {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
+                                            {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                            <a href="{{ $u }}" class="top-stat-card text-decoration-none" title="{{ $it.Name }}">
+                                                <div class="card shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="top-stat-rank">#{{ add $i 1 }}</div>
+                                                        <div class="top-stat-name text-primary">{{ $it.Name }}</div>
+                                                        <div class="top-stat-meta">出现：{{ $it.Count }}</div>
+                                                        <div class="top-stat-meta">体积：{{ humanSize $it.SizeBytes }}</div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            {{ end }}
+
+                            {{ if .TopLabels }}
+                                <div class="tab-pane p-2" id="tab-top-labels" role="tabpanel">
+                                    <div class="top-stat-grid">
+                                        {{ $rs := or .RangeStart "" }}{{ $re := or .RangeEnd "" }}
+                                        {{ range $i, $it := .TopLabels }}
+                                            {{ $u := (printf "/cards?ln=%s&mowned=3" (urlquery $it.Name)) }}
+                                            {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
+                                            {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                            <a href="{{ $u }}" class="top-stat-card text-decoration-none" title="{{ $it.Name }}">
+                                                <div class="card shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="top-stat-rank">#{{ add $i 1 }}</div>
+                                                        <div class="top-stat-name text-primary">{{ $it.Name }}</div>
+                                                        <div class="top-stat-meta">出现：{{ $it.Count }}</div>
+                                                        <div class="top-stat-meta">体积：{{ humanSize $it.SizeBytes }}</div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            {{ end }}
+
+                            {{ if .TopPrefixes }}
+                                <div class="tab-pane p-2" id="tab-top-prefixes" role="tabpanel">
+                                    <div class="top-stat-grid">
+                                        {{ $rs := or .RangeStart "" }}{{ $re := or .RangeEnd "" }}
+                                        {{ range $i, $it := .TopPrefixes }}
+                                            {{ $u := (printf "/cards?pn=%s&mowned=3" (urlquery $it.Name)) }}
+                                            {{ if $rs }}{{ $u = (printf "%s&mbs=%s" $u $rs) }}{{ end }}
+                                            {{ if $re }}{{ $u = (printf "%s&mbe=%s" $u $re) }}{{ end }}
+                                            <a href="{{ $u }}" class="top-stat-card text-decoration-none" title="{{ $it.Name }}">
+                                                <div class="card shadow-sm h-100">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="top-stat-rank">#{{ add $i 1 }}</div>
+                                                        <div class="top-stat-name text-primary">{{ $it.Name }}</div>
+                                                        <div class="top-stat-meta">出现：{{ $it.Count }}</div>
+                                                        <div class="top-stat-meta">体积：{{ humanSize $it.SizeBytes }}</div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {{ end }}
+                                    </div>
+                                </div>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+            {{ end }}
+
+            <div class="section-card">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <div class="d-flex align-items-center toolbar-gap">
+                        {{ if .SortQuery }}{{ template "sort_bar" . }}{{ end }}
+                    </div>
+                    <div class="ms-auto">
+                        {{ if .PageInfo }}{{ template "pagination" . }}{{ end }}
+                    </div>
+                </div>
+
+                <div class="row g-3" id="movie-grid">
+                    {{ range .Movies }}
+                        <div class="col-6 col-sm-3 col-md-2 col-lg-1-5">
+                            {{ template "card" . }}
+                        </div>
+                    {{ else }}
+                        <div class="col-12"><div class="alert alert-info mb-0">当前范围暂无媒体卡片。</div></div>
+                    {{ end }}
+                </div>
+            </div>
+
+            {{ if .PageInfo }}
+                <div class="mt-3">
+                    {{ template "pagination" . }}
+                </div>
+            {{ end }}
+
+        </div>
+    </div>
+</main>
+
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/metisMenu.min.js"></script>
+<script src="/static/js/simplebar.min.js"></script>
+<script src="/static/js/waves.min.js"></script>
+<script src="/static/js/jquery.sparkline.min.js"></script>
+<script src="/static/js/dataTables.buttons.min.js"></script>
+<script src="/static/js/buttons.bootstrap4.min.js"></script>
+<script src="/static/js/jszip.min.js"></script>
+<script src="/static/js/buttons.html5.min.js"></script>
+<script src="/static/js/buttons.print.min.js"></script>
+<script src="/static/js/buttons.colVis.min.js"></script>
+<script src="/static/js/dashboard.init.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/customer/w_media_agg_birth.js"></script>
+</body>
+</html>
+{{ end }}

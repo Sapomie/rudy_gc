@@ -15,9 +15,10 @@ func NewService(d *dep.Dep) *Service {
 }
 
 const (
-	FetchSiteCodeJavbus    = svc.FetchSiteCodeJavbus
-	FetchSiteCodeSukebei   = svc.FetchSiteCodeSukebei
-	FetchSiteCodeSehuatang = svc.FetchSiteCodeSehuatang
+	FetchSiteCodeJavbus     = svc.FetchSiteCodeJavbus
+	FetchSiteCodeSukebei    = svc.FetchSiteCodeSukebei
+	FetchSiteCodeSehuatang  = svc.FetchSiteCodeSehuatang
+	FetchSiteCodeBaiduFanyi = svc.FetchSiteCodeBaiduFanyi
 
 	FetchStatusPending = int64(1)
 	FetchStatusRunning = int64(2)

@@ -276,9 +276,9 @@ func buildFilmOrderByForPage(sortField, sortOrder string) string {
 	case "has_mask":
 		return "f.has_mask " + order + ", f.birth_time DESC, f.movie_name DESC, f.id DESC"
 	case "sc_times":
-		return "f.sc_times " + order + ", f.birth_time DESC, f.movie_name DESC, f.id DESC"
+		return "COALESCE(gss.sc_times, 0) " + order + ", COALESCE(gss.last_sc_time, 0) DESC, f.birth_time DESC, f.movie_name DESC, f.id DESC"
 	case "last_sc_time":
-		return "f.last_sc_time " + order + ", f.birth_time DESC, f.movie_name DESC, f.id DESC"
+		return "COALESCE(gss.last_sc_time, 0) " + order + ", f.birth_time DESC, f.movie_name DESC, f.id DESC"
 	case "releasing_date":
 		return "f.releasing_date " + order + ", f.birth_time DESC, f.movie_name DESC, f.id DESC"
 	default:

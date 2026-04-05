@@ -1,6 +1,7 @@
 (function (global) {
     const API_BASE = '/api/crawler/jobs';
     const TASK_FETCH_SITE_BOTH = 'spider_fetch_site_both_resources';
+    const TASK_FETCH_JAVBUS_FILTERED = 'spider_fetch_javbus_filtered_resources';
     const TASK_FETCH_SUKEBEI_FILTERED = 'spider_fetch_sukebei_filtered_resources';
     const TASK_FETCH_SEHUATANG = 'spider_fetch_sehuatang_magnets';
     const FETCH_SITE_TASK_TYPES = ['spider_fetch_javbus_resources', 'spider_fetch_sukebei_resources'];
@@ -12,10 +13,14 @@
         spider_seeds: '活跃 Seeds',
         spider_seed_by_name: '按名称抓取',
         spider_refresh_oldest_detail: '刷新最久详情',
+        spider_download_cover: '图片抓取',
+        spider_translate_title: '标题翻译',
+        spider_post_process: '图片 + 标题翻译',
         spider_backfill_person: 'person 回填',
         spider_backfill_rank_period: '周期排行回填',
         spider_backfill_fetch_site: '外站任务回填',
         spider_fetch_javbus_resources: 'JavBus 资源抓取',
+        spider_fetch_javbus_filtered_resources: 'JavBus 列表筛选抓取',
         spider_fetch_sukebei_resources: 'Sukebei 资源抓取',
         spider_fetch_sukebei_filtered_resources: 'Sukebei 列表筛选抓取',
         spider_fetch_site_both_resources: 'JavBus + Sukebei 同时抓取',
@@ -131,6 +136,24 @@
             },
             pageStylePhases: {},
         },
+        post_process_stages: {
+            phaseKeys: ['cover', 'translate'],
+            labels: {
+                cover: '封面下载',
+                translate: '标题翻译',
+            },
+            stageByEvent: {
+                pipeline_pre: 'cover',
+                job_started: 'cover',
+                cover_queue_ready: 'cover',
+                cover_download_done: 'cover',
+                cover_download_failed: 'cover',
+                translate_queue_ready: 'translate',
+                translate_done: 'translate',
+                translate_failed: 'translate',
+            },
+            pageStylePhases: {},
+        },
     };
 
     function createCrawlerJobConsole(config) {
@@ -146,6 +169,10 @@
                 selectedJob: null,
                 jobs: [],
                 fetchSiteBothJobIds: [],
+                fetchSitePreviewPayload: null,
+                fetchSitePreviewPage: 1,
+                fetchSitePreviewTotalPages: 0,
+                fetchSitePreviewPageSize: 100,
                 detailLoop: null,
                 eventEntries: [],
                 eventCount: 0,
@@ -194,12 +221,12 @@
         runtime.fetchSiteSukebeiProgressText = document.getElementById('fetchSiteSukebeiProgressText');
         runtime.fetchSiteSukebeiResultText = document.getElementById('fetchSiteSukebeiResultText');
         runtime.sehuatangProgressText = document.getElementById('sehuatangProgressText');
-        runtime.sukebeiFilteredTotalText = document.getElementById('sukebeiFilteredTotalText');
-        runtime.sukebeiFilteredPendingText = document.getElementById('sukebeiFilteredPendingText');
-        runtime.sukebeiFilteredSuccessText = document.getElementById('sukebeiFilteredSuccessText');
-        runtime.sukebeiFilteredFailedText = document.getElementById('sukebeiFilteredFailedText');
-        runtime.sukebeiFilteredPendingList = document.getElementById('sukebeiFilteredPendingList');
-        runtime.sukebeiFilteredDoneList = document.getElementById('sukebeiFilteredDoneList');
+        runtime.filteredQueueTotalText = document.getElementById('filteredQueueTotalText') || document.getElementById('sukebeiFilteredTotalText');
+        runtime.filteredQueuePendingText = document.getElementById('filteredQueuePendingText') || document.getElementById('sukebeiFilteredPendingText');
+        runtime.filteredQueueSuccessText = document.getElementById('filteredQueueSuccessText') || document.getElementById('sukebeiFilteredSuccessText');
+        runtime.filteredQueueFailedText = document.getElementById('filteredQueueFailedText') || document.getElementById('sukebeiFilteredFailedText');
+        runtime.filteredQueuePendingList = document.getElementById('filteredQueuePendingList') || document.getElementById('sukebeiFilteredPendingList');
+        runtime.filteredQueueDoneList = document.getElementById('filteredQueueDoneList') || document.getElementById('sukebeiFilteredDoneList');
         runtime.dailyBestBestinvProgressText = document.getElementById('dailyBestBestinvProgressText');
         runtime.dailyBestBestinvResultText = document.getElementById('dailyBestBestinvResultText');
         runtime.dailyBestDetailProgressText = document.getElementById('dailyBestDetailProgressText');
@@ -216,6 +243,7 @@
         runtime.nameFieldWrap = document.getElementById('nameFieldWrap');
         runtime.numberFieldWrap = document.getElementById('numberFieldWrap');
         runtime.actorNameFieldWrap = document.getElementById('actorNameFieldWrap');
+        runtime.translateStatusesFieldWrap = document.getElementById('translateStatusesFieldWrap');
         runtime.autoFetchSiteFieldWrap = document.getElementById('autoFetchSiteFieldWrap');
         runtime.fetchSehuatangListURLFieldWrap = document.getElementById('fetchSehuatangListURLFieldWrap');
         runtime.fetchSehuatangKeywordFieldWrap = document.getElementById('fetchSehuatangKeywordFieldWrap');
@@ -226,6 +254,15 @@
         runtime.toggleFetchSiteFilterBtn = document.getElementById('toggleFetchSiteFilterBtn');
         runtime.fetchSiteFilterWrap = document.getElementById('fetchSiteFilterWrap');
         runtime.clearFetchSiteFilterBtn = document.getElementById('clearFetchSiteFilterBtn');
+        runtime.previewFetchSiteBtn = document.getElementById('previewFetchSiteBtn');
+        runtime.fetchSitePreviewPanel = document.getElementById('fetchSitePreviewPanel');
+        runtime.fetchSitePreviewSummary = document.getElementById('fetchSitePreviewSummary');
+        runtime.fetchSitePreviewMetaText = document.getElementById('fetchSitePreviewMetaText');
+        runtime.fetchSitePreviewTableBody = document.getElementById('fetchSitePreviewTableBody');
+        runtime.fetchSitePreviewPageText = document.getElementById('fetchSitePreviewPageText');
+        runtime.fetchSitePreviewPrevBtn = document.getElementById('fetchSitePreviewPrevBtn');
+        runtime.fetchSitePreviewNextBtn = document.getElementById('fetchSitePreviewNextBtn');
+        runtime.hideFetchSitePreviewBtn = document.getElementById('hideFetchSitePreviewBtn');
         runtime.nameInput = document.getElementById('task_name');
         runtime.numberInput = document.getElementById('task_number');
         runtime.actorNameInput = document.getElementById('task_actor_name');
@@ -569,7 +606,7 @@
 
         runtime.isFetchSiteTaskType = function (taskType) {
             const current = String(taskType || '').trim();
-            return FETCH_SITE_TASK_TYPES.indexOf(current) >= 0 || current === TASK_FETCH_SITE_BOTH || current === TASK_FETCH_SUKEBEI_FILTERED;
+            return FETCH_SITE_TASK_TYPES.indexOf(current) >= 0 || current === TASK_FETCH_SITE_BOTH || current === TASK_FETCH_SUKEBEI_FILTERED || current === TASK_FETCH_JAVBUS_FILTERED;
         };
 
         runtime.fetchSiteStatsFromJob = function (job) {
@@ -620,6 +657,10 @@
                 taskType === TASK_FETCH_SITE_BOTH
             );
             runtime.toggleField(runtime.actorNameFieldWrap, taskType === 'spider_rebuild_actor_rank');
+            runtime.toggleField(
+                runtime.translateStatusesFieldWrap,
+                taskType === 'spider_translate_title' || taskType === 'spider_post_process'
+            );
             runtime.toggleField(runtime.autoFetchSiteFieldWrap, runtime.isAutoFetchSiteTaskType(taskType));
             runtime.toggleField(runtime.fetchSehuatangListURLFieldWrap, isFetchSehuatangTask);
             runtime.toggleField(runtime.fetchSehuatangKeywordFieldWrap, isFetchSehuatangTask);
@@ -628,6 +669,7 @@
             runtime.toggleField(runtime.fetchSehuatangPersistModeFieldWrap, isFetchSehuatangTask);
             if (!isFetchSiteTask) {
                 runtime.state.fetchSiteFilterExpanded = false;
+                runtime.hideFetchSitePreview();
             }
             runtime.toggleField(runtime.fetchSiteFilterPanel, isFetchSiteTask);
             runtime.toggleField(runtime.fetchSiteFilterWrap, isFetchSiteTask && runtime.state.fetchSiteFilterExpanded);
@@ -686,6 +728,16 @@
             }
             if (taskType === 'spider_rebuild_actor_rank') {
                 payload.actor_name = String(runtime.actorNameInput && runtime.actorNameInput.value || '').trim();
+            }
+            if (taskType === 'spider_translate_title' || taskType === 'spider_post_process') {
+                const checkedStatuses = Array.from(runtime.form.querySelectorAll('input[name="statuses"]:checked')).map(function (input) {
+                    return String(input && input.value || '').trim();
+                }).filter(function (value) {
+                    return value !== '';
+                });
+                if (checkedStatuses.length > 0) {
+                    payload.statuses = checkedStatuses;
+                }
             }
             if (runtime.isFetchSehuatangTaskType(taskType)) {
                 payload.list_url = String(runtime.fetchSehuatangListURLInput && runtime.fetchSehuatangListURLInput.value || '').trim();
@@ -798,6 +850,120 @@
                 runtime.numberInput.value = String(FETCH_SITE_DEFAULT_NUMBER);
             }
             runtime.syncFetchSiteOrderByButtons();
+            runtime.hideFetchSitePreview();
+        };
+
+        runtime.hideFetchSitePreview = function () {
+            runtime.state.fetchSitePreviewPayload = null;
+            runtime.state.fetchSitePreviewPage = 1;
+            runtime.state.fetchSitePreviewTotalPages = 0;
+            if (runtime.fetchSitePreviewPanel) {
+                runtime.fetchSitePreviewPanel.classList.add('is-hidden');
+            }
+            if (runtime.fetchSitePreviewSummary) {
+                runtime.fetchSitePreviewSummary.textContent = '当前还没有预览数据';
+            }
+            if (runtime.fetchSitePreviewMetaText) {
+                runtime.fetchSitePreviewMetaText.textContent = '共 0 条';
+            }
+            if (runtime.fetchSitePreviewPageText) {
+                runtime.fetchSitePreviewPageText.textContent = '第 0/0 页';
+            }
+            if (runtime.fetchSitePreviewPrevBtn) {
+                runtime.fetchSitePreviewPrevBtn.disabled = true;
+            }
+            if (runtime.fetchSitePreviewNextBtn) {
+                runtime.fetchSitePreviewNextBtn.disabled = true;
+            }
+            if (runtime.fetchSitePreviewTableBody) {
+                runtime.fetchSitePreviewTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">等待预览</td></tr>';
+            }
+        };
+
+        runtime.renderFetchSitePreview = function (payload) {
+            const result = payload || {};
+            const items = Array.isArray(result.items) ? result.items : [];
+            const total = Number(result.total || 0);
+            const pageNumber = Number(result.page || 1);
+            const pageSize = Number(result.page_size || runtime.state.fetchSitePreviewPageSize || 100);
+            const totalPages = Number(result.total_pages || 0);
+            runtime.state.fetchSitePreviewPage = pageNumber;
+            runtime.state.fetchSitePreviewTotalPages = totalPages;
+            runtime.state.fetchSitePreviewPageSize = pageSize;
+
+            if (runtime.fetchSitePreviewPanel) {
+                runtime.fetchSitePreviewPanel.classList.remove('is-hidden');
+            }
+            if (runtime.fetchSitePreviewSummary) {
+                runtime.fetchSitePreviewSummary.textContent = runtime.taskLabel(result.task_type) + ' 预览结果';
+            }
+            if (runtime.fetchSitePreviewMetaText) {
+                runtime.fetchSitePreviewMetaText.textContent = '共 ' + String(total) + ' 条';
+            }
+            if (runtime.fetchSitePreviewPageText) {
+                runtime.fetchSitePreviewPageText.textContent = '第 ' + String(pageNumber) + '/' + String(totalPages) + ' 页';
+            }
+            if (runtime.fetchSitePreviewPrevBtn) {
+                runtime.fetchSitePreviewPrevBtn.disabled = pageNumber <= 1;
+            }
+            if (runtime.fetchSitePreviewNextBtn) {
+                runtime.fetchSitePreviewNextBtn.disabled = totalPages <= 0 || pageNumber >= totalPages;
+            }
+            if (!runtime.fetchSitePreviewTableBody) {
+                return;
+            }
+            if (!items.length) {
+                runtime.fetchSitePreviewTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">当前筛选没有命中影片</td></tr>';
+                return;
+            }
+            runtime.fetchSitePreviewTableBody.innerHTML = items.map(function (item, index) {
+                const seq = (pageNumber - 1) * pageSize + index + 1;
+                const movieName = runtime.escapeHtml(String(item && item.movie_name || '').trim() || '-');
+                const movieJavID = runtime.escapeHtml(String(item && item.movie_jav_id || '').trim() || '-');
+                const source = runtime.escapeHtml(String(item && item.source || '').trim() || '-');
+                return '' +
+                    '<tr>' +
+                    '<td class="text-nowrap">' + String(seq) + '</td>' +
+                    '<td class="text-nowrap">' + movieName + '</td>' +
+                    '<td class="text-nowrap">' + movieJavID + '</td>' +
+                    '<td class="text-nowrap">' + source + '</td>' +
+                    '</tr>';
+            }).join('');
+        };
+
+        runtime.previewFetchSite = function (pageNumber, useStoredPayload) {
+            const taskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '').trim();
+            if (!runtime.isFetchSiteTaskType(taskType)) {
+                runtime.showMessage('当前任务不支持筛选预览', false);
+                return;
+            }
+            let payload;
+            if (useStoredPayload && runtime.state.fetchSitePreviewPayload) {
+                payload = Object.assign({}, runtime.state.fetchSitePreviewPayload);
+            } else {
+                payload = runtime.currentPayload();
+                runtime.state.fetchSitePreviewPayload = Object.assign({}, payload);
+            }
+            payload.page = pageNumber > 0 ? pageNumber : 1;
+            payload.page_size = runtime.state.fetchSitePreviewPageSize || 100;
+            if (runtime.previewFetchSiteBtn) {
+                runtime.previewFetchSiteBtn.disabled = true;
+            }
+            runtime.request(API_BASE + '/fetch-site/preview', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            }).then(function (data) {
+                runtime.renderFetchSitePreview(data || {});
+                if (runtime.previewFetchSiteBtn) {
+                    runtime.previewFetchSiteBtn.disabled = false;
+                }
+            }).catch(function (error) {
+                if (runtime.previewFetchSiteBtn) {
+                    runtime.previewFetchSiteBtn.disabled = false;
+                }
+                runtime.showMessage(error.message, false);
+            });
         };
 
         runtime.syncFetchSiteOrderByButtons = function () {
@@ -1209,7 +1375,7 @@
                 runtime.updateControls();
                 return;
             }
-            if (runtime.overviewExtraMode === 'sukebei_filtered_queue') {
+            if (runtime.overviewExtraMode === 'sukebei_filtered_queue' || runtime.overviewExtraMode === 'javbus_filtered_queue') {
                 const pendingItems = runtime.normalizeQueueItems(job && job.pending_items);
                 const runningItems = runtime.normalizeQueueItems(job && job.running_items);
                 const doneItems = runtime.normalizeQueueItems(job && job.done_items);
@@ -1218,13 +1384,13 @@
                 const failedCount = Number((job || {}).failed_count || 0);
                 const selectedId = runtime.normalizeJobId(runtime.state.selectedJobId);
 
-                if (runtime.sukebeiFilteredTotalText) runtime.sukebeiFilteredTotalText.textContent = String(total);
-                if (runtime.sukebeiFilteredPendingText) runtime.sukebeiFilteredPendingText.textContent = String(pendingItems.length);
-                if (runtime.sukebeiFilteredSuccessText) runtime.sukebeiFilteredSuccessText.textContent = String(successCount);
-                if (runtime.sukebeiFilteredFailedText) runtime.sukebeiFilteredFailedText.textContent = String(failedCount);
+                if (runtime.filteredQueueTotalText) runtime.filteredQueueTotalText.textContent = String(total);
+                if (runtime.filteredQueuePendingText) runtime.filteredQueuePendingText.textContent = String(pendingItems.length);
+                if (runtime.filteredQueueSuccessText) runtime.filteredQueueSuccessText.textContent = String(successCount);
+                if (runtime.filteredQueueFailedText) runtime.filteredQueueFailedText.textContent = String(failedCount);
 
-                runtime.renderQueueItems(runtime.sukebeiFilteredPendingList, pendingItems, selectedId ? '当前任务没有待入列影片' : '等待任务启动', false);
-                runtime.renderQueueItems(runtime.sukebeiFilteredDoneList, doneItems, selectedId ? '当前还没有处理完成的影片' : '等待任务启动', true);
+                runtime.renderQueueItems(runtime.filteredQueuePendingList, pendingItems, selectedId ? '当前任务没有待入列影片' : '等待任务启动', false);
+                runtime.renderQueueItems(runtime.filteredQueueDoneList, doneItems, selectedId ? '当前还没有处理完成的影片' : '等待任务启动', true);
 
                 if (!job) {
                     if (runtime.progressBar) {
@@ -1879,6 +2045,30 @@
         if (runtime.clearFetchSiteFilterBtn) {
             runtime.clearFetchSiteFilterBtn.addEventListener('click', function () {
                 runtime.clearMovieFilters();
+            });
+        }
+        if (runtime.previewFetchSiteBtn) {
+            runtime.previewFetchSiteBtn.addEventListener('click', function () {
+                runtime.previewFetchSite(1, false);
+            });
+        }
+        if (runtime.hideFetchSitePreviewBtn) {
+            runtime.hideFetchSitePreviewBtn.addEventListener('click', function () {
+                runtime.hideFetchSitePreview();
+            });
+        }
+        if (runtime.fetchSitePreviewPrevBtn) {
+            runtime.fetchSitePreviewPrevBtn.addEventListener('click', function () {
+                if (runtime.state.fetchSitePreviewPage > 1) {
+                    runtime.previewFetchSite(runtime.state.fetchSitePreviewPage - 1, true);
+                }
+            });
+        }
+        if (runtime.fetchSitePreviewNextBtn) {
+            runtime.fetchSitePreviewNextBtn.addEventListener('click', function () {
+                if (runtime.state.fetchSitePreviewTotalPages > 0 && runtime.state.fetchSitePreviewPage < runtime.state.fetchSitePreviewTotalPages) {
+                    runtime.previewFetchSite(runtime.state.fetchSitePreviewPage + 1, true);
+                }
             });
         }
         if (runtime.toggleFetchSiteFilterBtn) {

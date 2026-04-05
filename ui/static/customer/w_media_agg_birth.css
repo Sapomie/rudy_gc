@@ -1,0 +1,106 @@
+.w-media-agg-page .toolbar-gap > * {
+    margin-right: .5rem;
+    margin-bottom: .5rem;
+}
+
+.w-media-agg-page .col-lg-1-5 {
+    flex: 0 0 12.5%;
+    max-width: 12.5%;
+}
+
+.w-media-agg-page .section-card {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.w-media-agg-page .section-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #212529;
+    margin: 0 0 .75rem;
+    border-left: 4px solid #0dcaf0;
+    padding-left: .5rem;
+}
+
+.w-media-agg-page .page-subtitle {
+    font-size: .95rem;
+    color: #6c757d;
+}
+
+.w-media-agg-page .bucket-section + .bucket-section {
+    margin-top: 1rem;
+}
+
+.w-media-agg-page .bucket-section-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: .75rem;
+}
+
+.w-media-agg-page .bucket-card .count {
+    font-weight: 600;
+}
+
+.w-media-agg-page .bucket-card .sizegb {
+    color: #6c757d;
+}
+
+.w-media-agg-page .top-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: .75rem;
+}
+
+.w-media-agg-page .top-stat-card .card {
+    background-color: #f8f9fa;
+}
+
+.w-media-agg-page .top-stat-rank {
+    display: inline-block;
+    margin-bottom: .35rem;
+    padding: .1rem .45rem;
+    font-size: .7rem;
+    border-radius: 999px;
+    color: #fff;
+    background: #6c757d;
+}
+
+.w-media-agg-page .top-stat-name {
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.w-media-agg-page .top-stat-meta {
+    margin-top: .2rem;
+    color: #6c757d;
+    font-size: .78rem;
+}
+
+@media (max-width: 1199.98px) {
+    .w-media-agg-page .col-lg-1-5 {
+        flex: 0 0 20%;
+        max-width: 20%;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .w-media-agg-page .col-lg-1-5 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .w-media-agg-page .section-card {
+        padding: 1rem;
+    }
+
+    .w-media-agg-page .col-lg-1-5 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}

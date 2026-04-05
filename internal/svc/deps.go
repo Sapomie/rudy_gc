@@ -31,43 +31,52 @@ type Deps struct {
 	Log     *logrus.Logger
 
 	// moviex models（新 service 直连用）
-	MovieModel               moviex.AMovieModel
-	MinfoModel               moviex.BmMinfoModel
-	MurlModel                moviex.BmMurlModel
-	ItemModel                moviex.EItemModel
-	DeletedMovieModel        moviex.EDeletedMovieModel
-	CastModel                moviex.AmCastModel
-	GenreModel               moviex.AmGenreModel
-	DirectorModel            moviex.AmDirectorModel
-	LabelModel               moviex.AmLabelModel
-	MakerModel               moviex.AmMakerModel
-	PrefixModel              moviex.AmPrefixModel
-	MovieCastModel           moviex.AmrMovieCastModel
-	MovieGenreModel          moviex.AmrMovieGenreModel
-	FilmModel                moviex.VFilmModel
-	DirectoryModel           moviex.VDirectoryModel
-	WFolderModel             moviex.WFolderModel
-	WMediaModel              moviex.WMediaModel
-	GListModel               moviex.GListModel
-	ScModel                  moviex.GScModel
-	RankModel                moviex.CRankModel
-	RankPeriodModel          moviex.CRankPeriodModel
-	RankPeriodItemModel      moviex.CRankPeriodItemModel
-	PersonModel              moviex.CPersonModel
-	CafoModel                moviex.CCafoModel
-	RecordModel              moviex.ERecordModel
-	AlbumModel               moviex.TAlbumModel
-	AlbumItemModel           moviex.TmAlbumItemModel
-	JavbusMagnetModel        moviex.TJavbusMagnetModel
-	SehuatangMagnetModel     moviex.TSehuatangMagnetModel
-	JavbusMagnetFetchModel   moviex.TJavbusMagnetFetchModel
-	SukebeiTorrentModel      moviex.TSukebeiTorrentModel
-	SukebeiTorrentFetchModel moviex.TSukebeiTorrentFetchModel
-	SeedModel                spiderx.DSeedModel
-	InventoryModel           spiderx.DInventoryModel
-	DetailModel              spiderx.DDetailModel
-	BestinvModel             spiderx.DBestinvModel
-	FetchSiteModel           moviex.TFetchSiteModel
+	MovieModel                  moviex.AMovieModel
+	MinfoModel                  moviex.BmMinfoModel
+	MurlModel                   moviex.BmMurlModel
+	ItemModel                   moviex.EItemModel
+	DeletedMovieModel           moviex.EDeletedMovieModel
+	CastModel                   moviex.AmCastModel
+	GenreModel                  moviex.AmGenreModel
+	DirectorModel               moviex.AmDirectorModel
+	LabelModel                  moviex.AmLabelModel
+	MakerModel                  moviex.AmMakerModel
+	PrefixModel                 moviex.AmPrefixModel
+	MovieCastModel              moviex.AmrMovieCastModel
+	MovieGenreModel             moviex.AmrMovieGenreModel
+	FilmModel                   moviex.VFilmModel
+	DirectoryModel              moviex.VDirectoryModel
+	WFolderModel                moviex.WFolderModel
+	WKvModel                    moviex.WKvModel
+	WMediaModel                 moviex.WMediaModel
+	WMediaBirthBucketStatModel  moviex.WMediaBirthBucketStatModel
+	WMediaBirthTopStatModel     moviex.WMediaBirthTopStatModel
+	WMediaAggDirtyModel         moviex.WMediaAggDirtyModel
+	MovieReleaseBucketStatModel moviex.MovieReleaseBucketStatModel
+	MovieReleaseTopStatModel    moviex.MovieReleaseTopStatModel
+	MovieReleaseAggDirtyModel   moviex.MovieReleaseAggDirtyModel
+	WAggEventModel              moviex.WAggEventModel
+	GListModel                  moviex.GListModel
+	ScModel                     moviex.GScModel
+	RankModel                   moviex.CRankModel
+	RankPeriodModel             moviex.CRankPeriodModel
+	RankPeriodItemModel         moviex.CRankPeriodItemModel
+	PersonModel                 moviex.CPersonModel
+	GScStatModel                moviex.GScStatModel
+	CafoModel                   moviex.CCafoModel
+	RecordModel                 moviex.ERecordModel
+	AlbumModel                  moviex.TAlbumModel
+	AlbumItemModel              moviex.TmAlbumItemModel
+	JavbusMagnetModel           moviex.TJavbusMagnetModel
+	SehuatangMagnetModel        moviex.TSehuatangMagnetModel
+	JavbusMagnetFetchModel      moviex.TJavbusMagnetFetchModel
+	SukebeiTorrentModel         moviex.TSukebeiTorrentModel
+	SukebeiTorrentFetchModel    moviex.TSukebeiTorrentFetchModel
+	SeedModel                   spiderx.DSeedModel
+	InventoryModel              spiderx.DInventoryModel
+	DetailModel                 spiderx.DDetailModel
+	BestinvModel                spiderx.DBestinvModel
+	FetchSiteModel              moviex.TFetchSiteModel
 
 	MovieTypeCache MovieTypeCache
 
@@ -90,6 +99,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		deletedMovieModel        = moviex.NewEDeletedMovieModel(conn, c)
 		rankModel                = moviex.NewCRankModel(conn, c)
 		personModel              = moviex.NewCPersonModel(conn, c)
+		gScStatModel             = moviex.NewGScStatModel(conn, c)
 		cafoModel                = moviex.NewCCafoModel(conn, c)
 		filmModel                = moviex.NewVFilmModel(conn, c)
 		glistModel               = moviex.NewGListModel(conn, c)
@@ -122,9 +132,17 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieGenreModel = moviex.NewAmrMovieGenreModel(conn, c)
 
 		// ★ 目录 model
-		vdirModel    = moviex.NewVDirectoryModel(conn, c)
-		wFolderModel = moviex.NewWFolderModel(conn, c)
-		wMediaModel  = moviex.NewWMediaModel(conn, c)
+		vdirModel                   = moviex.NewVDirectoryModel(conn, c)
+		wFolderModel                = moviex.NewWFolderModel(conn, c)
+		wKvModel                    = moviex.NewWKvModel(conn, c)
+		wMediaModel                 = moviex.NewWMediaModel(conn, c)
+		wMediaBirthBucketStatModel  = moviex.NewWMediaBirthBucketStatModel(conn, c)
+		wMediaBirthTopStatModel     = moviex.NewWMediaBirthTopStatModel(conn, c)
+		wMediaAggDirtyModel         = moviex.NewWMediaAggDirtyModel(conn, c)
+		movieReleaseBucketStatModel = moviex.NewMovieReleaseBucketStatModel(conn, c)
+		movieReleaseTopStatModel    = moviex.NewMovieReleaseTopStatModel(conn, c)
+		movieReleaseAggDirtyModel   = moviex.NewMovieReleaseAggDirtyModel(conn, c)
+		wAggEventModel              = moviex.NewWAggEventModel(conn, c)
 	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
@@ -161,44 +179,53 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		SqlConn: conn,
 		Cache:   c,
 
-		MovieModel:               movieModel,
-		MinfoModel:               minfoModel,
-		MurlModel:                murlModel,
-		ItemModel:                itemModel,
-		DeletedMovieModel:        deletedMovieModel,
-		CastModel:                castModel,
-		GenreModel:               genreModel,
-		DirectorModel:            directorModel,
-		LabelModel:               labelModel,
-		MakerModel:               makerModel,
-		PrefixModel:              prefixModel,
-		MovieCastModel:           movieCastModel,
-		MovieGenreModel:          movieGenreModel,
-		FilmModel:                filmModel,
-		DirectoryModel:           vdirModel,
-		WFolderModel:             wFolderModel,
-		WMediaModel:              wMediaModel,
-		GListModel:               glistModel,
-		ScModel:                  scModel,
-		RankModel:                rankModel,
-		RankPeriodModel:          rankPeriodModel,
-		RankPeriodItemModel:      rankPeriodItemModel,
-		PersonModel:              personModel,
-		CafoModel:                cafoModel,
-		RecordModel:              recordModel,
-		AlbumModel:               albumModel,
-		AlbumItemModel:           albumItemModel,
-		JavbusMagnetModel:        javbusMagnetModel,
-		SehuatangMagnetModel:     sehuatangMagnetModel,
-		JavbusMagnetFetchModel:   javbusMagnetFetchModel,
-		SukebeiTorrentModel:      sukebeiTorrentModel,
-		SukebeiTorrentFetchModel: sukebeiTorrentFetchModel,
-		SeedModel:                seedModel,
-		InventoryModel:           invModel,
-		DetailModel:              detailModel,
-		BestinvModel:             bestModel,
-		FetchSiteModel:           fetchSiteModel,
-		MovieTypeCache:           movieTypeCache,
+		MovieModel:                  movieModel,
+		MinfoModel:                  minfoModel,
+		MurlModel:                   murlModel,
+		ItemModel:                   itemModel,
+		DeletedMovieModel:           deletedMovieModel,
+		CastModel:                   castModel,
+		GenreModel:                  genreModel,
+		DirectorModel:               directorModel,
+		LabelModel:                  labelModel,
+		MakerModel:                  makerModel,
+		PrefixModel:                 prefixModel,
+		MovieCastModel:              movieCastModel,
+		MovieGenreModel:             movieGenreModel,
+		FilmModel:                   filmModel,
+		DirectoryModel:              vdirModel,
+		WFolderModel:                wFolderModel,
+		WKvModel:                    wKvModel,
+		WMediaModel:                 wMediaModel,
+		WMediaBirthBucketStatModel:  wMediaBirthBucketStatModel,
+		WMediaBirthTopStatModel:     wMediaBirthTopStatModel,
+		WMediaAggDirtyModel:         wMediaAggDirtyModel,
+		MovieReleaseBucketStatModel: movieReleaseBucketStatModel,
+		MovieReleaseTopStatModel:    movieReleaseTopStatModel,
+		MovieReleaseAggDirtyModel:   movieReleaseAggDirtyModel,
+		WAggEventModel:              wAggEventModel,
+		GListModel:                  glistModel,
+		ScModel:                     scModel,
+		RankModel:                   rankModel,
+		RankPeriodModel:             rankPeriodModel,
+		RankPeriodItemModel:         rankPeriodItemModel,
+		PersonModel:                 personModel,
+		GScStatModel:                gScStatModel,
+		CafoModel:                   cafoModel,
+		RecordModel:                 recordModel,
+		AlbumModel:                  albumModel,
+		AlbumItemModel:              albumItemModel,
+		JavbusMagnetModel:           javbusMagnetModel,
+		SehuatangMagnetModel:        sehuatangMagnetModel,
+		JavbusMagnetFetchModel:      javbusMagnetFetchModel,
+		SukebeiTorrentModel:         sukebeiTorrentModel,
+		SukebeiTorrentFetchModel:    sukebeiTorrentFetchModel,
+		SeedModel:                   seedModel,
+		InventoryModel:              invModel,
+		DetailModel:                 detailModel,
+		BestinvModel:                bestModel,
+		FetchSiteModel:              fetchSiteModel,
+		MovieTypeCache:              movieTypeCache,
 
 		DetailJobs:  make(chan string, 200),
 		BestTrigger: make(chan contracts.TriggerMsg, 8),

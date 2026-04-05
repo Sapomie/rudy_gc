@@ -17,9 +17,10 @@ type movieCardFilterView struct {
 	Order    string
 	PageSize string
 
-	RandomCount string
-	Explicit    map[string]bool
-	HideDirs    bool
+	RandomCount    string
+	Explicit       map[string]bool
+	HideDirs       bool
+	TextDateInputs bool
 
 	CastNames    string
 	PersonIds    string
@@ -30,10 +31,12 @@ type movieCardFilterView struct {
 	LabelName    string
 	Word         string
 
-	ReleasingDateStart string
-	ReleasingDateEnd   string
-	FilmBirthTimeStart string
-	FilmBirthTimeEnd   string
+	ReleasingDateStart  string
+	ReleasingDateEnd    string
+	FilmBirthTimeStart  string
+	FilmBirthTimeEnd    string
+	MediaBirthTimeStart string
+	MediaBirthTimeEnd   string
 
 	CastAgeMin string
 	CastAgeMax string
@@ -68,13 +71,14 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 	path := c.Request.URL.Path
 
 	view := &movieCardFilterView{
-		Action:    path,
-		ClearHref: buildMovieCardFilterClearHref(path, randomN),
-		OrderBy:   currentOD,
-		Order:     queryOrFallbackString(c, "order", req.Order),
-		PageSize:  strconv.FormatInt(req.PageSize, 10),
-		Explicit:  buildMovieCardFilterExplicit(c, randomN != nil),
-		HideDirs:  false,
+		Action:         path,
+		ClearHref:      buildMovieCardFilterClearHref(path, randomN),
+		OrderBy:        currentOD,
+		Order:          queryOrFallbackString(c, "order", req.Order),
+		PageSize:       strconv.FormatInt(req.PageSize, 10),
+		Explicit:       buildMovieCardFilterExplicit(c, randomN != nil),
+		HideDirs:       false,
+		TextDateInputs: true,
 
 		CastNames:    queryOrFallbackString(c, "cn", req.CastNames),
 		PersonIds:    queryOrFallbackString(c, "pid", req.PersonIds),
@@ -85,10 +89,12 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 		LabelName:    queryOrFallbackString(c, "ln", req.LabelName),
 		Word:         queryOrFallbackString(c, "wd", req.Word),
 
-		ReleasingDateStart: queryOrFallbackString(c, "rs", req.ReleasingDateStart),
-		ReleasingDateEnd:   queryOrFallbackString(c, "re", req.ReleasingDateEnd),
-		FilmBirthTimeStart: queryOrFallbackString(c, "bs", req.FilmBirthTimeStart),
-		FilmBirthTimeEnd:   queryOrFallbackString(c, "be", req.FilmBirthTimeEnd),
+		ReleasingDateStart:  queryOrFallbackString(c, "rs", req.ReleasingDateStart),
+		ReleasingDateEnd:    queryOrFallbackString(c, "re", req.ReleasingDateEnd),
+		FilmBirthTimeStart:  queryOrFallbackString(c, "bs", req.FilmBirthTimeStart),
+		FilmBirthTimeEnd:    queryOrFallbackString(c, "be", req.FilmBirthTimeEnd),
+		MediaBirthTimeStart: queryOrFallbackString(c, "mbs", req.MediaBirthTimeStart),
+		MediaBirthTimeEnd:   queryOrFallbackString(c, "mbe", req.MediaBirthTimeEnd),
 
 		CastAgeMin: queryOrFallbackFloat(c, "cay", req.CastAgeMin),
 		CastAgeMax: queryOrFallbackFloat(c, "cao", req.CastAgeMax),
@@ -132,7 +138,7 @@ func buildMovieCardFilterExplicit(c *gin.Context, hasRandom bool) map[string]boo
 		"owned", "nd", "drkmin",
 		"mowned",
 		"d1", "d2", "d3", "d4",
-		"rs", "re", "bs", "be", "srds", "srde", "lsctmin", "lsctmax",
+		"rs", "re", "bs", "be", "mbs", "mbe", "srds", "srde", "lsctmin", "lsctmax",
 		"cay", "cao", "vwmin", "vwmax", "smin", "smax", "scmin", "scmax", "comin", "comax",
 	}
 	if hasRandom {

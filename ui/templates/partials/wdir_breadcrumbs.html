@@ -1,0 +1,15 @@
+{{ define "wdir_breadcrumbs" }}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a href="/wdir">根目录</a></li>
+        {{ $n := len .Breadcrumbs }}
+        {{ range $i, $b := .Breadcrumbs }}
+        {{ if lt $i (sub $n 1) }}
+        <li class="breadcrumb-item"><a href="/wdir/{{ $b.Id }}">{{ $b.Name }}</a></li>
+        {{ else }}
+        <li class="breadcrumb-item active" aria-current="page">{{ $b.Name }}</li>
+        {{ end }}
+        {{ end }}
+    </ol>
+</nav>
+{{ end }}

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/types"
 	"rudy_gc/pkg/ptr"
 	"strings"
@@ -51,11 +52,19 @@ var (
 
 // TranslateTitle：核心逻辑不变，但更稳、更幂等
 func (l *CrawlLogic) TranslateTitle(ctx context.Context) error {
+	return l.TranslateTitleWithStatuses(ctx, []int64{consts.ItemChineseNone})
+}
+
+func (l *CrawlLogic) TranslateTitleWithStatuses(ctx context.Context, statuses []int64) error {
 	var successCount int64
 	var failedCount int64
 	log := l.deps.Log.WithContext(ctx)
 
-	items, err := l.deps.ItemRepo.FindByTranslateStatus(ctx, consts.ItemChineseNone)
+	if len(statuses) == 0 {
+		statuses = []int64{consts.ItemChineseNone}
+	}
+
+	items, err := l.deps.ItemRepo.FindByTranslateStatuses(ctx, statuses)
 	if err != nil {
 		return err
 	}
@@ -220,7 +229,7 @@ func (l *CrawlLogic) GetChineseNameFromBaidu(ctx context.Context, src string) (s
 		url.QueryEscape(src), appID, salt, sign,
 	)
 
-	r, err := l.deps.Fetcher.GetWithProxy(ctx, queryURL)
+	r, err := l.fetchSiteSvc.Get(ctx, fetchsite.FetchSiteCodeBaiduFanyi, queryURL, fetchsite.RequestOptions{})
 	if err != nil {
 		return "", err
 	}

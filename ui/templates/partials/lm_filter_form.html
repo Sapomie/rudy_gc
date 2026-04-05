@@ -1,10 +1,11 @@
 {{ define "movie_card_filter_fields" }}
     {{ $explicit := .Explicit }}
+    {{ $dateInputType := "text" }}
+    {{ if .TextDateInputs }}{{ $dateInputType = "text" }}{{ end }}
     {{ if .PageSize }}<input type="hidden" name="ps" value="{{ .PageSize }}" data-explicit="{{ if index $explicit "ps" }}1{{ else }}0{{ end }}">{{ end }}
     {{ if .OrderBy }}<input type="hidden" name="od" value="{{ .OrderBy }}" data-explicit="{{ if index $explicit "od" }}1{{ else }}0{{ end }}">{{ end }}
     {{ if .RandomCount }}<input type="hidden" name="n" value="{{ .RandomCount }}" data-explicit="{{ if index $explicit "n" }}1{{ else }}0{{ end }}">{{ end }}
     {{ if .PersonIds }}<input type="hidden" name="pid" value="{{ .PersonIds }}" data-explicit="{{ if index $explicit "pid" }}1{{ else }}0{{ end }}">{{ end }}
-    {{ if .MediaOwned }}<input type="hidden" name="mowned" value="{{ .MediaOwned }}" data-explicit="{{ if index $explicit "mowned" }}1{{ else }}0{{ end }}">{{ end }}
 
     <div class="col-12 col-md-6 col-xl-2">
         <label class="form-label mb-1">演员</label>
@@ -36,15 +37,29 @@
         <input class="form-control" type="text" name="wd" value="{{ .Word }}" placeholder="中文关键词" data-explicit="{{ if index $explicit "wd" }}1{{ else }}0{{ end }}">
     </div>
     <div class="col-12 col-md-6 col-xl-2">
-        <label class="form-label mb-1">库存状态</label>
+        <label class="form-label mb-1">v_film 库存</label>
         <select class="form-select" name="owned" data-explicit="{{ if index $explicit "owned" }}1{{ else }}0{{ end }}">
             <option value="" {{ if eq .Owned "" }}selected{{ end }}>全部</option>
             <option value="1" {{ if eq .Owned "1" }}selected{{ end }}>全部电影</option>
-            <option value="2" {{ if eq .Owned "2" }}selected{{ end }}>全部库存</option>
+            <option value="2" {{ if eq .Owned "2" }}selected{{ end }}>有 v_film 记录（含移除）</option>
             <option value="3" {{ if eq .Owned "3" }}selected{{ end }}>已拥有未移除</option>
             <option value="4" {{ if eq .Owned "4" }}selected{{ end }}>有字幕未移除</option>
             <option value="5" {{ if eq .Owned "5" }}selected{{ end }}>无字幕未移除</option>
             <option value="6" {{ if eq .Owned "6" }}selected{{ end }}>已移除</option>
+            <option value="7" {{ if eq .Owned "7" }}selected{{ end }}>无 v_film 记录</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+        <label class="form-label mb-1">w_media 库存</label>
+        <select class="form-select" name="mowned" data-explicit="{{ if index $explicit "mowned" }}1{{ else }}0{{ end }}">
+            <option value="" {{ if eq .MediaOwned "" }}selected{{ end }}>全部</option>
+            <option value="1" {{ if eq .MediaOwned "1" }}selected{{ end }}>全部电影</option>
+            <option value="2" {{ if eq .MediaOwned "2" }}selected{{ end }}>有 w_media 记录（含移除）</option>
+            <option value="3" {{ if eq .MediaOwned "3" }}selected{{ end }}>已拥有未移除</option>
+            <option value="4" {{ if eq .MediaOwned "4" }}selected{{ end }}>有字幕未移除</option>
+            <option value="5" {{ if eq .MediaOwned "5" }}selected{{ end }}>无字幕未移除</option>
+            <option value="6" {{ if eq .MediaOwned "6" }}selected{{ end }}>已移除</option>
+            <option value="7" {{ if eq .MediaOwned "7" }}selected{{ end }}>无 w_media 记录</option>
         </select>
     </div>
     <div class="col-12 col-md-6 col-xl-2">
@@ -82,10 +97,10 @@
         <label class="form-label mb-1">上映日期</label>
         <div class="row g-2">
             <div class="col-6">
-                <input class="form-control" type="date" name="rs" value="{{ .ReleasingDateStart }}" data-explicit="{{ if index $explicit "rs" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="rs" value="{{ .ReleasingDateStart }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "rs" }}1{{ else }}0{{ end }}">
             </div>
             <div class="col-6">
-                <input class="form-control" type="date" name="re" value="{{ .ReleasingDateEnd }}" data-explicit="{{ if index $explicit "re" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="re" value="{{ .ReleasingDateEnd }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "re" }}1{{ else }}0{{ end }}">
             </div>
         </div>
     </div>
@@ -93,10 +108,21 @@
         <label class="form-label mb-1">影片时间</label>
         <div class="row g-2">
             <div class="col-6">
-                <input class="form-control" type="date" name="bs" value="{{ .FilmBirthTimeStart }}" data-explicit="{{ if index $explicit "bs" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="bs" value="{{ .FilmBirthTimeStart }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "bs" }}1{{ else }}0{{ end }}">
             </div>
             <div class="col-6">
-                <input class="form-control" type="date" name="be" value="{{ .FilmBirthTimeEnd }}" data-explicit="{{ if index $explicit "be" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="be" value="{{ .FilmBirthTimeEnd }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "be" }}1{{ else }}0{{ end }}">
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <label class="form-label mb-1">Media 下载时间</label>
+        <div class="row g-2">
+            <div class="col-6">
+                <input class="form-control" type="{{ $dateInputType }}" name="mbs" value="{{ .MediaBirthTimeStart }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "mbs" }}1{{ else }}0{{ end }}">
+            </div>
+            <div class="col-6">
+                <input class="form-control" type="{{ $dateInputType }}" name="mbe" value="{{ .MediaBirthTimeEnd }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "mbe" }}1{{ else }}0{{ end }}">
             </div>
         </div>
     </div>
@@ -104,10 +130,10 @@
         <label class="form-label mb-1">上榜日期</label>
         <div class="row g-2">
             <div class="col-6">
-                <input class="form-control" type="date" name="srds" value="{{ .StartRankingDateStart }}" data-explicit="{{ if index $explicit "srds" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="srds" value="{{ .StartRankingDateStart }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "srds" }}1{{ else }}0{{ end }}">
             </div>
             <div class="col-6">
-                <input class="form-control" type="date" name="srde" value="{{ .StartRankingDateEnd }}" data-explicit="{{ if index $explicit "srde" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="srde" value="{{ .StartRankingDateEnd }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "srde" }}1{{ else }}0{{ end }}">
             </div>
         </div>
     </div>
@@ -115,10 +141,10 @@
         <label class="form-label mb-1">最后 SC 时间</label>
         <div class="row g-2">
             <div class="col-6">
-                <input class="form-control" type="date" name="lsctmin" value="{{ .LastScTimeMin }}" data-explicit="{{ if index $explicit "lsctmin" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="lsctmin" value="{{ .LastScTimeMin }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "lsctmin" }}1{{ else }}0{{ end }}">
             </div>
             <div class="col-6">
-                <input class="form-control" type="date" name="lsctmax" value="{{ .LastScTimeMax }}" data-explicit="{{ if index $explicit "lsctmax" }}1{{ else }}0{{ end }}">
+                <input class="form-control" type="{{ $dateInputType }}" name="lsctmax" value="{{ .LastScTimeMax }}" {{ if .TextDateInputs }}inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"{{ end }} data-explicit="{{ if index $explicit "lsctmax" }}1{{ else }}0{{ end }}">
             </div>
         </div>
     </div>

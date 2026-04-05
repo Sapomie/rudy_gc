@@ -32,6 +32,7 @@ type MovieType struct {
 	EncodeName           string      `json:"encode_name"`
 	ScTimes              int64       `json:"sc_times"`
 	ComeTimes            int64       `json:"come_times"`
+	LastScTime           int64       `json:"last_sc_time"`
 	VideoUrlWMedia       string      `json:"video_url_w_media"`
 	FilmBirthDateWMedia  string      `json:"film_birth_date_w_media"`
 	HighestRank          int64       `json:"highest_rank"`

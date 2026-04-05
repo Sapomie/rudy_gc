@@ -58,7 +58,7 @@
                         {{ else if eq .Movie.OwnedWMedia 4 }}
                             <a href="{{ .Movie.VideoUrlWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
                         {{ else if eq .Movie.OwnedWMedia 6 }}
-                            <a href="{{ .Movie.VideoUrlWMedia }}" class="btn btn-sm btn-outline-secondary me-2">MRemoved</a>
+                            <span class="btn btn-sm btn-outline-secondary me-2 disabled" aria-disabled="true">MRemoved</span>
                         {{ end }}
                         {{ if .Movie.FilmBirthDate }}<span class="text-muted small">| {{ .Movie.FilmBirthDate }}</span>{{ end }}
                         {{ if .Movie.FilmBirthDateWMedia }}<span class="text-muted small ms-2">| M {{ .Movie.FilmBirthDateWMedia }}</span>{{ end }}

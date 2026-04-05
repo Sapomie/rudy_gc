@@ -208,19 +208,19 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 		}
 
 		movieName := extractMovieName(info.Name())
-		vf, err := l.filmFindOneByMovieName(ctx, movieName)
+		wm, err := l.wMediaFindOneByMovieName(ctx, movieName)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to find film by name %s: %w", movieName, err)
+			return nil, "", fmt.Errorf("failed to find media by name %s: %w", movieName, err)
 		}
 
-		mt, err := l.movieSvc.GetMovieType(ctx, vf.MovieJavId)
+		mt, err := l.movieSvc.GetMovieType(ctx, wm.MovieJavId)
 		if err != nil || mt == nil {
-			return nil, "", fmt.Errorf("failed to get movie type: %w,%s", err, vf.MovieJavId)
+			return nil, "", fmt.Errorf("failed to get movie type: %w,%s", err, wm.MovieJavId)
 		}
 
 		previewMovie := &AddScPreviewMovie{
-			MovieName:  vf.MovieName,
-			MovieJavId: vf.MovieJavId,
+			MovieName:  wm.MovieName,
+			MovieJavId: wm.MovieJavId,
 			Casts:      collectCastNames(mt),
 		}
 		preview.Movies = append(preview.Movies, previewMovie)

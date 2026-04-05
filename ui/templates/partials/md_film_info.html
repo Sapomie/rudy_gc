@@ -35,11 +35,20 @@
                 </tr>
             {{ end }}
 
-            {{ if .media }}
+            {{ if and .media (ne .movieType.OwnedWMedia 6) }}
                 <tr>
                     <td>WMedia</td>
                     <td>{{.media.BirthTime}}</td>
-                    <td><a href="{{.media.FilePath}}">{{ printf "%.2f" .media.Size }}</a></td>
+                    <td>
+                        <div class="d-flex flex-column gap-1">
+                            <a href="{{.media.FilePath}}">{{ printf "%.2f" .media.Size }}</a>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger js-move-wmedia-removed"
+                                    data-jav="{{ .movieType.JavId }}">
+                                移到 Removed
+                            </button>
+                        </div>
+                    </td>
                     <td>{{.media.Height}}</td>
                     <td>{{ printf "%.0f" .media.BitRate }}</td>
                     <td>{{ printf "%.2f" .media.Duration }}</td>

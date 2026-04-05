@@ -177,6 +177,20 @@ func parseMovieName(title string) string {
 	return strings.ToUpper(strings.TrimSpace(match[1]))
 }
 
+func parseThreadTag(title string) string {
+	text := strings.ToUpper(strings.TrimSpace(title))
+	if text == "" {
+		return ""
+	}
+	if strings.Contains(text, "FC2PPV") {
+		return "FC2PPV"
+	}
+	if strings.Contains(text, "[自译征用]") || strings.Contains(text, "[自提征用]") {
+		return "自提征用"
+	}
+	return ""
+}
+
 func parsePostTime(detailHTML []byte, fallback string, now time.Time) int64 {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(detailHTML))
 	if err != nil {

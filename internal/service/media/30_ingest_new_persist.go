@@ -255,6 +255,7 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 			return err
 		}
+		s.markMediaAggDirty(ctx, existing, row)
 		s.invalidateMovieTypeCaches(ctx, existing.MovieJavId, row.MovieJavId)
 		return nil
 	}
@@ -276,9 +277,11 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 			return err
 		}
+		s.markMediaAggDirty(ctx, dup, row)
 		s.invalidateMovieTypeCaches(ctx, dup.MovieJavId, row.MovieJavId)
 		return nil
 	}
+	s.markMediaAggDirty(ctx, row)
 	s.invalidateMovieTypeCaches(ctx, row.MovieJavId)
 	return nil
 }

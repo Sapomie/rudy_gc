@@ -5,6 +5,7 @@ type SehuatangMagnet struct {
 
 	MovieJavID string `gorm:"column:movie_jav_id;type:varchar(191);not null;index"`
 	MovieName  string `gorm:"column:movie_name;type:varchar(191);not null;index"`
+	Tag        string `gorm:"column:tag;type:varchar(100);not null;index"`
 
 	ThreadTitle string `gorm:"column:thread_title;type:varchar(500);not null"`
 	ThreadURL   string `gorm:"column:thread_url;type:varchar(255);not null;index"`

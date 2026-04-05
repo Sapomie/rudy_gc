@@ -9,6 +9,7 @@ import (
 
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/service/media"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/spider"
 	"rudy_gc/internal/svc"
@@ -18,6 +19,7 @@ import (
 
 type MovieAPI struct {
 	movieSvc   *movie.Service
+	mediaSvc   *media.Service
 	crawlLogic *spider.CrawlLogic
 	deps       *svc.Deps
 }
@@ -25,6 +27,7 @@ type MovieAPI struct {
 func NewMovieAPI(deps *svc.Deps) *MovieAPI {
 	return &MovieAPI{
 		movieSvc:   movie.NewService(deps),
+		mediaSvc:   media.NewService(deps),
 		crawlLogic: spider.NewCrawlLogic(deps),
 		deps:       deps,
 	}
@@ -78,6 +81,30 @@ func (h *MovieAPI) DownloadCoverNow(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// POST /api/movie/:movie/move-wmedia-removed
+func (h *MovieAPI) MoveWMediaToRemoved(c *gin.Context) {
+	javId := strings.TrimSpace(c.Param("movie"))
+	if javId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 movie 参数"})
+		return
+	}
+
+	result, err := h.mediaSvc.MoveWMediaToRemoved(c.Request.Context(), javId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+	if result == nil || !result.Ok {
+		msg := "移动失败"
+		if result != nil && strings.TrimSpace(result.Error) != "" {
+			msg = result.Error
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": msg, "result": result})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "result": result})
+}
+
 type addMovieCastReq struct {
 	Name string `json:"name"`
 }
@@ -100,6 +127,10 @@ type batchRemoveAlbumItemReq struct {
 type batchMoveAlbumItemReq struct {
 	ItemIDs       []int64 `json:"item_ids"`
 	TargetAlbumID int64   `json:"target_album_id"`
+}
+
+type createAlbumReq struct {
+	Name string `json:"name"`
 }
 
 // POST /api/movie/:movie/add-cast
@@ -362,6 +393,33 @@ func (h *MovieAPI) BatchMoveAlbumItems(c *gin.Context) {
 		"failed_ids":   failedIDs,
 		"target_album": req.TargetAlbumID,
 		"message":      "批量移动完成",
+	})
+}
+
+// POST /api/albums
+func (h *MovieAPI) CreateAlbum(c *gin.Context) {
+	var req createAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	album, err := h.movieSvc.CreateAlbum(c.Request.Context(), req.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrAlbumNameEmpty), errors.Is(err, movie.ErrAlbumNameTooLong), errors.Is(err, movie.ErrAlbumNameExists):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"album_id":   album.ID,
+		"album_name": album.Name,
+		"message":    "相册创建成功",
 	})
 }
 

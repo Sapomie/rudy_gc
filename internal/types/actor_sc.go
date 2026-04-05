@@ -24,5 +24,4 @@ type ActorScPage struct {
 	TotalMovies   int
 	ActorPageHref string
 	CardsHref     string
-	ScAggHref     string
 }

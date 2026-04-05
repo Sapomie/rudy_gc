@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"rudy_gc/internal/taskctx"
@@ -14,6 +15,7 @@ const (
 	failedDirName        = "003_failed"
 	rollbackDirName      = "004_rollback"
 	mediaDirName         = "media"
+	watchedDirName       = "watched"
 	maxFilesPerLeafDir   = 18
 	maxLeafDirsPerYear   = 20
 	defaultFilePerm      = 0o755
@@ -115,9 +117,19 @@ func (s *Service) IngestPrecheck(ctx context.Context) (*IngestNewResult, error) 
 	return result, nil
 }
 
-func (s *Service) IngestCommit(ctx context.Context) (*IngestNewResult, error) {
+func (s *Service) IngestCommit(ctx context.Context) (result *IngestNewResult, err error) {
+	defer func() {
+		if rebuildErr := s.rebuildMediaAggsAfterFlow(ctx, "media_ingest"); rebuildErr != nil {
+			if err == nil {
+				err = rebuildErr
+			} else {
+				err = errors.Join(err, rebuildErr)
+			}
+		}
+	}()
+
 	roots := s.mediaRoots()
-	result := &IngestNewResult{
+	result = &IngestNewResult{
 		Roots: len(roots),
 		Items: make([]*IngestFileItem, 0, 64),
 	}

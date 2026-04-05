@@ -2,9 +2,11 @@ package sc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/taskctx"
 )
 
@@ -51,26 +53,54 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 	}
 
 	for _, movieJavID := range movieJavIDs {
-		info := movieAgg[movieJavID]
-
-		vFilm, err := l.filmFindOneByMovieJavID(ctx, movieJavID)
-		if err != nil {
-			return fmt.Errorf("FilmRepo.FindOneByMovieJavId %s: %w", movieJavID, err)
-		}
-
-		if vFilm.ScTimes == info.ScTimes &&
-			vFilm.ComeTimes == info.ComeTimes &&
-			vFilm.LastScTime == info.LastScTime {
+		info, ok := movieAgg[movieJavID]
+		if !ok || info.ScTimes <= 0 {
 			continue
 		}
 
-		vFilm.ScTimes = info.ScTimes
-		vFilm.ComeTimes = info.ComeTimes
-		vFilm.LastScTime = info.LastScTime
-		if _, _, err := l.filmUpsert(ctx, vFilm); err != nil {
-			return fmt.Errorf("FilmRepo.UpsertFilm %s: %w", movieJavID, err)
+		movieRow, err := l.movieFindOneByJavID(ctx, movieJavID)
+		if err != nil {
+			return fmt.Errorf("MovieRepo.FindOneByJavId %s: %w", movieJavID, err)
 		}
-		l.movieSvc.InvalidateMovieType(ctx, movieJavID)
+		releasingDate := movieRow.ReleasingDate
+		mediaBirthTime := int64(0)
+		mediaRow, err := l.wMediaFindOneByMovieJavID(ctx, movieJavID)
+		if err == nil && mediaRow != nil {
+			mediaBirthTime = mediaRow.BirthTime
+		} else if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+			return fmt.Errorf("WMediaModel.FindOneByMovieJavId %s: %w", movieJavID, err)
+		}
+
+		needInvalidateMovieType := false
+		vFilm, err := l.filmFindOneByMovieJavID(ctx, movieJavID)
+		if err == nil && vFilm != nil {
+			if vFilm.ScTimes == info.ScTimes &&
+				vFilm.ComeTimes == info.ComeTimes &&
+				vFilm.LastScTime == info.LastScTime {
+				// keep old v_film branch unchanged; g_sc_stat is additive.
+			} else {
+				vFilm.ScTimes = info.ScTimes
+				vFilm.ComeTimes = info.ComeTimes
+				vFilm.LastScTime = info.LastScTime
+				vFilm, _, err = l.filmUpsert(ctx, vFilm)
+				if err != nil {
+					return fmt.Errorf("FilmRepo.UpsertFilm %s: %w", movieJavID, err)
+				}
+				needInvalidateMovieType = true
+			}
+		} else if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+			return fmt.Errorf("FilmRepo.FindOneByMovieJavId %s: %w", movieJavID, err)
+		}
+
+		if _, statStatus, err := l.gScStatUpsert(ctx, movieJavID, movieRow.Name, releasingDate, mediaBirthTime, info); err != nil {
+			return fmt.Errorf("GScStat.Upsert %s: %w", movieJavID, err)
+		} else if statStatus != consts.UpsertUnchanged {
+			needInvalidateMovieType = true
+		}
+
+		if needInvalidateMovieType {
+			l.movieSvc.InvalidateMovieType(ctx, movieJavID)
+		}
 	}
 
 	return nil
@@ -142,55 +172,44 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 		return result, nil
 	}
 
-	pairs := make(map[string]int64, len(gls))
+	scNameSet := make(map[string]struct{}, len(gls))
 	for _, gl := range gls {
 		if gl == nil || gl.MovieJavId == "" || gl.ScName == "" {
 			continue
 		}
-		key := gl.MovieJavId + "\x00" + gl.ScName
-		if old, ok := pairs[key]; ok {
-			if old == consts.GListIsCome || gl.IsCome != consts.GListIsCome {
-				continue
-			}
-		}
-		pairs[key] = gl.IsCome
+		scNameSet[gl.ScName] = struct{}{}
 	}
 
-	scTimeMap, err := l.loadScTimes(ctx, pairs)
+	scNames := make([]string, 0, len(scNameSet))
+	for scName := range scNameSet {
+		scNames = append(scNames, scName)
+	}
+
+	scTimeMap, err := l.loadScTimes(ctx, scNames)
 	if err != nil {
 		return nil, err
 	}
 
-	for key, isCome := range pairs {
-		movieJavID, scName := splitMovieScPair(key)
-		info := result[movieJavID]
+	for _, gl := range gls {
+		if gl == nil || gl.MovieJavId == "" || gl.ScName == "" {
+			continue
+		}
+		info := result[gl.MovieJavId]
 		info.ScTimes++
-		if isCome == consts.GListIsCome {
+		if gl.IsCome == consts.GListIsCome {
 			info.ComeTimes++
 		}
-		if scTime := scTimeMap[scName]; scTime > info.LastScTime {
+		if scTime := scTimeMap[gl.ScName]; scTime > info.LastScTime {
 			info.LastScTime = scTime
 		}
-		result[movieJavID] = info
+		result[gl.MovieJavId] = info
 	}
 
 	return result, nil
 }
 
-func (l *ScService) loadScTimes(ctx context.Context, pairs map[string]int64) (map[string]int64, error) {
-	scNames := make(map[string]struct{}, len(pairs))
-	for key := range pairs {
-		_, scName := splitMovieScPair(key)
-		if scName != "" {
-			scNames[scName] = struct{}{}
-		}
-	}
-
-	names := make([]string, 0, len(scNames))
-	for scName := range scNames {
-		names = append(names, scName)
-	}
-
+func (l *ScService) loadScTimes(ctx context.Context, names []string) (map[string]int64, error) {
+	names = uniqueStrings(names)
 	scRows, err := l.scFindByNames(ctx, names)
 	if err != nil {
 		return nil, fmt.Errorf("ScRepo.FindByNames: %w", err)
@@ -256,33 +275,15 @@ func uniqueStrings(items []string) []string {
 	return out
 }
 
-func splitMovieScPair(key string) (movieJavID string, scName string) {
-	for i := 0; i < len(key); i++ {
-		if key[i] != 0 {
-			continue
-		}
-		return key[:i], key[i+1:]
-	}
-	return key, ""
-}
-
 func (l *ScService) RebuildAllScStats(ctx context.Context) error {
-	films, err := l.filmFindAll(ctx, consts.OwnedAll)
+	movieJavIDs, err := l.glListDistinctMovieJavIDs(ctx)
 	if err != nil {
-		return fmt.Errorf("FilmRepo.FindAll: %w", err)
+		return fmt.Errorf("GListRepo.ListDistinctMovieJavIds: %w", err)
 	}
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:   "sc_movie_stats_begin",
-		Message: fmt.Sprintf("开始回填影片 SC 统计，影片数=%d", len(films)),
+		Message: fmt.Sprintf("开始回填影片 SC 统计，影片数=%d", len(movieJavIDs)),
 	})
-
-	movieJavIDs := make([]string, 0, len(films))
-	for _, film := range films {
-		if film == nil || film.MovieJavId == "" {
-			continue
-		}
-		movieJavIDs = append(movieJavIDs, film.MovieJavId)
-	}
 
 	if err := l.rebuildMovieScStatsByJavIDs(ctx, movieJavIDs); err != nil {
 		return fmt.Errorf("rebuild movie sc stats: %w", err)
