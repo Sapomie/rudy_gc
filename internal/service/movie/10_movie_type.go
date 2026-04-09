@@ -144,6 +144,10 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		return nil, fmt.Errorf("MinfoModel.FindOneByJavId failed: %w", err)
 	}
 	minfo := mapBmMinfoToTypes(minfoRow)
+	needDownload, err := s.GetMovieNeedDownloadStatus(ctx, mv.JavId)
+	if err != nil {
+		return nil, fmt.Errorf("GetMovieNeedDownloadStatus failed: %w", err)
+	}
 
 	itemRow, err := s.deps.ItemModel.FindOneByJavId(ctx, mv.JavId)
 	if err != nil {
@@ -177,7 +181,7 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		JacketImg:            murl.JacketImg,
 		Prefix:               prefixRow.Name,
 		Owned:                consts.MovieAll,
-		NeedDownload:         minfo.NeedDownload,
+		NeedDownload:         needDownload,
 		EncodeName:           mv.EncodeName,
 		AMovie:               mv,
 		BmMinfo:              minfo,

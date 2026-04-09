@@ -89,20 +89,16 @@ func (h *MovieAPI) MoveWMediaToRemoved(c *gin.Context) {
 		return
 	}
 
-	result, err := h.mediaSvc.MoveWMediaToRemoved(c.Request.Context(), javId)
+	created, albumName, err := h.movieSvc.AddMovieToAlbum(c.Request.Context(), consts.MovieDeleteAlbumName, javId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
 	}
-	if result == nil || !result.Ok {
-		msg := "移动失败"
-		if result != nil && strings.TrimSpace(result.Error) != "" {
-			msg = result.Error
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": msg, "result": result})
+	if created {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "created": true, "album_name": albumName, "message": "已加入待删除相册：" + albumName})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true, "result": result})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "created": false, "album_name": albumName, "message": "该电影已在待删除相册：" + albumName})
 }
 
 type addMovieCastReq struct {
@@ -131,6 +127,11 @@ type batchMoveAlbumItemReq struct {
 
 type createAlbumReq struct {
 	Name string `json:"name"`
+}
+
+type addMovieToMovieAlbumReq struct {
+	MovieJavID string `json:"movie_jav_id"`
+	AlbumName  string `json:"album_name"`
 }
 
 // POST /api/movie/:movie/add-cast
@@ -421,6 +422,182 @@ func (h *MovieAPI) CreateAlbum(c *gin.Context) {
 		"album_id":   album.ID,
 		"album_name": album.Name,
 		"message":    "相册创建成功",
+	})
+}
+
+// POST /api/movie/:movie/movie-album-item
+func (h *MovieAPI) AddMovieToMovieAlbum(c *gin.Context) {
+	javID := strings.TrimSpace(c.Param("movie"))
+	if javID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 movie 参数"})
+		return
+	}
+
+	var req addMovieToMovieAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+	if req.MovieJavID != "" && !strings.EqualFold(strings.TrimSpace(req.MovieJavID), javID) {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "影片参数不匹配"})
+		return
+	}
+
+	created, albumName, err := h.movieSvc.AddMovieToAlbum(c.Request.Context(), req.AlbumName, javID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumNameEmpty), errors.Is(err, movie.ErrMovieAlbumNameTooLong):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+	if created {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "created": true, "album_name": albumName, "message": "已加入电影相册：" + albumName})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "created": false, "album_name": albumName, "message": "该电影已在相册：" + albumName})
+}
+
+// POST /api/movie-albums
+func (h *MovieAPI) CreateMovieAlbum(c *gin.Context) {
+	var req createAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	album, err := h.movieSvc.CreateMovieAlbum(c.Request.Context(), req.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumNameEmpty), errors.Is(err, movie.ErrMovieAlbumNameTooLong), errors.Is(err, movie.ErrMovieAlbumNameExists):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"album_id":   album.ID,
+		"album_name": album.Name,
+		"message":    "电影相册创建成功",
+	})
+}
+
+// POST /api/movie-albums/:albumID/items/remove
+func (h *MovieAPI) RemoveMovieAlbumItem(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req removeAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	removed, err := h.movieSvc.RemoveMovieAlbumItemByID(c.Request.Context(), albumID, req.ItemID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumInvalidID), errors.Is(err, movie.ErrMovieAlbumItemInvalid):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"removed": removed,
+		"message": "移除完成",
+	})
+}
+
+// POST /api/movie-albums/:albumID/execute-remove
+func (h *MovieAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req batchRemoveAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+	if len(req.ItemIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少待删除条目"})
+		return
+	}
+
+	albumRow, err := h.deps.MovieAlbumModel.FindOne(c.Request.Context(), albumID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+	if albumRow == nil || strings.TrimSpace(albumRow.Name) != consts.MovieDeleteAlbumName {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "当前电影相册不支持统一删除"})
+		return
+	}
+
+	successJavIDs := make([]string, 0, len(req.ItemIDs))
+	failedIDs := make([]int64, 0)
+	seen := make(map[int64]struct{}, len(req.ItemIDs))
+	removedCount := int64(0)
+	for _, itemID := range req.ItemIDs {
+		if itemID <= 0 {
+			continue
+		}
+		if _, ok := seen[itemID]; ok {
+			continue
+		}
+		seen[itemID] = struct{}{}
+
+		itemRow, findErr := h.deps.MovieAlbumItemModel.FindOne(c.Request.Context(), itemID)
+		if findErr != nil || itemRow == nil || itemRow.AlbumId != albumID {
+			failedIDs = append(failedIDs, itemID)
+			continue
+		}
+
+		result, moveErr := h.mediaSvc.MoveWMediaToRemovedDeferRefresh(c.Request.Context(), strings.TrimSpace(itemRow.MovieJavId))
+		if moveErr != nil || result == nil || !result.Ok {
+			failedIDs = append(failedIDs, itemID)
+			continue
+		}
+
+		if _, removeErr := h.movieSvc.RemoveMovieAlbumItemByID(c.Request.Context(), albumID, itemID); removeErr != nil {
+			failedIDs = append(failedIDs, itemID)
+			continue
+		}
+
+		successJavIDs = append(successJavIDs, strings.TrimSpace(itemRow.MovieJavId))
+		removedCount++
+	}
+
+	if len(successJavIDs) > 0 {
+		if err := h.mediaSvc.FinalizeMoveRemovedBatch(c.Request.Context(), successJavIDs...); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"ok":            false,
+				"error":         err.Error(),
+				"removed_count": removedCount,
+				"failed_ids":    failedIDs,
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":            true,
+		"removed_count": removedCount,
+		"failed_ids":    failedIDs,
+		"message":       "统一删除完成",
 	})
 }
 

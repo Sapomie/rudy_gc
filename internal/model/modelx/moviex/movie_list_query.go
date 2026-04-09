@@ -425,6 +425,22 @@ func needMinfo(req *types.ListMovieFullRequest) bool {
 	return false
 }
 
+func needDownloadAlbumFilter(req *types.ListMovieFullRequest) squirrel.Sqlizer {
+	if req.NeedDownload == consts.MovieNeedDownLoadOK {
+		return squirrel.Expr(
+			"EXISTS (SELECT 1 FROM `c_movie_album_item` cai JOIN `c_movie_album` ca ON ca.`id` = cai.`album_id` WHERE ca.`name` = ? AND cai.`movie_jav_id` = `jav_id`)",
+			consts.MovieNeedDownloadAlbumName,
+		)
+	}
+	if req.NeedDownload == consts.MovieNeedDownLoadNone {
+		return squirrel.Expr(
+			"NOT EXISTS (SELECT 1 FROM `c_movie_album_item` cai JOIN `c_movie_album` ca ON ca.`id` = cai.`album_id` WHERE ca.`name` = ? AND cai.`movie_jav_id` = `jav_id`)",
+			consts.MovieNeedDownloadAlbumName,
+		)
+	}
+	return nil
+}
+
 func needVFilm(req *types.ListMovieFullRequest) bool {
 	if hasVFilmFilters(req) {
 		return true
@@ -465,7 +481,8 @@ func needWMedia(req *types.ListMovieFullRequest) bool {
 	}
 	if (req.MediaOwned > consts.MovieAll && req.MediaOwned != consts.OwnedNotOwned) ||
 		((req.MediaBirthTimeStart != "" || req.MediaBirthTimeEnd != "") && !hasGScStatCoreSignals(req)) ||
-		req.MediaDir1 != "" || req.MediaDir2 != "" || req.MediaDir3 != "" || req.MediaDir4 != "" {
+		req.MediaDir1 != "" || req.MediaDir2 != "" || req.MediaDir3 != "" || req.MediaDir4 != "" ||
+		req.MediaDirFull != "" {
 		return true
 	}
 	return false
@@ -545,8 +562,8 @@ func minfoBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 	if req.DaysInRankMin > 0 {
 		w = append(w, squirrel.GtOrEq{"days_in_rank": req.DaysInRankMin})
 	}
-	if req.NeedDownload > 0 {
-		w = append(w, squirrel.Eq{"need_download": req.NeedDownload})
+	if needDownloadFilter := needDownloadAlbumFilter(req); needDownloadFilter != nil {
+		w = append(w, needDownloadFilter)
 	}
 	if req.Word != "" {
 		w = append(w, squirrel.Like{"chinese": "%" + req.Word + "%"})
@@ -743,6 +760,16 @@ func wmediaBaseFilters(req *types.ListMovieFullRequest) squirrel.And {
 	if req.MediaDir4 != "" {
 		w = append(w, squirrel.Expr("CONCAT('/', full_dir, '/') LIKE ?", "%/"+req.MediaDir4+"/%"))
 	}
+	if req.MediaDirFull != "" {
+		if req.MediaDirSub {
+			w = append(w, squirrel.Or{
+				squirrel.Eq{"full_dir": req.MediaDirFull},
+				squirrel.Like{"full_dir": req.MediaDirFull + "/%"},
+			})
+		} else {
+			w = append(w, squirrel.Eq{"full_dir": req.MediaDirFull})
+		}
+	}
 	return w
 }
 
@@ -887,6 +914,15 @@ func (r *MovieListRepoSqlx) buildNativeMediaMatchCondition(req *types.ListMovieF
 	if req.MediaDir4 != "" {
 		conds = append(conds, "CONCAT('/', "+alias+".full_dir, '/') LIKE ?")
 		args = append(args, "%/"+req.MediaDir4+"/%")
+	}
+	if req.MediaDirFull != "" {
+		if req.MediaDirSub {
+			conds = append(conds, "("+alias+".full_dir = ? OR "+alias+".full_dir LIKE ?)")
+			args = append(args, req.MediaDirFull, req.MediaDirFull+"/%")
+		} else {
+			conds = append(conds, alias+".full_dir = ?")
+			args = append(args, req.MediaDirFull)
+		}
 	}
 
 	return strings.Join(conds, " AND "), args

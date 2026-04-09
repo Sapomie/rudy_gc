@@ -29,43 +29,30 @@ func (s *Service) GetMovieDetailByName(ctx context.Context, movieName string) (*
 }
 
 func (s *Service) AddToDownloadLater(ctx context.Context, javId string) (int64, error) {
-	row, err := s.deps.MinfoModel.FindOneByJavId(ctx, javId)
-	if err != nil {
+	if _, err := s.ensureMovieNeedDownloadAlbum(ctx); err != nil {
+		return 0, fmt.Errorf("ensure movie need download album failed: %w", err)
+	}
+	if _, _, err := s.AddMovieToAlbum(ctx, normalizeMovieNeedDownloadAlbumName(), javId); err != nil {
 		return 0, fmt.Errorf("add to download later failed: %w", err)
 	}
-	if row.NeedDownload != consts.MovieNeedDownLoadOK {
-		row.NeedDownload = consts.MovieNeedDownLoadOK
-		row.UpdatedOn = time.Now().Unix()
-		if err := s.deps.MinfoModel.Update(ctx, row); err != nil {
-			return 0, fmt.Errorf("update download later failed: %w", err)
-		}
-	}
 	s.InvalidateMovieType(ctx, javId)
-	got, err := s.deps.MinfoModel.FindOneByJavId(ctx, javId)
+	got, err := s.GetMovieNeedDownloadStatus(ctx, javId)
 	if err != nil {
 		return 0, fmt.Errorf("find to download later failed: %w", err)
 	}
-	return got.NeedDownload, nil
+	return got, nil
 }
 
 func (s *Service) RemoveFromDownloadLater(ctx context.Context, javId string) (int64, error) {
-	row, err := s.deps.MinfoModel.FindOneByJavId(ctx, javId)
-	if err != nil {
+	if _, _, err := s.RemoveMovieFromAlbum(ctx, normalizeMovieNeedDownloadAlbumName(), javId); err != nil {
 		return 0, fmt.Errorf("remove from download later failed: %w", err)
 	}
-	if row.NeedDownload != 1 {
-		row.NeedDownload = 1
-		row.UpdatedOn = time.Now().Unix()
-		if err := s.deps.MinfoModel.Update(ctx, row); err != nil {
-			return 0, fmt.Errorf("update remove download later failed: %w", err)
-		}
-	}
 	s.InvalidateMovieType(ctx, javId)
-	got, err := s.deps.MinfoModel.FindOneByJavId(ctx, javId)
+	got, err := s.GetMovieNeedDownloadStatus(ctx, javId)
 	if err != nil {
 		return 0, fmt.Errorf("find after remove download later failed: %w", err)
 	}
-	return got.NeedDownload, nil
+	return got, nil
 }
 
 func (s *Service) ListMovieFull(ctx context.Context, r *types.ListMovieFullRequest) (*types.ListMovieResponse, error) {

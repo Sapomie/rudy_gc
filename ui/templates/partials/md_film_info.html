@@ -46,9 +46,9 @@
                         <div class="d-flex flex-column gap-1">
                             <a href="{{.media.FilePath}}">{{ printf "%.2f" .media.Size }}</a>
                             <button type="button"
-                                    class="btn btn-sm btn-outline-danger js-move-wmedia-removed"
+                                    class="btn btn-sm {{ if .MovieDeleteAlbumMarked }}btn-danger{{ else }}btn-outline-danger{{ end }} js-move-wmedia-removed"
                                     data-jav="{{ .movieType.JavId }}">
-                                移到 Removed
+                                {{ if .MovieDeleteAlbumMarked }}已在待删除{{ else }}加入待删除{{ end }}
                             </button>
                         </div>
                     </td>

@@ -6,6 +6,5 @@ type MinfoPatch struct {
 	FirstRankDayNumber *int64
 	HighestRank        *int64
 	DaysInRank         *int64
-	NeedDownload       *int64
 	UpdatedOn          *int64 // 若为 nil，仓储层会用 now 兜底
 }

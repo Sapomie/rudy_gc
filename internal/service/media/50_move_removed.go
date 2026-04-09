@@ -24,44 +24,63 @@ type MoveWMediaResult struct {
 }
 
 func (s *Service) MoveWMediaToRemoved(ctx context.Context, javId string) (*MoveWMediaResult, error) {
+	result, row, updated, err := s.moveWMediaToRemoved(ctx, javId)
+	if err != nil || result == nil || !result.Ok {
+		return result, err
+	}
+
+	s.markMediaAggDirty(ctx, row, updated)
+	s.invalidateMovieTypeCaches(ctx, javId)
+	if err := s.rebuildMediaAggsAfterFlow(ctx, "move_removed"); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (s *Service) MoveWMediaToRemovedDeferRefresh(ctx context.Context, javId string) (*MoveWMediaResult, error) {
+	result, _, _, err := s.moveWMediaToRemoved(ctx, javId)
+	return result, err
+}
+
+func (s *Service) moveWMediaToRemoved(ctx context.Context, javId string) (*MoveWMediaResult, *moviex.WMedia, *moviex.WMedia, error) {
 	javId = strings.TrimSpace(javId)
 	if javId == "" {
-		return nil, fmt.Errorf("movie_jav_id 为空")
+		return nil, nil, nil, fmt.Errorf("movie_jav_id 为空")
 	}
 
 	row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
-			return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil
+			return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil, nil, nil
 		}
-		return nil, err
+		return nil, nil, nil, err
 	}
 	if row == nil {
-		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil
+		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil, nil, nil
 	}
 
 	rootDir := filepath.Clean(strings.TrimSpace(row.RootDir))
 	if rootDir == "" {
-		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "root_dir 为空"}, nil
+		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "root_dir 为空"}, row, nil, nil
 	}
 
 	srcPath := joinMediaPath(row.FullDir, row.FileName)
 	if strings.TrimSpace(srcPath) == "" {
-		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "源路径为空"}, nil
+		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "源路径为空"}, row, nil, nil
 	}
 
 	removedDir := buildRemovedDir(rootDir)
 	if err := os.MkdirAll(removedDir, 0o755); err != nil {
-		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, Ok: false, Error: "创建 removed 目录失败: " + err.Error()}, nil
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, Ok: false, Error: "创建 removed 目录失败: " + err.Error()}, row, nil, nil
 	}
 
 	targetPath, err := nextAvailableTargetPath(removedDir, filepath.Base(srcPath))
 	if err != nil {
-		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, Ok: false, Error: err.Error()}, nil
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, Ok: false, Error: err.Error()}, row, nil, nil
 	}
 
 	if err := moveFileWithFallback(ctx, srcPath, targetPath); err != nil {
-		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, nil, nil
 	}
 
 	now := time.Now().Unix()
@@ -71,17 +90,7 @@ func (s *Service) MoveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 	updated.UpdatedOn = now
 
 	if err := s.deps.WMediaModel.Update(ctx, updated); err != nil {
-		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
-	}
-	s.markMediaAggDirty(ctx, row, updated)
-	s.invalidateMovieTypeCaches(ctx, javId)
-	if err := s.rebuildMediaAggsAfterFlow(ctx, "move_removed"); err != nil {
-		return &MoveWMediaResult{
-			MovieJavId: javId,
-			SourcePath: srcPath,
-			TargetPath: targetPath,
-			Ok:         true,
-		}, err
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
 	}
 
 	return &MoveWMediaResult{
@@ -89,7 +98,46 @@ func (s *Service) MoveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 		SourcePath: srcPath,
 		TargetPath: targetPath,
 		Ok:         true,
-	}, nil
+	}, row, updated, nil
+}
+
+func (s *Service) FinalizeMoveRemovedBatch(ctx context.Context, javIds ...string) error {
+	seen := make(map[string]struct{}, len(javIds))
+	rows := make([]*moviex.WMedia, 0, len(javIds))
+	dirtyJavIDs := make([]string, 0, len(javIds))
+	for _, javId := range javIds {
+		javId = strings.TrimSpace(javId)
+		if javId == "" {
+			continue
+		}
+		if _, ok := seen[javId]; ok {
+			continue
+		}
+		seen[javId] = struct{}{}
+		dirtyJavIDs = append(dirtyJavIDs, javId)
+
+		row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
+		if err != nil {
+			if errors.Is(err, moviex.ErrNotFound) {
+				continue
+			}
+			return err
+		}
+		if row != nil {
+			rows = append(rows, row)
+		}
+	}
+
+	if len(rows) > 0 {
+		s.markMediaAggDirty(ctx, rows...)
+	}
+	if len(dirtyJavIDs) > 0 {
+		s.invalidateMovieTypeCaches(ctx, dirtyJavIDs...)
+	}
+	if len(rows) == 0 && len(dirtyJavIDs) == 0 {
+		return nil
+	}
+	return s.rebuildMediaAggsAfterFlow(ctx, "move_removed_batch")
 }
 
 func buildRemovedDir(rootDir string) string {

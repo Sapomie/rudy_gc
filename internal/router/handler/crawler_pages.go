@@ -49,6 +49,7 @@ type crawlerJobsPageLink struct {
 type crawlerJobsPageConfig struct {
 	Title                     string
 	PageTitle                 string
+	QuickNavCurrent           string
 	TaskPanelTitle            string
 	TaskHelperText            string
 	PageNote                  string
@@ -114,6 +115,7 @@ func (h *CrawlerPages) DailyBestPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "DailyBest 任务",
 		PageTitle:         "DailyBest 抓取",
+		QuickNavCurrent:   "dailybest",
 		TaskPanelTitle:    "DailyBest 触发",
 		PageNote:          "只处理 DailyBest 抓取与同步任务。",
 		TaskTableTitle:    "DailyBest 任务",
@@ -446,9 +448,10 @@ func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 
 func (h *CrawlerPages) TasksPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "page.crawler_tasks", gin.H{
-		"Title":          "任务列表",
-		"JobID":          strings.TrimSpace(c.Query("job_id")),
-		"TriggerPageURL": "/triggers/dailybest",
+		"Title":           "任务列表",
+		"QuickNavCurrent": "crawler_tasks",
+		"JobID":           strings.TrimSpace(c.Query("job_id")),
+		"TriggerPageURL":  "/triggers/dailybest",
 	})
 }
 
@@ -462,6 +465,7 @@ func (h *CrawlerPages) renderJobsPage(c *gin.Context, cfg crawlerJobsPageConfig)
 	c.HTML(http.StatusOK, "page.admin_triggers", gin.H{
 		"Title":                     cfg.Title,
 		"PageTitle":                 cfg.PageTitle,
+		"QuickNavCurrent":           cfg.QuickNavCurrent,
 		"TaskPanelTitle":            cfg.TaskPanelTitle,
 		"TaskHelperText":            cfg.TaskHelperText,
 		"PageNote":                  cfg.PageNote,

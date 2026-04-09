@@ -38,6 +38,16 @@
                         <div class="card shadow-sm">
                             <div class="card-body pb-2">
                                 <h4 class="mb-1" title="{{.movieType.Title}}">{{.movieType.Title}}</h4>
+                                <div class="mt-2 d-flex flex-wrap align-items-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnOpenMovieAlbumModal">加入电影相册</button>
+                                    {{ if .MovieAlbums }}
+                                        {{ range .MovieAlbums }}
+                                            {{ if .Selected }}
+                                                <a href="/movie-albums?album_name={{ urlquery .Name }}" class="badge bg-primary-subtle text-primary text-decoration-none">{{ .Name }}</a>
+                                            {{ end }}
+                                        {{ end }}
+                                    {{ end }}
+                                </div>
                             </div>
                             <div class="thumb-2x2">
                                 <img src="{{.movieType.JacketImg}}" alt="Card image cap"
@@ -408,16 +418,49 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="moveWMediaRemovedModalLabel">移动到 Removed</h5>
+                    <h5 class="modal-title" id="moveWMediaRemovedModalLabel">加入待删除</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    将 w_media 移到 001_process/005_removed。
+                    将当前电影加入默认电影相册“待删除”。真正删除会在电影相册页统一执行。
                     <div id="moveWMediaRemovedMsg" class="small mt-2" style="display:none;"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-danger" id="btnMoveWMediaRemovedDo">继续</button>
+                    <button type="button" class="btn btn-danger" id="btnMoveWMediaRemovedDo">加入待删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="movieAlbumModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">加入电影相册</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="movieAlbumMsg" class="alert d-none mb-3" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label mb-1" for="movieAlbumSelect">选择相册</label>
+                        <select class="form-select" id="movieAlbumSelect">
+                            {{ range .MovieAlbums }}
+                                <option value="{{ .Name }}">{{ .Name }}{{ if .Selected }}（已在相册）{{ end }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label mb-1" for="movieAlbumNewName">新建相册</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="form-control" id="movieAlbumNewName" maxlength="128" placeholder="输入新相册名称后创建">
+                            <button type="button" class="btn btn-outline-secondary" id="btnCreateMovieAlbumInline">创建</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="btnAddMovieToAlbum">加入</button>
                 </div>
             </div>
         </div>
@@ -453,6 +496,7 @@
     <script src="/static/js/app.js"></script>
     <script src="/static/customer/open_finder.js"></script>
     <script src="/static/customer/fetch_site_list.js"></script>
+    <script src="/static/customer/movie_album_detail.js"></script>
     </body>
     </html>
 {{ end }}

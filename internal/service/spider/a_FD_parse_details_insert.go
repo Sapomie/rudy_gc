@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"rudy_gc/internal/consts"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/moviereleaseagg"
 	"rudy_gc/internal/types"
@@ -187,8 +186,7 @@ func (l *CrawlLogic) saveParsedMovie(ctx context.Context, raw *RawJavMovie) (*sa
 		Name:          raw.Designation,
 		JavId:         raw.JavId,
 		ReleasingDate: releasingDate,
-		NeedDownload:  consts.MovieNeedDownLoadNone,
-		// Chinese / FirstRankDayNumber / HighestRank / DaysInRank / NeedDownload
+		// Chinese / FirstRankDayNumber / HighestRank / DaysInRank
 		// 这些由 Repo 内部“保留旧值”策略处理
 		CreatedOn: now,
 		UpdatedOn: now,

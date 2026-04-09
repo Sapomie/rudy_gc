@@ -66,7 +66,7 @@
                                         </div>
                                         <div class="col-md-2">
                                             <label for="castOwnedScRatioPenaltyAlpha" class="form-label">Cast SC Ratio 惩罚系数</label>
-                                            <input type="number" min="0" step="0.1" class="form-control" id="castOwnedScRatioPenaltyAlpha" value="0.7" required>
+                                            <input type="number" min="0" step="0.1" class="form-control" id="castOwnedScRatioPenaltyAlpha" value='{{ if eq .PageSource "wmedia" }}0{{ else }}0.7{{ end }}' required>
                                         </div>
                                         <div class="col-md-2">
                                             <label for="movieHasScPenaltyAlpha" class="form-label">Movie Has SC 惩罚系数</label>

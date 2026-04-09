@@ -17,11 +17,7 @@
 <main class="main-content">
     <div class="page-content">
         <div class="container-fluid movie-release-bucket-list-page" id="movieReleaseBucketListPage">
-            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-                <div>
-                    <h4 class="mb-1">{{ .PageTitle }}</h4>
-                    <p class="text-muted mb-0">{{ .PageNote }}</p>
-                </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                 <div class="d-flex flex-wrap gap-2">
                     {{ range .ModeSwitches }}
                         <a href="{{ .Href }}" class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}">
@@ -138,7 +134,7 @@
                             <tbody>
                             {{ if .Rows }}
                                 {{ range .Rows }}
-                                    <tr>
+                                    <tr{{ if and (eq $.AggMode "owned") (eq $.Query.Level "day") }} class="{{ monthParityClass .LatestReleasingDate }}"{{ end }}>
                                         <td class="text-nowrap">
                                             {{ if .ViewHref }}
                                                 <a class="bucket-name-link" href="{{ .ViewHref }}">{{ .BucketDisplay }}</a>

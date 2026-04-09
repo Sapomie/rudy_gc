@@ -38,6 +38,12 @@ func (h *MovieHTMLHandler) MovieDetail(c *gin.Context) {
 		"sehuatangRows": md.SehuatangMagnets,
 		"magUpdateDate": md.MovieType.UpdateDate,
 	}
+	if movieAlbums, err := h.movieSvc.ListMovieAlbumsByMovieJavID(c.Request.Context(), md.MovieType.JavId); err == nil {
+		data["MovieAlbums"] = movieAlbums
+	}
+	if markedDelete, err := h.movieSvc.IsMovieMarkedDelete(c.Request.Context(), md.MovieType.JavId); err == nil {
+		data["MovieDeleteAlbumMarked"] = markedDelete
+	}
 
 	c.HTML(http.StatusOK, "page.movie_detail", data)
 }

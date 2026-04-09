@@ -11,6 +11,7 @@ func (h *CrawlerPages) FetchSehuatangPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "色花堂抓取任务",
 		PageTitle:         "色花堂磁力抓取（日志流）",
+		QuickNavCurrent:   "fetch_sehuatang",
 		TaskPanelTitle:    "色花堂抓取任务",
 		PageNote:          "抓取列表普通帖子并直接入库，自动跳过置顶/公告帖；支持按起始页到结束页范围抓取。",
 		TaskTableTitle:    "色花堂抓取任务",

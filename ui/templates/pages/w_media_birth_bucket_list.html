@@ -132,7 +132,7 @@
                             <tbody>
                             {{ if .Rows }}
                                 {{ range .Rows }}
-                                    <tr>
+                                    <tr{{ if eq $.Query.Level "day" }} class="{{ monthParityClass .LatestBirthTime }}"{{ end }}>
                                         <td class="text-nowrap">
                                             {{ if .ViewHref }}
                                                 <a class="bucket-name-link" href="{{ .ViewHref }}">{{ .BucketDisplay }}</a>

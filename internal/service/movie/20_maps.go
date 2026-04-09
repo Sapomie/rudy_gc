@@ -45,7 +45,6 @@ func mapBmMinfoToTypes(m *moviex.BmMinfo) *types.Minfo {
 		FirstRankDayNumber: m.FirstRankDayNumber,
 		HighestRank:        m.HighestRank,
 		DaysInRank:         m.DaysInRank,
-		NeedDownload:       m.NeedDownload,
 		CreatedOn:          m.CreatedOn,
 		UpdatedOn:          m.UpdatedOn,
 		ReleasingDate:      m.ReleasingDate,

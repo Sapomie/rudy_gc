@@ -145,7 +145,7 @@ document.addEventListener('click', async function (e) {
         }
         const msgEl = modalEl ? modalEl.querySelector('#moveWMediaRemovedMsg') : null;
         if (msgEl) {
-            msgEl.textContent = '已移动到 005_removed';
+            msgEl.textContent = data.message || '已加入待删除相册';
             msgEl.className = 'small mt-2 text-success';
             msgEl.style.display = 'block';
         }

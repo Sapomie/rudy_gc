@@ -51,10 +51,12 @@ type ListMovieFullRequest struct {
 	Dir3 string `form:"d3"`
 	Dir4 string `form:"d4"`
 
-	MediaDir1 string `form:"md1"`
-	MediaDir2 string `form:"md2"`
-	MediaDir3 string `form:"md3"`
-	MediaDir4 string `form:"md4"`
+	MediaDir1    string `form:"md1"`
+	MediaDir2    string `form:"md2"`
+	MediaDir3    string `form:"md3"`
+	MediaDir4    string `form:"md4"`
+	MediaDirFull string `form:"-"`
+	MediaDirSub  bool   `form:"-"`
 
 	OrderBy  string `form:"od"`
 	Order    string `form:"order"`

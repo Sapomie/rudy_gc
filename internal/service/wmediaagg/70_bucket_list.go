@@ -81,20 +81,16 @@ func bucketListHref(row *moviex.WMediaBirthBucketStat) string {
 	case levelRoot:
 		return rootPath
 	case levelYear:
-		return rootPath + "/" + itoa64(row.Year)
+		return buildBirthAggHref(int(row.Year), 0, 0, 0)
 	case levelQuarter:
-		return rootPath + "/" + itoa64(row.Year) + "/q/" + itoa64(row.Quarter)
+		return buildBirthAggHref(int(row.Year), int(row.Quarter), 0, 0)
 	case levelMonth:
-		return rootPath + "/" + itoa64(row.Year) + "/" + itoa64(row.Month)
+		return buildBirthAggHref(int(row.Year), 0, int(row.Month), 0)
 	case levelDay:
-		return rootPath + "/" + itoa64(row.Year) + "/" + itoa64(row.Month) + "/" + itoa64(row.Day)
+		return buildBirthAggHref(int(row.Year), 0, int(row.Month), int(row.Day))
 	default:
 		return ""
 	}
-}
-
-func itoa64(v int64) string {
-	return strconv.FormatInt(v, 10)
 }
 
 func bucketDisplay(row *moviex.WMediaBirthBucketStat) string {

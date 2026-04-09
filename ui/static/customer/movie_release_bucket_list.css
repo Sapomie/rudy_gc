@@ -67,6 +67,14 @@
     border-radius: .75rem;
 }
 
+.movie-release-bucket-list-page .bucket-table tr.sc-month-odd > td {
+    background: #fcfdff;
+}
+
+.movie-release-bucket-list-page .bucket-table tr.sc-month-even > td {
+    background: #fffaf5;
+}
+
 @media (max-width: 767.98px) {
     .movie-release-bucket-list-page .bucket-list-summary {
         width: 100%;

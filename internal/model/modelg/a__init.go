@@ -99,6 +99,8 @@ func AutoMigrate(db *gorm.DB) error {
 		new(FetchSite),
 		new(Album),
 		new(AlbumItem),
+		new(CMovieAlbum),
+		new(CMovieAlbumItem),
 		new(JavbusMagnet),
 		new(SehuatangMagnet),
 		new(JavbusMagnetFetch),
@@ -117,6 +119,9 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 	if err := migrateMovieReleaseAggMode(db); err != nil {
+		return err
+	}
+	if err := migrateMovieNeedDownloadToAlbum(db); err != nil {
 		return err
 	}
 	if err := migrateWFolderSourceType(db); err != nil {
@@ -238,6 +243,96 @@ SET
 		consts.WMediaSourceLegacyVFilm,
 		consts.WMediaSourceNative,
 	).Error
+}
+
+func migrateMovieNeedDownloadToAlbum(db *gorm.DB) error {
+	const (
+		albumTable      = "c_movie_album"
+		albumItemTable  = "c_movie_album_item"
+		minfoTable      = "bm_minfo"
+		legacyIndexName = "idx_need_reldate_name"
+		legacyColumn    = "need_download"
+	)
+
+	if ok, err := hasTable(db, albumTable); err != nil {
+		return err
+	} else if !ok {
+		return nil
+	}
+	if ok, err := hasTable(db, albumItemTable); err != nil {
+		return err
+	} else if !ok {
+		return nil
+	}
+
+	now := time.Now().Unix()
+	insertAlbumSQL := `
+INSERT INTO c_movie_album (name, remark, created_on, updated_on)
+SELECT ?, ?, ?, ?
+FROM DUAL
+WHERE NOT EXISTS (
+	SELECT 1 FROM c_movie_album WHERE name = ?
+)`
+	if err := db.Exec(insertAlbumSQL,
+		consts.MovieNeedDownloadAlbumName,
+		consts.MovieNeedDownloadAlbumRemark,
+		now,
+		now,
+		consts.MovieNeedDownloadAlbumName,
+	).Error; err != nil {
+		return err
+	}
+
+	hasLegacyColumn, err := hasColumn(db, minfoTable, legacyColumn)
+	if err != nil {
+		return err
+	}
+	if !hasLegacyColumn {
+		return nil
+	}
+
+	backfillSQL := `
+INSERT INTO c_movie_album_item (album_id, movie_jav_id, movie_name, sort_no, created_on, updated_on)
+SELECT
+	ca.id,
+	mi.jav_id,
+	COALESCE(NULLIF(am.name, ''), mi.name, mi.jav_id) AS movie_name,
+	UNIX_TIMESTAMP(),
+	?,
+	?
+FROM bm_minfo mi
+JOIN c_movie_album ca
+  ON ca.name = ?
+LEFT JOIN a_movie am
+  ON am.jav_id = mi.jav_id
+LEFT JOIN c_movie_album_item cai
+  ON cai.album_id = ca.id
+ AND cai.movie_jav_id = mi.jav_id
+WHERE mi.need_download = ?
+  AND cai.id IS NULL`
+	if err := db.Exec(backfillSQL,
+		now,
+		now,
+		consts.MovieNeedDownloadAlbumName,
+		consts.MovieNeedDownLoadOK,
+	).Error; err != nil {
+		return err
+	}
+
+	hasLegacyIndex, err := hasIndex(db, minfoTable, legacyIndexName)
+	if err != nil {
+		return err
+	}
+	if hasLegacyIndex {
+		if err := db.Exec("ALTER TABLE `bm_minfo` DROP INDEX `idx_need_reldate_name`").Error; err != nil {
+			return err
+		}
+	}
+
+	if err := db.Exec("ALTER TABLE `bm_minfo` DROP COLUMN `need_download`").Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func migrateWMediaSourceType(db *gorm.DB) error {

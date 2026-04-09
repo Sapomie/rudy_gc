@@ -48,7 +48,6 @@ func (r *MinfoRepoSqlx) UpsertPreserve(ctx context.Context, in *types.Minfo) err
 	up.FirstRankDayNumber = old.FirstRankDayNumber
 	up.HighestRank = old.HighestRank
 	up.DaysInRank = old.DaysInRank
-	up.NeedDownload = old.NeedDownload
 
 	up.CreatedOn = old.CreatedOn
 	up.UpdatedOn = now
@@ -87,10 +86,6 @@ func (r *MinfoRepoSqlx) UpdatePartialByJavId(ctx context.Context, javId string, 
 		row.DaysInRank = *patch.DaysInRank
 		changed = true
 	}
-	if patch.NeedDownload != nil && row.NeedDownload != *patch.NeedDownload {
-		row.NeedDownload = *patch.NeedDownload
-		changed = true
-	}
 
 	if !changed && patch.UpdatedOn == nil {
 		return nil
@@ -114,7 +109,6 @@ func mapTypesToModelx(in *types.Minfo) *moviex.BmMinfo {
 		FirstRankDayNumber: in.FirstRankDayNumber,
 		HighestRank:        in.HighestRank,
 		DaysInRank:         in.DaysInRank,
-		NeedDownload:       in.NeedDownload,
 		CreatedOn:          in.CreatedOn,
 		UpdatedOn:          in.UpdatedOn,
 		ReleasingDate:      in.ReleasingDate,
@@ -130,7 +124,6 @@ func mapModelxToTypes(m *moviex.BmMinfo) *types.Minfo {
 		FirstRankDayNumber: m.FirstRankDayNumber,
 		HighestRank:        m.HighestRank,
 		DaysInRank:         m.DaysInRank,
-		NeedDownload:       m.NeedDownload,
 		CreatedOn:          m.CreatedOn,
 		UpdatedOn:          m.UpdatedOn,
 		ReleasingDate:      m.ReleasingDate,
