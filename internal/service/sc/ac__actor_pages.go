@@ -2,6 +2,7 @@ package sc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"sort"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
 )
 
@@ -55,6 +57,7 @@ func (s *ScService) buildActorScPageByPersonID(ctx context.Context, personID int
 	if personID <= 0 {
 		return nil, types.ErrNotFound
 	}
+	_ = movieLimit
 	actor, err := s.personFindOne(ctx, personID)
 	if err != nil {
 		if errors.Is(err, types.ErrNotFound) {
@@ -65,14 +68,23 @@ func (s *ScService) buildActorScPageByPersonID(ctx context.Context, personID int
 	if actor == nil {
 		return nil, types.ErrNotFound
 	}
-	req := &types.ListMovieFullRequest{
-		PersonIds:  strconv.FormatInt(personID, 10),
-		MediaOwned: consts.MovieAll,
-		OrderBy:    consts.OrderByReleasingDate,
-		Page:       1,
-		PageSize:   999999,
+	recentEvents, err := s.buildActorRecentEventsFromSnapshot(ctx, personID, recentLimit)
+	if err != nil {
+		return nil, err
 	}
-	return s.buildActorScPageWithMovies(ctx, actor, req, recentLimit, movieLimit, buildActorPageHrefByID(personID), buildActorCardsHrefByID(personID))
+
+	actorAliases, err := s.buildActorAliases(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.ActorScPage{
+		Actor:         actor,
+		ActorAliases:  actorAliases,
+		RecentEvents:  recentEvents,
+		ActorPageHref: buildActorPageHrefByID(personID),
+		CardsHref:     buildActorCardsHrefByID(personID),
+	}, nil
 }
 
 func (s *ScService) buildActorScPageWithMovies(ctx context.Context, actor *types.Person, req *types.ListMovieFullRequest, recentLimit, movieLimit int, actorHref, cardsHref string) (*types.ActorScPage, error) {
@@ -281,20 +293,21 @@ func personFromCast(cast *types.Cast) *types.Person {
 		return nil
 	}
 	return &types.Person{
-		Id:               cast.PersonId,
-		Name:             cast.Name,
-		Chinese:          cast.Chinese,
-		BirthDay:         cast.BirthDay,
-		Height:           cast.Height,
-		MovieNumber:      cast.MovieNumber,
-		OwnedMovieNumber: cast.OwnedMovieNumber,
-		ScTimes:          cast.ScTimes,
-		ComeTimes:        cast.ComeTimes,
-		LastScTime:       cast.LastScTime,
-		HighestRank:      cast.HighestRank,
-		RankTimes:        cast.RankTimes,
-		CreatedOn:        cast.CreatedOn,
-		UpdatedOn:        cast.UpdatedOn,
+		Id:                cast.PersonId,
+		Name:              cast.Name,
+		Chinese:           cast.Chinese,
+		BirthDay:          cast.BirthDay,
+		Height:            cast.Height,
+		MovieNumber:       cast.MovieNumber,
+		OwnedMovieNumber:  cast.OwnedMovieNumber,
+		OwnedWMediaNumber: cast.OwnedWMediaNumber,
+		ScTimes:           cast.ScTimes,
+		ComeTimes:         cast.ComeTimes,
+		LastScTime:        cast.LastScTime,
+		HighestRank:       cast.HighestRank,
+		RankTimes:         cast.RankTimes,
+		CreatedOn:         cast.CreatedOn,
+		UpdatedOn:         cast.UpdatedOn,
 	}
 }
 
@@ -338,6 +351,83 @@ func flattenActorScMovies(movieMap map[string]*types.ActorScEventMovie) []*types
 
 func buildScEventHref(name string) string {
 	return "/sc-events/" + url.PathEscape(name)
+}
+
+func (s *ScService) buildActorRecentEventsFromSnapshot(ctx context.Context, personID int64, recentLimit int) ([]*types.ActorScEventItem, error) {
+	if s == nil || s.deps == nil || s.deps.CPersonScModel == nil || personID <= 0 {
+		return nil, nil
+	}
+
+	limit := int64(recentLimit)
+	rows, err := s.deps.CPersonScModel.ListRecentByPersonID(ctx, personID, limit)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		if err := s.deps.CPersonScModel.RebuildByPersonIDs(ctx, []int64{personID}, 0); err != nil {
+			return nil, err
+		}
+		rows, err = s.deps.CPersonScModel.ListRecentByPersonID(ctx, personID, limit)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	out := make([]*types.ActorScEventItem, 0, len(rows))
+	for _, row := range rows {
+		item, err := mapCPersonScRowToActorScEvent(row)
+		if err != nil {
+			return nil, err
+		}
+		if item == nil {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
+func mapCPersonScRowToActorScEvent(row *moviex.CPersonSc) (*types.ActorScEventItem, error) {
+	if row == nil || strings.TrimSpace(row.ScName) == "" {
+		return nil, nil
+	}
+
+	var snapshots []struct {
+		JavId  string `json:"javId"`
+		Name   string `json:"name"`
+		IsCome bool   `json:"isCome"`
+	}
+	if strings.TrimSpace(row.MoviesJson) != "" {
+		if err := json.Unmarshal([]byte(row.MoviesJson), &snapshots); err != nil {
+			return nil, err
+		}
+	}
+
+	movies := make([]*types.ActorScEventMovie, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		name := strings.TrimSpace(snapshot.Name)
+		if name == "" {
+			name = strings.TrimSpace(snapshot.JavId)
+		}
+		movie := &types.ActorScEventMovie{
+			Name:   name,
+			IsCome: snapshot.IsCome,
+		}
+		if movie.Name != "" {
+			movie.Href = buildMovieHref(movie.Name)
+		}
+		movies = append(movies, movie)
+	}
+
+	return &types.ActorScEventItem{
+		ScName:     row.ScName,
+		ScTime:     row.ScTime,
+		Cooldown:   row.Cooldown,
+		MovieCount: int(row.MovieCount),
+		IsCome:     row.HasCome > 0,
+		Href:       buildScEventHref(row.ScName),
+		Movies:     movies,
+	}, nil
 }
 
 func actorMovieIsCome(gl *types.GList) bool {

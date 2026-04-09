@@ -198,13 +198,14 @@ func (h *MovieAPI) AddCast(c *gin.Context) {
 		}
 	}
 
-	movieNumber, ownedMovieNumber, err := h.deps.CastModel.GetMovieNumbersByID(c.Request.Context(), castRow.Id, consts.OwnedAllNotRemoved)
+	movieNumber, ownedMovieNumber, ownedWMediaNumber, err := h.deps.CastModel.GetMovieNumbersWithWMediaByID(c.Request.Context(), castRow.Id, consts.OwnedAllNotRemoved)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
 	}
 	castRow.MovieNumber = movieNumber
 	castRow.OwnedMovieNumber = ownedMovieNumber
+	castRow.OwnedWMediaNumber = ownedWMediaNumber
 	castRow.UpdatedOn = now
 	if err := h.deps.CastModel.Update(c.Request.Context(), castRow); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})

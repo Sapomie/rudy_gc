@@ -104,10 +104,10 @@
                                         </div>
                                     </div>
                                     <div class="sc-detail-info-item sc-metric-card">
-                                        <div class="sc-metric-label">Duration</div>
+                                        <div class="sc-metric-label">时长(分钟)</div>
                                         <div class="sc-metric-value">
-                                            {{ if gt .Event.Duration 0 }}
-                                                {{ .Event.Duration }} 分钟
+                                            {{ if gt .Event.DurationMinutes 0 }}
+                                                {{ .Event.DurationMinutes }} 分钟
                                             {{ else }}
                                                 -
                                             {{ end }}

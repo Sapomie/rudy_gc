@@ -6,8 +6,9 @@ type Cast struct {
 	Name     string `gorm:"not null;unique"`
 	JavId    string `gorm:"not null;index"`
 
-	MovieNumber      int64 `gorm:"not null;index"`
-	OwnedMovieNumber int64 `gorm:"not null;index"`
+	MovieNumber       int64 `gorm:"not null;index"`
+	OwnedMovieNumber  int64 `gorm:"not null;index"`
+	OwnedWMediaNumber int64 `gorm:"not null;index"`
 
 	ScTimes    int64 `gorm:"not null;type:MEDIUMINT;index"`
 	ComeTimes  int64 `gorm:"not null;type:MEDIUMINT;index"`

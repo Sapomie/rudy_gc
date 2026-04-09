@@ -2,31 +2,31 @@ package vfilm
 
 import (
 	"context"
+
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/types"
 )
 
-// 单根场景：直接返回根目录详情（可递归统计）
-func (s *DirectoryService) GetRootDetail(ctx context.Context) (*types.DirDetail, error) {
-	// 若根ID固定，可以直接 FindOneByID(ctx, 1)
-	items, _, err := s.directoryListRoots(ctx, 1, 1)
+func (s *DirectoryService) ListRootPage(ctx context.Context, page, pageSize int64) ([]*types.DirSummaryWithStats, int64, error) {
+	summarys, total, err := s.directoryListRoots(ctx, int(page), int(pageSize))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	if len(items) == 0 {
-		return &types.DirDetail{}, nil
+	items := make([]*types.DirSummaryWithStats, 0, len(summarys))
+	for _, summary := range summarys {
+		stats, err := s.buildDirectoryRecursiveStats(ctx, summary.Id)
+		if err != nil {
+			return nil, 0, err
+		}
+		items = append(items, &types.DirSummaryWithStats{
+			Summary: summary,
+			Stats:   []*types.DirStats{stats},
+		})
 	}
-	root, err := s.directoryFindOneByID(ctx, items[0].Id)
-	if err != nil {
-		return nil, err
-	}
-	return &types.DirDetail{
-		Directory:   root,
-		Breadcrumbs: []types.Breadcrumb{}, // 根无上级
-	}, nil
+	return items, total, nil
 }
 
-// 任意目录详情（含面包屑 + 可选递归统计）
 func (s *DirectoryService) GetDirDetail(ctx context.Context, id int64) (*types.DirDetail, error) {
 	dir, err := s.directoryFindOneByID(ctx, id)
 	if err != nil {
@@ -35,7 +35,10 @@ func (s *DirectoryService) GetDirDetail(ctx context.Context, id int64) (*types.D
 	if dir == nil {
 		return nil, nil
 	}
-	crumbs, _ := s.directoryBuildBreadcrumbs(ctx, id)
+	crumbs, err := s.directoryBuildBreadcrumbs(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	return &types.DirDetail{Directory: dir, Breadcrumbs: crumbs}, nil
 }
 
@@ -43,7 +46,6 @@ func (s *DirectoryService) ListFilmsForDirPage(
 	ctx context.Context, req *types.ListDirFilmsRequest,
 ) (mts []*types.MovieType, stats *types.DirStats, allFilms []*types.Film, total int64, err error) {
 
-	// 目录集合（是否递归）
 	dirIDs := []int64{req.DirID}
 	if req.Recursive {
 		if subIDs, e := s.directoryListSubtreeIDs(ctx, req.DirID); e == nil && len(subIDs) > 0 {
@@ -51,13 +53,11 @@ func (s *DirectoryService) ListFilmsForDirPage(
 		}
 	}
 
-	// 只查一次库：all = 全量，vfilms = 当前页
 	all, vfilms, total, err := s.filmListByDirectories(ctx, dirIDs, int(req.Page), int(req.PageSize), req.OrderBy)
 	if err != nil {
 		return nil, nil, nil, 0, err
 	}
 
-	// 当前页 -> MovieType
 	mts = make([]*types.MovieType, len(vfilms))
 	for i, vf := range vfilms {
 		mt, e := s.movieSvc.GetMovieType(ctx, vf.MovieJavId)
@@ -67,14 +67,26 @@ func (s *DirectoryService) ListFilmsForDirPage(
 		mts[i] = mt
 	}
 
-	// 顶部统计：对 all 做（递归与否由上面 dirIDs 决定）
 	stats = buildDirStatsFromAll(all, req.Recursive)
-
-	// 返回 all 给上层，避免任何重复查询
 	return mts, stats, all, total, nil
 }
 
-// 基于全量影片聚合目录统计
+func (s *DirectoryService) buildDirectoryRecursiveStats(ctx context.Context, dirID int64) (*types.DirStats, error) {
+	dirIDs, err := s.directoryListSubtreeIDs(ctx, dirID)
+	if err != nil {
+		return nil, err
+	}
+	if len(dirIDs) == 0 {
+		dirIDs = []int64{dirID}
+	}
+
+	allFilms, _, _, err := s.filmListByDirectories(ctx, dirIDs, 1, 1, consts.OrderByBirthTime)
+	if err != nil {
+		return nil, err
+	}
+	return buildDirStatsFromAll(allFilms, true), nil
+}
+
 func buildDirStatsFromAll(all []*types.Film, recursive bool) *types.DirStats {
 	st := &types.DirStats{
 		Recursive: recursive,
@@ -100,6 +112,5 @@ func buildDirStatsFromAll(all []*types.Film, recursive bool) *types.DirStats {
 	st.TotalSize = sumSize
 	st.LastFilmBirth = maxBirthTime
 	st.LastUpdatedOn = maxUpdatedOn
-	// 如果后续需要时间分桶（Buckets），在这里追加即可
 	return st
 }

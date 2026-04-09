@@ -25,7 +25,7 @@ func (s *Service) ListFilmPageWithFilter(ctx context.Context, page, pageSize int
 	}
 
 	offset := (page - 1) * pageSize
-	total, err := s.deps.FilmModel.CountAll(ctx, filter)
+	total, err := s.deps.WMediaModel.CountLegacyFilms(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -33,7 +33,7 @@ func (s *Service) ListFilmPageWithFilter(ctx context.Context, page, pageSize int
 		return []*types.FilmListItem{}, 0, nil
 	}
 
-	rows, err := s.deps.FilmModel.ListPage(ctx, offset, pageSize, orderBy, filter)
+	rows, err := s.deps.WMediaModel.ListLegacyFilmsPage(ctx, offset, pageSize, orderBy, filter)
 	if err != nil {
 		return nil, 0, err
 	}

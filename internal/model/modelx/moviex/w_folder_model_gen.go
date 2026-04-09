@@ -23,17 +23,17 @@ var (
 	wFolderRowsExpectAutoSet   = strings.Join(stringx.Remove(wFolderFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	wFolderRowsWithPlaceHolder = strings.Join(stringx.Remove(wFolderFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcWFolderIdPrefix           = "cache:rudyGc:wFolder:id:"
-	cacheRudyGcWFolderParentIdNamePrefix = "cache:rudyGc:wFolder:parentId:name:"
-	cacheRudyGcWFolderPathPrefix         = "cache:rudyGc:wFolder:path:"
+	cacheRudyGcWFolderIdPrefix                     = "cache:rudyGc:wFolder:id:"
+	cacheRudyGcWFolderParentIdNameSourceTypePrefix = "cache:rudyGc:wFolder:parentId:name:sourceType:"
+	cacheRudyGcWFolderPathSourceTypePrefix         = "cache:rudyGc:wFolder:path:sourceType:"
 )
 
 type (
 	wFolderModel interface {
 		Insert(ctx context.Context, data *WFolder) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*WFolder, error)
-		FindOneByParentIdName(ctx context.Context, parentId int64, name string) (*WFolder, error)
-		FindOneByPath(ctx context.Context, path string) (*WFolder, error)
+		FindOneByParentIdNameSourceType(ctx context.Context, parentId int64, name string, sourceType int64) (*WFolder, error)
+		FindOneByPathSourceType(ctx context.Context, path string, sourceType int64) (*WFolder, error)
 		Update(ctx context.Context, data *WFolder) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -44,16 +44,25 @@ type (
 	}
 
 	WFolder struct {
-		Id        int64  `db:"id"`
-		ParentId  int64  `db:"parent_id"`
-		Name      string `db:"name"`
-		Depth     int64  `db:"depth"`
-		Path      string `db:"path"`
-		PathHash  string `db:"path_hash"`
-		CreatedOn int64  `db:"created_on"`
-		UpdatedOn int64  `db:"updated_on"`
+		Id         int64  `db:"id"`
+		ParentId   int64  `db:"parent_id"`
+		Name       string `db:"name"`
+		SourceType int64  `db:"source_type"`
+		Depth      int64  `db:"depth"`
+		Path       string `db:"path"`
+		PathHash   string `db:"path_hash"`
+		CreatedOn  int64  `db:"created_on"`
+		UpdatedOn  int64  `db:"updated_on"`
 	}
 )
+
+func wFolderParentIdNameSourceTypeCacheKey(parentId int64, name string, sourceType int64) string {
+	return fmt.Sprintf("%s%v:%v:%v", cacheRudyGcWFolderParentIdNameSourceTypePrefix, parentId, name, sourceType)
+}
+
+func wFolderPathSourceTypeCacheKey(path string, sourceType int64) string {
+	return fmt.Sprintf("%s%v:%v", cacheRudyGcWFolderPathSourceTypePrefix, path, sourceType)
+}
 
 func newWFolderModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) *defaultWFolderModel {
 	return &defaultWFolderModel{
@@ -69,12 +78,12 @@ func (m *defaultWFolderModel) Delete(ctx context.Context, id int64) error {
 	}
 
 	rudyGcWFolderIdKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderIdPrefix, id)
-	rudyGcWFolderParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcWFolderParentIdNamePrefix, data.ParentId, data.Name)
-	rudyGcWFolderPathKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderPathPrefix, data.Path)
+	rudyGcWFolderParentIdNameSourceTypeKey := wFolderParentIdNameSourceTypeCacheKey(data.ParentId, data.Name, data.SourceType)
+	rudyGcWFolderPathSourceTypeKey := wFolderPathSourceTypeCacheKey(data.Path, data.SourceType)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
-	}, rudyGcWFolderIdKey, rudyGcWFolderParentIdNameKey, rudyGcWFolderPathKey)
+	}, rudyGcWFolderIdKey, rudyGcWFolderParentIdNameSourceTypeKey, rudyGcWFolderPathSourceTypeKey)
 	return err
 }
 
@@ -95,12 +104,12 @@ func (m *defaultWFolderModel) FindOne(ctx context.Context, id int64) (*WFolder, 
 	}
 }
 
-func (m *defaultWFolderModel) FindOneByParentIdName(ctx context.Context, parentId int64, name string) (*WFolder, error) {
-	rudyGcWFolderParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcWFolderParentIdNamePrefix, parentId, name)
+func (m *defaultWFolderModel) FindOneByParentIdNameSourceType(ctx context.Context, parentId int64, name string, sourceType int64) (*WFolder, error) {
+	rudyGcWFolderParentIdNameSourceTypeKey := wFolderParentIdNameSourceTypeCacheKey(parentId, name, sourceType)
 	var resp WFolder
-	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcWFolderParentIdNameKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
-		query := fmt.Sprintf("select %s from %s where `parent_id` = ? and `name` = ? limit 1", wFolderRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, parentId, name); err != nil {
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcWFolderParentIdNameSourceTypeKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `parent_id` = ? and `name` = ? and `source_type` = ? limit 1", wFolderRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, parentId, name, sourceType); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -115,12 +124,12 @@ func (m *defaultWFolderModel) FindOneByParentIdName(ctx context.Context, parentI
 	}
 }
 
-func (m *defaultWFolderModel) FindOneByPath(ctx context.Context, path string) (*WFolder, error) {
-	rudyGcWFolderPathKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderPathPrefix, path)
+func (m *defaultWFolderModel) FindOneByPathSourceType(ctx context.Context, path string, sourceType int64) (*WFolder, error) {
+	rudyGcWFolderPathSourceTypeKey := wFolderPathSourceTypeCacheKey(path, sourceType)
 	var resp WFolder
-	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcWFolderPathKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
-		query := fmt.Sprintf("select %s from %s where `path` = ? limit 1", wFolderRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, path); err != nil {
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcWFolderPathSourceTypeKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `path` = ? and `source_type` = ? limit 1", wFolderRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, path, sourceType); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -137,12 +146,12 @@ func (m *defaultWFolderModel) FindOneByPath(ctx context.Context, path string) (*
 
 func (m *defaultWFolderModel) Insert(ctx context.Context, data *WFolder) (sql.Result, error) {
 	rudyGcWFolderIdKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderIdPrefix, data.Id)
-	rudyGcWFolderParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcWFolderParentIdNamePrefix, data.ParentId, data.Name)
-	rudyGcWFolderPathKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderPathPrefix, data.Path)
+	rudyGcWFolderParentIdNameSourceTypeKey := wFolderParentIdNameSourceTypeCacheKey(data.ParentId, data.Name, data.SourceType)
+	rudyGcWFolderPathSourceTypeKey := wFolderPathSourceTypeCacheKey(data.Path, data.SourceType)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, wFolderRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.ParentId, data.Name, data.Depth, data.Path, data.PathHash, data.CreatedOn, data.UpdatedOn)
-	}, rudyGcWFolderIdKey, rudyGcWFolderParentIdNameKey, rudyGcWFolderPathKey)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table, wFolderRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.ParentId, data.Name, data.SourceType, data.Depth, data.Path, data.PathHash, data.CreatedOn, data.UpdatedOn)
+	}, rudyGcWFolderIdKey, rudyGcWFolderParentIdNameSourceTypeKey, rudyGcWFolderPathSourceTypeKey)
 	return ret, err
 }
 
@@ -153,12 +162,12 @@ func (m *defaultWFolderModel) Update(ctx context.Context, newData *WFolder) erro
 	}
 
 	rudyGcWFolderIdKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderIdPrefix, data.Id)
-	rudyGcWFolderParentIdNameKey := fmt.Sprintf("%s%v:%v", cacheRudyGcWFolderParentIdNamePrefix, data.ParentId, data.Name)
-	rudyGcWFolderPathKey := fmt.Sprintf("%s%v", cacheRudyGcWFolderPathPrefix, data.Path)
+	rudyGcWFolderParentIdNameSourceTypeKey := wFolderParentIdNameSourceTypeCacheKey(data.ParentId, data.Name, data.SourceType)
+	rudyGcWFolderPathSourceTypeKey := wFolderPathSourceTypeCacheKey(data.Path, data.SourceType)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, wFolderRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.ParentId, newData.Name, newData.Depth, newData.Path, newData.PathHash, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, rudyGcWFolderIdKey, rudyGcWFolderParentIdNameKey, rudyGcWFolderPathKey)
+		return conn.ExecCtx(ctx, query, newData.ParentId, newData.Name, newData.SourceType, newData.Depth, newData.Path, newData.PathHash, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, rudyGcWFolderIdKey, rudyGcWFolderParentIdNameSourceTypeKey, rudyGcWFolderPathSourceTypeKey)
 	return err
 }
 

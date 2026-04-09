@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
 )
@@ -15,6 +16,9 @@ func (s *Service) folderFindOneByID(ctx context.Context, id int64) (*types.Direc
 			return nil, nil
 		}
 		return nil, err
+	}
+	if row == nil || row.SourceType != consts.WFolderSourceNative {
+		return nil, nil
 	}
 	return mapFolderModelToTypes(row), nil
 }
@@ -28,7 +32,7 @@ func (s *Service) folderListChildren(ctx context.Context, parentID int64, page, 
 }
 
 func (s *Service) folderListByParent(ctx context.Context, parentID int64, page, size int) ([]*types.DirSummary, int64, error) {
-	rows, total, err := s.deps.WFolderModel.ListByParent(ctx, parentID, page, size)
+	rows, total, err := s.deps.WFolderModel.ListByParentSourceType(ctx, parentID, consts.WFolderSourceNative, page, size)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -55,7 +59,7 @@ func (s *Service) folderBuildBreadcrumbs(ctx context.Context, id int64) ([]types
 		}
 		return nil, err
 	}
-	if cur == nil {
+	if cur == nil || cur.SourceType != consts.WFolderSourceNative {
 		return []types.Breadcrumb{}, nil
 	}
 
@@ -82,6 +86,9 @@ func (s *Service) folderBuildBreadcrumbs(ctx context.Context, id int64) ([]types
 			}
 			return nil, err
 		}
+		if parent == nil || parent.SourceType != consts.WFolderSourceNative {
+			break
+		}
 		cur = parent
 	}
 
@@ -99,11 +106,11 @@ func (s *Service) folderListSubtreeIDs(ctx context.Context, id int64) ([]int64, 
 		}
 		return nil, err
 	}
-	if row == nil {
+	if row == nil || row.SourceType != consts.WFolderSourceNative {
 		return []int64{}, nil
 	}
 
-	ids, err := s.deps.WFolderModel.ListSubtreeIDsByPath(ctx, row.Path)
+	ids, err := s.deps.WFolderModel.ListSubtreeIDsByPathSourceType(ctx, row.Path, consts.WFolderSourceNative)
 	if err != nil {
 		return nil, err
 	}

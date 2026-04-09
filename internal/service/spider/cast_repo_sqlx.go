@@ -97,6 +97,7 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		old.JavId = in.JavId
 		old.MovieNumber = in.MovieNumber
 		old.OwnedMovieNumber = in.OwnedMovieNumber
+		old.OwnedWMediaNumber = in.OwnedWMediaNumber
 		old.ScTimes = in.ScTimes
 		old.ComeTimes = in.ComeTimes
 		old.LastScTime = in.LastScTime
@@ -126,6 +127,7 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		JavId:              in.JavId,
 		MovieNumber:        in.MovieNumber,
 		OwnedMovieNumber:   in.OwnedMovieNumber,
+		OwnedWMediaNumber:  in.OwnedWMediaNumber,
 		ScTimes:            in.ScTimes,
 		ComeTimes:          in.ComeTimes,
 		LastScTime:         in.LastScTime,
@@ -180,6 +182,7 @@ func mapAmCastToTypes(v *moviex.AmCast) *types.Cast {
 		Height:             0,
 		MovieNumber:        v.MovieNumber,
 		OwnedMovieNumber:   v.OwnedMovieNumber,
+		OwnedWMediaNumber:  v.OwnedWMediaNumber,
 		ScTimes:            v.ScTimes,
 		ComeTimes:          v.ComeTimes,
 		LastScTime:         v.LastScTime,
@@ -249,6 +252,7 @@ func (r *CastRepoSqlx) insertPerson(ctx context.Context, name string, cast *type
 	if cast != nil {
 		row.MovieNumber = cast.MovieNumber
 		row.OwnedMovieNumber = cast.OwnedMovieNumber
+		row.OwnedWMediaNumber = cast.OwnedWMediaNumber
 		row.ScTimes = cast.ScTimes
 		row.ComeTimes = cast.ComeTimes
 		row.LastScTime = cast.LastScTime
@@ -270,7 +274,7 @@ func ifElseInt64(cond bool, a, b int64) int64 {
 }
 
 func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64, now int64) error {
-	movieNumber, ownedMovieNumber, err := r.m.GetMovieNumbersByID(ctx, id, ownedRemovedStatus)
+	movieNumber, ownedMovieNumber, ownedWMediaNumber, err := r.m.GetMovieNumbersWithWMediaByID(ctx, id, ownedRemovedStatus)
 	if err != nil {
 		return err
 	}
@@ -280,12 +284,13 @@ func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, own
 		return err
 	}
 
-	if row.MovieNumber == movieNumber && row.OwnedMovieNumber == ownedMovieNumber {
+	if row.MovieNumber == movieNumber && row.OwnedMovieNumber == ownedMovieNumber && row.OwnedWMediaNumber == ownedWMediaNumber {
 		return nil
 	}
 
 	row.MovieNumber = movieNumber
 	row.OwnedMovieNumber = ownedMovieNumber
+	row.OwnedWMediaNumber = ownedWMediaNumber
 	row.UpdatedOn = now
 
 	if err := r.m.Update(ctx, row); err != nil {

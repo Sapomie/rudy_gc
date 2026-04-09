@@ -14,13 +14,13 @@ import (
 )
 
 type AddScInput struct {
-	Dir            string
-	ComeMovieJavId string
-	MovieCast      string
-	Duration       int64
-	Fg             string
-	Vessel         string
-	Remarks        string
+	Dir             string
+	ComeMovieJavId  string
+	MovieCast       string
+	DurationMinutes int64
+	Fg              string
+	Vessel          string
+	Remarks         string
 }
 
 type AddScPreview struct {
@@ -109,16 +109,16 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 	}
 
 	sc := &types.GSc{
-		Name:          scName,
-		ScTime:        preview.ScTime,
-		ComeMovieName: comeMovie,
-		MovieNumber:   count,
-		Cooldown:      0,
-		Duration:      in.Duration,
-		Fg:            strings.TrimSpace(in.Fg),
-		Vessel:        strings.TrimSpace(in.Vessel),
-		Remarks:       strings.TrimSpace(in.Remarks),
-		MovieCast:     strings.TrimSpace(in.MovieCast),
+		Name:            scName,
+		ScTime:          preview.ScTime,
+		ComeMovieName:   comeMovie,
+		MovieNumber:     count,
+		Cooldown:        0,
+		DurationMinutes: in.DurationMinutes,
+		Fg:              strings.TrimSpace(in.Fg),
+		Vessel:          strings.TrimSpace(in.Vessel),
+		Remarks:         strings.TrimSpace(in.Remarks),
+		MovieCast:       strings.TrimSpace(in.MovieCast),
 	}
 	if imageFilePath != "" {
 		imagePath, err := l.copyScImage(imageFilePath, scName)

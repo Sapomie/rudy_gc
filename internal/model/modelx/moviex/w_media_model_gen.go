@@ -50,6 +50,7 @@ type (
 		MovieJavId        string  `db:"movie_jav_id"`
 		MovieName         string  `db:"movie_name"`
 		FileName          string  `db:"file_name"`
+		SourceType        int64   `db:"source_type"`
 		SourceTorrentHash string  `db:"source_torrent_hash"`
 		DirectoryId       int64   `db:"directory_id"`
 		RootDir           string  `db:"root_dir"`
@@ -181,8 +182,8 @@ func (m *defaultWMediaModel) Insert(ctx context.Context, data *WMedia) (sql.Resu
 	rudyGcWMediaMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcWMediaMovieJavIdPrefix, data.MovieJavId)
 	rudyGcWMediaMovieNameKey := fmt.Sprintf("%s%v", cacheRudyGcWMediaMovieNamePrefix, data.MovieName)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, wMediaRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FileName, data.SourceTorrentHash, data.DirectoryId, data.RootDir, data.FullDir, data.Alias, data.Size, data.Width, data.Height, data.BitRate, data.Duration, data.FrameAverage, data.HasSub, data.SelfMake, data.HasMask, data.NeedScanMeta, data.IsRemoved, data.RemoveTime, data.BirthTime, data.ReleasingDate, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, wMediaRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.FileName, data.SourceType, data.SourceTorrentHash, data.DirectoryId, data.RootDir, data.FullDir, data.Alias, data.Size, data.Width, data.Height, data.BitRate, data.Duration, data.FrameAverage, data.HasSub, data.SelfMake, data.HasMask, data.NeedScanMeta, data.IsRemoved, data.RemoveTime, data.BirthTime, data.ReleasingDate, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcWMediaFileNameKey, rudyGcWMediaIdKey, rudyGcWMediaMovieJavIdKey, rudyGcWMediaMovieNameKey)
 	return ret, err
 }
@@ -199,7 +200,7 @@ func (m *defaultWMediaModel) Update(ctx context.Context, newData *WMedia) error 
 	rudyGcWMediaMovieNameKey := fmt.Sprintf("%s%v", cacheRudyGcWMediaMovieNamePrefix, data.MovieName)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, wMediaRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FileName, newData.SourceTorrentHash, newData.DirectoryId, newData.RootDir, newData.FullDir, newData.Alias, newData.Size, newData.Width, newData.Height, newData.BitRate, newData.Duration, newData.FrameAverage, newData.HasSub, newData.SelfMake, newData.HasMask, newData.NeedScanMeta, newData.IsRemoved, newData.RemoveTime, newData.BirthTime, newData.ReleasingDate, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.FileName, newData.SourceType, newData.SourceTorrentHash, newData.DirectoryId, newData.RootDir, newData.FullDir, newData.Alias, newData.Size, newData.Width, newData.Height, newData.BitRate, newData.Duration, newData.FrameAverage, newData.HasSub, newData.SelfMake, newData.HasMask, newData.NeedScanMeta, newData.IsRemoved, newData.RemoveTime, newData.BirthTime, newData.ReleasingDate, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcWMediaFileNameKey, rudyGcWMediaIdKey, rudyGcWMediaMovieJavIdKey, rudyGcWMediaMovieNameKey)
 	return err
 }

@@ -12,13 +12,14 @@ type Person struct {
 	Bwh      string `gorm:"not null;type:varchar(191)"`
 	Avatar   string `gorm:"not null;type:varchar(191)"`
 
-	MovieNumber      int64 `gorm:"not null;index"`
-	OwnedMovieNumber int64 `gorm:"not null;index"`
-	ScTimes          int64 `gorm:"not null;type:MEDIUMINT;index"`
-	ComeTimes        int64 `gorm:"not null;type:MEDIUMINT;index"`
-	LastScTime       int64 `gorm:"not null;index"`
-	HighestRank      int64 `gorm:"not null;type:MEDIUMINT;index"`
-	RankTimes        int64 `gorm:"not null;type:MEDIUMINT;index"`
+	MovieNumber       int64 `gorm:"not null;index"`
+	OwnedMovieNumber  int64 `gorm:"not null;index"`
+	OwnedWMediaNumber int64 `gorm:"not null;index"`
+	ScTimes           int64 `gorm:"not null;type:MEDIUMINT;index"`
+	ComeTimes         int64 `gorm:"not null;type:MEDIUMINT;index"`
+	LastScTime        int64 `gorm:"not null;index"`
+	HighestRank       int64 `gorm:"not null;type:MEDIUMINT;index"`
+	RankTimes         int64 `gorm:"not null;type:MEDIUMINT;index"`
 
 	CreatedOn int64 `gorm:"not null;default:0"`
 	UpdatedOn int64 `gorm:"not null;default:0"`

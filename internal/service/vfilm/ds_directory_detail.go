@@ -6,30 +6,14 @@ import (
 )
 
 func (s *DirectoryService) GetDirectoryPage(ctx context.Context, in *types.DirPageRequest) (*types.DirPageResult, error) {
-	// 1) 定位目录
-	var (
-		detail *types.DirDetail
-		err    error
-		dirID  int64
-	)
-	if in.UseRoot {
-		detail, err = s.GetRootDetail(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if detail != nil && detail.Directory != nil {
-			dirID = detail.Directory.Id
-		}
-	} else {
-		detail, err = s.GetDirDetail(ctx, in.DirID)
-		if err != nil {
-			return nil, err
-		}
-		if detail == nil || detail.Directory == nil {
-			return &types.DirPageResult{Detail: &types.DirDetail{}}, nil
-		}
-		dirID = detail.Directory.Id
+	detail, err := s.GetDirDetail(ctx, in.DirID)
+	if err != nil {
+		return nil, err
 	}
+	if detail == nil || detail.Directory == nil {
+		return &types.DirPageResult{Detail: &types.DirDetail{}}, nil
+	}
+	dirID := detail.Directory.Id
 
 	// 2) 子目录 summary（不带聚合）
 	summarys, _, _ := s.directoryListChildren(ctx, dirID, int(in.ChildrenPage), int(in.ChildrenSize))

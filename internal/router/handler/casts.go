@@ -186,6 +186,8 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 		column = "p.movie_number"
 	case "owned_movie_number":
 		column = "p.owned_movie_number"
+	case "owned_w_media_number":
+		column = "p.owned_w_media_number"
 	case "sc_times":
 		column = "p.sc_times"
 	case "come_times":
@@ -198,6 +200,9 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 
 	if column == "p.owned_movie_number" {
 		return column + " " + order + ", p.movie_number DESC, p.name ASC, p.id DESC"
+	}
+	if column == "p.owned_w_media_number" {
+		return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	}
 	if column == "p.name" {
 		return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.id DESC"

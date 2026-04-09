@@ -70,13 +70,15 @@ func (s *Service) rebuildDirty(ctx context.Context, dirtyRows []*moviex.MovieRel
 			continue
 		}
 		monthScope := scopeFromBucketMonth(row.BucketMonth)
-		dayBuckets, err := s.deps.MovieModel.ListDistinctReleaseDaysByRange(ctx, monthScope.StartUnix, monthScope.EndUnix)
-		if err != nil {
-			return summary, err
-		}
-		for _, bucketDay := range dayBuckets {
-			dayScope := scopeFromBucketDay(bucketDay)
-			dayScopes[dayScope.Key] = dayScope
+		for _, aggMode := range []string{AggModeAll, AggModeOwned} {
+			dayBuckets, err := s.deps.MovieModel.ListDistinctReleaseDaysByRangeMode(ctx, monthScope.StartUnix, monthScope.EndUnix, aggMode)
+			if err != nil {
+				return summary, err
+			}
+			for _, bucketDay := range dayBuckets {
+				dayScope := scopeFromBucketDay(bucketDay)
+				dayScopes[dayScope.Key] = dayScope
+			}
 		}
 		monthScopes[monthScope.Key] = monthScope
 		quarterScope := buildScope(monthScope.Year, monthScope.Quarter, 0, 0)
@@ -85,50 +87,52 @@ func (s *Service) rebuildDirty(ctx context.Context, dirtyRows []*moviex.MovieRel
 		yearScopes[yearScope.Key] = yearScope
 	}
 
-	for _, sc := range sortedScopes(dayScopes) {
-		if err := s.rebuildBucketScope(ctx, sc); err != nil {
-			return summary, err
+	for _, aggMode := range []string{AggModeAll, AggModeOwned} {
+		for _, sc := range sortedScopes(dayScopes) {
+			if err := s.rebuildBucketScope(ctx, aggMode, sc); err != nil {
+				return summary, err
+			}
+			summary.BucketCount++
 		}
-		summary.BucketCount++
-	}
-	for _, sc := range sortedScopes(monthScopes) {
-		if err := s.rebuildBucketScope(ctx, sc); err != nil {
-			return summary, err
+		for _, sc := range sortedScopes(monthScopes) {
+			if err := s.rebuildBucketScope(ctx, aggMode, sc); err != nil {
+				return summary, err
+			}
+			summary.BucketCount++
+			topCount, err := s.rebuildTopScope(ctx, aggMode, sc)
+			if err != nil {
+				return summary, err
+			}
+			summary.TopCount += topCount
 		}
-		summary.BucketCount++
-		topCount, err := s.rebuildTopScope(ctx, sc)
+		for _, sc := range sortedScopes(quarterScopes) {
+			if err := s.rebuildBucketScope(ctx, aggMode, sc); err != nil {
+				return summary, err
+			}
+			summary.BucketCount++
+			topCount, err := s.rebuildTopScope(ctx, aggMode, sc)
+			if err != nil {
+				return summary, err
+			}
+			summary.TopCount += topCount
+		}
+		for _, sc := range sortedScopes(yearScopes) {
+			if err := s.rebuildBucketScope(ctx, aggMode, sc); err != nil {
+				return summary, err
+			}
+			summary.BucketCount++
+			topCount, err := s.rebuildTopScope(ctx, aggMode, sc)
+			if err != nil {
+				return summary, err
+			}
+			summary.TopCount += topCount
+		}
+		topCount, err := s.rebuildTopScope(ctx, aggMode, buildScope(0, 0, 0, 0))
 		if err != nil {
 			return summary, err
 		}
 		summary.TopCount += topCount
 	}
-	for _, sc := range sortedScopes(quarterScopes) {
-		if err := s.rebuildBucketScope(ctx, sc); err != nil {
-			return summary, err
-		}
-		summary.BucketCount++
-		topCount, err := s.rebuildTopScope(ctx, sc)
-		if err != nil {
-			return summary, err
-		}
-		summary.TopCount += topCount
-	}
-	for _, sc := range sortedScopes(yearScopes) {
-		if err := s.rebuildBucketScope(ctx, sc); err != nil {
-			return summary, err
-		}
-		summary.BucketCount++
-		topCount, err := s.rebuildTopScope(ctx, sc)
-		if err != nil {
-			return summary, err
-		}
-		summary.TopCount += topCount
-	}
-	topCount, err := s.rebuildTopScope(ctx, buildScope(0, 0, 0, 0))
-	if err != nil {
-		return summary, err
-	}
-	summary.TopCount += topCount
 
 	for _, row := range dirtyRows {
 		if row == nil || row.Id <= 0 {
@@ -141,12 +145,12 @@ func (s *Service) rebuildDirty(ctx context.Context, dirtyRows []*moviex.MovieRel
 	return summary, nil
 }
 
-func (s *Service) rebuildBucketScope(ctx context.Context, sc scope) error {
+func (s *Service) rebuildBucketScope(ctx context.Context, aggMode string, sc scope) error {
 	if sc.Level == levelRoot {
 		return nil
 	}
 
-	calc, err := s.deps.MovieModel.CalcReleaseBucket(ctx, sc.StartUnix, sc.EndUnix)
+	calc, err := s.deps.MovieModel.CalcReleaseBucketByMode(ctx, sc.StartUnix, sc.EndUnix, aggMode)
 	if err != nil {
 		return err
 	}
@@ -154,7 +158,7 @@ func (s *Service) rebuildBucketScope(ctx context.Context, sc scope) error {
 		calc = &moviex.MovieReleaseBucketCalc{}
 	}
 
-	existing, err := s.deps.MovieReleaseBucketStatModel.FindOneByScopeKey(ctx, sc.Key)
+	existing, err := s.deps.MovieReleaseBucketStatModel.FindOneByAggModeScopeKey(ctx, aggMode, sc.Key)
 	if err != nil && err != moviex.ErrNotFound {
 		return err
 	}
@@ -169,6 +173,7 @@ func (s *Service) rebuildBucketScope(ctx context.Context, sc scope) error {
 	now := time.Now().Unix()
 	if existing == nil {
 		_, err = s.deps.MovieReleaseBucketStatModel.Insert(ctx, &moviex.MovieReleaseBucketStat{
+			AggMode:             aggMode,
 			ScopeKey:            sc.Key,
 			Level:               sc.Level,
 			Year:                int64(sc.Year),
@@ -185,6 +190,7 @@ func (s *Service) rebuildBucketScope(ctx context.Context, sc scope) error {
 		return err
 	}
 
+	existing.AggMode = aggMode
 	existing.Level = sc.Level
 	existing.Year = int64(sc.Year)
 	existing.Quarter = int64(sc.Quarter)
@@ -198,43 +204,43 @@ func (s *Service) rebuildBucketScope(ctx context.Context, sc scope) error {
 	return s.deps.MovieReleaseBucketStatModel.Update(ctx, existing)
 }
 
-func (s *Service) rebuildTopScope(ctx context.Context, sc scope) (int64, error) {
+func (s *Service) rebuildTopScope(ctx context.Context, aggMode string, sc scope) (int64, error) {
 	var total int64
-	castRows, err := s.deps.MovieModel.CalcTopCastsByReleaseRange(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit)
+	castRows, err := s.deps.MovieModel.CalcTopCastsByReleaseRangeMode(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit, aggMode)
 	if err != nil {
 		return total, err
 	}
-	inserted, err := s.replaceTopRows(ctx, sc, aggTypeCast, castRows)
-	if err != nil {
-		return total, err
-	}
-	total += inserted
-
-	directorRows, err := s.deps.MovieModel.CalcTopDirectorsByReleaseRange(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit)
-	if err != nil {
-		return total, err
-	}
-	inserted, err = s.replaceTopRows(ctx, sc, aggTypeDirector, directorRows)
+	inserted, err := s.replaceTopRows(ctx, aggMode, sc, aggTypeCast, castRows)
 	if err != nil {
 		return total, err
 	}
 	total += inserted
 
-	labelRows, err := s.deps.MovieModel.CalcTopLabelsByReleaseRange(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit)
+	directorRows, err := s.deps.MovieModel.CalcTopDirectorsByReleaseRangeMode(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit, aggMode)
 	if err != nil {
 		return total, err
 	}
-	inserted, err = s.replaceTopRows(ctx, sc, aggTypeLabel, labelRows)
+	inserted, err = s.replaceTopRows(ctx, aggMode, sc, aggTypeDirector, directorRows)
 	if err != nil {
 		return total, err
 	}
 	total += inserted
 
-	prefixRows, err := s.deps.MovieModel.CalcTopPrefixesByReleaseRange(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit)
+	labelRows, err := s.deps.MovieModel.CalcTopLabelsByReleaseRangeMode(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit, aggMode)
 	if err != nil {
 		return total, err
 	}
-	inserted, err = s.replaceTopRows(ctx, sc, aggTypePrefix, prefixRows)
+	inserted, err = s.replaceTopRows(ctx, aggMode, sc, aggTypeLabel, labelRows)
+	if err != nil {
+		return total, err
+	}
+	total += inserted
+
+	prefixRows, err := s.deps.MovieModel.CalcTopPrefixesByReleaseRangeMode(ctx, sc.StartUnix, sc.EndUnix, topPersistLimit, aggMode)
+	if err != nil {
+		return total, err
+	}
+	inserted, err = s.replaceTopRows(ctx, aggMode, sc, aggTypePrefix, prefixRows)
 	if err != nil {
 		return total, err
 	}
@@ -242,8 +248,8 @@ func (s *Service) rebuildTopScope(ctx context.Context, sc scope) (int64, error) 
 	return total, nil
 }
 
-func (s *Service) replaceTopRows(ctx context.Context, sc scope, aggType string, rows []*moviex.MovieReleaseTopCalc) (int64, error) {
-	if err := s.deps.MovieReleaseTopStatModel.DeleteByScopeAggType(ctx, sc.Key, aggType); err != nil {
+func (s *Service) replaceTopRows(ctx context.Context, aggMode string, sc scope, aggType string, rows []*moviex.MovieReleaseTopCalc) (int64, error) {
+	if err := s.deps.MovieReleaseTopStatModel.DeleteByAggModeScopeAggType(ctx, aggMode, sc.Key, aggType); err != nil {
 		return 0, err
 	}
 
@@ -254,6 +260,7 @@ func (s *Service) replaceTopRows(ctx context.Context, sc scope, aggType string, 
 			continue
 		}
 		_, err := s.deps.MovieReleaseTopStatModel.Insert(ctx, &moviex.MovieReleaseTopStat{
+			AggMode:    aggMode,
 			ScopeKey:   sc.Key,
 			Level:      sc.Level,
 			Year:       int64(sc.Year),

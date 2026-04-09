@@ -2,9 +2,10 @@ package modelg
 
 type Media struct {
 	ID                int64  `gorm:"primaryKey;autoIncrement;column:id"`
-	MovieJavID        string `gorm:"column:movie_jav_id;type:varchar(191);not null;uniqueIndex"`
-	MovieName         string `gorm:"column:movie_name;type:varchar(191);not null;uniqueIndex;index:idx_w_media_birth_name,priority:2,sort:desc;index:idx_w_media_reldate_name,priority:2,sort:desc"`
-	FileName          string `gorm:"column:file_name;type:varchar(500);not null;uniqueIndex"`
+	MovieJavID        string `gorm:"column:movie_jav_id;type:varchar(191);not null;uniqueIndex:idx_w_media_movie_jav_id_source_type,priority:1"`
+	MovieName         string `gorm:"column:movie_name;type:varchar(191);not null;uniqueIndex:idx_w_media_movie_name_source_type,priority:1;index:idx_w_media_birth_name,priority:2,sort:desc;index:idx_w_media_reldate_name,priority:2,sort:desc"`
+	FileName          string `gorm:"column:file_name;type:varchar(500);not null;uniqueIndex:idx_w_media_file_name_source_type,priority:1"`
+	SourceType        int8   `gorm:"column:source_type;type:tinyint;not null;default:2;index:idx_w_media_source_type;uniqueIndex:idx_w_media_movie_jav_id_source_type,priority:2;uniqueIndex:idx_w_media_movie_name_source_type,priority:2;uniqueIndex:idx_w_media_file_name_source_type,priority:2"`
 	SourceTorrentHash string `gorm:"column:source_torrent_hash;type:char(40);not null;index:idx_w_media_source_torrent_hash"`
 
 	DirectoryID int64  `gorm:"column:directory_id;not null;index"`

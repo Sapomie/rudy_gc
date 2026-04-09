@@ -142,7 +142,7 @@ func (s *Service) findExistingMediaForRescan(ctx context.Context, fileName strin
 		return nil, "", nil
 	}
 
-	row, err := s.deps.WMediaModel.FindOneByFileName(ctx, fileName)
+	row, err := s.deps.WMediaModel.FindOneByFileNameSourceType(ctx, fileName, consts.WMediaSourceNative)
 	switch {
 	case err == nil && row != nil:
 		return row, "file_name", nil
@@ -157,7 +157,7 @@ func (s *Service) findExistingMediaForRescan(ctx context.Context, fileName strin
 			continue
 		}
 
-		row, err = s.deps.WMediaModel.FindOneByMovieJavId(ctx, candidate)
+		row, err = s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, candidate, consts.WMediaSourceNative)
 		switch {
 		case err == nil && row != nil:
 			return row, "movie_jav_id", nil
@@ -165,7 +165,7 @@ func (s *Service) findExistingMediaForRescan(ctx context.Context, fileName strin
 			return nil, "", err
 		}
 
-		row, err = s.deps.WMediaModel.FindOneByMovieName(ctx, candidate)
+		row, err = s.deps.WMediaModel.FindOneByMovieNameSourceType(ctx, candidate, consts.WMediaSourceNative)
 		switch {
 		case err == nil && row != nil:
 			return row, "movie_name", nil

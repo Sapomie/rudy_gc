@@ -10,13 +10,13 @@ const (
 )
 
 type ScTriggerMsg struct {
-	Kind           ScTriggerKind
-	ScName         string // ScMove 用
-	Dir            string // ScAdd 用
-	ComeMovieJavId string
-	MovieCast      string
-	Duration       int64
-	Fg             string
-	Vessel         string
-	Remarks        string
+	Kind            ScTriggerKind
+	ScName          string // ScMove 用
+	Dir             string // ScAdd 用
+	ComeMovieJavId  string
+	MovieCast       string
+	DurationMinutes int64
+	Fg              string
+	Vessel          string
+	Remarks         string
 }

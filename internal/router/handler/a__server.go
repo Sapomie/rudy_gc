@@ -2,6 +2,7 @@ package handler
 
 import (
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/service/media"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/service/vfilm"
@@ -15,6 +16,7 @@ import (
 // -------- Handler 结构 --------
 type MovieHTMLHandler struct {
 	deps       *svc.Deps
+	mediaSvc   *media.Service
 	movieSvc   *movie.Service
 	scSvc      *sc.ScService
 	vfilmSvc   *vfilm.Service
@@ -26,6 +28,7 @@ type MovieHTMLHandler struct {
 func NewMovieHTMLHandler(deps *svc.Deps) *MovieHTMLHandler {
 	return &MovieHTMLHandler{
 		deps:       deps,
+		mediaSvc:   media.NewService(deps),
 		movieSvc:   movie.NewService(deps),
 		scSvc:      sc.NewService(deps),
 		vfilmSvc:   vfilm.NewService(deps),

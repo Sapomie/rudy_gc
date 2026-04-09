@@ -1,24 +1,25 @@
 package types
 
 type Person struct {
-	Id               int64
-	Name             string
-	Alias            string
-	Chinese          string
-	BirthDay         int64
-	Height           int64
-	Cup              string
-	Bwh              string
-	Avatar           string
-	MovieNumber      int64
-	OwnedMovieNumber int64
-	ScTimes          int64
-	ComeTimes        int64
-	LastScTime       int64
-	HighestRank      int64
-	RankTimes        int64
-	CreatedOn        int64
-	UpdatedOn        int64
+	Id                int64
+	Name              string
+	Alias             string
+	Chinese           string
+	BirthDay          int64
+	Height            int64
+	Cup               string
+	Bwh               string
+	Avatar            string
+	MovieNumber       int64
+	OwnedMovieNumber  int64
+	OwnedWMediaNumber int64
+	ScTimes           int64
+	ComeTimes         int64
+	LastScTime        int64
+	HighestRank       int64
+	RankTimes         int64
+	CreatedOn         int64
+	UpdatedOn         int64
 }
 
 type PersonListFilter struct {

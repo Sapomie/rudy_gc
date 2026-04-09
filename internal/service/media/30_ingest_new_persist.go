@@ -220,6 +220,7 @@ func (s *Service) buildMediaRow(in mediaRowInput) *moviex.WMedia {
 		MovieJavId:        in.MovieInfo.javID,
 		MovieName:         in.MovieName,
 		FileName:          in.FileName,
+		SourceType:        consts.WMediaSourceNative,
 		SourceTorrentHash: sourceHash,
 		DirectoryId:       in.DirectoryID,
 		RootDir:           filepath.Clean(in.RootDir),
@@ -313,7 +314,7 @@ func (s *Service) invalidateMovieTypeCaches(ctx context.Context, javIDs ...strin
 
 func (s *Service) findMediaForUpsert(ctx context.Context, row *moviex.WMedia) (*moviex.WMedia, error) {
 	if strings.TrimSpace(row.MovieJavId) != "" {
-		existing, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, row.MovieJavId)
+		existing, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, row.MovieJavId, row.SourceType)
 		if err == nil {
 			return existing, nil
 		}
@@ -323,7 +324,7 @@ func (s *Service) findMediaForUpsert(ctx context.Context, row *moviex.WMedia) (*
 	}
 
 	if strings.TrimSpace(row.MovieName) != "" {
-		existing, err := s.deps.WMediaModel.FindOneByMovieName(ctx, row.MovieName)
+		existing, err := s.deps.WMediaModel.FindOneByMovieNameSourceType(ctx, row.MovieName, row.SourceType)
 		if err == nil {
 			return existing, nil
 		}
@@ -333,7 +334,7 @@ func (s *Service) findMediaForUpsert(ctx context.Context, row *moviex.WMedia) (*
 	}
 
 	if strings.TrimSpace(row.FileName) != "" {
-		existing, err := s.deps.WMediaModel.FindOneByFileName(ctx, row.FileName)
+		existing, err := s.deps.WMediaModel.FindOneByFileNameSourceType(ctx, row.FileName, row.SourceType)
 		if err == nil {
 			return existing, nil
 		}

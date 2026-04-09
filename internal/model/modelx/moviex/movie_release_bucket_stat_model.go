@@ -13,6 +13,7 @@ var _ MovieReleaseBucketStatModel = (*customMovieReleaseBucketStatModel)(nil)
 
 type (
 	MovieReleaseBucketStatListFilter struct {
+		AggMode      string
 		Level        string
 		ScopeKeyLike string
 		Year         *int64
@@ -30,7 +31,8 @@ type (
 	MovieReleaseBucketStatModel interface {
 		movieReleaseBucketStatModel
 		ListAll(ctx context.Context) ([]*MovieReleaseBucketStat, error)
-		ListByLevel(ctx context.Context, level string, year, quarter, month int64, positiveOnly bool) ([]*MovieReleaseBucketStat, error)
+		FindOneByAggModeScopeKey(ctx context.Context, aggMode, scopeKey string) (*MovieReleaseBucketStat, error)
+		ListByLevel(ctx context.Context, aggMode, level string, year, quarter, month int64, positiveOnly bool) ([]*MovieReleaseBucketStat, error)
 		ListPage(ctx context.Context, filter MovieReleaseBucketStatListFilter) ([]*MovieReleaseBucketStat, int64, error)
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
@@ -65,7 +67,7 @@ func (m *customMovieReleaseBucketStatModel) ListAll(ctx context.Context) ([]*Mov
 	query, args, err := squirrel.
 		Select(movieReleaseBucketStatRows).
 		From(m.table).
-		OrderBy("`level` ASC", "`year` DESC", "`quarter` DESC", "`month` DESC", "`day` DESC", "`scope_key` DESC").
+		OrderBy("`agg_mode` ASC", "`level` ASC", "`year` DESC", "`quarter` DESC", "`month` DESC", "`day` DESC", "`scope_key` DESC").
 		ToSql()
 	if err != nil {
 		return nil, err
@@ -80,11 +82,14 @@ func (m *customMovieReleaseBucketStatModel) ListAll(ctx context.Context) ([]*Mov
 	return rows, nil
 }
 
-func (m *customMovieReleaseBucketStatModel) ListByLevel(ctx context.Context, level string, year, quarter, month int64, positiveOnly bool) ([]*MovieReleaseBucketStat, error) {
+func (m *customMovieReleaseBucketStatModel) ListByLevel(ctx context.Context, aggMode, level string, year, quarter, month int64, positiveOnly bool) ([]*MovieReleaseBucketStat, error) {
 	builder := squirrel.
 		Select(movieReleaseBucketStatRows).
 		From(m.table).
-		Where(squirrel.Eq{"level": strings.TrimSpace(level)})
+		Where(squirrel.Eq{
+			"agg_mode": strings.TrimSpace(aggMode),
+			"level":    strings.TrimSpace(level),
+		})
 	if year > 0 {
 		builder = builder.Where(squirrel.Eq{"year": year})
 	}
@@ -115,6 +120,10 @@ func (m *customMovieReleaseBucketStatModel) ListPage(ctx context.Context, filter
 	builder := squirrel.Select(movieReleaseBucketStatRows).From(m.table)
 	countBuilder := squirrel.Select("COUNT(*)").From(m.table)
 
+	if aggMode := strings.TrimSpace(filter.AggMode); aggMode != "" {
+		builder = builder.Where(squirrel.Eq{"agg_mode": aggMode})
+		countBuilder = countBuilder.Where(squirrel.Eq{"agg_mode": aggMode})
+	}
 	if level := strings.TrimSpace(filter.Level); level != "" {
 		builder = builder.Where(squirrel.Eq{"level": level})
 		countBuilder = countBuilder.Where(squirrel.Eq{"level": level})

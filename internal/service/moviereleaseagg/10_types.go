@@ -21,6 +21,7 @@ type TopStat struct {
 }
 
 type AggParams struct {
+	Mode    string
 	Year    int
 	Quarter int
 	Month   int
@@ -29,6 +30,9 @@ type AggParams struct {
 }
 
 type AggResult struct {
+	AggMode         string
+	AggModeLabel    string
+	CardFilterQuery string
 	Title           string
 	Breadcrumbs     []Breadcrumb
 	Level           string

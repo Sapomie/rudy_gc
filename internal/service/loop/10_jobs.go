@@ -75,7 +75,7 @@ type StartTaskRequest struct {
 	Dir             string   `json:"dir"`
 	ComeMovieJavID  string   `json:"come_movie_jav_id"`
 	MovieCast       string   `json:"movie_cast"`
-	Duration        int64    `json:"duration"`
+	DurationMinutes int64    `json:"duration"`
 	Fg              string   `json:"fg"`
 	Vessel          string   `json:"vessel"`
 	Remarks         string   `json:"remarks"`
@@ -345,13 +345,13 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 			return "", fmt.Errorf("dir is required")
 		}
 		return l.StartScAdd(sc.AddScInput{
-			Dir:            dir,
-			ComeMovieJavId: strings.TrimSpace(req.ComeMovieJavID),
-			MovieCast:      strings.TrimSpace(req.MovieCast),
-			Duration:       req.Duration,
-			Fg:             strings.TrimSpace(req.Fg),
-			Vessel:         strings.TrimSpace(req.Vessel),
-			Remarks:        strings.TrimSpace(req.Remarks),
+			Dir:             dir,
+			ComeMovieJavId:  strings.TrimSpace(req.ComeMovieJavID),
+			MovieCast:       strings.TrimSpace(req.MovieCast),
+			DurationMinutes: req.DurationMinutes,
+			Fg:              strings.TrimSpace(req.Fg),
+			Vessel:          strings.TrimSpace(req.Vessel),
+			Remarks:         strings.TrimSpace(req.Remarks),
 		})
 	default:
 		return "", fmt.Errorf("unsupported task_type: %s", req.TaskType)

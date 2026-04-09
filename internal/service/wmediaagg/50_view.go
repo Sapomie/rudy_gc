@@ -121,12 +121,12 @@ func buildTitle(sc scope) string {
 }
 
 func buildBreadcrumbs(sc scope) []Breadcrumb {
-	bcs := []Breadcrumb{{Title: "Media下载日", Href: rootPath}}
+	bcs := []Breadcrumb{{Title: "Media下载日", Href: buildBirthAggHref(0, 0, 0, 0)}}
 	if sc.Level == levelRoot {
 		bcs[0].Href = ""
 		return bcs
 	}
-	yearHref := fmt.Sprintf("%s/%d", rootPath, sc.Year)
+	yearHref := buildBirthAggHref(sc.Year, 0, 0, 0)
 	bcs = append(bcs, Breadcrumb{Title: fmt.Sprintf("%d 年", sc.Year), Href: yearHref})
 	switch sc.Level {
 	case levelYear:
@@ -134,14 +134,14 @@ func buildBreadcrumbs(sc scope) []Breadcrumb {
 	case levelQuarter:
 		bcs = append(bcs, Breadcrumb{Title: fmt.Sprintf("Q%d 季", sc.Quarter)})
 	case levelMonth:
-		quarterHref := fmt.Sprintf("%s/%d/q/%d", rootPath, sc.Year, sc.Quarter)
+		quarterHref := buildBirthAggHref(sc.Year, sc.Quarter, 0, 0)
 		bcs = append(bcs,
 			Breadcrumb{Title: fmt.Sprintf("Q%d 季", sc.Quarter), Href: quarterHref},
 			Breadcrumb{Title: fmt.Sprintf("%02d 月", sc.Month)},
 		)
 	case levelDay:
-		quarterHref := fmt.Sprintf("%s/%d/q/%d", rootPath, sc.Year, sc.Quarter)
-		monthHref := fmt.Sprintf("%s/%d/%d", rootPath, sc.Year, sc.Month)
+		quarterHref := buildBirthAggHref(sc.Year, sc.Quarter, 0, 0)
+		monthHref := buildBirthAggHref(sc.Year, 0, sc.Month, 0)
 		bcs = append(bcs,
 			Breadcrumb{Title: fmt.Sprintf("Q%d 季", sc.Quarter), Href: quarterHref},
 			Breadcrumb{Title: fmt.Sprintf("%02d 月", sc.Month), Href: monthHref},
@@ -154,13 +154,13 @@ func buildBreadcrumbs(sc scope) []Breadcrumb {
 func bucketLabelHref(level string, row *moviex.WMediaBirthBucketStat) (string, string) {
 	switch level {
 	case levelYear:
-		return fmt.Sprintf("%04d", row.Year), fmt.Sprintf("%s/%d", rootPath, row.Year)
+		return fmt.Sprintf("%04d", row.Year), buildBirthAggHref(int(row.Year), 0, 0, 0)
 	case levelQuarter:
-		return fmt.Sprintf("Q%d", row.Quarter), fmt.Sprintf("%s/%d/q/%d", rootPath, row.Year, row.Quarter)
+		return fmt.Sprintf("Q%d", row.Quarter), buildBirthAggHref(int(row.Year), int(row.Quarter), 0, 0)
 	case levelMonth:
-		return fmt.Sprintf("%02d 月", row.Month), fmt.Sprintf("%s/%d/%d", rootPath, row.Year, row.Month)
+		return fmt.Sprintf("%02d 月", row.Month), buildBirthAggHref(int(row.Year), 0, int(row.Month), 0)
 	case levelDay:
-		return fmt.Sprintf("%02d 日", row.Day), fmt.Sprintf("%s/%d/%d/%d", rootPath, row.Year, row.Month, row.Day)
+		return fmt.Sprintf("%02d 日", row.Day), buildBirthAggHref(int(row.Year), 0, int(row.Month), int(row.Day))
 	default:
 		return row.ScopeKey, ""
 	}

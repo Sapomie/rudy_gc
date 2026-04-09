@@ -173,7 +173,7 @@ func (s *Service) ListMovieFullRandom(ctx context.Context, r *types.ListMovieFul
 }
 
 func (s *Service) ListMovieOwned(ctx context.Context) ([]*types.MovieType, error) {
-	allRows, err := s.deps.FilmModel.FindAll(ctx, consts.FilmIsNotRemoved)
+	allRows, err := s.deps.WMediaModel.FindAllLegacyFilms(ctx, consts.FilmIsNotRemoved)
 	if err != nil {
 		return nil, err
 	}

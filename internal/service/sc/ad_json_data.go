@@ -9,10 +9,10 @@ import (
 
 // 定义结构体
 type scJsonData struct {
-	Duration int64  `json:"duration"`
-	Fg       string `json:"fg"`
-	Vessel   string `json:"vessel"`
-	Remarks  string `json:"remarks"`
+	DurationMinutes int64  `json:"duration"`
+	Fg              string `json:"fg"`
+	Vessel          string `json:"vessel"`
+	Remarks         string `json:"remarks"`
 }
 
 func isDataJsonFile(name string) bool {

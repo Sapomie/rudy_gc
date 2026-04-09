@@ -30,20 +30,7 @@ const (
 	orderByBirth       = "birth_time"
 )
 
-// ------- Owned 路由 -------
-
-func (h *MovieAggHTMLHandler) MovieAggOwnedReleaseYears(c *gin.Context) {
-	h.aggOwnedCommon(c, "release", orderByRelease)
-}
-func (h *MovieAggHTMLHandler) MovieAggOwnedReleaseMonths(c *gin.Context) {
-	h.aggOwnedCommon(c, "release", orderByRelease)
-}
-func (h *MovieAggHTMLHandler) MovieAggOwnedReleaseQuarter(c *gin.Context) {
-	h.aggOwnedCommon(c, "release", orderByRelease)
-}
-func (h *MovieAggHTMLHandler) MovieAggOwnedReleaseMonth(c *gin.Context) {
-	h.aggOwnedCommon(c, "release", orderByRelease)
-}
+// ------- Owned/Birth 路由 -------
 
 func (h *MovieAggHTMLHandler) MovieAggOwnedBirthYears(c *gin.Context) {
 	h.aggOwnedCommon(c, "birth", orderByBirth)

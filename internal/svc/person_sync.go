@@ -11,13 +11,17 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 	if d == nil || d.CastModel == nil || d.PersonModel == nil {
 		return nil
 	}
+	filteredIDs := uniquePositiveInt64s(ids)
+	if len(filteredIDs) == 0 {
+		return nil
+	}
 
-	statsMap, err := d.CastModel.AggregatePersonStatsByIDs(ctx, ids)
+	statsMap, err := d.CastModel.AggregatePersonStatsByIDs(ctx, filteredIDs)
 	if err != nil {
 		return err
 	}
 
-	for _, id := range uniquePositiveInt64s(ids) {
+	for _, id := range filteredIDs {
 		row, err := d.PersonModel.FindOne(ctx, id)
 		if err != nil {
 			if errors.Is(err, moviex.ErrNotFound) {
@@ -31,17 +35,19 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 
 		stat := statsMap[id]
 		var (
-			movieNumber      int64
-			ownedMovieNumber int64
-			scTimes          int64
-			comeTimes        int64
-			lastScTime       int64
-			highestRank      int64
-			rankTimes        int64
+			movieNumber       int64
+			ownedMovieNumber  int64
+			ownedWMediaNumber int64
+			scTimes           int64
+			comeTimes         int64
+			lastScTime        int64
+			highestRank       int64
+			rankTimes         int64
 		)
 		if stat != nil {
 			movieNumber = stat.MovieNumber
 			ownedMovieNumber = stat.OwnedMovieNumber
+			ownedWMediaNumber = stat.OwnedWMediaNumber
 			scTimes = stat.ScTimes
 			comeTimes = stat.ComeTimes
 			lastScTime = stat.LastScTime
@@ -51,6 +57,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 
 		if row.MovieNumber == movieNumber &&
 			row.OwnedMovieNumber == ownedMovieNumber &&
+			row.OwnedWMediaNumber == ownedWMediaNumber &&
 			row.ScTimes == scTimes &&
 			row.ComeTimes == comeTimes &&
 			row.LastScTime == lastScTime &&
@@ -61,6 +68,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 
 		row.MovieNumber = movieNumber
 		row.OwnedMovieNumber = ownedMovieNumber
+		row.OwnedWMediaNumber = ownedWMediaNumber
 		row.ScTimes = scTimes
 		row.ComeTimes = comeTimes
 		row.LastScTime = lastScTime
@@ -68,6 +76,11 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		row.RankTimes = rankTimes
 		row.UpdatedOn = now
 		if err := d.PersonModel.Update(ctx, row); err != nil {
+			return err
+		}
+	}
+	if d.CPersonScModel != nil {
+		if err := d.CPersonScModel.RebuildByPersonIDs(ctx, filteredIDs, now); err != nil {
 			return err
 		}
 	}

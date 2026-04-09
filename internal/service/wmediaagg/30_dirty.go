@@ -2,21 +2,26 @@ package wmediaagg
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"rudy_gc/internal/model/modelx/moviex"
 )
 
 func (s *Service) MarkMovieDirty(ctx context.Context, javID string) error {
-	row, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, javID)
+	rows, err := s.deps.WMediaModel.ListByMovieJavIds(ctx, []string{javID})
 	if err != nil {
-		if errors.Is(err, moviex.ErrNotFound) {
-			return nil
-		}
 		return err
 	}
-	return s.MarkMediaRowsDirty(ctx, row)
+	if len(rows) == 0 {
+		return nil
+	}
+	items := make([]*moviex.WMedia, 0, len(rows))
+	for _, row := range rows {
+		if row != nil {
+			items = append(items, row)
+		}
+	}
+	return s.MarkMediaRowsDirty(ctx, items...)
 }
 
 func (s *Service) MarkMoviesDirty(ctx context.Context, javIDs ...string) error {

@@ -62,24 +62,24 @@ func (h *ScTriggerAPI) Add(c *gin.Context) {
 		return
 	}
 	h.startTask(c, loop.StartTaskRequest{
-		TaskType:       loop.TaskScAdd,
-		Dir:            dir,
-		ComeMovieJavID: strings.TrimSpace(req.ComeMovieJavId),
-		MovieCast:      strings.TrimSpace(req.MovieCast),
-		Duration:       req.Duration,
-		Fg:             strings.TrimSpace(req.Fg),
-		Vessel:         strings.TrimSpace(req.Vessel),
-		Remarks:        strings.TrimSpace(req.Remarks),
+		TaskType:        loop.TaskScAdd,
+		Dir:             dir,
+		ComeMovieJavID:  strings.TrimSpace(req.ComeMovieJavId),
+		MovieCast:       strings.TrimSpace(req.MovieCast),
+		DurationMinutes: req.DurationMinutes,
+		Fg:              strings.TrimSpace(req.Fg),
+		Vessel:          strings.TrimSpace(req.Vessel),
+		Remarks:         strings.TrimSpace(req.Remarks),
 	})
 }
 
 type scAddReq struct {
-	ComeMovieJavId string `json:"comeMovieJavId"`
-	MovieCast      string `json:"movieCast"`
-	Duration       int64  `json:"duration"`
-	Fg             string `json:"fg"`
-	Vessel         string `json:"vessel"`
-	Remarks        string `json:"remarks"`
+	ComeMovieJavId  string `json:"comeMovieJavId"`
+	MovieCast       string `json:"movieCast"`
+	DurationMinutes int64  `json:"duration"`
+	Fg              string `json:"fg"`
+	Vessel          string `json:"vessel"`
+	Remarks         string `json:"remarks"`
 }
 
 type scAddPreviewMovieResp struct {

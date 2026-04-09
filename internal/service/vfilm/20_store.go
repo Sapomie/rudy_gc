@@ -28,7 +28,7 @@ func (s *Service) directoryGetOrCreateChainWithLevels(ctx context.Context, parts
 	var parentID int64
 	fullIDs := make([]int64, 0, len(clean))
 	for i, name := range clean {
-		if row, err := s.deps.DirectoryModel.FindOneByParentIdName(ctx, parentID, name); err == nil && row != nil {
+		if row, err := s.deps.WFolderModel.FindOneByParentIdNameSourceType(ctx, parentID, name, consts.WFolderSourceLegacyVFilm); err == nil && row != nil {
 			parentID = row.Id
 			fullIDs = append(fullIDs, parentID)
 			continue
@@ -37,24 +37,25 @@ func (s *Service) directoryGetOrCreateChainWithLevels(ctx context.Context, parts
 		depth := int64(i + 1)
 		path := "/" + strings.Join(clean[:i+1], "/")
 		sum := md5.Sum([]byte(path))
-		vd := &moviex.VDirectory{
-			ParentId:  parentID,
-			Name:      name,
-			Depth:     depth,
-			Path:      path,
-			PathHash:  string(sum[:]),
-			CreatedOn: now,
-			UpdatedOn: now,
+		vd := &moviex.WFolder{
+			ParentId:   parentID,
+			Name:       name,
+			SourceType: consts.WFolderSourceLegacyVFilm,
+			Depth:      depth,
+			Path:       path,
+			PathHash:   string(sum[:]),
+			CreatedOn:  now,
+			UpdatedOn:  now,
 		}
-		if _, err := s.deps.DirectoryModel.Insert(ctx, vd); err != nil {
-			if row2, err2 := s.deps.DirectoryModel.FindOneByParentIdName(ctx, parentID, name); err2 == nil && row2 != nil {
+		if _, err := s.deps.WFolderModel.Insert(ctx, vd); err != nil {
+			if row2, err2 := s.deps.WFolderModel.FindOneByParentIdNameSourceType(ctx, parentID, name, consts.WFolderSourceLegacyVFilm); err2 == nil && row2 != nil {
 				parentID = row2.Id
 				fullIDs = append(fullIDs, parentID)
 				continue
 			}
 			return levels, err
 		}
-		row3, err := s.deps.DirectoryModel.FindOneByParentIdName(ctx, parentID, name)
+		row3, err := s.deps.WFolderModel.FindOneByParentIdNameSourceType(ctx, parentID, name, consts.WFolderSourceLegacyVFilm)
 		if err != nil {
 			return levels, err
 		}
@@ -73,15 +74,18 @@ func (s *Service) directoryGetOrCreateChainWithLevels(ctx context.Context, parts
 }
 
 func (s *Service) directoryFindOneByID(ctx context.Context, id int64) (*types.Directory, error) {
-	row, err := s.deps.DirectoryModel.FindOne(ctx, id)
+	row, err := s.deps.WFolderModel.FindOne(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if row == nil || row.SourceType != consts.WFolderSourceLegacyVFilm {
+		return nil, nil
 	}
 	return mapDirectoryModelToTypes(row), nil
 }
 
 func (s *Service) directoryFindOneByName(ctx context.Context, name string) (*types.Directory, error) {
-	row, err := s.deps.DirectoryModel.FindOneByName(ctx, name)
+	row, err := s.deps.WFolderModel.FindOneByNameSourceType(ctx, name, consts.WFolderSourceLegacyVFilm)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +101,7 @@ func (s *Service) directoryListChildren(ctx context.Context, parentID int64, pag
 }
 
 func (s *Service) directoryListByParent(ctx context.Context, parentID int64, page, size int) ([]*types.DirSummary, int64, error) {
-	rows, total, err := s.deps.DirectoryModel.ListByParent(ctx, parentID, page, size)
+	rows, total, err := s.deps.WFolderModel.ListByParentSourceType(ctx, parentID, consts.WFolderSourceLegacyVFilm, page, size)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -116,15 +120,15 @@ func (s *Service) directoryListByParent(ctx context.Context, parentID int64, pag
 }
 
 func (s *Service) directoryBuildBreadcrumbs(ctx context.Context, id int64) ([]types.Breadcrumb, error) {
-	cur, err := s.deps.DirectoryModel.FindOne(ctx, id)
-	if err != nil || cur == nil {
+	cur, err := s.deps.WFolderModel.FindOne(ctx, id)
+	if err != nil || cur == nil || cur.SourceType != consts.WFolderSourceLegacyVFilm {
 		return []types.Breadcrumb{}, err
 	}
 	parts := stringsSplitPath(cur.Path)
 	var parentID int64
 	var out []types.Breadcrumb
 	for _, name := range parts {
-		row, err := s.deps.DirectoryModel.FindOneByParentIdName(ctx, parentID, name)
+		row, err := s.deps.WFolderModel.FindOneByParentIdNameSourceType(ctx, parentID, name, consts.WFolderSourceLegacyVFilm)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +139,7 @@ func (s *Service) directoryBuildBreadcrumbs(ctx context.Context, id int64) ([]ty
 }
 
 func (s *Service) directoryListSubtreeIDs(ctx context.Context, id int64) ([]int64, error) {
-	d, err := s.deps.DirectoryModel.FindOne(ctx, id)
+	d, err := s.deps.WFolderModel.FindOne(ctx, id)
 	if err != nil {
 		if err == moviex.ErrNotFound {
 			return []int64{}, nil
@@ -145,7 +149,10 @@ func (s *Service) directoryListSubtreeIDs(ctx context.Context, id int64) ([]int6
 	if d == nil {
 		return []int64{}, nil
 	}
-	ids, err := s.deps.DirectoryModel.ListSubtreeIDsByPath(ctx, d.Path)
+	if d.SourceType != consts.WFolderSourceLegacyVFilm {
+		return []int64{}, nil
+	}
+	ids, err := s.deps.WFolderModel.ListSubtreeIDsByPathSourceType(ctx, d.Path, consts.WFolderSourceLegacyVFilm)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +163,7 @@ func (s *Service) directoryListSubtreeIDs(ctx context.Context, id int64) ([]int6
 }
 
 func (s *Service) filmFindAll(ctx context.Context, removedStatus int64) ([]*types.Film, error) {
-	rows, err := s.deps.FilmModel.FindAll(ctx, removedStatus)
+	rows, err := s.deps.WMediaModel.FindAllLegacyFilms(ctx, removedStatus)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +175,15 @@ func (s *Service) filmFindAll(ctx context.Context, removedStatus int64) ([]*type
 }
 
 func (s *Service) filmFindOne(ctx context.Context, id int64) (*types.Film, error) {
-	row, err := s.deps.FilmModel.FindOne(ctx, id)
+	row, err := s.deps.WMediaModel.FindOneLegacyFilmByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return mapFilmModelToTypes(row), nil
+}
+
+func (s *Service) filmFindOneByMovieJavID(ctx context.Context, javID string) (*types.Film, error) {
+	row, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, javID)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +194,7 @@ func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, 
 	if in == nil {
 		return nil, 0, nil
 	}
-	if row, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, in.MovieJavId); err == nil && row != nil {
+	if row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, in.MovieJavId, consts.WMediaSourceLegacyVFilm); err == nil && row != nil {
 		changed := false
 		if row.MovieName != in.MovieName {
 			row.MovieName = in.MovieName
@@ -199,22 +214,6 @@ func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, 
 		}
 		if row.FullDir != in.FullDir {
 			row.FullDir = in.FullDir
-			changed = true
-		}
-		if row.Dir1Id != in.Dir1Id {
-			row.Dir1Id = in.Dir1Id
-			changed = true
-		}
-		if row.Dir2Id != in.Dir2Id {
-			row.Dir2Id = in.Dir2Id
-			changed = true
-		}
-		if row.Dir3Id != in.Dir3Id {
-			row.Dir3Id = in.Dir3Id
-			changed = true
-		}
-		if row.Dir4Id != in.Dir4Id {
-			row.Dir4Id = in.Dir4Id
 			changed = true
 		}
 		if row.Alias != in.Alias {
@@ -269,18 +268,6 @@ func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, 
 			row.RemoveTime = in.RemoveTime
 			changed = true
 		}
-		if row.ScTimes != in.ScTimes {
-			row.ScTimes = in.ScTimes
-			changed = true
-		}
-		if row.ComeTimes != in.ComeTimes {
-			row.ComeTimes = in.ComeTimes
-			changed = true
-		}
-		if row.LastScTime != in.LastScTime {
-			row.LastScTime = in.LastScTime
-			changed = true
-		}
 		if row.BirthTime != in.BirthTime {
 			row.BirthTime = in.BirthTime
 			changed = true
@@ -291,36 +278,46 @@ func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, 
 		}
 		if changed {
 			row.UpdatedOn = time.Now().Unix()
-			if err := s.deps.FilmModel.Update(ctx, row); err != nil {
+			if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 				return nil, 0, err
 			}
-			return mapFilmModelToTypes(row), consts.UpsertUpdated, nil
+			updated, err := s.filmFindOneByMovieJavID(ctx, in.MovieJavId)
+			if err != nil {
+				return nil, 0, err
+			}
+			return updated, consts.UpsertUpdated, nil
 		}
-		return mapFilmModelToTypes(row), consts.UpsertUnchanged, nil
+		current, err := s.filmFindOneByMovieJavID(ctx, in.MovieJavId)
+		if err != nil {
+			return nil, 0, err
+		}
+		return current, consts.UpsertUnchanged, nil
 	}
 
 	row := mapFilmTypesToModel(in)
 	now := time.Now().Unix()
+	row.SourceType = consts.WMediaSourceLegacyVFilm
+	row.SourceTorrentHash = ""
 	row.CreatedOn = now
 	row.UpdatedOn = now
-	if _, err := s.deps.FilmModel.Insert(ctx, row); err != nil {
-		if again, err2 := s.deps.FilmModel.FindOneByMovieJavId(ctx, in.MovieJavId); err2 == nil && again != nil {
-			return mapFilmModelToTypes(again), consts.UpsertUpdated, nil
+	if _, err := s.deps.WMediaModel.Insert(ctx, row); err != nil {
+		if again, err2 := s.filmFindOneByMovieJavID(ctx, in.MovieJavId); err2 == nil && again != nil {
+			return again, consts.UpsertUpdated, nil
 		}
 		return nil, 0, err
 	}
-	ins, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, in.MovieJavId)
+	ins, err := s.filmFindOneByMovieJavID(ctx, in.MovieJavId)
 	if err != nil {
 		return nil, 0, err
 	}
-	return mapFilmModelToTypes(ins), consts.UpsertInserted, nil
+	return ins, consts.UpsertInserted, nil
 }
 
 func (s *Service) filmListByDirectories(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*types.Film, total int64, err error) {
 	if len(dirIDs) == 0 {
 		return []*types.Film{}, []*types.Film{}, 0, nil
 	}
-	rowsAll, rowsPaged, total, err := s.deps.FilmModel.ListByDirectoryIDs(ctx, dirIDs, page, size, mapFilmOrderBy(orderBy))
+	rowsAll, rowsPaged, total, err := s.deps.WMediaModel.ListLegacyFilmsByDirectoryIDs(ctx, dirIDs, page, size, mapFilmOrderBy(orderBy))
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -368,7 +365,7 @@ func (s *Service) movieFindByName(ctx context.Context, name string) ([]*types.Mo
 	return out, nil
 }
 
-func mapDirectoryModelToTypes(v *moviex.VDirectory) *types.Directory {
+func mapDirectoryModelToTypes(v *moviex.WFolder) *types.Directory {
 	if v == nil {
 		return nil
 	}
@@ -383,7 +380,7 @@ func mapDirectoryModelToTypes(v *moviex.VDirectory) *types.Directory {
 	}
 }
 
-func mapFilmModelToTypes(v *moviex.VFilm) *types.Film {
+func mapFilmModelToTypes(v *moviex.LegacyFilm) *types.Film {
 	if v == nil {
 		return nil
 	}
@@ -422,8 +419,8 @@ func mapFilmModelToTypes(v *moviex.VFilm) *types.Film {
 	}
 }
 
-func mapFilmTypesToModel(in *types.Film) *moviex.VFilm {
-	return &moviex.VFilm{
+func mapFilmTypesToModel(in *types.Film) *moviex.WMedia {
+	return &moviex.WMedia{
 		Id:            in.Id,
 		MovieJavId:    in.MovieJavId,
 		MovieName:     in.MovieName,
@@ -431,10 +428,6 @@ func mapFilmTypesToModel(in *types.Film) *moviex.VFilm {
 		DirectoryId:   in.DirectoryId,
 		RootDir:       in.RootDir,
 		FullDir:       in.FullDir,
-		Dir1Id:        in.Dir1Id,
-		Dir2Id:        in.Dir2Id,
-		Dir3Id:        in.Dir3Id,
-		Dir4Id:        in.Dir4Id,
 		Alias:         in.Alias,
 		Size:          in.Size,
 		Width:         in.Width,
@@ -448,9 +441,6 @@ func mapFilmTypesToModel(in *types.Film) *moviex.VFilm {
 		NeedScanMeta:  in.NeedScanMeta,
 		IsRemoved:     in.IsRemoved,
 		RemoveTime:    in.RemoveTime,
-		ScTimes:       in.ScTimes,
-		ComeTimes:     in.ComeTimes,
-		LastScTime:    in.LastScTime,
 		BirthTime:     in.BirthTime,
 		ReleasingDate: in.ReleasingDate,
 		CreatedOn:     in.CreatedOn,

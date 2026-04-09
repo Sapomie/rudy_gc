@@ -122,6 +122,7 @@ SELECT DISTINCT
 	p.avatar AS avatar,
 	p.movie_number AS movie_number,
 	p.owned_movie_number AS owned_movie_number,
+	p.owned_w_media_number AS owned_w_media_number,
 	p.sc_times AS sc_times,
 	p.come_times AS come_times,
 	p.last_sc_time AS last_sc_time,
@@ -186,6 +187,7 @@ func (m *customCPersonModel) ListPage(ctx context.Context, offset, limit int64, 
 			"p.avatar",
 			"p.movie_number",
 			"p.owned_movie_number",
+			"p.owned_w_media_number",
 			"p.sc_times",
 			"p.come_times",
 			"p.last_sc_time",
@@ -291,7 +293,7 @@ func (m *customCPersonModel) CountOwnedScMovieNumbersByIDs(ctx context.Context, 
 		From(m.table + " p").
 		LeftJoin("`am_cast` ac ON ac.person_id = p.id").
 		LeftJoin("`amr_movie_cast` amr ON amr.cast_id = ac.id").
-		LeftJoin("`v_film` vf ON vf.movie_jav_id = amr.movie_jav_id").
+		LeftJoin(buildLegacyWMediaJoin("`w_media`", "vf", "amr.movie_jav_id")).
 		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = amr.movie_jav_id").
 		Where(squirrel.Eq{"p.id": uniq}).
 		GroupBy("p.id").
@@ -326,24 +328,25 @@ func mapCPersonModelToTypes(v *CPerson) *types.Person {
 		return nil
 	}
 	return &types.Person{
-		Id:               v.Id,
-		Name:             v.Name,
-		Alias:            v.Alias,
-		Chinese:          v.Chinese,
-		BirthDay:         v.BirthDay,
-		Height:           v.Height,
-		Cup:              v.Cup,
-		Bwh:              v.Bwh,
-		Avatar:           v.Avatar,
-		MovieNumber:      v.MovieNumber,
-		OwnedMovieNumber: v.OwnedMovieNumber,
-		ScTimes:          v.ScTimes,
-		ComeTimes:        v.ComeTimes,
-		LastScTime:       v.LastScTime,
-		HighestRank:      v.HighestRank,
-		RankTimes:        v.RankTimes,
-		CreatedOn:        v.CreatedOn,
-		UpdatedOn:        v.UpdatedOn,
+		Id:                v.Id,
+		Name:              v.Name,
+		Alias:             v.Alias,
+		Chinese:           v.Chinese,
+		BirthDay:          v.BirthDay,
+		Height:            v.Height,
+		Cup:               v.Cup,
+		Bwh:               v.Bwh,
+		Avatar:            v.Avatar,
+		MovieNumber:       v.MovieNumber,
+		OwnedMovieNumber:  v.OwnedMovieNumber,
+		OwnedWMediaNumber: v.OwnedWMediaNumber,
+		ScTimes:           v.ScTimes,
+		ComeTimes:         v.ComeTimes,
+		LastScTime:        v.LastScTime,
+		HighestRank:       v.HighestRank,
+		RankTimes:         v.RankTimes,
+		CreatedOn:         v.CreatedOn,
+		UpdatedOn:         v.UpdatedOn,
 	}
 }
 

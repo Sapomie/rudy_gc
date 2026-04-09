@@ -128,16 +128,16 @@
 	                vessel: (scPreviewVessel && scPreviewVessel.value || '').trim(),
 	                remarks: (scPreviewRemarks && scPreviewRemarks.value || '').trim(),
 	            };
-	            const rawDuration = (scPreviewDuration && scPreviewDuration.value || '').trim();
-	            if (rawDuration === '') {
+	            const rawDurationMinutes = (scPreviewDuration && scPreviewDuration.value || '').trim();
+	            if (rawDurationMinutes === '') {
 	                payload.duration = 0;
 	            } else {
-	                const parsedDuration = parseInt(rawDuration, 10);
-	                if (!Number.isFinite(parsedDuration)) {
-	                    setScPreviewMsg('Duration 必须是数字', false);
+	                const parsedDurationMinutes = parseInt(rawDurationMinutes, 10);
+	                if (!Number.isFinite(parsedDurationMinutes)) {
+	                    setScPreviewMsg('时长(分钟)必须是数字', false);
 	                    return;
 	                }
-	                payload.duration = parsedDuration;
+	                payload.duration = parsedDurationMinutes;
 	            }
 	            if (!payload.comeMovieJavId) {
 	                setScPreviewMsg('请选择 Come Movie', false);

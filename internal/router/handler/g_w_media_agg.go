@@ -43,10 +43,10 @@ func (h *WMediaAggHTMLHandler) birthCommon(c *gin.Context) {
 	curOD := normalizeOrderBy(c.Query("od"), consts.OrderByMediaBirthTime)
 	sq := buildSortQuery(c, curOD)
 
-	year := atoiDef(c.Param("year"), 0)
-	quarter := atoiDef(c.Param("q"), 0)
-	month := atoiDef(c.Param("month"), 0)
-	day := atoiDef(c.Param("day"), 0)
+	year := atoiDef(c.Query("year"), 0)
+	quarter := atoiDef(c.Query("quarter"), 0)
+	month := atoiDef(c.Query("month"), 0)
+	day := atoiDef(c.Query("day"), 0)
 
 	topN := 30
 	if v := c.Query("tn"); v != "" {
@@ -77,24 +77,26 @@ func (h *WMediaAggHTMLHandler) birthCommon(c *gin.Context) {
 		return
 	}
 
-	listReq := &types.ListMovieFullRequest{
+	baseReq := types.ListMovieFullRequest{
 		MediaOwned: consts.OwnedAllNotRemoved,
 		OrderBy:    curOD,
 		Page:       int64(page),
 		PageSize:   int64(size),
 	}
-	if vm.RangeStart != "" {
-		listReq.MediaBirthTimeStart = vm.RangeStart
+	listReq, err := parseMovieCardRequest(c, baseReq)
+	if err != nil {
+		c.String(400, "参数解析错误: %v", err)
+		return
 	}
-	if vm.RangeEnd != "" {
-		listReq.MediaBirthTimeEnd = vm.RangeEnd
-	}
+	listReq.MediaBirthTimeStart = vm.RangeStart
+	listReq.MediaBirthTimeEnd = vm.RangeEnd
 
-	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), listReq)
+	listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), &listReq)
 	if err != nil {
 		c.String(500, "加载失败: %v", err)
 		return
 	}
+	pageInfo := BuildPageInfo(c, listResp.Total, listReq.Page, listReq.PageSize, pageWindow)
 
 	data := map[string]any{
 		"Title":        vm.Title,
@@ -111,10 +113,15 @@ func (h *WMediaAggHTMLHandler) birthCommon(c *gin.Context) {
 		"TopLabels":    vm.TopLabels,
 		"TopPrefixes":  vm.TopPrefixes,
 		"Movies":       listResp.List,
+		"movies":       listResp.List,
 		"Total":        listResp.Total,
-		"PageInfo":     BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow),
+		"total":        listResp.Total,
+		"PageInfo":     pageInfo,
+		"pageInfo":     pageInfo,
 		"SortQuery":    sq,
+		"sortQuery":    sq,
 		"CurrentSort":  curOD,
+		"ownedQuery":   buildOwnedFilterInfoWithDefaults(c, "", "3"),
 	}
 
 	c.HTML(200, "page.w_media_agg_birth_time", data)
@@ -225,12 +232,14 @@ func bucketListOptionalInt64(c *gin.Context, key string) (*int64, string) {
 
 func normalizeBucketListSort(v string) string {
 	switch strings.TrimSpace(v) {
-	case "", "updated":
+	case "":
+		return "scope"
+	case "updated":
 		return "updated"
 	case "media", "removed", "size", "subtitle", "latest_birth", "scope":
 		return strings.TrimSpace(v)
 	default:
-		return "updated"
+		return "scope"
 	}
 }
 

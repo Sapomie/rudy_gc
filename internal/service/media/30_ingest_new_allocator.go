@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"rudy_gc/internal/consts"
 	"rudy_gc/internal/service/wfoldertree"
 )
 
@@ -37,7 +38,7 @@ func (s *Service) allocateTargetDirectoryUnder(ctx context.Context, baseDir stri
 	}
 
 	nowUnix := now.Unix()
-	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, mediaRoot, nowUnix); err != nil {
+	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, mediaRoot, nowUnix); err != nil {
 		return "", 0, err
 	}
 
@@ -49,7 +50,7 @@ func (s *Service) allocateTargetDirectoryUnder(ctx context.Context, baseDir stri
 		return "", 0, err
 	}
 
-	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, yearPath, nowUnix); err != nil {
+	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, yearPath, nowUnix); err != nil {
 		return "", 0, err
 	}
 
@@ -62,7 +63,7 @@ func (s *Service) allocateTargetDirectoryUnder(ctx context.Context, baseDir stri
 		return "", 0, err
 	}
 
-	dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, dayPath, nowUnix)
+	dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, dayPath, nowUnix)
 	if err != nil {
 		return "", 0, err
 	}

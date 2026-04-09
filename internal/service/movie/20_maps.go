@@ -67,7 +67,7 @@ func mapBmMurlToTypes(m *moviex.BmMurl) *types.Murl {
 	}
 }
 
-func mapVFilmToTypes(mv *moviex.VFilm) *types.Film {
+func mapVFilmToTypes(mv *moviex.LegacyFilm) *types.Film {
 	if mv == nil {
 		return nil
 	}

@@ -3,6 +3,8 @@ package wmediaagg
 import (
 	"fmt"
 	"math"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -156,4 +158,24 @@ func monthToQuarter(month int) int {
 
 func bytesToGB(b int64) float64 {
 	return float64(b) / gbDiv
+}
+
+func buildBirthAggHref(year, quarter, month, day int) string {
+	q := url.Values{}
+	if year > 0 {
+		q.Set("year", strconv.Itoa(year))
+	}
+	if quarter > 0 {
+		q.Set("quarter", strconv.Itoa(quarter))
+	}
+	if month > 0 {
+		q.Set("month", strconv.Itoa(month))
+	}
+	if day > 0 {
+		q.Set("day", strconv.Itoa(day))
+	}
+	if enc := q.Encode(); enc != "" {
+		return rootPath + "?" + enc
+	}
+	return rootPath
 }

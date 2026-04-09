@@ -82,6 +82,11 @@ func (s *ScService) MergePerson(ctx context.Context, keepPersonID int64, sourceP
 			return nil, err
 		}
 	}
+	if s.deps.CPersonScModel != nil {
+		if err := s.deps.CPersonScModel.DeleteByPersonIDs(ctx, state.sourcePersonIDs); err != nil {
+			return nil, err
+		}
+	}
 
 	s.movieSvc.InvalidateMovieTypes(ctx, state.affectedMovieJavIDs...)
 

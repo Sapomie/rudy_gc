@@ -23,15 +23,15 @@ var (
 	movieReleaseBucketStatRowsExpectAutoSet   = strings.Join(stringx.Remove(movieReleaseBucketStatFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	movieReleaseBucketStatRowsWithPlaceHolder = strings.Join(stringx.Remove(movieReleaseBucketStatFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcMovieReleaseBucketStatIdPrefix       = "cache:rudyGc:movieReleaseBucketStat:id:"
-	cacheRudyGcMovieReleaseBucketStatScopeKeyPrefix = "cache:rudyGc:movieReleaseBucketStat:scopeKey:"
+	cacheRudyGcMovieReleaseBucketStatIdPrefix              = "cache:rudyGc:movieReleaseBucketStat:id:"
+	cacheRudyGcMovieReleaseBucketStatAggModeScopeKeyPrefix = "cache:rudyGc:movieReleaseBucketStat:aggMode:scopeKey:"
 )
 
 type (
 	movieReleaseBucketStatModel interface {
 		Insert(ctx context.Context, data *MovieReleaseBucketStat) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*MovieReleaseBucketStat, error)
-		FindOneByScopeKey(ctx context.Context, scopeKey string) (*MovieReleaseBucketStat, error)
+		FindOneByAggModeScopeKey(ctx context.Context, aggMode string, scopeKey string) (*MovieReleaseBucketStat, error)
 		Update(ctx context.Context, data *MovieReleaseBucketStat) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -43,6 +43,7 @@ type (
 
 	MovieReleaseBucketStat struct {
 		Id                  int64  `db:"id"`
+		AggMode             string `db:"agg_mode"`
 		ScopeKey            string `db:"scope_key"`
 		Level               string `db:"level"`
 		Year                int64  `db:"year"`
@@ -72,11 +73,11 @@ func (m *defaultMovieReleaseBucketStatModel) Delete(ctx context.Context, id int6
 	}
 
 	rudyGcMovieReleaseBucketStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatIdPrefix, id)
-	rudyGcMovieReleaseBucketStatScopeKeyKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatScopeKeyPrefix, data.ScopeKey)
+	rudyGcMovieReleaseBucketStatAggModeScopeKeyKey := fmt.Sprintf("%s%v:%v", cacheRudyGcMovieReleaseBucketStatAggModeScopeKeyPrefix, data.AggMode, data.ScopeKey)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
-	}, rudyGcMovieReleaseBucketStatIdKey, rudyGcMovieReleaseBucketStatScopeKeyKey)
+	}, rudyGcMovieReleaseBucketStatIdKey, rudyGcMovieReleaseBucketStatAggModeScopeKeyKey)
 	return err
 }
 
@@ -97,12 +98,12 @@ func (m *defaultMovieReleaseBucketStatModel) FindOne(ctx context.Context, id int
 	}
 }
 
-func (m *defaultMovieReleaseBucketStatModel) FindOneByScopeKey(ctx context.Context, scopeKey string) (*MovieReleaseBucketStat, error) {
-	rudyGcMovieReleaseBucketStatScopeKeyKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatScopeKeyPrefix, scopeKey)
+func (m *defaultMovieReleaseBucketStatModel) FindOneByAggModeScopeKey(ctx context.Context, aggMode string, scopeKey string) (*MovieReleaseBucketStat, error) {
+	rudyGcMovieReleaseBucketStatAggModeScopeKeyKey := fmt.Sprintf("%s%v:%v", cacheRudyGcMovieReleaseBucketStatAggModeScopeKeyPrefix, aggMode, scopeKey)
 	var resp MovieReleaseBucketStat
-	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcMovieReleaseBucketStatScopeKeyKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
-		query := fmt.Sprintf("select %s from %s where `scope_key` = ? limit 1", movieReleaseBucketStatRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, scopeKey); err != nil {
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcMovieReleaseBucketStatAggModeScopeKeyKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `agg_mode` = ? and `scope_key` = ? limit 1", movieReleaseBucketStatRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, aggMode, scopeKey); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -119,11 +120,11 @@ func (m *defaultMovieReleaseBucketStatModel) FindOneByScopeKey(ctx context.Conte
 
 func (m *defaultMovieReleaseBucketStatModel) Insert(ctx context.Context, data *MovieReleaseBucketStat) (sql.Result, error) {
 	rudyGcMovieReleaseBucketStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatIdPrefix, data.Id)
-	rudyGcMovieReleaseBucketStatScopeKeyKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatScopeKeyPrefix, data.ScopeKey)
+	rudyGcMovieReleaseBucketStatAggModeScopeKeyKey := fmt.Sprintf("%s%v:%v", cacheRudyGcMovieReleaseBucketStatAggModeScopeKeyPrefix, data.AggMode, data.ScopeKey)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, movieReleaseBucketStatRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.ScopeKey, data.Level, data.Year, data.Quarter, data.Month, data.Day, data.CountAll, data.CountOwned, data.SizeBytes, data.LatestReleasingDate, data.CreatedOn, data.UpdatedOn)
-	}, rudyGcMovieReleaseBucketStatIdKey, rudyGcMovieReleaseBucketStatScopeKeyKey)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, movieReleaseBucketStatRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.AggMode, data.ScopeKey, data.Level, data.Year, data.Quarter, data.Month, data.Day, data.CountAll, data.CountOwned, data.SizeBytes, data.LatestReleasingDate, data.CreatedOn, data.UpdatedOn)
+	}, rudyGcMovieReleaseBucketStatIdKey, rudyGcMovieReleaseBucketStatAggModeScopeKeyKey)
 	return ret, err
 }
 
@@ -134,11 +135,11 @@ func (m *defaultMovieReleaseBucketStatModel) Update(ctx context.Context, newData
 	}
 
 	rudyGcMovieReleaseBucketStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatIdPrefix, data.Id)
-	rudyGcMovieReleaseBucketStatScopeKeyKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseBucketStatScopeKeyPrefix, data.ScopeKey)
+	rudyGcMovieReleaseBucketStatAggModeScopeKeyKey := fmt.Sprintf("%s%v:%v", cacheRudyGcMovieReleaseBucketStatAggModeScopeKeyPrefix, data.AggMode, data.ScopeKey)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, movieReleaseBucketStatRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.ScopeKey, newData.Level, newData.Year, newData.Quarter, newData.Month, newData.Day, newData.CountAll, newData.CountOwned, newData.SizeBytes, newData.LatestReleasingDate, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, rudyGcMovieReleaseBucketStatIdKey, rudyGcMovieReleaseBucketStatScopeKeyKey)
+		return conn.ExecCtx(ctx, query, newData.AggMode, newData.ScopeKey, newData.Level, newData.Year, newData.Quarter, newData.Month, newData.Day, newData.CountAll, newData.CountOwned, newData.SizeBytes, newData.LatestReleasingDate, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, rudyGcMovieReleaseBucketStatIdKey, rudyGcMovieReleaseBucketStatAggModeScopeKeyKey)
 	return err
 }
 

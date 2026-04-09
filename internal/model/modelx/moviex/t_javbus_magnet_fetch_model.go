@@ -139,8 +139,8 @@ func (m *customTJavbusMagnetFetchModel) CountPageRows(ctx context.Context, filte
 func (m *customTJavbusMagnetFetchModel) ListPageRows(ctx context.Context, offset int64, limit int64, orderBy string, filter JavbusFetchPageFilter) ([]*TJavbusMagnetFetch, error) {
 	queryBuilder := squirrel.Select("jf.*").
 		From(strings.Trim(m.table, "`") + " jf").
-		LeftJoin("`v_film` vf ON vf.movie_jav_id = jf.movie_jav_id").
-		LeftJoin("`w_media` wm ON wm.movie_jav_id = jf.movie_jav_id")
+		LeftJoin(buildLegacyWMediaJoin("`w_media`", "vf", "jf.movie_jav_id")).
+		LeftJoin(buildNativeWMediaJoin("`w_media`", "wm", "jf.movie_jav_id"))
 	queryBuilder = applyJavbusPageFilter(queryBuilder, filter)
 	if strings.TrimSpace(orderBy) != "" {
 		queryBuilder = queryBuilder.OrderBy(orderBy)
@@ -198,13 +198,13 @@ func (m *customTJavbusMagnetFetchModel) CountByFetchStatus(ctx context.Context, 
 }
 
 func applyJavbusPageFilter(queryBuilder squirrel.SelectBuilder, filter JavbusFetchPageFilter) squirrel.SelectBuilder {
-	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "jf", filter.Owned, "v_film", "vf")
+	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "jf", filter.Owned, "legacy_w_media", "vf")
 	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "jf", filter.MediaOwned, "w_media", "wm")
 	if filter.RequireVFilm {
-		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `v_film` vf_sort WHERE vf_sort.movie_jav_id = jf.movie_jav_id)")
+		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_sort", "jf.movie_jav_id"))
 	}
 	if filter.RequireWMedia {
-		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `w_media` wm_sort WHERE wm_sort.movie_jav_id = jf.movie_jav_id)")
+		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_sort", "jf.movie_jav_id"))
 	}
 
 	keyword := strings.TrimSpace(filter.Keyword)
@@ -228,16 +228,16 @@ func applyJavbusPageFilter(queryBuilder squirrel.SelectBuilder, filter JavbusFet
 		queryBuilder = queryBuilder.Where(squirrel.LtOrEq{"release_date": filter.ReleaseDateTo})
 	}
 	if filter.HasFilmBirthFrom {
-		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `v_film` vf_birth_from WHERE vf_birth_from.movie_jav_id = jf.movie_jav_id AND vf_birth_from.birth_time >= ?)", filter.FilmBirthFrom)
+		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_birth_from", "jf.movie_jav_id", "vf_birth_from.birth_time >= ?"), filter.FilmBirthFrom)
 	}
 	if filter.HasFilmBirthTo {
-		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `v_film` vf_birth_to WHERE vf_birth_to.movie_jav_id = jf.movie_jav_id AND vf_birth_to.birth_time <= ?)", filter.FilmBirthTo)
+		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_birth_to", "jf.movie_jav_id", "vf_birth_to.birth_time <= ?"), filter.FilmBirthTo)
 	}
 	if filter.HasMediaBirthFrom {
-		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `w_media` wm_birth_from WHERE wm_birth_from.movie_jav_id = jf.movie_jav_id AND wm_birth_from.birth_time >= ?)", filter.MediaBirthFrom)
+		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_birth_from", "jf.movie_jav_id", "wm_birth_from.birth_time >= ?"), filter.MediaBirthFrom)
 	}
 	if filter.HasMediaBirthTo {
-		queryBuilder = queryBuilder.Where("EXISTS (SELECT 1 FROM `w_media` wm_birth_to WHERE wm_birth_to.movie_jav_id = jf.movie_jav_id AND wm_birth_to.birth_time <= ?)", filter.MediaBirthTo)
+		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_birth_to", "jf.movie_jav_id", "wm_birth_to.birth_time <= ?"), filter.MediaBirthTo)
 	}
 	return queryBuilder
 }

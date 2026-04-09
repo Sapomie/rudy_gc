@@ -40,9 +40,9 @@
                                 {{ $id := .Detail.Directory.Id }}
                                 {{ $q := .Query }}
                                 <a class="btn btn-sm btn-outline-secondary {{ if .Recursive }}active{{ end }}"
-                                   href="/dir/{{ $id }}?recursive=1{{ $q }}">递归</a>
+                                   href="/dir?id={{ $id }}&recursive=1{{ $q }}">递归</a>
                                 <a class="btn btn-sm btn-outline-secondary {{ if not .Recursive }}active{{ end }}"
-                                   href="/dir/{{ $id }}?recursive=0{{ $q }}">直属</a>
+                                   href="/dir?id={{ $id }}&recursive=0{{ $q }}">直属</a>
                             </div>
                         </div>
 

@@ -22,7 +22,12 @@
                     <h4 class="mb-1">{{ .PageTitle }}</h4>
                     <p class="text-muted mb-0">{{ .PageNote }}</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                    {{ range .ModeSwitches }}
+                        <a href="{{ .Href }}" class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                            {{ .Label }}
+                        </a>
+                    {{ end }}
                     <a href="{{ .AggPageHref }}" class="btn btn-outline-primary btn-sm">返回聚合页</a>
                     <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">去回填入口</a>
                 </div>
@@ -42,7 +47,7 @@
 
             <div class="card mb-3">
                 <div class="card-body">
-                    <form class="row g-2 align-items-end" method="get" action="/movie-agg-all/release-bucket-list">
+                    <form class="row g-2 align-items-end" method="get" action="{{ .ListPath }}">
                         <input type="hidden" name="sort" value="{{ .Query.Sort }}">
                         <input type="hidden" name="dir" value="{{ .Query.Dir }}">
                         <input type="hidden" name="level" value="{{ .Query.Level }}">

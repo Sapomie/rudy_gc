@@ -73,6 +73,15 @@
                 <!-- ============== 区块 1：时间聚合（年/季/月） ============== -->
                 <div class="section-card">
                     <div class="container-fluid px-0">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                            <div class="d-flex flex-wrap gap-2">
+                                {{ range .ModeSwitches }}
+                                    <a href="{{ .Href }}" class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                        {{ .Label }}
+                                    </a>
+                                {{ end }}
+                            </div>
+                        </div>
                         <div class="mb-2">
                             {{ if .Breadcrumbs }}
                                 <div class="page-subtitle">
@@ -189,7 +198,7 @@
                 {{ if $hasAny }}
                     <div class="section-card">
                         <div class="d-flex align-items-center justify-content-start mb-2">
-                            <h4 class="section-title mb-0 me-3">Top 聚合（全量）</h4>
+                            <h4 class="section-title mb-0 me-3">Top 聚合（{{ .AggModeLabel }}）</h4>
                             <button id="toggleTopAgg"
                                     type="button"
                                     class="btn btn-outline-info waves-effect waves-light btn-sm"
@@ -233,10 +242,10 @@
                                 {{ if .TopCastsAll }}
                                     <div class="tab-pane p-2" id="tab-all-casts" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}{{ $cfq := .CardFilterQuery }}
                                             {{ range $i, $it := .TopCastsAll }}
-                                                {{ $u := (printf "/cards?cn=%s&owned=1" (urlquery $it.Name)) }}
-                                                {{ if gt $it.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&owned=1" $it.PersonId) }}{{ end }}
+                                                {{ $u := (printf "/cards?cn=%s&%s" (urlquery $it.Name) $cfq) }}
+                                                {{ if gt $it.PersonId 0 }}{{ $u = (printf "/cards?pid=%d&%s" $it.PersonId $cfq) }}{{ end }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -264,9 +273,9 @@
                                 {{ if .TopDirectorsAll }}
                                     <div class="tab-pane p-2" id="tab-all-directors" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}{{ $cfq := .CardFilterQuery }}
                                             {{ range $i, $it := .TopDirectorsAll }}
-                                                {{ $u := (printf "/cards?dn=%s&owned=1" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?dn=%s&%s" (urlquery $it.Name) $cfq) }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -294,9 +303,9 @@
                                 {{ if .TopLabelsAll }}
                                     <div class="tab-pane p-2" id="tab-all-labels" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}{{ $cfq := .CardFilterQuery }}
                                             {{ range $i, $it := .TopLabelsAll }}
-                                                {{ $u := (printf "/cards?ln=%s&owned=1" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?ln=%s&%s" (urlquery $it.Name) $cfq) }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -324,9 +333,9 @@
                                 {{ if .TopPrefixesAll }}
                                     <div class="tab-pane p-2" id="tab-all-prefixes" role="tabpanel">
                                         <div class="d-flex flex-wrap gap-2 justify-content-start">
-                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}
+                                            {{ $rs := or .RangeStart "" }} {{ $re := or .RangeEnd "" }}{{ $cfq := .CardFilterQuery }}
                                             {{ range $i, $it := .TopPrefixesAll }}
-                                                {{ $u := (printf "/cards?pn=%s&owned=1" (urlquery $it.Name)) }}
+                                                {{ $u := (printf "/cards?pn=%s&%s" (urlquery $it.Name) $cfq) }}
                                                 {{ if $rs }}{{ $u = (printf "%s&rs=%s" $u $rs) }}{{ end }}
                                                 {{ if $re }}{{ $u = (printf "%s&re=%s" $u $re) }}{{ end }}
                                                 <a href="{{ $u }}" class="text-decoration-none"
@@ -358,21 +367,26 @@
                 <!-- ============== 区块 3：电影列表 ============== -->
                 {{ if .Movies }}
                     <div class="section-card">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                            <div class="d-flex align-items-center toolbar-gap">
-                                {{ if .SortQuery }}{{ template "sort_bar" . }}{{ end }}
-                            </div>
-                            <div class="ms-auto">
-                                {{ if .PageInfo }}{{ template "pagination" . }}{{ end }}
+                        <div class="position-sticky pb-2 pt-2 mb-3 border-bottom"
+                             style="top:0; z-index:1030; background:rgba(255,255,255,.9); backdrop-filter: blur(6px);">
+                            <div class="container-fluid px-0">
+                                <div class="d-flex flex-wrap justify-content-start align-items-center mb-2">
+                                    {{ if .SortQuery }}{{ template "sort_bar" . }}{{ end }}
+                                </div>
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        {{ if .ownedQuery }}{{ template "owned_filter" . }}{{ end }}
+                                    </div>
+                                    <div class="d-flex align-items-center ms-md-3">
+                                        {{ if .PageInfo }}{{ template "pagination" . }}{{ end }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- ✅ 强制一行 8 个卡片 -->
-                        <div class="row g-3" id="movie-grid">
-                            {{ range .Movies }}
-                                <div class="col-6 col-sm-3 col-md-2 col-lg-1-5">
-                                    {{ template "card" . }}
-                                </div>
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">
+                            {{ range .movies }}
+                                {{ template "card" . }}
                             {{ else }}
                                 <div class="col-12">
                                     <div class="alert alert-info mb-0">暂无影片。</div>

@@ -17,8 +17,10 @@ type (
 	MovieReleaseTopStatModel interface {
 		movieReleaseTopStatModel
 		DeleteByScopeAggType(ctx context.Context, scopeKey, aggType string) error
+		DeleteByAggModeScopeAggType(ctx context.Context, aggMode, scopeKey, aggType string) error
 		ListAll(ctx context.Context) ([]*MovieReleaseTopStat, error)
 		ListByScopeAggType(ctx context.Context, scopeKey, aggType string) ([]*MovieReleaseTopStat, error)
+		ListByAggModeScopeAggType(ctx context.Context, aggMode, scopeKey, aggType string) ([]*MovieReleaseTopStat, error)
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		TableName() string
 	}
@@ -47,7 +49,7 @@ func (m *customMovieReleaseTopStatModel) ListAll(ctx context.Context) ([]*MovieR
 	query, args, err := squirrel.
 		Select(movieReleaseTopStatRows).
 		From(m.table).
-		OrderBy("`scope_key` ASC", "`agg_type` ASC", "`rank_no` ASC", "`agg_name` ASC").
+		OrderBy("`agg_mode` ASC", "`scope_key` ASC", "`agg_type` ASC", "`rank_no` ASC", "`agg_name` ASC").
 		ToSql()
 	if err != nil {
 		return nil, err
@@ -63,10 +65,15 @@ func (m *customMovieReleaseTopStatModel) ListAll(ctx context.Context) ([]*MovieR
 }
 
 func (m *customMovieReleaseTopStatModel) ListByScopeAggType(ctx context.Context, scopeKey, aggType string) ([]*MovieReleaseTopStat, error) {
+	return m.ListByAggModeScopeAggType(ctx, "all", scopeKey, aggType)
+}
+
+func (m *customMovieReleaseTopStatModel) ListByAggModeScopeAggType(ctx context.Context, aggMode, scopeKey, aggType string) ([]*MovieReleaseTopStat, error) {
 	query, args, err := squirrel.
 		Select(movieReleaseTopStatRows).
 		From(m.table).
 		Where(squirrel.Eq{
+			"agg_mode":  strings.TrimSpace(aggMode),
 			"scope_key": strings.TrimSpace(scopeKey),
 			"agg_type":  strings.TrimSpace(aggType),
 		}).
@@ -86,7 +93,11 @@ func (m *customMovieReleaseTopStatModel) ListByScopeAggType(ctx context.Context,
 }
 
 func (m *customMovieReleaseTopStatModel) DeleteByScopeAggType(ctx context.Context, scopeKey, aggType string) error {
-	rows, err := m.ListByScopeAggType(ctx, scopeKey, aggType)
+	return m.DeleteByAggModeScopeAggType(ctx, "all", scopeKey, aggType)
+}
+
+func (m *customMovieReleaseTopStatModel) DeleteByAggModeScopeAggType(ctx context.Context, aggMode, scopeKey, aggType string) error {
+	rows, err := m.ListByAggModeScopeAggType(ctx, aggMode, scopeKey, aggType)
 	if err != nil {
 		return err
 	}

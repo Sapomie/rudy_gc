@@ -6,11 +6,12 @@
             <thead>
             <tr class="table-light">
                 <th>Source</th>
+                <th>TorrentHash</th>
                 <th>BirthTime</th>
                 <th>Size</th>
                 <th>Height</th>
                 <th>BitRate</th>
-                <th>Duration</th>
+                <th>时长(分钟)</th>
                 <th>Frame</th>
                 <th>SelfMake</th>
                 <th>Dir</th>
@@ -20,11 +21,12 @@
             {{ if .film }}
                 <tr>
                     <td>VFilm</td>
+                    <td><span class="text-muted">-</span></td>
                     <td>{{.film.BirthTime}}</td>
                     <td><a href="{{.film.FilePath}}">{{ printf "%.2f" .film.Size }}</a></td>
                     <td>{{.film.Height}}</td>
                     <td>{{ printf "%.0f" .film.BitRate }}</td>
-                    <td>{{ printf "%.2f" .film.Duration }}</td>
+                    <td>{{ printf "%.2f" .film.DurationMinutes }}</td>
                     <td>{{.film.Frame}}</td>
                     <td>{{.film.SelfMake}}</td>
                     <td>
@@ -38,6 +40,7 @@
             {{ if and .media (ne .movieType.OwnedWMedia 6) }}
                 <tr>
                     <td>WMedia</td>
+                    <td class="text-monospace">{{ if .media.SourceTorrentHash }}{{ .media.SourceTorrentHash }}{{ else }}<span class="text-muted">-</span>{{ end }}</td>
                     <td>{{.media.BirthTime}}</td>
                     <td>
                         <div class="d-flex flex-column gap-1">
@@ -51,7 +54,7 @@
                     </td>
                     <td>{{.media.Height}}</td>
                     <td>{{ printf "%.0f" .media.BitRate }}</td>
-                    <td>{{ printf "%.2f" .media.Duration }}</td>
+                    <td>{{ printf "%.2f" .media.DurationMinutes }}</td>
                     <td>{{.media.Frame}}</td>
                     <td>{{.media.SelfMake}}</td>
                     <td>

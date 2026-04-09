@@ -11,6 +11,7 @@ type Cast struct {
 	Height             int64
 	MovieNumber        int64
 	OwnedMovieNumber   int64
+	OwnedWMediaNumber  int64
 	ScTimes            int64
 	ComeTimes          int64
 	LastScTime         int64

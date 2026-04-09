@@ -29,7 +29,7 @@ func (s *Service) MoveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 		return nil, fmt.Errorf("movie_jav_id 为空")
 	}
 
-	row, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, javId)
+	row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
 			return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil

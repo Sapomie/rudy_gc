@@ -327,16 +327,17 @@ func newPersonRowFromCast(row *moviex.AmCast, now int64) *moviex.CPerson {
 		return &moviex.CPerson{CreatedOn: now, UpdatedOn: now}
 	}
 	return &moviex.CPerson{
-		Name:             strings.TrimSpace(row.Name),
-		MovieNumber:      row.MovieNumber,
-		OwnedMovieNumber: row.OwnedMovieNumber,
-		ScTimes:          row.ScTimes,
-		ComeTimes:        row.ComeTimes,
-		LastScTime:       row.LastScTime,
-		HighestRank:      row.HighestRank,
-		RankTimes:        row.RankTimes,
-		CreatedOn:        now,
-		UpdatedOn:        now,
+		Name:              strings.TrimSpace(row.Name),
+		MovieNumber:       row.MovieNumber,
+		OwnedMovieNumber:  row.OwnedMovieNumber,
+		OwnedWMediaNumber: row.OwnedWMediaNumber,
+		ScTimes:           row.ScTimes,
+		ComeTimes:         row.ComeTimes,
+		LastScTime:        row.LastScTime,
+		HighestRank:       row.HighestRank,
+		RankTimes:         row.RankTimes,
+		CreatedOn:         now,
+		UpdatedOn:         now,
 	}
 }
 

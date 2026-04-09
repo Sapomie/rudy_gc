@@ -23,15 +23,15 @@ var (
 	movieReleaseTopStatRowsExpectAutoSet   = strings.Join(stringx.Remove(movieReleaseTopStatFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	movieReleaseTopStatRowsWithPlaceHolder = strings.Join(stringx.Remove(movieReleaseTopStatFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcMovieReleaseTopStatIdPrefix                    = "cache:rudyGc:movieReleaseTopStat:id:"
-	cacheRudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyPrefix = "cache:rudyGc:movieReleaseTopStat:scopeKey:aggType:aggKey:"
+	cacheRudyGcMovieReleaseTopStatIdPrefix                           = "cache:rudyGc:movieReleaseTopStat:id:"
+	cacheRudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyPrefix = "cache:rudyGc:movieReleaseTopStat:aggMode:scopeKey:aggType:aggKey:"
 )
 
 type (
 	movieReleaseTopStatModel interface {
 		Insert(ctx context.Context, data *MovieReleaseTopStat) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*MovieReleaseTopStat, error)
-		FindOneByScopeKeyAggTypeAggKey(ctx context.Context, scopeKey string, aggType string, aggKey string) (*MovieReleaseTopStat, error)
+		FindOneByAggModeScopeKeyAggTypeAggKey(ctx context.Context, aggMode string, scopeKey string, aggType string, aggKey string) (*MovieReleaseTopStat, error)
 		Update(ctx context.Context, data *MovieReleaseTopStat) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -43,6 +43,7 @@ type (
 
 	MovieReleaseTopStat struct {
 		Id         int64  `db:"id"`
+		AggMode    string `db:"agg_mode"`
 		ScopeKey   string `db:"scope_key"`
 		Level      string `db:"level"`
 		Year       int64  `db:"year"`
@@ -74,11 +75,11 @@ func (m *defaultMovieReleaseTopStatModel) Delete(ctx context.Context, id int64) 
 	}
 
 	rudyGcMovieReleaseTopStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseTopStatIdPrefix, id)
-	rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v", cacheRudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyPrefix, data.ScopeKey, data.AggType, data.AggKey)
+	rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v:%v", cacheRudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyPrefix, data.AggMode, data.ScopeKey, data.AggType, data.AggKey)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
-	}, rudyGcMovieReleaseTopStatIdKey, rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey)
+	}, rudyGcMovieReleaseTopStatIdKey, rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey)
 	return err
 }
 
@@ -99,12 +100,12 @@ func (m *defaultMovieReleaseTopStatModel) FindOne(ctx context.Context, id int64)
 	}
 }
 
-func (m *defaultMovieReleaseTopStatModel) FindOneByScopeKeyAggTypeAggKey(ctx context.Context, scopeKey string, aggType string, aggKey string) (*MovieReleaseTopStat, error) {
-	rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v", cacheRudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyPrefix, scopeKey, aggType, aggKey)
+func (m *defaultMovieReleaseTopStatModel) FindOneByAggModeScopeKeyAggTypeAggKey(ctx context.Context, aggMode string, scopeKey string, aggType string, aggKey string) (*MovieReleaseTopStat, error) {
+	rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v:%v", cacheRudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyPrefix, aggMode, scopeKey, aggType, aggKey)
 	var resp MovieReleaseTopStat
-	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
-		query := fmt.Sprintf("select %s from %s where `scope_key` = ? and `agg_type` = ? and `agg_key` = ? limit 1", movieReleaseTopStatRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, scopeKey, aggType, aggKey); err != nil {
+	err := m.QueryRowIndexCtx(ctx, &resp, rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (i any, e error) {
+		query := fmt.Sprintf("select %s from %s where `agg_mode` = ? and `scope_key` = ? and `agg_type` = ? and `agg_key` = ? limit 1", movieReleaseTopStatRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, aggMode, scopeKey, aggType, aggKey); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -121,11 +122,11 @@ func (m *defaultMovieReleaseTopStatModel) FindOneByScopeKeyAggTypeAggKey(ctx con
 
 func (m *defaultMovieReleaseTopStatModel) Insert(ctx context.Context, data *MovieReleaseTopStat) (sql.Result, error) {
 	rudyGcMovieReleaseTopStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseTopStatIdPrefix, data.Id)
-	rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v", cacheRudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyPrefix, data.ScopeKey, data.AggType, data.AggKey)
+	rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v:%v", cacheRudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyPrefix, data.AggMode, data.ScopeKey, data.AggType, data.AggKey)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, movieReleaseTopStatRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.ScopeKey, data.Level, data.Year, data.Quarter, data.Month, data.AggType, data.AggKey, data.AggId, data.AggName, data.CountAll, data.CountOwned, data.RankNo, data.CreatedOn, data.UpdatedOn)
-	}, rudyGcMovieReleaseTopStatIdKey, rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, movieReleaseTopStatRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.AggMode, data.ScopeKey, data.Level, data.Year, data.Quarter, data.Month, data.AggType, data.AggKey, data.AggId, data.AggName, data.CountAll, data.CountOwned, data.RankNo, data.CreatedOn, data.UpdatedOn)
+	}, rudyGcMovieReleaseTopStatIdKey, rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey)
 	return ret, err
 }
 
@@ -136,11 +137,11 @@ func (m *defaultMovieReleaseTopStatModel) Update(ctx context.Context, newData *M
 	}
 
 	rudyGcMovieReleaseTopStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcMovieReleaseTopStatIdPrefix, data.Id)
-	rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v", cacheRudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyPrefix, data.ScopeKey, data.AggType, data.AggKey)
+	rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey := fmt.Sprintf("%s%v:%v:%v:%v", cacheRudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyPrefix, data.AggMode, data.ScopeKey, data.AggType, data.AggKey)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, movieReleaseTopStatRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.ScopeKey, newData.Level, newData.Year, newData.Quarter, newData.Month, newData.AggType, newData.AggKey, newData.AggId, newData.AggName, newData.CountAll, newData.CountOwned, newData.RankNo, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, rudyGcMovieReleaseTopStatIdKey, rudyGcMovieReleaseTopStatScopeKeyAggTypeAggKeyKey)
+		return conn.ExecCtx(ctx, query, newData.AggMode, newData.ScopeKey, newData.Level, newData.Year, newData.Quarter, newData.Month, newData.AggType, newData.AggKey, newData.AggId, newData.AggName, newData.CountAll, newData.CountOwned, newData.RankNo, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, rudyGcMovieReleaseTopStatIdKey, rudyGcMovieReleaseTopStatAggModeScopeKeyAggTypeAggKeyKey)
 	return err
 }
 

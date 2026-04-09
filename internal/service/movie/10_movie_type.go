@@ -194,9 +194,9 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		out.LastScTime = scStatRow.LastScTime
 	}
 
-	filmRow, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, mv.JavId)
+	filmRow, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, mv.JavId)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return nil, fmt.Errorf("FilmModel.FindOneByMovieJavId failed: %w", err)
+		return nil, fmt.Errorf("WMediaModel.FindOneLegacyFilmByMovieJavId failed: %w", err)
 	}
 	if filmRow != nil {
 		film := mapVFilmToTypes(filmRow)
@@ -426,12 +426,15 @@ func (s *Service) findRankInfo(ctx context.Context, movieJavId string) ([]*types
 }
 
 func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.FilmInfo, error) {
-	vf, err := s.deps.FilmModel.FindOneByMovieJavId(ctx, movieJavId)
+	vf, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, movieJavId)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if vf == nil || vf.IsRemoved == consts.FilmIsRemoved {
+		return nil, nil
 	}
 
 	durationMinutes := float64(vf.Duration) / 60
@@ -444,7 +447,7 @@ func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.F
 		Directory:         vf.FullDir,
 		Height:            vf.Height,
 		BitRate:           float64(vf.BitRate) / 1e3,
-		Duration:          durationMinutes,
+		DurationMinutes:   durationMinutes,
 		Frame:             vf.FrameAverage,
 		SizeDurationRatio: calcFilmSizeDurationRatio(vf.Size, vf.Duration),
 		SelfMake:          formatMovieFilmSelfMake(vf.SelfMake),
@@ -466,13 +469,14 @@ func (s *Service) findMediaInfo(ctx context.Context, movieJavId string) (*types.
 	mediaInfo := &types.FilmInfo{
 		Name:              wm.MovieName,
 		BirthTime:         time.Unix(wm.BirthTime, 0).Format(time.DateTime),
+		SourceTorrentHash: wm.SourceTorrentHash,
 		Size:              float64(wm.Size) / 1e9,
 		FilePath:          wm.FullDir + string(filepath.Separator) + wm.FileName,
 		FileName:          wm.FileName,
 		Directory:         wm.FullDir,
 		Height:            wm.Height,
 		BitRate:           float64(wm.BitRate) / 1e3,
-		Duration:          durationMinutes,
+		DurationMinutes:   durationMinutes,
 		Frame:             wm.FrameAverage,
 		SizeDurationRatio: calcFilmSizeDurationRatio(wm.Size, wm.Duration),
 		SelfMake:          formatMovieFilmSelfMake(wm.SelfMake),

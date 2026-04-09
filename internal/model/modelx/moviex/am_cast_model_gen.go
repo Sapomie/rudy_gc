@@ -47,6 +47,7 @@ type (
 		JavId              string `db:"jav_id"`
 		MovieNumber        int64  `db:"movie_number"`
 		OwnedMovieNumber   int64  `db:"owned_movie_number"`
+		OwnedWMediaNumber  int64  `db:"owned_w_media_number"`
 		ScTimes            int64  `db:"sc_times"`
 		ComeTimes          int64  `db:"come_times"`
 		LastScTime         int64  `db:"last_sc_time"`
@@ -124,8 +125,8 @@ func (m *defaultAmCastModel) Insert(ctx context.Context, data *AmCast) (sql.Resu
 	rudyGcAmCastIdKey := fmt.Sprintf("%s%v", cacheRudyGcAmCastIdPrefix, data.Id)
 	rudyGcAmCastNameKey := fmt.Sprintf("%s%v", cacheRudyGcAmCastNamePrefix, data.Name)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, amCastRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Name, data.JavId, data.MovieNumber, data.OwnedMovieNumber, data.ScTimes, data.ComeTimes, data.LastScTime, data.Rank500MovieNumber, data.Rank20MovieNumber, data.Rank1MovieNumber, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn, data.PersonId)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, amCastRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Name, data.JavId, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.ScTimes, data.ComeTimes, data.LastScTime, data.Rank500MovieNumber, data.Rank20MovieNumber, data.Rank1MovieNumber, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn, data.PersonId)
 	}, rudyGcAmCastIdKey, rudyGcAmCastNameKey)
 	return ret, err
 }
@@ -140,7 +141,7 @@ func (m *defaultAmCastModel) Update(ctx context.Context, newData *AmCast) error 
 	rudyGcAmCastNameKey := fmt.Sprintf("%s%v", cacheRudyGcAmCastNamePrefix, data.Name)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, amCastRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.Name, newData.JavId, newData.MovieNumber, newData.OwnedMovieNumber, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.Rank500MovieNumber, newData.Rank20MovieNumber, newData.Rank1MovieNumber, newData.HighestRank, newData.RankTimes, newData.CreatedOn, newData.UpdatedOn, newData.PersonId, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.Name, newData.JavId, newData.MovieNumber, newData.OwnedMovieNumber, newData.OwnedWMediaNumber, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.Rank500MovieNumber, newData.Rank20MovieNumber, newData.Rank1MovieNumber, newData.HighestRank, newData.RankTimes, newData.CreatedOn, newData.UpdatedOn, newData.PersonId, newData.Id)
 	}, rudyGcAmCastIdKey, rudyGcAmCastNameKey)
 	return err
 }

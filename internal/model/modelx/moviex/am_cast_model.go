@@ -21,6 +21,7 @@ type (
 	AmCastModel interface {
 		amCastModel
 		GetMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, error)
+		GetMovieNumbersWithWMediaByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, int64, error)
 		AggregatePersonStatsByIDs(ctx context.Context, ids []int64) (map[int64]*types.Person, error)
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
@@ -59,17 +60,45 @@ SELECT
 	(SELECT COUNT(DISTINCT movie_jav_id) FROM amr_movie_cast WHERE cast_id = ?) AS movie_number,
 	(SELECT COUNT(DISTINCT amr.movie_jav_id)
 		FROM amr_movie_cast amr
-		JOIN v_film vf ON vf.movie_jav_id = amr.movie_jav_id AND vf.is_removed = ?
+		JOIN w_media vf ON vf.movie_jav_id = amr.movie_jav_id AND vf.source_type = ? AND vf.is_removed = ?
 		WHERE amr.cast_id = ?) AS owned_movie_number
 `
 	var resp struct {
 		MovieNumber      int64 `db:"movie_number"`
 		OwnedMovieNumber int64 `db:"owned_movie_number"`
 	}
-	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, id, ownedRemovedStatus, id); err != nil {
+	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, id, consts.WMediaSourceLegacyVFilm, ownedRemovedStatus, id); err != nil {
 		return 0, 0, err
 	}
 	return resp.MovieNumber, resp.OwnedMovieNumber, nil
+}
+
+func (m *customAmCastModel) GetMovieNumbersWithWMediaByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, int64, error) {
+	const query = `
+SELECT
+	(SELECT COUNT(DISTINCT movie_jav_id) FROM amr_movie_cast WHERE cast_id = ?) AS movie_number,
+	(SELECT COUNT(DISTINCT amr.movie_jav_id)
+		FROM amr_movie_cast amr
+		JOIN w_media vf ON vf.movie_jav_id = amr.movie_jav_id AND vf.source_type = ? AND vf.is_removed = ?
+		WHERE amr.cast_id = ?) AS owned_movie_number,
+	(SELECT COUNT(DISTINCT amr.movie_jav_id)
+		FROM amr_movie_cast amr
+		JOIN w_media wm ON wm.movie_jav_id = amr.movie_jav_id AND wm.source_type = ? AND wm.is_removed = ?
+		WHERE amr.cast_id = ?) AS owned_w_media_number
+`
+	var resp struct {
+		MovieNumber       int64 `db:"movie_number"`
+		OwnedMovieNumber  int64 `db:"owned_movie_number"`
+		OwnedWMediaNumber int64 `db:"owned_w_media_number"`
+	}
+	if err := m.QueryRowNoCacheCtx(ctx, &resp, query,
+		id,
+		consts.WMediaSourceLegacyVFilm, ownedRemovedStatus, id,
+		consts.WMediaSourceNative, ownedRemovedStatus, id,
+	); err != nil {
+		return 0, 0, 0, err
+	}
+	return resp.MovieNumber, resp.OwnedMovieNumber, resp.OwnedWMediaNumber, nil
 }
 
 func (m *customAmCastModel) AggregatePersonStatsByIDs(ctx context.Context, ids []int64) (map[int64]*types.Person, error) {
@@ -79,14 +108,15 @@ func (m *customAmCastModel) AggregatePersonStatsByIDs(ctx context.Context, ids [
 	}
 
 	type row struct {
-		PersonId         int64 `db:"person_id"`
-		MovieNumber      int64 `db:"movie_number"`
-		OwnedMovieNumber int64 `db:"owned_movie_number"`
-		ScTimes          int64 `db:"sc_times"`
-		ComeTimes        int64 `db:"come_times"`
-		LastScTime       int64 `db:"last_sc_time"`
-		HighestRank      int64 `db:"highest_rank"`
-		RankTimes        int64 `db:"rank_times"`
+		PersonId          int64 `db:"person_id"`
+		MovieNumber       int64 `db:"movie_number"`
+		OwnedMovieNumber  int64 `db:"owned_movie_number"`
+		OwnedWMediaNumber int64 `db:"owned_w_media_number"`
+		ScTimes           int64 `db:"sc_times"`
+		ComeTimes         int64 `db:"come_times"`
+		LastScTime        int64 `db:"last_sc_time"`
+		HighestRank       int64 `db:"highest_rank"`
+		RankTimes         int64 `db:"rank_times"`
 	}
 
 	placeholders := strings.TrimRight(strings.Repeat("?,", len(uniq)), ",")
@@ -95,6 +125,7 @@ SELECT
 	pm.person_id AS person_id,
 	COUNT(*) AS movie_number,
 	COALESCE(SUM(CASE WHEN vf.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_movie_number,
+	COALESCE(SUM(CASE WHEN wm.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_w_media_number,
 	COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
 	COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
 	COALESCE(MAX(COALESCE(gss.last_sc_time, 0)), 0) AS last_sc_time,
@@ -106,17 +137,19 @@ FROM (
 	JOIN amr_movie_cast amr ON amr.cast_id = ac.id
 	WHERE ac.person_id IN (` + placeholders + `)
 ) pm
-LEFT JOIN v_film vf ON vf.movie_jav_id = pm.movie_jav_id
+LEFT JOIN w_media vf ON vf.movie_jav_id = pm.movie_jav_id AND vf.source_type = ?
+LEFT JOIN w_media wm ON wm.movie_jav_id = pm.movie_jav_id AND wm.source_type = ?
 LEFT JOIN g_sc_stat gss ON gss.movie_jav_id = pm.movie_jav_id
 LEFT JOIN bm_minfo mi ON mi.jav_id = pm.movie_jav_id
 GROUP BY pm.person_id
 `
 
-	args := make([]any, 0, len(uniq)+1)
-	args = append(args, consts.FilmIsNotRemoved)
+	args := make([]any, 0, len(uniq)+4)
+	args = append(args, consts.FilmIsNotRemoved, consts.FilmIsNotRemoved)
 	for _, id := range uniq {
 		args = append(args, id)
 	}
+	args = append(args, consts.WMediaSourceLegacyVFilm, consts.WMediaSourceNative)
 
 	var rows []*row
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
@@ -132,14 +165,15 @@ GROUP BY pm.person_id
 			continue
 		}
 		out[item.PersonId] = &types.Person{
-			Id:               item.PersonId,
-			MovieNumber:      item.MovieNumber,
-			OwnedMovieNumber: item.OwnedMovieNumber,
-			ScTimes:          item.ScTimes,
-			ComeTimes:        item.ComeTimes,
-			LastScTime:       item.LastScTime,
-			HighestRank:      item.HighestRank,
-			RankTimes:        item.RankTimes,
+			Id:                item.PersonId,
+			MovieNumber:       item.MovieNumber,
+			OwnedMovieNumber:  item.OwnedMovieNumber,
+			OwnedWMediaNumber: item.OwnedWMediaNumber,
+			ScTimes:           item.ScTimes,
+			ComeTimes:         item.ComeTimes,
+			LastScTime:        item.LastScTime,
+			HighestRank:       item.HighestRank,
+			RankTimes:         item.RankTimes,
 		}
 	}
 	return out, nil
@@ -210,6 +244,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 		Height             int64  `db:"height"`
 		MovieNumber        int64  `db:"movie_number"`
 		OwnedMovieNumber   int64  `db:"owned_movie_number"`
+		OwnedWMediaNumber  int64  `db:"owned_w_media_number"`
 		ScTimes            int64  `db:"sc_times"`
 		ComeTimes          int64  `db:"come_times"`
 		LastScTime         int64  `db:"last_sc_time"`
@@ -233,6 +268,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			"COALESCE(p.height, 0) AS height",
 			"ac.movie_number AS movie_number",
 			"ac.owned_movie_number AS owned_movie_number",
+			"ac.owned_w_media_number AS owned_w_media_number",
 			"ac.sc_times AS sc_times",
 			"ac.come_times AS come_times",
 			"ac.last_sc_time AS last_sc_time",
@@ -281,6 +317,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			Height:             row.Height,
 			MovieNumber:        row.MovieNumber,
 			OwnedMovieNumber:   row.OwnedMovieNumber,
+			OwnedWMediaNumber:  row.OwnedWMediaNumber,
 			ScTimes:            row.ScTimes,
 			ComeTimes:          row.ComeTimes,
 			LastScTime:         row.LastScTime,
@@ -328,6 +365,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 		JavId              string `db:"jav_id"`
 		MovieNumber        int64  `db:"movie_number"`
 		OwnedMovieNumber   int64  `db:"owned_movie_number"`
+		OwnedWMediaNumber  int64  `db:"owned_w_media_number"`
 		ScTimes            int64  `db:"sc_times"`
 		ComeTimes          int64  `db:"come_times"`
 		LastScTime         int64  `db:"last_sc_time"`
@@ -348,6 +386,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 			"jav_id",
 			"movie_number",
 			"owned_movie_number",
+			"owned_w_media_number",
 			"sc_times",
 			"come_times",
 			"last_sc_time",
@@ -386,6 +425,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 			JavId:              row.JavId,
 			MovieNumber:        row.MovieNumber,
 			OwnedMovieNumber:   row.OwnedMovieNumber,
+			OwnedWMediaNumber:  row.OwnedWMediaNumber,
 			ScTimes:            row.ScTimes,
 			ComeTimes:          row.ComeTimes,
 			LastScTime:         row.LastScTime,
@@ -419,7 +459,7 @@ func (m *customAmCastModel) CountOwnedScMovieNumbersByNames(ctx context.Context,
 		).
 		From(m.table + " ac").
 		LeftJoin("`amr_movie_cast` amr ON amr.cast_id = ac.id").
-		LeftJoin("`v_film` vf ON vf.movie_jav_id = amr.movie_jav_id").
+		LeftJoin(buildLegacyWMediaJoin("`w_media`", "vf", "amr.movie_jav_id")).
 		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = amr.movie_jav_id").
 		Where(squirrel.Eq{"ac.name": uniq}).
 		GroupBy("ac.name").

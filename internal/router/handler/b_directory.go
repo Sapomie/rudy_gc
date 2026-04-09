@@ -21,7 +21,63 @@ func NewDirectoryHTMLHandler(deps *svc.Deps) *DirectoryHTML {
 	return &DirectoryHTML{dirSvc: vfilm.NewDirectoryService(deps)}
 }
 
+func (h *DirectoryHTML) RootList(c *gin.Context) {
+	if rawID := strings.TrimSpace(c.Query("id")); rawID != "" && rawID != "root" {
+		h.DirDetail(c)
+		return
+	}
+
+	var req struct {
+		Page     int64 `form:"p"`
+		PageSize int64 `form:"ps"`
+	}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
+		return
+	}
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 || req.PageSize > maxPageSize {
+		req.PageSize = 60
+	}
+
+	items, total, err := h.dirSvc.ListRootPage(c.Request.Context(), req.Page, req.PageSize)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "加载目录失败: %v", err)
+		return
+	}
+
+	pi := BuildPageInfo(c, total, req.Page, req.PageSize, pageWindow)
+	ctx := gin.H{
+		"Title":    "影片目录",
+		"Total":    total,
+		"PageInfo": pi,
+		"pageInfo": pi,
+		"Pagination": gin.H{
+			"PageInfo": pi,
+		},
+		"Children": gin.H{
+			"Title":   "根目录",
+			"Items":   items,
+			"MoreURL": "",
+		},
+	}
+
+	c.HTML(http.StatusOK, "page.dir_list", ctx)
+}
+
 func (h *DirectoryHTML) DirDetail(c *gin.Context) {
+	rawID := strings.TrimSpace(c.Query("id"))
+	if rawID == "" || rawID == "root" {
+		target := "/dir"
+		if raw := strings.TrimSpace(c.Request.URL.RawQuery); raw != "" {
+			target += "?" + raw
+		}
+		c.Redirect(http.StatusFound, target)
+		return
+	}
+
 	// 1) 绑定查询参数
 	var req types.DirPageRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -29,13 +85,9 @@ func (h *DirectoryHTML) DirDetail(c *gin.Context) {
 		return
 	}
 
-	// 2) 从 path 决定是否 root
-	if c.Param("id") == "root" || c.Param("id") == "" {
-		req.UseRoot = true
-	} else {
-		if id, err := strconv.ParseInt(c.Param("id"), 10, 64); err == nil {
-			req.DirID = id
-		}
+	// 2) 从 query 读取真实目录 id
+	if id, err := strconv.ParseInt(rawID, 10, 64); err == nil {
+		req.DirID = id
 	}
 
 	// 3) 默认值（仅此一处）

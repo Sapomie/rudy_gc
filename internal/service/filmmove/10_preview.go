@@ -61,7 +61,7 @@ func (s *Service) buildPreviewItem(movieType *types.MovieType) *PreviewItem {
 	item.MovieJavID = strings.TrimSpace(movieType.JavId)
 
 	if movieType.VFilm == nil {
-		item.Error = "v_film 不存在"
+		item.Error = "旧媒体不存在"
 		return item
 	}
 

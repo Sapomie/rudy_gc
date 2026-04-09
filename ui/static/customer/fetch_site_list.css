@@ -227,6 +227,15 @@
     white-space: nowrap;
 }
 
+.fetch-site-hash-match {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #8a5300;
+    font-weight: 700;
+}
+
 .fetch-site-time-cell {
     display: inline-flex;
     align-items: baseline;

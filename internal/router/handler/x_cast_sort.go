@@ -19,6 +19,7 @@ type castSortQuery struct {
 	ByHeight      castSortLink
 	ByMovieNumber castSortLink
 	ByOwned       castSortLink
+	ByWOwned      castSortLink
 	ByScTimes     castSortLink
 	ByComeTimes   castSortLink
 	ByLastSc      castSortLink
@@ -56,6 +57,7 @@ func buildCastSortQuery(c *gin.Context, currentField, currentOrder string) *cast
 		ByHeight:      makeHref("height"),
 		ByMovieNumber: makeHref("movie_number"),
 		ByOwned:       makeHref("owned_movie_number"),
+		ByWOwned:      makeHref("owned_w_media_number"),
 		ByScTimes:     makeHref("sc_times"),
 		ByComeTimes:   makeHref("come_times"),
 		ByLastSc:      makeHref("last_sc_time"),
@@ -65,7 +67,7 @@ func buildCastSortQuery(c *gin.Context, currentField, currentOrder string) *cast
 
 func normalizeCastSortFieldForPage(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "name", "chinese", "age", "height", "movie_number", "owned_movie_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
+	case "name", "chinese", "age", "height", "movie_number", "owned_movie_number", "owned_w_media_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
 		return strings.ToLower(strings.TrimSpace(v))
 	default:
 		return "owned_movie_number"

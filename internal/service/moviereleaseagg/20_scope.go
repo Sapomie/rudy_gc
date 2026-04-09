@@ -2,11 +2,14 @@ package moviereleaseagg
 
 import (
 	"fmt"
+	"net/url"
+	"strconv"
 	"time"
 )
 
 const (
-	rootPath = "/movie-agg-all/release"
+	AggModeAll   = "all"
+	AggModeOwned = "owned"
 
 	levelRoot    = "root"
 	levelYear    = "year"
@@ -22,6 +25,61 @@ const (
 	topPersistLimit = 30
 	gbDiv           = 1024.0 * 1024.0 * 1024.0
 )
+
+func NormalizeAggMode(mode string) string {
+	switch mode {
+	case AggModeOwned:
+		return AggModeOwned
+	default:
+		return AggModeAll
+	}
+}
+
+func rootPathForMode(mode string) string {
+	return "/movie-agg-all/release"
+}
+
+func bucketListPathForMode(mode string) string {
+	return "/movie-agg-all/release-bucket-list"
+}
+
+func pathWithAggMode(path, mode string) string {
+	if NormalizeAggMode(mode) == AggModeOwned {
+		return path + "?agg_mode=" + AggModeOwned
+	}
+	return path
+}
+
+func buildReleaseAggHref(mode string, year, quarter, month, day int) string {
+	q := url.Values{}
+	if NormalizeAggMode(mode) == AggModeOwned {
+		q.Set("agg_mode", AggModeOwned)
+	}
+	if year > 0 {
+		q.Set("year", strconv.Itoa(year))
+	}
+	if quarter > 0 {
+		q.Set("quarter", strconv.Itoa(quarter))
+	}
+	if month > 0 {
+		q.Set("month", strconv.Itoa(month))
+	}
+	if day > 0 {
+		q.Set("day", strconv.Itoa(day))
+	}
+	href := rootPathForMode(mode)
+	if enc := q.Encode(); enc != "" {
+		href += "?" + enc
+	}
+	return href
+}
+
+func aggModeLabel(mode string) string {
+	if NormalizeAggMode(mode) == AggModeOwned {
+		return "已拥有"
+	}
+	return "全量"
+}
 
 type scope struct {
 	Key       string
@@ -132,19 +190,19 @@ func bytesToGB(sizeBytes int64) float64 {
 	return float64(sizeBytes) / gbDiv
 }
 
-func buildBreadcrumbs(year, quarter, month, day int) []Breadcrumb {
-	bcs := []Breadcrumb{{Title: "上映日（全量）", Href: rootPath}}
+func buildBreadcrumbs(mode string, year, quarter, month, day int) []Breadcrumb {
+	bcs := []Breadcrumb{{Title: "上映日（" + aggModeLabel(mode) + "）", Href: buildReleaseAggHref(mode, 0, 0, 0, 0)}}
 	if year == 0 {
 		bcs[0].Href = ""
 		return bcs
 	}
-	yearHref := fmt.Sprintf("%s/%d", rootPath, year)
+	yearHref := buildReleaseAggHref(mode, year, 0, 0, 0)
 	if day > 0 {
 		if quarter == 0 {
 			quarter = monthToQuarter(month)
 		}
-		quarterHref := fmt.Sprintf("%s/%d/q/%d", rootPath, year, quarter)
-		monthHref := fmt.Sprintf("%s/%d/%02d", rootPath, year, month)
+		quarterHref := buildReleaseAggHref(mode, year, quarter, 0, 0)
+		monthHref := buildReleaseAggHref(mode, year, 0, month, 0)
 		return append(bcs,
 			Breadcrumb{Title: fmt.Sprintf("%d 年", year), Href: yearHref},
 			Breadcrumb{Title: fmt.Sprintf("Q%d 季", quarter), Href: quarterHref},
@@ -164,7 +222,7 @@ func buildBreadcrumbs(year, quarter, month, day int) []Breadcrumb {
 	if quarter == 0 && month > 0 {
 		quarter = monthToQuarter(month)
 	}
-	quarterHref := fmt.Sprintf("%s/%d/q/%d", rootPath, year, quarter)
+	quarterHref := buildReleaseAggHref(mode, year, quarter, 0, 0)
 	return append(bcs,
 		Breadcrumb{Title: fmt.Sprintf("%d 年", year), Href: yearHref},
 		Breadcrumb{Title: fmt.Sprintf("Q%d 季", quarter), Href: quarterHref},

@@ -1,5 +1,9 @@
 # Media 流程规划（w_media）
 
+补充说明：
+
+- `w_media / w_folder` 的新旧来源划分，见 [w_media_w_folder_source_type.md](/Users/gaojinwei/src/my/rudy_gc/docs/w_media_w_folder_source_type.md)
+
 本文档定义新版本媒体处理的两条流程：`ingest_new` 与 `reconcile_full`。
 
 ## 目标

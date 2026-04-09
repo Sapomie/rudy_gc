@@ -9,6 +9,7 @@ import (
 )
 
 type BucketListParams struct {
+	AggMode      string
 	Level        string
 	ScopeKeyLike string
 	Year         *int64
@@ -36,7 +37,9 @@ type BucketListResult struct {
 }
 
 func (s *Service) BuildBucketList(ctx context.Context, p BucketListParams) (*BucketListResult, error) {
+	mode := NormalizeAggMode(p.AggMode)
 	rows, total, err := s.deps.MovieReleaseBucketStatModel.ListPage(ctx, moviex.MovieReleaseBucketStatListFilter{
+		AggMode:      mode,
 		Level:        strings.TrimSpace(p.Level),
 		ScopeKeyLike: strings.TrimSpace(p.ScopeKeyLike),
 		Year:         p.Year,
@@ -63,28 +66,28 @@ func (s *Service) BuildBucketList(ctx context.Context, p BucketListParams) (*Buc
 			CountOwned:          row.CountOwned,
 			SizeBytes:           row.SizeBytes,
 			LatestReleasingDate: row.LatestReleasingDate,
-			ViewHref:            bucketListHref(row),
+			ViewHref:            bucketListHref(row, mode),
 		})
 	}
 
 	return &BucketListResult{Rows: out, Total: total}, nil
 }
 
-func bucketListHref(row *moviex.MovieReleaseBucketStat) string {
+func bucketListHref(row *moviex.MovieReleaseBucketStat, mode string) string {
 	if row == nil {
 		return ""
 	}
 	switch row.Level {
 	case levelYear:
-		return rootPath + "/" + itoa64(row.Year)
+		return buildReleaseAggHref(mode, int(row.Year), 0, 0, 0)
 	case levelQuarter:
-		return rootPath + "/" + itoa64(row.Year) + "/q/" + itoa64(row.Quarter)
+		return buildReleaseAggHref(mode, int(row.Year), int(row.Quarter), 0, 0)
 	case levelMonth:
-		return rootPath + "/" + itoa64(row.Year) + "/" + pad2(row.Month)
+		return buildReleaseAggHref(mode, int(row.Year), 0, int(row.Month), 0)
 	case levelDay:
-		return rootPath + "/" + itoa64(row.Year) + "/" + pad2(row.Month) + "/" + pad2(row.Day)
+		return buildReleaseAggHref(mode, int(row.Year), 0, int(row.Month), int(row.Day))
 	default:
-		return rootPath
+		return buildReleaseAggHref(mode, 0, 0, 0, 0)
 	}
 }
 

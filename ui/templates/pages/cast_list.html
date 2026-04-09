@@ -153,6 +153,12 @@
                                         </a>
                                     </th>
                                     <th>
+                                        <a class="sc-sort-link {{ if .CastSortQuery.ByWOwned.Active }}active{{ end }}"
+                                           href="{{ .CastSortQuery.ByWOwned.Href }}">
+                                            WOwned{{ if .CastSortQuery.ByWOwned.Active }}{{ if .CastSortQuery.ByWOwned.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
                                         <a class="sc-sort-link {{ if .CastSortQuery.ByScTimes.Active }}active{{ end }}"
                                            href="{{ .CastSortQuery.ByScTimes.Href }}">
                                             SC Times{{ if .CastSortQuery.ByScTimes.Active }}{{ if .CastSortQuery.ByScTimes.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
@@ -190,6 +196,7 @@
                                             <td>{{ if gt .Height 0 }}{{ .Height }} cm{{ else }}-{{ end }}</td>
                                             <td>{{ .MovieNumber }}</td>
                                             <td>{{ .OwnedMovieNumber }}</td>
+                                            <td>{{ .OwnedWMediaNumber }}</td>
                                             <td>{{ .ScTimes }}</td>
                                             <td>{{ .ComeTimes }}</td>
                                             <td>{{ humanTime .LastScTime }}</td>
@@ -198,7 +205,7 @@
                                     {{ end }}
                                 {{ else }}
                                     <tr>
-                                        <td colspan="10">
+                                        <td colspan="11">
                                             <div class="sc-empty-state">还没有可展示的演员。</div>
                                         </td>
                                     </tr>

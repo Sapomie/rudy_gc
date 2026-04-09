@@ -13,7 +13,7 @@ type Media struct {
 	Width         int64
 	Height        int64
 	BitRate       int64
-	Duration      int64
+	Duration      int64 // 秒
 	FrameAverage  float64
 	HasSub        int64
 	SelfMake      int64

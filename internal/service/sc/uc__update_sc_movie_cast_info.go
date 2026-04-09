@@ -77,7 +77,7 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 			if vFilm.ScTimes == info.ScTimes &&
 				vFilm.ComeTimes == info.ComeTimes &&
 				vFilm.LastScTime == info.LastScTime {
-				// keep old v_film branch unchanged; g_sc_stat is additive.
+				// legacy media stats are still maintained here; g_sc_stat remains the shared aggregate source.
 			} else {
 				vFilm.ScTimes = info.ScTimes
 				vFilm.ComeTimes = info.ComeTimes

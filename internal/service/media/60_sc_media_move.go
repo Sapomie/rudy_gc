@@ -288,7 +288,7 @@ func (s *Service) commitOneScMediaMove(ctx context.Context, entry *scMediaMovePl
 		return item
 	}
 
-	row, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, item.MovieJavId)
+	row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, item.MovieJavId, consts.WMediaSourceNative)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
 			item.Status = scMediaMoveStatusFail

@@ -12,14 +12,14 @@ import (
 )
 
 type Store interface {
-	FindOneByPath(ctx context.Context, path string) (*moviex.WFolder, error)
+	FindOneByPathSourceType(ctx context.Context, path string, sourceType int64) (*moviex.WFolder, error)
 	Insert(ctx context.Context, data *moviex.WFolder) (sql.Result, error)
 	Update(ctx context.Context, data *moviex.WFolder) error
-	ListAll(ctx context.Context) ([]*moviex.WFolder, error)
+	ListAllBySourceType(ctx context.Context, sourceType int64) ([]*moviex.WFolder, error)
 }
 
-func NormalizeAll(ctx context.Context, store Store, nowUnix int64) error {
-	rows, err := store.ListAll(ctx)
+func NormalizeAll(ctx context.Context, store Store, sourceType int64, nowUnix int64) error {
+	rows, err := store.ListAllBySourceType(ctx, sourceType)
 	if err != nil {
 		return err
 	}
@@ -28,14 +28,14 @@ func NormalizeAll(ctx context.Context, store Store, nowUnix int64) error {
 		if row == nil {
 			continue
 		}
-		if _, err := EnsurePathChain(ctx, store, row.Path, nowUnix); err != nil {
+		if _, err := EnsurePathChain(ctx, store, sourceType, row.Path, nowUnix); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func EnsurePathChain(ctx context.Context, store Store, fullPath string, nowUnix int64) (*moviex.WFolder, error) {
+func EnsurePathChain(ctx context.Context, store Store, sourceType int64, fullPath string, nowUnix int64) (*moviex.WFolder, error) {
 	parts := splitPathParts(fullPath)
 	if len(parts) == 0 {
 		return nil, nil
@@ -47,24 +47,24 @@ func EnsurePathChain(ctx context.Context, store Store, fullPath string, nowUnix 
 	)
 	for i, name := range parts {
 		curPath := joinPath(parts[:i+1])
-		row, err := store.FindOneByPath(ctx, curPath)
+		row, err := store.FindOneByPathSourceType(ctx, curPath, sourceType)
 		switch {
 		case err == nil && row != nil:
-			if normalized, changed := normalizeFolderRow(row, parentID, int64(i+1), name, curPath, nowUnix); changed {
+			if normalized, changed := normalizeFolderRow(row, parentID, sourceType, int64(i+1), name, curPath, nowUnix); changed {
 				if err := store.Update(ctx, normalized); err != nil {
 					return nil, err
 				}
 				row = normalized
 			}
 		case errors.Is(err, moviex.ErrNotFound):
-			insert := newFolderRow(parentID, int64(i+1), name, curPath, nowUnix)
+			insert := newFolderRow(parentID, sourceType, int64(i+1), name, curPath, nowUnix)
 			if _, err := store.Insert(ctx, insert); err != nil {
-				row, err = store.FindOneByPath(ctx, curPath)
+				row, err = store.FindOneByPathSourceType(ctx, curPath, sourceType)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				row, err = store.FindOneByPath(ctx, curPath)
+				row, err = store.FindOneByPathSourceType(ctx, curPath, sourceType)
 				if err != nil {
 					return nil, err
 				}
@@ -80,7 +80,7 @@ func EnsurePathChain(ctx context.Context, store Store, fullPath string, nowUnix 
 	return leaf, nil
 }
 
-func normalizeFolderRow(row *moviex.WFolder, parentID, depth int64, name, path string, nowUnix int64) (*moviex.WFolder, bool) {
+func normalizeFolderRow(row *moviex.WFolder, parentID, sourceType, depth int64, name, path string, nowUnix int64) (*moviex.WFolder, bool) {
 	if row == nil {
 		return nil, false
 	}
@@ -89,6 +89,10 @@ func normalizeFolderRow(row *moviex.WFolder, parentID, depth int64, name, path s
 	changed := false
 	if row.ParentId != parentID {
 		row.ParentId = parentID
+		changed = true
+	}
+	if row.SourceType != sourceType {
+		row.SourceType = sourceType
 		changed = true
 	}
 	if row.Depth != depth {
@@ -117,15 +121,16 @@ func normalizeFolderRow(row *moviex.WFolder, parentID, depth int64, name, path s
 	return row, changed
 }
 
-func newFolderRow(parentID, depth int64, name, path string, nowUnix int64) *moviex.WFolder {
+func newFolderRow(parentID, sourceType, depth int64, name, path string, nowUnix int64) *moviex.WFolder {
 	return &moviex.WFolder{
-		ParentId:  parentID,
-		Name:      name,
-		Depth:     depth,
-		Path:      path,
-		PathHash:  folderPathHash(path),
-		CreatedOn: nowUnix,
-		UpdatedOn: nowUnix,
+		ParentId:   parentID,
+		Name:       name,
+		SourceType: sourceType,
+		Depth:      depth,
+		Path:       path,
+		PathHash:   folderPathHash(path),
+		CreatedOn:  nowUnix,
+		UpdatedOn:  nowUnix,
 	}
 }
 

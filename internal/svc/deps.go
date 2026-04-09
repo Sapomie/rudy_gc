@@ -44,8 +44,6 @@ type Deps struct {
 	PrefixModel                 moviex.AmPrefixModel
 	MovieCastModel              moviex.AmrMovieCastModel
 	MovieGenreModel             moviex.AmrMovieGenreModel
-	FilmModel                   moviex.VFilmModel
-	DirectoryModel              moviex.VDirectoryModel
 	WFolderModel                moviex.WFolderModel
 	WKvModel                    moviex.WKvModel
 	WMediaModel                 moviex.WMediaModel
@@ -56,6 +54,7 @@ type Deps struct {
 	MovieReleaseTopStatModel    moviex.MovieReleaseTopStatModel
 	MovieReleaseAggDirtyModel   moviex.MovieReleaseAggDirtyModel
 	WAggEventModel              moviex.WAggEventModel
+	CPersonScModel              moviex.CPersonScModel
 	GListModel                  moviex.GListModel
 	ScModel                     moviex.GScModel
 	RankModel                   moviex.CRankModel
@@ -101,7 +100,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		personModel              = moviex.NewCPersonModel(conn, c)
 		gScStatModel             = moviex.NewGScStatModel(conn, c)
 		cafoModel                = moviex.NewCCafoModel(conn, c)
-		filmModel                = moviex.NewVFilmModel(conn, c)
 		glistModel               = moviex.NewGListModel(conn, c)
 		scModel                  = moviex.NewGScModel(conn, c)
 		recordModel              = moviex.NewERecordModel(conn, c)
@@ -132,7 +130,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieGenreModel = moviex.NewAmrMovieGenreModel(conn, c)
 
 		// ★ 目录 model
-		vdirModel                   = moviex.NewVDirectoryModel(conn, c)
 		wFolderModel                = moviex.NewWFolderModel(conn, c)
 		wKvModel                    = moviex.NewWKvModel(conn, c)
 		wMediaModel                 = moviex.NewWMediaModel(conn, c)
@@ -143,6 +140,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieReleaseTopStatModel    = moviex.NewMovieReleaseTopStatModel(conn, c)
 		movieReleaseAggDirtyModel   = moviex.NewMovieReleaseAggDirtyModel(conn, c)
 		wAggEventModel              = moviex.NewWAggEventModel(conn, c)
+		cPersonScModel              = moviex.NewCPersonScModel(conn, c)
 	)
 
 	bizRedis, err := redis.NewRedis(redis.RedisConf{
@@ -192,8 +190,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		PrefixModel:                 prefixModel,
 		MovieCastModel:              movieCastModel,
 		MovieGenreModel:             movieGenreModel,
-		FilmModel:                   filmModel,
-		DirectoryModel:              vdirModel,
 		WFolderModel:                wFolderModel,
 		WKvModel:                    wKvModel,
 		WMediaModel:                 wMediaModel,
@@ -204,6 +200,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		MovieReleaseTopStatModel:    movieReleaseTopStatModel,
 		MovieReleaseAggDirtyModel:   movieReleaseAggDirtyModel,
 		WAggEventModel:              wAggEventModel,
+		CPersonScModel:              cPersonScModel,
 		GListModel:                  glistModel,
 		ScModel:                     scModel,
 		RankModel:                   rankModel,

@@ -94,6 +94,12 @@
                                         </a>
                                     </th>
                                     <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByDuration.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByDuration.Href }}">
+                                            时长(分钟){{ if .ScSortQuery.ByDuration.Active }}{{ if .ScSortQuery.ByDuration.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
                                         <a class="sc-sort-link {{ if .ScSortQuery.ByMovieCast.Active }}active{{ end }}"
                                            href="{{ .ScSortQuery.ByMovieCast.Href }}">
                                             演员{{ if .ScSortQuery.ByMovieCast.Active }}{{ if .ScSortQuery.ByMovieCast.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
@@ -143,6 +149,13 @@
                                                 {{ end }}
                                             </td>
                                             <td class="sc-muted">
+                                                {{ if gt .Event.DurationMinutes 0 }}
+                                                    {{ .Event.DurationMinutes }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
                                                 {{ if .Event.MovieCast }}
                                                     <a href="/cards?cn={{ .Event.MovieCast }}">{{ .Event.MovieCast }}</a>
                                                 {{ else }}
@@ -167,7 +180,7 @@
                                     {{ end }}
                                 {{ else }}
                                     <tr>
-                                        <td colspan="7">
+                                        <td colspan="8">
                                             <div class="sc-empty-state">还没有可展示的 SC 事件。</div>
                                         </td>
                                     </tr>

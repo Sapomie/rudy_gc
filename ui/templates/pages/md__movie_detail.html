@@ -168,7 +168,9 @@
                                                                     <span class="text-muted">-</span>
                                                                 {{ end }}
                                                             </td>
-                                                            <td class="text-monospace">{{ .InfoHash }}</td>
+                                                            <td class="text-monospace">
+                                                                <span{{ if and $.media $.media.SourceTorrentHash (eq $.media.SourceTorrentHash .InfoHash) }} class="fetch-site-hash-match"{{ end }}>{{ .InfoHash }}</span>
+                                                            </td>
                                                             <td class="text-nowrap">
                                                                 <button type="button" class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
                                                                         data-source-type="javbus_magnet"
@@ -242,7 +244,7 @@
                                                             <td class="fetch-site-col-compact text-nowrap" data-sort-key="date">{{ .PublishTime }}</td>
                                                             <td class="fetch-site-col-compact text-nowrap" data-sort-key="downloads">{{ .Completed }}</td>
                                                             <td class="fetch-site-col-hash text-monospace">
-                                                                <span class="fetch-site-hash-text" title="{{ .InfoHash }}">{{ .InfoHash }}</span>
+                                                                <span class="fetch-site-hash-text{{ if and $.media $.media.SourceTorrentHash (eq $.media.SourceTorrentHash .InfoHash) }} fetch-site-hash-match{{ end }}" title="{{ .InfoHash }}">{{ .InfoHash }}</span>
                                                             </td>
                                                             <td class="fetch-site-col-compact text-nowrap">
                                                                 <button type="button" class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
@@ -298,7 +300,9 @@
                                                                 {{ end }}
                                                             </td>
                                                             <td class="text-nowrap" data-sort-key="date">{{ .PostTime }}</td>
-                                                            <td class="text-monospace">{{ .InfoHash }}</td>
+                                                            <td class="text-monospace">
+                                                                <span{{ if and $.media $.media.SourceTorrentHash (eq $.media.SourceTorrentHash .InfoHash) }} class="fetch-site-hash-match"{{ end }}>{{ .InfoHash }}</span>
+                                                            </td>
                                                             <td class="text-nowrap">
                                                                 <button type="button" class="btn btn-sm {{ if .IsInDownload }}btn-warning{{ else }}btn-outline-warning{{ end }} js-add-favorite"
                                                                         data-source-type="sehuatang_magnet"

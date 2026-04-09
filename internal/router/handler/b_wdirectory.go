@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"rudy_gc/internal/consts"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -21,6 +22,11 @@ func NewWDirectoryHTMLHandler(deps *svc.Deps) *WDirectoryHTML {
 }
 
 func (h *WDirectoryHTML) RootList(c *gin.Context) {
+	if rawID := strings.TrimSpace(c.Query("id")); rawID != "" && rawID != "root" {
+		h.DirDetail(c)
+		return
+	}
+
 	var req struct {
 		Page     int64 `form:"p"`
 		PageSize int64 `form:"ps"`
@@ -62,7 +68,17 @@ func (h *WDirectoryHTML) RootList(c *gin.Context) {
 }
 
 func (h *WDirectoryHTML) DirDetail(c *gin.Context) {
-	dirID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	rawID := strings.TrimSpace(c.Query("id"))
+	if rawID == "" || rawID == "root" {
+		target := "/wdir"
+		if raw := strings.TrimSpace(c.Request.URL.RawQuery); raw != "" {
+			target += "?" + raw
+		}
+		c.Redirect(http.StatusFound, target)
+		return
+	}
+
+	dirID, err := strconv.ParseInt(rawID, 10, 64)
 	if err != nil || dirID <= 0 {
 		c.String(http.StatusNotFound, "目录不存在")
 		return

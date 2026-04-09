@@ -93,59 +93,70 @@ func (s *Service) BackfillAll(ctx context.Context) (*BackfillResult, error) {
 }
 
 func (s *Service) countBucketLevel(ctx context.Context, level string) (int, error) {
-	rows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, level, 0, 0, 0, false)
-	if err != nil {
-		return 0, err
+	total := 0
+	for _, aggMode := range []string{AggModeAll, AggModeOwned} {
+		rows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, aggMode, level, 0, 0, 0, false)
+		if err != nil {
+			return 0, err
+		}
+		total += len(rows)
 	}
-	return len(rows), nil
+	return total, nil
 }
 
 func (s *Service) countAllTopRows(ctx context.Context) (int, error) {
 	total := 0
-	scopeKeys := []string{levelRoot}
+	scopeKeysByMode := map[string][]string{
+		AggModeAll:   {levelRoot},
+		AggModeOwned: {levelRoot},
+	}
 
 	appendScopeKeys := func(rows []*moviex.MovieReleaseBucketStat) {
 		for _, row := range rows {
 			if row == nil || row.ScopeKey == "" {
 				continue
 			}
-			scopeKeys = append(scopeKeys, row.ScopeKey)
+			scopeKeysByMode[row.AggMode] = append(scopeKeysByMode[row.AggMode], row.ScopeKey)
 		}
 	}
 
-	yearRows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, levelYear, 0, 0, 0, false)
-	if err != nil {
-		return 0, err
-	}
-	appendScopeKeys(yearRows)
-
-	quarterRows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, levelQuarter, 0, 0, 0, false)
-	if err != nil {
-		return 0, err
-	}
-	appendScopeKeys(quarterRows)
-
-	monthRows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, levelMonth, 0, 0, 0, false)
-	if err != nil {
-		return 0, err
-	}
-	appendScopeKeys(monthRows)
-
-	seen := make(map[string]struct{}, len(scopeKeys))
-	for _, key := range scopeKeys {
-		if key == "" {
-			continue
+	for _, aggMode := range []string{AggModeAll, AggModeOwned} {
+		yearRows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, aggMode, levelYear, 0, 0, 0, false)
+		if err != nil {
+			return 0, err
 		}
-		if _, ok := seen[key]; ok {
-			continue
+		appendScopeKeys(yearRows)
+
+		quarterRows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, aggMode, levelQuarter, 0, 0, 0, false)
+		if err != nil {
+			return 0, err
 		}
-		seen[key] = struct{}{}
-		for _, aggType := range []string{aggTypeCast, aggTypeDirector, aggTypeLabel, aggTypePrefix} {
-			rows, err := s.deps.MovieReleaseTopStatModel.ListByScopeAggType(ctx, key, aggType)
-			if err != nil {
-				return 0, err
+		appendScopeKeys(quarterRows)
+
+		monthRows, err := s.deps.MovieReleaseBucketStatModel.ListByLevel(ctx, aggMode, levelMonth, 0, 0, 0, false)
+		if err != nil {
+			return 0, err
+		}
+		appendScopeKeys(monthRows)
+	}
+
+	for _, aggMode := range []string{AggModeAll, AggModeOwned} {
+		seen := make(map[string]struct{}, len(scopeKeysByMode[aggMode]))
+		for _, key := range scopeKeysByMode[aggMode] {
+			if key == "" {
+				continue
 			}
-			total += len(rows)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			for _, aggType := range []string{aggTypeCast, aggTypeDirector, aggTypeLabel, aggTypePrefix} {
+				rows, err := s.deps.MovieReleaseTopStatModel.ListByAggModeScopeAggType(ctx, aggMode, key, aggType)
+				if err != nil {
+					return 0, err
+				}
+				total += len(rows)
+			}
 		}
 	}
 	return total, nil

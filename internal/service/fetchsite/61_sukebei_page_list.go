@@ -133,7 +133,7 @@ func (s *Service) fillSukebeiInventory(ctx context.Context, items []*SukebeiPage
 		movieJavIDs = append(movieJavIDs, item.MovieJavID)
 	}
 
-	filmRows, err := s.deps.FilmModel.ListByMovieJavIds(ctx, movieJavIDs)
+	filmRows, err := s.deps.WMediaModel.ListLegacyFilmsByMovieJavIds(ctx, movieJavIDs)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (s *Service) fillSukebeiInventory(ctx context.Context, items []*SukebeiPage
 		return err
 	}
 
-	filmMap := make(map[string]*moviex.VFilm, len(filmRows))
+	filmMap := make(map[string]*moviex.LegacyFilm, len(filmRows))
 	for _, row := range filmRows {
 		if row == nil || strings.TrimSpace(row.MovieJavId) == "" {
 			continue
@@ -187,7 +187,7 @@ func (s *Service) fillSukebeiInventory(ctx context.Context, items []*SukebeiPage
 	return nil
 }
 
-func buildVFilmInventoryText(row *moviex.VFilm) (string, string) {
+func buildVFilmInventoryText(row *moviex.LegacyFilm) (string, string) {
 	if row == nil {
 		return strings.Join([]string{
 			strconv.FormatInt(consts.MovieAll, 10),

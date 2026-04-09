@@ -1,7 +1,7 @@
 // internal/types/film.go
 package types
 
-// Film 与 internal/model/modelx/moviex.VFilm 字段一一对应（用于 Domain/Repo 传参与返回）
+// Film 对应旧影片业务视图字段（底层由 w_media source_type=1 提供）
 type Film struct {
 	Id          int64
 	MovieJavId  string
@@ -22,7 +22,7 @@ type Film struct {
 	Width        int64
 	Height       int64
 	BitRate      int64
-	Duration     int64
+	Duration     int64 // 秒
 	FrameAverage float64
 
 	HasSub   int64

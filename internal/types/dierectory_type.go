@@ -60,7 +60,6 @@ type ListDirFilmsRequest struct {
 
 // DirPageRequest 统一封装目录详情页所需的入参
 type DirPageRequest struct {
-	UseRoot   bool  `form:"-"` // 从 path 判断，不来自 query
 	DirID     int64 `form:"-"` // 从 path 判断，不来自 query
 	Recursive bool  `form:"recursive"`
 

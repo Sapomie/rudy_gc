@@ -6,7 +6,6 @@ func (s *Service) movieListQuery() *moviex.MovieListRepoSqlx {
 	return moviex.NewMovieListRepoSqlx(
 		s.deps.MovieModel,
 		s.deps.MinfoModel,
-		s.deps.FilmModel,
 		s.deps.WMediaModel,
 		s.deps.GScStatModel,
 		s.deps.LabelModel,
@@ -17,6 +16,6 @@ func (s *Service) movieListQuery() *moviex.MovieListRepoSqlx {
 		s.deps.GenreModel,
 		s.deps.MovieCastModel,
 		s.deps.MovieGenreModel,
-		s.deps.DirectoryModel,
+		s.deps.WFolderModel,
 	)
 }

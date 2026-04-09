@@ -8,17 +8,20 @@ import (
 
 	"rudy_gc/internal/dep"
 	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/moviereleaseagg"
 	"rudy_gc/internal/service/wmediaagg"
 )
 
 type Service struct {
-	deps *dep.Dep
+	deps     *dep.Dep
+	movieSvc *movie.Service
 }
 
 func NewService(d *dep.Dep) *Service {
 	return &Service{
-		deps: d,
+		deps:     d,
+		movieSvc: movie.NewService(d),
 	}
 }
 

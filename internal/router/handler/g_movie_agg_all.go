@@ -12,16 +12,17 @@ import (
 
 // ------- All/Release 路由 -------
 
-func (h *MovieAggHTMLHandler) MovieAggAllReleaseYears(c *gin.Context)   { h.aggAllRelease(c) }
-func (h *MovieAggHTMLHandler) MovieAggAllReleaseMonths(c *gin.Context)  { h.aggAllRelease(c) }
-func (h *MovieAggHTMLHandler) MovieAggAllReleaseQuarter(c *gin.Context) { h.aggAllRelease(c) }
-func (h *MovieAggHTMLHandler) MovieAggAllReleaseMonth(c *gin.Context)   { h.aggAllRelease(c) }
-func (h *MovieAggHTMLHandler) MovieAggAllReleaseDay(c *gin.Context)     { h.aggAllRelease(c) }
+func (h *MovieAggHTMLHandler) MovieAggAllReleaseYears(c *gin.Context)   { h.aggRelease(c) }
+func (h *MovieAggHTMLHandler) MovieAggAllReleaseMonths(c *gin.Context)  { h.aggRelease(c) }
+func (h *MovieAggHTMLHandler) MovieAggAllReleaseQuarter(c *gin.Context) { h.aggRelease(c) }
+func (h *MovieAggHTMLHandler) MovieAggAllReleaseMonth(c *gin.Context)   { h.aggRelease(c) }
+func (h *MovieAggHTMLHandler) MovieAggAllReleaseDay(c *gin.Context)     { h.aggRelease(c) }
 func (h *MovieAggHTMLHandler) MovieAggAllReleaseBucketList(c *gin.Context) {
 	h.releaseBucketList(c)
 }
 
-func (h *MovieAggHTMLHandler) aggAllRelease(c *gin.Context) {
+func (h *MovieAggHTMLHandler) aggRelease(c *gin.Context) {
+	aggMode := moviereleaseagg.NormalizeAggMode(c.Query("agg_mode"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
 	if page < 1 {
 		page = 1
@@ -30,10 +31,10 @@ func (h *MovieAggHTMLHandler) aggAllRelease(c *gin.Context) {
 	curOD := normalizeOrderBy(c.Query("od"), orderByRelease)
 	sq := buildSortQuery(c, curOD)
 
-	year, _ := strconv.Atoi(c.Param("year"))
-	quarter, _ := strconv.Atoi(c.Param("q"))
-	month, _ := strconv.Atoi(c.Param("month"))
-	day, _ := strconv.Atoi(c.Param("day"))
+	year := atoiDef(c.Query("year"), 0)
+	quarter := atoiDef(c.Query("quarter"), 0)
+	month := atoiDef(c.Query("month"), 0)
+	day := atoiDef(c.Query("day"), 0)
 
 	topN := 30
 	if v := c.Query("tn"); v != "" {
@@ -53,6 +54,7 @@ func (h *MovieAggHTMLHandler) aggAllRelease(c *gin.Context) {
 	}
 
 	vm, err := h.releaseAggSvc.BuildReleaseView(c.Request.Context(), moviereleaseagg.AggParams{
+		Mode:    aggMode,
 		Year:    year,
 		Quarter: quarter,
 		Month:   month,
@@ -77,13 +79,18 @@ func (h *MovieAggHTMLHandler) aggAllRelease(c *gin.Context) {
 		"TopDirectorsAll": vm.TopDirectorsAll,
 		"TopLabelsAll":    vm.TopLabelsAll,
 		"TopPrefixesAll":  vm.TopPrefixesAll,
-		"Mode":            "release_all",
+		"AggMode":         vm.AggMode,
+		"AggModeLabel":    vm.AggModeLabel,
+		"CardFilterQuery": vm.CardFilterQuery,
+		"ModeSwitches":    buildReleaseModeSwitches(c, aggMode),
+		"Mode":            "release_" + aggMode,
 		"CurrentSort":     curOD,
 		"SortQuery":       sq,
+		"sortQuery":       sq,
 	}
 
 	if vm.Level != "root" {
-		listReq := &types.ListMovieFullRequest{
+		baseReq := types.ListMovieFullRequest{
 			Owned:              consts.MovieAll,
 			OrderBy:            curOD,
 			Page:               int64(page),
@@ -91,14 +98,32 @@ func (h *MovieAggHTMLHandler) aggAllRelease(c *gin.Context) {
 			ReleasingDateStart: vm.RangeStart,
 			ReleasingDateEnd:   vm.RangeEnd,
 		}
-		listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), listReq)
+		if aggMode == moviereleaseagg.AggModeOwned {
+			baseReq.MediaOwned = consts.OwnedAllNotRemoved
+		}
+		listReq, err := parseMovieCardRequest(c, baseReq)
+		if err != nil {
+			c.String(400, "参数解析错误: %v", err)
+			return
+		}
+		listReq.ReleasingDateStart = vm.RangeStart
+		listReq.ReleasingDateEnd = vm.RangeEnd
+		listResp, err := h.movieSvc.ListMovieFull(c.Request.Context(), &listReq)
 		if err != nil {
 			c.String(500, "加载失败: %v", err)
 			return
 		}
 		data["Movies"] = listResp.List
+		data["movies"] = listResp.List
 		data["Total"] = listResp.Total
-		data["PageInfo"] = BuildPageInfo(c, listResp.Total, int64(page), int64(size), pageWindow)
+		data["total"] = listResp.Total
+		data["PageInfo"] = BuildPageInfo(c, listResp.Total, listReq.Page, listReq.PageSize, pageWindow)
+		data["pageInfo"] = data["PageInfo"]
+		if aggMode == moviereleaseagg.AggModeOwned {
+			data["ownedQuery"] = buildOwnedFilterInfoWithDefaults(c, "", "3")
+		} else {
+			data["ownedQuery"] = buildOwnedFilterInfoWithDefaults(c, "", "")
+		}
 	}
 
 	c.HTML(200, "page.movie_agg_all_time", data)
@@ -133,6 +158,7 @@ type movieReleaseBucketHeaderLinks struct {
 }
 
 func (h *MovieAggHTMLHandler) releaseBucketList(c *gin.Context) {
+	aggMode := moviereleaseagg.NormalizeAggMode(c.Query("agg_mode"))
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
 	if page < 1 {
 		page = 1
@@ -149,6 +175,7 @@ func (h *MovieAggHTMLHandler) releaseBucketList(c *gin.Context) {
 	curDir := normalizeMovieReleaseBucketListDir(c.Query("dir"))
 
 	out, err := h.releaseAggSvc.BuildBucketList(c.Request.Context(), moviereleaseagg.BucketListParams{
+		AggMode:      aggMode,
 		Level:        level,
 		ScopeKeyLike: scopeKey,
 		Year:         year,
@@ -165,18 +192,36 @@ func (h *MovieAggHTMLHandler) releaseBucketList(c *gin.Context) {
 		return
 	}
 
+	pageTitle := "上映日时间桶落库列表"
+	pageNote := "直接查看 movie_release_bucket_stat 原始落库结果，不做二次聚合。"
+	clearHref := "/movie-agg-all/release-bucket-list"
+	aggPageHref := "/movie-agg-all/release"
+	if aggMode == moviereleaseagg.AggModeOwned {
+		pageTitle = "上映日时间桶落库列表（已拥有）"
+		pageNote = "直接查看 movie_release_bucket_stat 的 owned 口径原始落库结果，只统计 native w_media。"
+		clearHref = "/movie-agg-all/release-bucket-list?agg_mode=owned"
+		aggPageHref = "/movie-agg-all/release?agg_mode=owned"
+	}
+
 	data := map[string]any{
-		"Title":       "上映日时间桶列表",
-		"PageTitle":   "上映日时间桶落库列表",
-		"PageNote":    "直接查看 movie_release_bucket_stat 原始落库结果，不做二次聚合。",
-		"Rows":        out.Rows,
-		"Total":       out.Total,
-		"PageInfo":    BuildPageInfo(c, out.Total, int64(page), int64(size), pageWindow),
-		"SortLinks":   buildMovieReleaseBucketListSortLinks(c, curSort, curDir),
-		"HeaderLinks": buildMovieReleaseBucketListHeaderLinks(c, curSort, curDir),
-		"LevelLinks":  buildMovieReleaseBucketListLevelLinks(c, level),
-		"ClearHref":   "/movie-agg-all/release-bucket-list",
-		"AggPageHref": "/movie-agg-all/release",
+		"Title":     pageTitle,
+		"PageTitle": pageTitle,
+		"PageNote":  pageNote,
+		"AggMode":   aggMode,
+		"AggModeLabel": map[string]string{
+			moviereleaseagg.AggModeAll:   "全量",
+			moviereleaseagg.AggModeOwned: "已拥有",
+		}[aggMode],
+		"Rows":         out.Rows,
+		"Total":        out.Total,
+		"PageInfo":     BuildPageInfo(c, out.Total, int64(page), int64(size), pageWindow),
+		"ModeSwitches": buildReleaseModeSwitches(c, aggMode),
+		"SortLinks":    buildMovieReleaseBucketListSortLinks(c, curSort, curDir),
+		"HeaderLinks":  buildMovieReleaseBucketListHeaderLinks(c, curSort, curDir),
+		"LevelLinks":   buildMovieReleaseBucketListLevelLinks(c, level),
+		"ClearHref":    clearHref,
+		"AggPageHref":  aggPageHref,
+		"ListPath":     clearHref,
 		"Query": movieReleaseBucketListQuery{
 			Level:    level,
 			ScopeKey: scopeKey,
@@ -194,14 +239,42 @@ func (h *MovieAggHTMLHandler) releaseBucketList(c *gin.Context) {
 	c.HTML(200, "page.movie_release_bucket_list", data)
 }
 
+func buildReleaseModeSwitches(c *gin.Context, currentMode string) []movieReleaseBucketSortLink {
+	items := []struct {
+		Label string
+		Mode  string
+	}{
+		{Label: "全量", Mode: moviereleaseagg.AggModeAll},
+		{Label: "已拥有", Mode: moviereleaseagg.AggModeOwned},
+	}
+	out := make([]movieReleaseBucketSortLink, 0, len(items))
+	for _, item := range items {
+		q := cloneValues(c)
+		q.Set("agg_mode", item.Mode)
+		q.Set("p", "1")
+		href := c.Request.URL.Path
+		if enc := q.Encode(); enc != "" {
+			href += "?" + enc
+		}
+		out = append(out, movieReleaseBucketSortLink{
+			Label:  item.Label,
+			Href:   href,
+			Active: currentMode == item.Mode,
+		})
+	}
+	return out
+}
+
 func normalizeMovieReleaseBucketListSort(v string) string {
 	switch strings.TrimSpace(v) {
-	case "", "updated":
+	case "":
+		return "scope"
+	case "updated":
 		return "updated"
 	case "all", "owned", "size", "latest_release", "scope":
 		return strings.TrimSpace(v)
 	default:
-		return "updated"
+		return "scope"
 	}
 }
 

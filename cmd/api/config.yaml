@@ -38,8 +38,8 @@ Film:
   Pairs:
     - RootDir: "/Volumes/Expansion/v3/"
       MoveFilmDestination: "/Volumes/Expansion/goingon/"
-    - RootDir: "/Volumes/Expansion/v4/"
-      MoveFilmDestination: "/Volumes/Expansion/goingon/"
+#    - RootDir: "/Volumes/Expansion/v4/"
+#      MoveFilmDestination: "/Volumes/Expansion/goingon/"
     - RootDir: "/Volumes/Getea/vx/"
       MoveFilmDestination: "/Volumes/Getea/goingon/"
 

@@ -12,18 +12,18 @@ type GList struct {
 }
 
 type GSc struct {
-	Id            int64
-	Name          string
-	MovieNumber   int64
-	ScTime        int64
-	ComeMovieName string
-	Cooldown      int64
-	Duration      int64
-	Fg            string
-	Vessel        string
-	MovieCast     string
-	Remarks       string
-	ImagePath     string
-	CreatedOn     int64
-	UpdatedOn     int64
+	Id              int64
+	Name            string
+	MovieNumber     int64
+	ScTime          int64
+	ComeMovieName   string
+	Cooldown        int64
+	DurationMinutes int64 // 分钟
+	Fg              string
+	Vessel          string
+	MovieCast       string
+	Remarks         string
+	ImagePath       string
+	CreatedOn       int64
+	UpdatedOn       int64
 }

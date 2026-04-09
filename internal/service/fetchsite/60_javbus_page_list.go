@@ -132,7 +132,7 @@ func (s *Service) fillJavbusInventory(ctx context.Context, items []*JavbusPageIt
 		movieJavIDs = append(movieJavIDs, item.MovieJavID)
 	}
 
-	filmRows, err := s.deps.FilmModel.ListByMovieJavIds(ctx, movieJavIDs)
+	filmRows, err := s.deps.WMediaModel.ListLegacyFilmsByMovieJavIds(ctx, movieJavIDs)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (s *Service) fillJavbusInventory(ctx context.Context, items []*JavbusPageIt
 		return err
 	}
 
-	filmMap := make(map[string]*moviex.VFilm, len(filmRows))
+	filmMap := make(map[string]*moviex.LegacyFilm, len(filmRows))
 	for _, row := range filmRows {
 		if row == nil || strings.TrimSpace(row.MovieJavId) == "" {
 			continue

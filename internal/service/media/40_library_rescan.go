@@ -458,5 +458,5 @@ func updateRowLocation(row *moviex.WMedia, rootDir, fullDir, fileName string, di
 }
 
 func ensureFolderChainForDir(ctx context.Context, svc *Service, fullDir string, nowUnix int64) (*moviex.WFolder, error) {
-	return wfoldertree.EnsurePathChain(ctx, svc.deps.WFolderModel, fullDir, nowUnix)
+	return wfoldertree.EnsurePathChain(ctx, svc.deps.WFolderModel, consts.WFolderSourceNative, fullDir, nowUnix)
 }
