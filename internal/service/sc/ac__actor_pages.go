@@ -259,7 +259,7 @@ func movieOwnedRank(movieType *types.MovieType) int {
 	if movieType == nil {
 		return 0
 	}
-	if movieType.Owned > consts.MovieAll {
+	if movieType.OwnedWMedia > consts.MovieAll {
 		return 1
 	}
 	return 0
@@ -281,7 +281,7 @@ func buildActorCardsHrefByName(name string) string {
 }
 
 func buildActorPageHrefByID(id int64) string {
-	return "/cast?id=" + strconv.FormatInt(id, 10)
+	return "/cast/" + strconv.FormatInt(id, 10)
 }
 
 func buildActorCardsHrefByID(id int64) string {
@@ -299,7 +299,7 @@ func personFromCast(cast *types.Cast) *types.Person {
 		BirthDay:          cast.BirthDay,
 		Height:            cast.Height,
 		MovieNumber:       cast.MovieNumber,
-		OwnedMovieNumber:  cast.OwnedMovieNumber,
+		OwnedMovieNumber:  cast.OwnedWMediaNumber,
 		OwnedWMediaNumber: cast.OwnedWMediaNumber,
 		ScTimes:           cast.ScTimes,
 		ComeTimes:         cast.ComeTimes,

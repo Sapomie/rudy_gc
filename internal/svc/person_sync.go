@@ -38,6 +38,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 			movieNumber       int64
 			ownedMovieNumber  int64
 			ownedWMediaNumber int64
+			ownedWMediaRatio  int64
 			scTimes           int64
 			comeTimes         int64
 			lastScTime        int64
@@ -46,8 +47,9 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		)
 		if stat != nil {
 			movieNumber = stat.MovieNumber
-			ownedMovieNumber = stat.OwnedMovieNumber
+			ownedMovieNumber = stat.OwnedWMediaNumber
 			ownedWMediaNumber = stat.OwnedWMediaNumber
+			ownedWMediaRatio = calcOwnedWMediaRatio(ownedMovieNumber, ownedWMediaNumber)
 			scTimes = stat.ScTimes
 			comeTimes = stat.ComeTimes
 			lastScTime = stat.LastScTime
@@ -58,6 +60,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		if row.MovieNumber == movieNumber &&
 			row.OwnedMovieNumber == ownedMovieNumber &&
 			row.OwnedWMediaNumber == ownedWMediaNumber &&
+			row.OwnedWMediaRatio == ownedWMediaRatio &&
 			row.ScTimes == scTimes &&
 			row.ComeTimes == comeTimes &&
 			row.LastScTime == lastScTime &&
@@ -69,6 +72,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		row.MovieNumber = movieNumber
 		row.OwnedMovieNumber = ownedMovieNumber
 		row.OwnedWMediaNumber = ownedWMediaNumber
+		row.OwnedWMediaRatio = ownedWMediaRatio
 		row.ScTimes = scTimes
 		row.ComeTimes = comeTimes
 		row.LastScTime = lastScTime
@@ -85,6 +89,13 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		}
 	}
 	return nil
+}
+
+func calcOwnedWMediaRatio(ownedMovieNumber, ownedWMediaNumber int64) int64 {
+	if ownedMovieNumber == 0 {
+		return 0
+	}
+	return ownedWMediaNumber * 10000 / ownedMovieNumber
 }
 
 func uniquePositiveInt64s(ids []int64) []int64 {

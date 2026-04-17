@@ -2,21 +2,14 @@
     <table class="table table-bordered dt-responsive nowrap" style="width:100%">
         <tr class="table-light">
             <th>识别码</th>
-            <td>
-                <a href="/cards?pn={{.movieType.Prefix}}" class="mr-2">{{.movieType.Name}}</a>
-                {{if eq .movieType.Owned 5}}
-                    <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-info mr-1">Play</a>
-                {{else if eq .movieType.Owned 4}}
-                    <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-success mr-1">Play</a>
-                {{else if eq .movieType.Owned 6}}
-                    <a href="{{.movieType.VideoUrl}}" class="btn btn-sm btn-secondary mr-1">Removed</a>
-                {{end}}
-                {{if eq .movieType.OwnedWMedia 5}}
-                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-outline-primary mr-1">MPlay</a>
+	            <td>
+	                <a href="/cards?pn={{.movieType.Prefix}}" class="mr-2">{{.movieType.Name}}</a>
+	                {{if eq .movieType.OwnedWMedia 5}}
+	                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-info mr-1">MPlay</a>
                 {{else if eq .movieType.OwnedWMedia 4}}
-                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-primary mr-1">MPlay</a>
+                    <a href="{{.movieType.VideoUrlWMedia}}" class="btn btn-sm btn-success mr-1">MPlay</a>
                 {{else if eq .movieType.OwnedWMedia 6}}
-                    <span class="btn btn-sm btn-outline-secondary mr-1 disabled" aria-disabled="true">MRemoved</span>
+                    <span class="btn btn-sm btn-secondary mr-1 disabled" aria-disabled="true">MRemoved</span>
                 {{end}}
                 <small class="text-muted">({{.movieType.EncodeName}})</small>
             </td>
@@ -29,13 +22,10 @@
 
         <tr class="table-light">
             <th>长度</th>
-            <td>
-                {{.movieType.Length}}
-                {{ if or (eq .movieType.Owned 3) (eq .movieType.Owned 2) }}
-                    <a href="/copyfilm/{{.movieType.Name}}" class="btn btn-sm btn-warning ml-2">Copy</a>
-                {{ end }}
+	            <td>
+	                {{.movieType.Length}}
 
-                <!-- ✅ 新增：下载封面按钮 -->
+	                <!-- ✅ 新增：下载封面按钮 -->
                 <button id="btnDownloadCover"
                         class="btn btn-sm btn-outline-info ml-2"
                         data-jav="{{.movieType.JavId}}">
@@ -78,7 +68,7 @@
             <td>
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     {{range .movieType.Cast}}
-                        <a class="tag" href="/{{.Url}}" title="{{.NameShow}}">{{.NameShow}}</a>
+                        <a class="tag" href="{{.Url}}" title="{{.NameShow}}">{{.NameShow}}</a>
                     {{end}}
                     <button type="button"
                             class="btn btn-sm btn-outline-primary"
@@ -127,20 +117,31 @@
             <th>Sc</th>
             <td>
                 {{ if .sc }}
-                    <div class="d-flex flex-column gap-2">
+                    <div class="d-flex flex-wrap gap-2">
                         {{ range .sc }}
-                            <div class="d-flex flex-wrap align-items-center">
-                                <a class="tag" href="{{ .Href }}">{{ .ScName }}</a>
-                                <small class="text-muted ms-2">{{ formatUnix .ScTime }}</small>
-                                {{ if .IsCome }}
-                                    <span class="badge bg-danger ms-2">COME</span>
-                                {{ end }}
-                                {{ if gt .Cooldown 0 }}
-                                    <small class="text-muted ms-2">Cooldown {{ humanDays .Cooldown }}</small>
-                                {{ end }}
-                            </div>
+                            <a class="tag" href="{{ .Href }}">{{ .ScName }}</a>
                         {{ end }}
                     </div>
+                {{ else }}
+                    <span class="text-muted">-</span>
+                {{ end }}
+            </td>
+        </tr>
+
+        <tr class="table-light">
+            <th>电影相册</th>
+            <td>
+                {{ if .MovieAlbums }}
+                    {{ $hasSelected := false }}
+                    {{ range .MovieAlbums }}
+                        {{ if .Selected }}
+                            {{ $hasSelected = true }}
+                            <a class="tag" href="/movie-albums?album_name={{ urlquery .Name }}">{{ .Name }}</a>
+                        {{ end }}
+                    {{ end }}
+                    {{ if not $hasSelected }}
+                        <span class="text-muted">-</span>
+                    {{ end }}
                 {{ else }}
                     <span class="text-muted">-</span>
                 {{ end }}

@@ -52,6 +52,7 @@ type (
 		MovieNumber       int64  `db:"movie_number"`
 		OwnedMovieNumber  int64  `db:"owned_movie_number"`
 		OwnedWMediaNumber int64  `db:"owned_w_media_number"`
+		OwnedWMediaRatio  int64  `db:"owned_w_media_ratio"`
 		ScTimes           int64  `db:"sc_times"`
 		ComeTimes         int64  `db:"come_times"`
 		LastScTime        int64  `db:"last_sc_time"`
@@ -98,8 +99,8 @@ func (m *defaultCPersonModel) FindOne(ctx context.Context, id int64) (*CPerson, 
 func (m *defaultCPersonModel) Insert(ctx context.Context, data *CPerson) (sql.Result, error) {
 	rudyGcCPersonIdKey := fmt.Sprintf("%s%v", cacheRudyGcCPersonIdPrefix, data.Id)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, cPersonRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Name, data.Alias, data.Chinese, data.BirthDay, data.Height, data.Cup, data.Bwh, data.Avatar, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.ScTimes, data.ComeTimes, data.LastScTime, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, cPersonRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Name, data.Alias, data.Chinese, data.BirthDay, data.Height, data.Cup, data.Bwh, data.Avatar, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.OwnedWMediaRatio, data.ScTimes, data.ComeTimes, data.LastScTime, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcCPersonIdKey)
 	return ret, err
 }
@@ -108,7 +109,7 @@ func (m *defaultCPersonModel) Update(ctx context.Context, data *CPerson) error {
 	rudyGcCPersonIdKey := fmt.Sprintf("%s%v", cacheRudyGcCPersonIdPrefix, data.Id)
 	_, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, cPersonRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, data.Name, data.Alias, data.Chinese, data.BirthDay, data.Height, data.Cup, data.Bwh, data.Avatar, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.ScTimes, data.ComeTimes, data.LastScTime, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn, data.Id)
+		return conn.ExecCtx(ctx, query, data.Name, data.Alias, data.Chinese, data.BirthDay, data.Height, data.Cup, data.Bwh, data.Avatar, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.OwnedWMediaRatio, data.ScTimes, data.ComeTimes, data.LastScTime, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn, data.Id)
 	}, rudyGcCPersonIdKey)
 	return err
 }

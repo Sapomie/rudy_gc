@@ -1,0 +1,218 @@
+{{ define "page.movie_album_items_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <link href="/static/customer/torrent_album_list.css" rel="stylesheet">
+    </head>
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid" id="movieAlbumItemsPage" data-album-id="{{ .SelectedAlbumID }}" data-album-name="{{ .SelectedAlbumName }}">
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <h4 class="mb-1">{{ .PageTitle }}</h4>
+                        <p class="text-muted mb-0">{{ .PageNote }}</p>
+                    </div>
+                </div>
+
+                <div id="movieAlbumItemsMsg" class="alert d-none mb-3" role="alert"></div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="sc-page-summary">
+                        <span class="sc-page-summary-label">相册</span>
+                        <span class="sc-page-summary-value">{{ .SelectedAlbumName }}</span>
+                        <span class="sc-page-summary-label ms-3">总数</span>
+                        <span class="sc-page-summary-value">{{ .Total }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenCreateMovieAlbumModal">新增电影相册</button>
+                    </div>
+                    {{ if .Rows }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div class="small text-muted">
+                        已选 <span id="movieAlbumBatchSelectedCount">0</span> 项
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {{ if eq .SelectedAlbumName "待删除" }}
+                            <button type="button" class="btn btn-sm btn-danger" id="btnBatchExecuteMovieAlbumRemove" disabled>统一删除</button>
+                        {{ end }}
+                        {{ if or (eq .SelectedAlbumName "待下载电影") (eq .SelectedAlbumName "v3") (eq .SelectedAlbumName "vx") }}
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="btnRemoveDownloadedMovieAlbumItems">移除已下载条目</button>
+                        {{ end }}
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" method="get" action="/movie-albums">
+                            <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+                            <div class="col-12">
+                                <label class="form-label mb-1">快捷相册</label>
+	                                <div class="d-flex flex-wrap gap-2 album-quick-filter-group">
+	                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "待下载电影" }}btn-warning{{ else }}btn-outline-warning{{ end }} js-movie-album-quick-filter" data-album-name="待下载电影">待下载电影</button>
+	                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "待删除" }}btn-danger{{ else }}btn-outline-danger{{ end }} js-movie-album-quick-filter" data-album-name="待删除">待删除</button>
+	                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "v3" }}btn-primary{{ else }}btn-outline-primary{{ end }} js-movie-album-quick-filter" data-album-name="v3">v3</button>
+	                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "vx" }}btn-primary{{ else }}btn-outline-primary{{ end }} js-movie-album-quick-filter" data-album-name="vx">vx</button>
+	                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1">相册</label>
+                                <select class="form-select" name="album_name">
+                                    {{ range .Albums }}
+                                        <option value="{{ .Name }}" {{ if eq $.SelectedAlbumName .Name }}selected{{ end }}>{{ .Name }}</option>
+                                    {{ end }}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1">影片编号 / 标题</label>
+                                <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_name 或 movie_jav_id">
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">筛选</button>
+                                <a class="btn btn-outline-secondary" href="/movie-albums">清空</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th class="text-center text-nowrap">
+                                        <input class="form-check-input js-movie-album-item-check-all" id="movieAlbumItemCheckAll" type="checkbox" aria-label="全选当前页">
+                                    </th>
+                                    <th>
+                                        <a class="album-sort-link {{ if .SortQuery.ByMovieName.Active }}active{{ end }}" href="{{ .SortQuery.ByMovieName.Href }}">
+                                            影片{{ if .SortQuery.ByMovieName.Active }}{{ if .SortQuery.ByMovieName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="album-sort-link {{ if .SortQuery.ByCreated.Active }}active{{ end }}" href="{{ .SortQuery.ByCreated.Href }}">
+                                            加入时间{{ if .SortQuery.ByCreated.Active }}{{ if .SortQuery.ByCreated.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">操作</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Rows }}
+                                    {{ range .Rows }}
+                                        <tr data-item-id="{{ .ID }}">
+                                            <td class="text-center">
+                                                <input class="form-check-input js-movie-album-item-check" type="checkbox" value="{{ .ID }}" aria-label="选择 {{ .MovieName }}">
+                                            </td>
+                                            <td class="text-nowrap"><a class="fw-semibold" href="/movie/{{ .MovieName }}">{{ .MovieName }}</a></td>
+                                            <td class="text-nowrap">{{ formatUnixMinute .CreatedOn }}</td>
+                                            <td class="text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-outline-danger js-remove-movie-album-item" data-item-id="{{ .ID }}">移除</button>
+                                            </td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="4"><div class="sc-empty-state">当前筛选下没有电影相册数据。</div></td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="movieAlbumCreateModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">新增电影相册</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label class="form-label mb-1" for="movieAlbumCreateName">相册名称</label>
+                                <input type="text" class="form-control" id="movieAlbumCreateName" maxlength="128" placeholder="请输入电影相册名称">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="movieAlbumCreateConfirmBtn">确认创建</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="movieAlbumExecuteRemoveModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">统一删除确认</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                确认执行已选中的 <span id="movieAlbumExecuteRemoveCount">0</span> 项吗？这会移动对应的 native w_media 到 `001_process/005_removed`。
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-danger" id="movieAlbumExecuteRemoveConfirmBtn">确认删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="movieAlbumRemoveDownloadedModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">移除已下载条目确认</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-2">
+                                    将要移除 <span class="fw-semibold" id="movieAlbumRemoveDownloadedCount">0</span> 条。
+                                </div>
+                                <div class="small text-muted mb-2">
+                                    只会移除相册条目，不会删除媒体文件。
+                                </div>
+                                <div class="border rounded p-2" style="max-height: 280px; overflow-y: auto;">
+                                    <div id="movieAlbumRemoveDownloadedEmpty" class="small text-muted">正在加载预览...</div>
+                                    <div id="movieAlbumRemoveDownloadedList" class="list-group list-group-flush"></div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-warning" id="movieAlbumRemoveDownloadedConfirmBtn" disabled>确认移除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/dashboard.init.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/movie_album_items_list.js"></script>
+    </body>
+    </html>
+{{ end }}

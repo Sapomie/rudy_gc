@@ -22,7 +22,7 @@ Fetcher:
   Cookie: "timezone=-480; dm=z93j; UGVyc2lzdFN0b3JhZ2U=%7B%7D; __PPU_puid=16775292821052140170; over18=18; cf_clearance=gqp_3r35eP7tPZvuGqT7orRFdvrjnjakLusUQGxj4BY-1770385844-1.2.1.1-F_TcplYJQ2Hc1vFGvkGlHr2iIrgfwXjVcrdNg9a8_ToFT_lcFiRkS3OMh4djV.XYb3pbyUaASqHczVj_zIME1KM6rHOQUtVojz8RCf9D4dWlOutnzRdRFBUmjNcLuvIB1knnuXWg41LeP28XhOCujPDaGgNcFbmXk0YqkQxVjPO9gjx1WamgqIoHP6zZ7tWQ_VlEYGnmIXxk217sm9BC5..MmmqZH8WcFRsjqLDGsCs"
   Proxy: "http://127.0.0.1:1087/"
   Timeout: 60
-#  JavAddress: "www.z93j.com"
+  #  JavAddress: "www.z93j.com"
   JavAddress: "www.c97k.com"
   BusAddress: "www.javbus.com"
   LocalImageDir: "/Volumes/T7/data/jacket_cover/"
@@ -38,13 +38,14 @@ Film:
   Pairs:
     - RootDir: "/Volumes/Expansion/v3/"
       MoveFilmDestination: "/Volumes/Expansion/goingon/"
-#    - RootDir: "/Volumes/Expansion/v4/"
-#      MoveFilmDestination: "/Volumes/Expansion/goingon/"
+    #    - RootDir: "/Volumes/Expansion/v4/"
+    #      MoveFilmDestination: "/Volumes/Expansion/goingon/"
     - RootDir: "/Volumes/Getea/vx/"
       MoveFilmDestination: "/Volumes/Getea/goingon/"
 
 Media:
   RootDirs:
-    - "/Volumes/movie-un/w1/"
+    #    - "/Volumes/movie-un/w1/"
+    - "/Volumes/Expansion/w1"
 
 DataSourceRemote: root:12345678@tcp(8.134.149.91:5306)/zero_gc_v2?charset=utf8mb4

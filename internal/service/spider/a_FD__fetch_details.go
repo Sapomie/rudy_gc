@@ -36,13 +36,18 @@ func (l *CrawlLogic) RefreshOldestDetail(ctx context.Context, num int64) (int, e
 	)
 
 	// 直接复用批量逻辑：按顺序刷新 num 条
-	return l.handleFetchAndParseDetails(ctx, items)
+	total, changedMovieJavIDs, err := l.handleFetchAndParseDetails(ctx, items)
+	if err != nil {
+		return 0, err
+	}
+	l.movieSvc.EnqueueAggRebuildByMovieJavIDs("spider_refresh_oldest_detail", changedMovieJavIDs...)
+	return total, nil
 }
 
-func (l *CrawlLogic) HandleFetchDetailsById(ctx context.Context, javIds []string) (int, error) {
+func (l *CrawlLogic) HandleFetchDetailsById(ctx context.Context, javIds []string) (int, []string, error) {
 	if len(javIds) == 0 {
 		l.deps.Log.WithContext(ctx).Info("handleFetchDetailsById: 空列表，跳过")
-		return 0, nil
+		return 0, nil, nil
 	}
 
 	items := make([]*types.Item, 0, len(javIds))
@@ -83,27 +88,28 @@ func (l *CrawlLogic) HandleFetchDetailsById(ctx context.Context, javIds []string
 
 	}
 
-	total, err := l.handleFetchAndParseDetails(ctx, items)
+	total, changedMovieJavIDs, err := l.handleFetchAndParseDetails(ctx, items)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	return total, nil
+	return total, changedMovieJavIDs, nil
 }
 
-func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*types.Item) (int, error) {
+func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*types.Item) (int, []string, error) {
 	total := len(items)
 	if total == 0 {
 		l.deps.Log.WithContext(ctx).Info("没有需要抓取的详情")
-		return 0, nil
+		return 0, nil, nil
 	}
 
 	start := time.Now()
 	l.deps.Log.WithContext(ctx).Infof("有 %d 个详情需要抓取", total)
 	l.reportPhaseProgress(ctx, "detail", "detail_queue_ready", fmt.Sprintf("待抓取详情 %d 条", total), 0, total, 0, 0)
 	var failed int
+	affected := newAffectedMovieNumbers()
 	for i, it := range items {
 		if err := l.waitIfPaused(ctx); err != nil {
-			return i, err
+			return i, nil, err
 		}
 
 		// -------------------------------
@@ -117,7 +123,7 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 			failed++
 			l.reportPhaseProgress(ctx, "detail", "detail_fetch_failed", fmt.Sprintf("抓取失败：%s", it.Name), i+1, total, (i+1)-failed, failed)
 			if sleepErr := l.sleepWithContext(ctx, getRandomSleepDuration()); sleepErr != nil {
-				return i + 1, sleepErr
+				return i + 1, nil, sleepErr
 			}
 			continue
 		}
@@ -137,7 +143,8 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 		// -------------------------------
 		// 3) 解析详情（失败 → log + continue）
 		// -------------------------------
-		if _, err := l.handleDetailParse(ctx, item); err != nil {
+		resp, err := l.handleDetailParse(ctx, item)
+		if err != nil {
 			l.deps.Log.WithContext(ctx).Errorf(
 				"[%d/%d] parse 失败: %s (err=%v)",
 				i+1, total, it.Name, err,
@@ -146,6 +153,7 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 			l.reportPhaseProgress(ctx, "detail", "detail_parse_failed", fmt.Sprintf("解析失败：%s", it.Name), i+1, total, (i+1)-failed, failed)
 			continue
 		}
+		affected.addFromResponse(resp)
 
 		// -------------------------------
 		// 4) 进度日志
@@ -153,11 +161,11 @@ func (l *CrawlLogic) handleFetchAndParseDetails(ctx context.Context, items []*ty
 		l.logItemProgress(ctx, i+1, total, it.Name, it.LastQueryDetailTime, start)
 		l.reportPhaseProgress(ctx, "detail", "detail_item_done", fmt.Sprintf("详情完成：%s", it.Name), i+1, total, (i+1)-failed, failed)
 		if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
-			return i + 1, err
+			return i + 1, nil, err
 		}
 	}
 
-	return total, nil
+	return total, affectedMovieJavIDs(affected), nil
 }
 
 const (
@@ -204,4 +212,19 @@ func (l *CrawlLogic) shouldSkipUpdate(ctx context.Context, lastQueryTime, releas
 	//}
 
 	return skip
+}
+
+func affectedMovieJavIDs(affected *affectedMovieNumbers) []string {
+	if affected == nil || len(affected.movies) == 0 {
+		return nil
+	}
+
+	out := make([]string, 0, len(affected.movies))
+	for javID := range affected.movies {
+		if strings.TrimSpace(javID) == "" {
+			continue
+		}
+		out = append(out, strings.TrimSpace(javID))
+	}
+	return out
 }

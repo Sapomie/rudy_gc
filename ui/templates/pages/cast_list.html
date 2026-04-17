@@ -59,13 +59,13 @@
                                 <input id="casts-keyword" class="form-control" type="text" name="keyword" placeholder="Name / Chinese / Alias" value="{{ .Query.Keyword }}">
                             </div>
                             <div class="col-12 col-md-6 col-xl-3">
-                                <label class="form-label mb-1">Owned Range</label>
+                                <label class="form-label mb-1">WOwned Range</label>
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <input id="casts-owned-min" class="form-control" type="number" min="0" name="owned_min" placeholder="Min" value="{{ .Query.OwnedMin }}">
+                                        <input id="casts-owned-min" class="form-control" type="number" min="0" name="wowned_min" placeholder="Min" value="{{ .Query.OwnedMin }}">
                                     </div>
                                     <div class="col-6">
-                                        <input id="casts-owned-max" class="form-control" type="number" min="0" name="owned_max" placeholder="Max" value="{{ .Query.OwnedMax }}">
+                                        <input id="casts-owned-max" class="form-control" type="number" min="0" name="wowned_max" placeholder="Max" value="{{ .Query.OwnedMax }}">
                                     </div>
                                 </div>
                             </div>
@@ -147,12 +147,6 @@
                                         </a>
                                     </th>
                                     <th>
-                                        <a class="sc-sort-link {{ if .CastSortQuery.ByOwned.Active }}active{{ end }}"
-                                           href="{{ .CastSortQuery.ByOwned.Href }}">
-                                            Owned{{ if .CastSortQuery.ByOwned.Active }}{{ if .CastSortQuery.ByOwned.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
-                                        </a>
-                                    </th>
-                                    <th>
                                         <a class="sc-sort-link {{ if .CastSortQuery.ByWOwned.Active }}active{{ end }}"
                                            href="{{ .CastSortQuery.ByWOwned.Href }}">
                                             WOwned{{ if .CastSortQuery.ByWOwned.Active }}{{ if .CastSortQuery.ByWOwned.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
@@ -189,13 +183,12 @@
                                     {{ range .Items }}
                                         <tr>
                                             <td>
-                                                <a class="sc-event-link" href="/cast?id={{ .Id }}">{{ .Name }}</a>
+                                                <a class="sc-event-link" href="/cast/{{ .Id }}">{{ .Name }}</a>
                                             </td>
                                             <td>{{ if .Chinese }}{{ .Chinese }}{{ else }}-{{ end }}</td>
                                             <td>{{ humanAgeFromBirth .BirthDay }}</td>
                                             <td>{{ if gt .Height 0 }}{{ .Height }} cm{{ else }}-{{ end }}</td>
                                             <td>{{ .MovieNumber }}</td>
-                                            <td>{{ .OwnedMovieNumber }}</td>
                                             <td>{{ .OwnedWMediaNumber }}</td>
                                             <td>{{ .ScTimes }}</td>
                                             <td>{{ .ComeTimes }}</td>
@@ -205,7 +198,7 @@
                                     {{ end }}
                                 {{ else }}
                                     <tr>
-                                        <td colspan="11">
+                                        <td colspan="10">
                                             <div class="sc-empty-state">还没有可展示的演员。</div>
                                         </td>
                                     </tr>

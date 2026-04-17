@@ -15,20 +15,12 @@ func nativeWMediaSourceTypeSQL() string {
 	return wMediaSourceTypeSQL(consts.WMediaSourceNative)
 }
 
-func legacyWMediaSourceTypeSQL() string {
-	return wMediaSourceTypeSQL(consts.WMediaSourceLegacyVFilm)
-}
-
 func buildWMediaJoin(tableExpr, alias, outerMovieJavID string, sourceType int64) string {
 	return tableExpr + " " + alias + " ON " + alias + ".movie_jav_id = " + outerMovieJavID + " AND " + alias + ".source_type = " + wMediaSourceTypeSQL(sourceType)
 }
 
 func buildNativeWMediaJoin(tableExpr, alias, outerMovieJavID string) string {
 	return buildWMediaJoin(tableExpr, alias, outerMovieJavID, consts.WMediaSourceNative)
-}
-
-func buildLegacyWMediaJoin(tableExpr, alias, outerMovieJavID string) string {
-	return buildWMediaJoin(tableExpr, alias, outerMovieJavID, consts.WMediaSourceLegacyVFilm)
 }
 
 func buildWMediaExists(tableExpr, alias, outerMovieJavID string, sourceType int64, extraConditions ...string) string {
@@ -50,10 +42,6 @@ func buildNativeWMediaExists(tableExpr, alias, outerMovieJavID string, extraCond
 	return buildWMediaExists(tableExpr, alias, outerMovieJavID, consts.WMediaSourceNative, extraConditions...)
 }
 
-func buildLegacyWMediaExists(tableExpr, alias, outerMovieJavID string, extraConditions ...string) string {
-	return buildWMediaExists(tableExpr, alias, outerMovieJavID, consts.WMediaSourceLegacyVFilm, extraConditions...)
-}
-
 func buildWMediaNotExists(tableExpr, alias, outerMovieJavID string, sourceType int64, extraConditions ...string) string {
 	conditions := []string{
 		alias + ".movie_jav_id = " + outerMovieJavID,
@@ -71,8 +59,4 @@ func buildWMediaNotExists(tableExpr, alias, outerMovieJavID string, sourceType i
 
 func buildNativeWMediaNotExists(tableExpr, alias, outerMovieJavID string, extraConditions ...string) string {
 	return buildWMediaNotExists(tableExpr, alias, outerMovieJavID, consts.WMediaSourceNative, extraConditions...)
-}
-
-func buildLegacyWMediaNotExists(tableExpr, alias, outerMovieJavID string, extraConditions ...string) string {
-	return buildWMediaNotExists(tableExpr, alias, outerMovieJavID, consts.WMediaSourceLegacyVFilm, extraConditions...)
 }

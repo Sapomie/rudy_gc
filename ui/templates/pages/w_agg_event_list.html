@@ -1,0 +1,170 @@
+{{ define "page.w_agg_event_list" }}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/icons.min.css" rel="stylesheet">
+    <link href="/static/css/app.min.css" rel="stylesheet">
+    <link href="/static/customer/w_agg_event_list.css" rel="stylesheet">
+</head>
+
+<body data-sidebar="dark">
+{{ template "menu" . }}
+
+<main class="main-content">
+    <div class="page-content">
+        <div class="container-fluid w-agg-event-list-page" id="wAggEventListPage">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                <div>
+                    <h4 class="mb-1">{{ .PageTitle }}</h4>
+                    <p class="text-muted mb-0">{{ .PageNote }}</p>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                <div class="w-agg-event-summary">
+                    <span class="w-agg-event-summary-label">总行数</span>
+                    <span class="w-agg-event-summary-value">{{ .Total }}</span>
+                </div>
+                {{ if .Rows }}
+                    <div class="ms-xl-auto">
+                        {{ template "pagination" . }}
+                    </div>
+                {{ end }}
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form class="row g-3 align-items-end" method="get" action="/w-agg-events">
+                        <input type="hidden" name="sort" value="{{ .Query.Sort }}">
+                        <input type="hidden" name="order" value="{{ .Query.Order }}">
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label mb-1">AggKey</label>
+                            <input class="form-control" type="text" name="agg_key" value="{{ .Query.AggKey }}" placeholder="精确匹配">
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label mb-1">FlowKey</label>
+                            <input class="form-control" type="text" name="flow_key" value="{{ .Query.FlowKey }}" placeholder="精确匹配">
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label mb-1">Status</label>
+                            <input class="form-control" type="text" name="status" value="{{ .Query.Status }}" placeholder="精确匹配">
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-1">
+                            <label class="form-label mb-1">每页</label>
+                            <select class="form-select" id="wAggEventPageSize" name="ps">
+                                <option value="20" {{ if eq .Query.PageSize 20 }}selected{{ end }}>20</option>
+                                <option value="50" {{ if eq .Query.PageSize 50 }}selected{{ end }}>50</option>
+                                <option value="100" {{ if eq .Query.PageSize 100 }}selected{{ end }}>100</option>
+                                <option value="200" {{ if eq .Query.PageSize 200 }}selected{{ end }}>200</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-xl-2 d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">筛选</button>
+                            <a class="btn btn-outline-secondary" href="{{ .ClearHref }}">清空</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 w-agg-event-table">
+                            <thead>
+                            <tr>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.StartedTime.Active }}is-active{{ end }}" href="{{ .HeaderLinks.StartedTime.Href }}">
+                                        {{ .HeaderLinks.StartedTime.Label }}{{ if .HeaderLinks.StartedTime.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.StartedTime.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.AggKey.Active }}is-active{{ end }}" href="{{ .HeaderLinks.AggKey.Href }}">
+                                        {{ .HeaderLinks.AggKey.Label }}{{ if .HeaderLinks.AggKey.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.AggKey.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.FlowKey.Active }}is-active{{ end }}" href="{{ .HeaderLinks.FlowKey.Href }}">
+                                        {{ .HeaderLinks.FlowKey.Label }}{{ if .HeaderLinks.FlowKey.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.FlowKey.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.ScopeCount.Active }}is-active{{ end }}" href="{{ .HeaderLinks.ScopeCount.Href }}">
+                                        {{ .HeaderLinks.ScopeCount.Label }}{{ if .HeaderLinks.ScopeCount.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.ScopeCount.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.BucketCount.Active }}is-active{{ end }}" href="{{ .HeaderLinks.BucketCount.Href }}">
+                                        {{ .HeaderLinks.BucketCount.Label }}{{ if .HeaderLinks.BucketCount.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.BucketCount.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.TopCount.Active }}is-active{{ end }}" href="{{ .HeaderLinks.TopCount.Href }}">
+                                        {{ .HeaderLinks.TopCount.Label }}{{ if .HeaderLinks.TopCount.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.TopCount.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.FinishedTime.Active }}is-active{{ end }}" href="{{ .HeaderLinks.FinishedTime.Href }}">
+                                        {{ .HeaderLinks.FinishedTime.Label }}{{ if .HeaderLinks.FinishedTime.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.FinishedTime.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="w-agg-event-sort-link {{ if .HeaderLinks.Duration.Active }}is-active{{ end }}" href="{{ .HeaderLinks.Duration.Href }}">
+                                        {{ .HeaderLinks.Duration.Label }}{{ if .HeaderLinks.Duration.Active }}<span class="w-agg-event-sort-indicator">{{ if .HeaderLinks.Duration.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{ if .Rows }}
+                                {{ range .Rows }}
+                                    <tr>
+                                        <td class="text-nowrap">{{ formatUnixMinute .StartedTime }}</td>
+                                        <td class="text-nowrap w-agg-event-key">{{ .AggKey }}</td>
+                                        <td class="text-nowrap w-agg-event-key">{{ .FlowKey }}</td>
+                                        <td class="text-nowrap">{{ .ScopeCount }}</td>
+                                        <td class="text-nowrap">{{ .BucketCount }}</td>
+                                        <td class="text-nowrap">{{ .TopCount }}</td>
+                                        <td class="text-nowrap">{{ formatUnixMinute .FinishedTime }}</td>
+                                        <td class="text-nowrap">{{ .DurationSecondsText }}</td>
+                                    </tr>
+                                {{ end }}
+                            {{ else }}
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="w-agg-event-empty-state">
+                                            当前筛选下没有 `w_agg_event` 数据。
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{ if .Rows }}
+                <div class="d-flex justify-content-end mt-3">
+                    {{ template "pagination" . }}
+                </div>
+            {{ end }}
+        </div>
+    </div>
+</main>
+
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/metisMenu.min.js"></script>
+<script src="/static/js/simplebar.min.js"></script>
+<script src="/static/js/waves.min.js"></script>
+<script src="/static/js/jquery.sparkline.min.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/customer/w_agg_event_list.js"></script>
+</body>
+</html>
+{{ end }}

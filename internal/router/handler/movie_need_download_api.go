@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -598,6 +599,59 @@ func (h *MovieAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
 		"removed_count": removedCount,
 		"failed_ids":    failedIDs,
 		"message":       "统一删除完成",
+	})
+}
+
+// POST /api/movie-albums/:albumID/remove-downloaded-items
+func (h *MovieAPI) RemoveDownloadedMovieAlbumItems(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	result, err := h.movieSvc.RemoveDownloadedMovieAlbumItems(c.Request.Context(), albumID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumInvalidID), errors.Is(err, movie.ErrMovieAlbumUnsupportedRemoveDownloaded):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":            true,
+		"removed_count": result.RemovedCount,
+		"skipped_count": result.SkippedCount,
+		"message":       fmt.Sprintf("已移除 %d 条已下载条目", result.RemovedCount),
+	})
+}
+
+// POST /api/movie-albums/:albumID/remove-downloaded-items-preview
+func (h *MovieAPI) PreviewRemoveDownloadedMovieAlbumItems(c *gin.Context) {
+	albumID, err := parseAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	result, err := h.movieSvc.PreviewRemoveDownloadedMovieAlbumItems(c.Request.Context(), albumID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumInvalidID), errors.Is(err, movie.ErrMovieAlbumUnsupportedRemoveDownloaded):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":    true,
+		"count": result.Count,
+		"items": result.Items,
 	})
 }
 

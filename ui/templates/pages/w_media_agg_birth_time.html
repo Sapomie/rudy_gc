@@ -194,7 +194,7 @@
                     {{ if not (or (or .BucketsY .BucketsQ) (or .BucketsM .BucketsD)) }}
                         <div class="alert alert-info mb-0">
                             当前范围暂无可展示的时间桶。
-                            <a href="/triggers/media-rescan" class="alert-link">如为新建统计表，请先到媒体重扫页执行 WMedia 时间聚合回填。</a>
+                            <a href="/triggers/agg" class="alert-link">如为新建统计表，请先到聚合回填页执行 WMedia 时间聚合回填。</a>
                         </div>
                     {{ end }}
                 {{ end }}

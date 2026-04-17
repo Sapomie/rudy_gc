@@ -135,39 +135,71 @@ func (s *Service) moveFavoriteItemToMediaAlbum(ctx context.Context, source *favo
 		return nil
 	}
 	item := source.item
+	if item.Id <= 0 {
+		return fmt.Errorf("missing favorite album item id: source_type=%s, source_row_id=%d", item.SourceType, item.SourceRowId)
+	}
 
 	mediaAlbumID, err := s.ensureAlbumByName(ctx, mediaAlbumName, "media ingest 自动迁移")
 	if err != nil {
 		return err
 	}
 
-	_, err = s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, mediaAlbumID, item.SourceType, item.SourceRowId)
+	sourceItem, err := s.deps.AlbumItemModel.FindOne(ctx, item.Id)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			_, targetErr := s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, mediaAlbumID, item.SourceType, item.SourceRowId)
+			if targetErr == nil {
+				return nil
+			}
+			if errors.Is(targetErr, moviex.ErrNotFound) {
+				return fmt.Errorf("favorite album item missing before move: id=%d, source_type=%s, source_row_id=%d", item.Id, item.SourceType, item.SourceRowId)
+			}
+			return targetErr
+		}
+		return err
+	}
+	if sourceItem.AlbumId == mediaAlbumID {
+		return nil
+	}
+	if sourceItem.AlbumId != source.favoriteAlbumID {
+		return fmt.Errorf("favorite album item album mismatch: id=%d, album_id=%d, expected=%d", sourceItem.Id, sourceItem.AlbumId, source.favoriteAlbumID)
+	}
+
+	_, err = s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, mediaAlbumID, sourceItem.SourceType, sourceItem.SourceRowId)
 	switch {
 	case err == nil:
-		// 已存在则直接从下载中移除，保证迁移幂等。
+		if err := s.deps.AlbumItemModel.Delete(ctx, sourceItem.Id); err != nil {
+			return err
+		}
 	case errors.Is(err, moviex.ErrNotFound):
 		now := time.Now().Unix()
 		_, insertErr := s.deps.AlbumItemModel.Insert(ctx, &moviex.TmAlbumItem{
 			AlbumId:     mediaAlbumID,
-			SourceType:  item.SourceType,
-			SourceRowId: item.SourceRowId,
-			MovieJavId:  item.MovieJavId,
-			InfoHash:    item.InfoHash,
-			MovieName:   item.MovieName,
-			Size:        item.Size,
-			PublishTime: item.PublishTime,
+			SourceType:  sourceItem.SourceType,
+			SourceRowId: sourceItem.SourceRowId,
+			MovieJavId:  sourceItem.MovieJavId,
+			InfoHash:    sourceItem.InfoHash,
+			MovieName:   sourceItem.MovieName,
+			Size:        sourceItem.Size,
+			PublishTime: sourceItem.PublishTime,
 			CreatedOn:   now,
 			UpdatedOn:   now,
 		})
 		if insertErr != nil {
 			return insertErr
 		}
+		if err := s.deps.AlbumItemModel.Delete(ctx, sourceItem.Id); err != nil {
+			return err
+		}
 	default:
 		return err
 	}
-
-	_, err = s.deps.AlbumItemModel.DeleteByAlbumIdSourceTypeSourceRowId(ctx, source.favoriteAlbumID, item.SourceType, item.SourceRowId)
-	return err
+	if _, err := s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, source.favoriteAlbumID, sourceItem.SourceType, sourceItem.SourceRowId); err == nil {
+		return fmt.Errorf("favorite album item still remains after move: album_id=%d, source_type=%s, source_row_id=%d", source.favoriteAlbumID, sourceItem.SourceType, sourceItem.SourceRowId)
+	} else if !errors.Is(err, moviex.ErrNotFound) {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) ensureAlbumByName(ctx context.Context, albumName, remark string) (int64, error) {
@@ -256,7 +288,9 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 			return err
 		}
-		s.markMediaAggDirty(ctx, existing, row)
+		if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, existing.MovieJavId, row.MovieJavId); err != nil {
+			return err
+		}
 		s.invalidateMovieTypeCaches(ctx, existing.MovieJavId, row.MovieJavId)
 		return nil
 	}
@@ -278,11 +312,15 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 			return err
 		}
-		s.markMediaAggDirty(ctx, dup, row)
+		if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, dup.MovieJavId, row.MovieJavId); err != nil {
+			return err
+		}
 		s.invalidateMovieTypeCaches(ctx, dup.MovieJavId, row.MovieJavId)
 		return nil
 	}
-	s.markMediaAggDirty(ctx, row)
+	if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, row.MovieJavId); err != nil {
+		return err
+	}
 	s.invalidateMovieTypeCaches(ctx, row.MovieJavId)
 	return nil
 }

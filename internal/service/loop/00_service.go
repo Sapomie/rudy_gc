@@ -11,7 +11,6 @@ import (
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/service/spider"
-	"rudy_gc/internal/service/vfilm"
 	"rudy_gc/internal/svc"
 )
 
@@ -27,7 +26,6 @@ type FetchLoopService struct {
 	fetchSiteSvc      *fetchsite.Service
 	fetchSehuatangSvc *fetchsehuatang.Service
 	movieSvc          *movie.Service
-	filmSvc           *vfilm.FilmService
 	scSvc             *sc.ScService
 
 	jobs       *managedProgressJobManager
@@ -71,7 +69,6 @@ func NewFetchLoopService(deps *svc.Deps) *FetchLoopService {
 		fetchSiteSvc:      fetchsite.NewService(deps),
 		fetchSehuatangSvc: fetchsehuatang.NewService(deps),
 		movieSvc:          movie.NewService(deps),
-		filmSvc:           vfilm.NewFilmService(deps),
 		scSvc:             sc.NewService(deps),
 		jobs:              newManagedProgressJobManager("crawler", 64, pushManagedProgressEvent),
 		detailLogs:        newDetailLoopLogHub(64),

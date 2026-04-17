@@ -10,15 +10,6 @@
         <link href="/static/css/app.min.css" rel="stylesheet">
         <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
         <link href="/static/css/custom/sc_event.css" rel="stylesheet">
-        <style>
-            #msgArea {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 2000;
-                display: none;
-            }
-        </style>
     </head>
 
     <body data-sidebar="dark">
@@ -38,12 +29,6 @@
                            class="btn btn-outline-primary">
                             移动 SC Media
                         </a>
-                        <button type="button"
-                                class="btn btn-primary"
-                                data-role="sc-move"
-                                data-sc-name="{{ .Event.Name }}">
-                            移动 SC Movie
-                        </button>
                         <a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a>
                     </div>
                 </div>
@@ -191,9 +176,6 @@
         </div>
     </main>
 
-    <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
-
-    <script src="/static/customer/sc_events.js"></script>
     <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/metisMenu.min.js"></script>

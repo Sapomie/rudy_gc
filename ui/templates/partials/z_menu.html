@@ -17,6 +17,8 @@
             <div class="d-flex align-items-center">
                 <div class="d-none d-md-flex align-items-center me-2">
                     <a href="/crawler/tasks" class="btn btn-sm me-2 {{ if eq .QuickNavCurrent "crawler_tasks" }}btn-primary{{ else }}btn-outline-primary{{ end }}">任务列表</a>
+                    <a href="/movie-albums" class="btn btn-sm me-2 {{ if eq .QuickNavCurrent "movie_albums" }}btn-primary{{ else }}btn-outline-primary{{ end }}">MovieAlbums</a>
+                    <a href="/torrent-albums" class="btn btn-sm me-2 {{ if eq .QuickNavCurrent "torrent_albums" }}btn-primary{{ else }}btn-outline-primary{{ end }}">TorrentAlbums</a>
                     <a href="/triggers/dailybest" class="btn btn-sm me-2 {{ if eq .QuickNavCurrent "dailybest" }}btn-primary{{ else }}btn-outline-primary{{ end }}">DailyBest</a>
                     <a href="/triggers/fetch-sehuatang" class="btn btn-sm {{ if eq .QuickNavCurrent "fetch_sehuatang" }}btn-primary{{ else }}btn-outline-primary{{ end }}">FetchSehuatang</a>
                 </div>
@@ -77,6 +79,7 @@
                             <li><a href="/movie-agg-all/release-bucket-list">Agg-All-Release-Bucket</a></li>
                             <li><a href="/w-media-agg/bucket-list">Agg-WMedia-Bucket</a></li>
                             <li><a href="/w-media-agg/birth">Agg-WMedia-Birth</a></li>
+                            <li><a href="/triggers/agg">AggTriggers</a></li>
                             <li><a href="/wdir">WDirectory</a></li>
                         </ul>
                     </li>
@@ -87,8 +90,10 @@
                         </a>
                         <ul class="sub-menu" aria-expanded="false">
                             <li><a href="/medias">Medias</a></li>
-                            <li><a href="/album-items">AlbumItems</a></li>
+                            <li><a href="/w-agg-events">WAggEvents</a></li>
+                            <li><a href="/torrent-albums">TorrentAlbums</a></li>
                             <li><a href="/movie-albums">MovieAlbums</a></li>
+                            <li><a href="/d-seeds">DSeeds</a></li>
                             <li><a href="/casts">Casts</a></li>
                             <li><a href="/e-items">EItems</a></li>
                         </ul>
@@ -111,7 +116,7 @@
                             <i class="mdi mdi-clipboard-text-outline"></i><span>抓取任务</span>
                         </a>
                         <ul class="sub-menu" aria-expanded="false">
-                            <li><a href="/records">Records</a></li>
+                            <li><a href="/crawl-records">CrawlRecords</a></li>
                             <li><a href="/triggers/dailybest">DailyBest</a></li>
                             <li><a href="/triggers/seeds">Seeds</a></li>
                             <li><a href="/triggers/post-process">PostProcess</a></li>
@@ -131,19 +136,6 @@
                             <li><a href="/fetch-site-javbus-list">JavbusList</a></li>
                             <li><a href="/fetch-site-sukebei-list">SukebeiList</a></li>
                             <li><a href="/fetch-site-sehuatang-list">SehuatangList</a></li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="javascript: void(0);" class="has-arrow waves-effect">
-                            <i class="mdi mdi-filmstrip"></i><span>film</span>
-                        </a>
-                        <ul class="sub-menu" aria-expanded="false">
-                            <li><a href="/cardsowned">Owned</a></li>
-                            <li><a href="/movie-agg-owned/birth">Agg-Own-Birth</a></li>
-                            <li><a href="/dir">Directory</a></li>
-                            <li><a href="/films">Films</a></li>
-                            <li><a href="/triggers/film-move">FilmMove</a></li>
-                            <li><a href="/sc-pick-smart">ScPickSmart</a></li>
                         </ul>
                     </li>
                     <li>

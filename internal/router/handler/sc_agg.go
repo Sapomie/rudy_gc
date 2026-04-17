@@ -14,7 +14,7 @@ import (
 )
 
 func (h *MovieHTMLHandler) CastDetailPage(c *gin.Context) {
-	personID, _ := strconv.ParseInt(strings.TrimSpace(c.Query("id")), 10, 64)
+	personID, _ := strconv.ParseInt(strings.TrimSpace(c.Param("id")), 10, 64)
 	name := strings.TrimSpace(c.Query("name"))
 
 	var (
@@ -96,19 +96,19 @@ func personDisplayName(person *types.Person) string {
 }
 
 func buildCastDetailMovieCardTargets(person *types.Person, rawName string) (string, string) {
-	values := url.Values{}
 	if person != nil && person.Id > 0 {
-		values.Set("id", strconv.FormatInt(person.Id, 10))
-	} else {
-		name := strings.TrimSpace(rawName)
-		if name == "" && person != nil {
-			name = strings.TrimSpace(person.Name)
-		}
-		if name != "" {
-			values.Set("name", name)
-		}
+		target := "/cast/" + strconv.FormatInt(person.Id, 10)
+		return target, target
 	}
 
+	values := url.Values{}
+	name := strings.TrimSpace(rawName)
+	if name == "" && person != nil {
+		name = strings.TrimSpace(person.Name)
+	}
+	if name != "" {
+		values.Set("name", name)
+	}
 	path := "/cast"
 	if encoded := values.Encode(); encoded != "" {
 		target := path + "?" + encoded

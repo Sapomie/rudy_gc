@@ -66,12 +66,6 @@ func (s *Service) ScMediaMovePrecheck(ctx context.Context, scName string) (*ScMe
 }
 
 func (s *Service) ScMediaMoveCommit(ctx context.Context, scName string) (result *ScMediaMoveResult, err error) {
-	defer func() {
-		if rebuildErr := s.rebuildMediaAggsAfterFlow(ctx, "sc_media_move"); rebuildErr != nil {
-			err = joinFlowErr(err, rebuildErr)
-		}
-	}()
-
 	scName = strings.TrimSpace(scName)
 	if scName == "" {
 		return nil, fmt.Errorf("sc_name 为空")
@@ -97,15 +91,22 @@ func (s *Service) ScMediaMoveCommit(ctx context.Context, scName string) (result 
 		Failed:      plan.Failed,
 		Items:       make([]*ScMediaMoveItem, 0, len(plan.Entries)),
 	}
+	changedMovieJavIDs := make([]string, 0, len(plan.Entries))
 
 	for _, entry := range plan.Entries {
 		item := s.commitOneScMediaMove(ctx, entry, now)
 		result.Items = append(result.Items, item)
 		if strings.TrimSpace(item.Error) == "" {
 			result.Success++
+			if javID := strings.TrimSpace(item.MovieJavId); javID != "" {
+				changedMovieJavIDs = append(changedMovieJavIDs, javID)
+			}
 		} else {
 			result.CommitFailed++
 		}
+	}
+	if len(changedMovieJavIDs) > 0 {
+		s.movieSvc.EnqueueAggRebuildByMovieJavIDs("sc_media_move", changedMovieJavIDs...)
 	}
 
 	if clearErr := s.clearScMediaMovePlan(scName); clearErr != nil {
@@ -375,7 +376,11 @@ func (s *Service) commitOneScMediaMove(ctx context.Context, entry *scMediaMovePl
 		item.Error = err.Error()
 		return item
 	}
-	s.markMediaAggDirty(ctx, row, updated)
+	if err = s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
 	s.invalidateMovieTypeCaches(ctx, updated.MovieJavId)
 
 	item.TargetDir = updated.FullDir

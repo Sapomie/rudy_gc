@@ -22,7 +22,6 @@ import (
 
 type Deps struct {
 	BestTrigger chan contracts.TriggerMsg
-	FilmTrigger chan contracts.FilmTriggerMsg
 	ScTrigger   chan contracts.ScTriggerMsg
 	// ...
 	Config  config.Config
@@ -49,10 +48,8 @@ type Deps struct {
 	WMediaModel                 moviex.WMediaModel
 	WMediaBirthBucketStatModel  moviex.WMediaBirthBucketStatModel
 	WMediaBirthTopStatModel     moviex.WMediaBirthTopStatModel
-	WMediaAggDirtyModel         moviex.WMediaAggDirtyModel
 	MovieReleaseBucketStatModel moviex.MovieReleaseBucketStatModel
 	MovieReleaseTopStatModel    moviex.MovieReleaseTopStatModel
-	MovieReleaseAggDirtyModel   moviex.MovieReleaseAggDirtyModel
 	WAggEventModel              moviex.WAggEventModel
 	CPersonScModel              moviex.CPersonScModel
 	GListModel                  moviex.GListModel
@@ -139,10 +136,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		wMediaModel                 = moviex.NewWMediaModel(conn, c)
 		wMediaBirthBucketStatModel  = moviex.NewWMediaBirthBucketStatModel(conn, c)
 		wMediaBirthTopStatModel     = moviex.NewWMediaBirthTopStatModel(conn, c)
-		wMediaAggDirtyModel         = moviex.NewWMediaAggDirtyModel(conn, c)
 		movieReleaseBucketStatModel = moviex.NewMovieReleaseBucketStatModel(conn, c)
 		movieReleaseTopStatModel    = moviex.NewMovieReleaseTopStatModel(conn, c)
-		movieReleaseAggDirtyModel   = moviex.NewMovieReleaseAggDirtyModel(conn, c)
 		wAggEventModel              = moviex.NewWAggEventModel(conn, c)
 		cPersonScModel              = moviex.NewCPersonScModel(conn, c)
 	)
@@ -199,10 +194,8 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		WMediaModel:                 wMediaModel,
 		WMediaBirthBucketStatModel:  wMediaBirthBucketStatModel,
 		WMediaBirthTopStatModel:     wMediaBirthTopStatModel,
-		WMediaAggDirtyModel:         wMediaAggDirtyModel,
 		MovieReleaseBucketStatModel: movieReleaseBucketStatModel,
 		MovieReleaseTopStatModel:    movieReleaseTopStatModel,
-		MovieReleaseAggDirtyModel:   movieReleaseAggDirtyModel,
 		WAggEventModel:              wAggEventModel,
 		CPersonScModel:              cPersonScModel,
 		GListModel:                  glistModel,
@@ -232,7 +225,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 
 		DetailJobs:  make(chan string, 200),
 		BestTrigger: make(chan contracts.TriggerMsg, 8),
-		FilmTrigger: make(chan contracts.FilmTriggerMsg, 8),
 		ScTrigger:   make(chan contracts.ScTriggerMsg, 16),
 
 		Fetcher:    f,

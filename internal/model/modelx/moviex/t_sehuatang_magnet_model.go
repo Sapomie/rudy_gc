@@ -20,6 +20,7 @@ type (
 		ListPage(ctx context.Context, offset, limit int64, orderBy string, filter SehuatangMagnetListFilter) ([]*TSehuatangMagnet, error)
 		CountAll(ctx context.Context, filter SehuatangMagnetListFilter) (int64, error)
 		ListByMovieKey(ctx context.Context, movieJavId string, movieName string) ([]*TSehuatangMagnet, error)
+		ListMissingMovieJavIDByMovieName(ctx context.Context, movieName string) ([]*TSehuatangMagnet, error)
 		ExistsByThreadURL(ctx context.Context, threadURL string) (bool, error)
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
@@ -139,6 +140,33 @@ func (m *customTSehuatangMagnetModel) ListByMovieKey(ctx context.Context, movieJ
 
 	query, args, err := builder.
 		OrderBy("`post_time` DESC", "`last_seen_time` DESC", "`id` DESC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*TSehuatangMagnet
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if err == sqlx.ErrNotFound {
+			return []*TSehuatangMagnet{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customTSehuatangMagnetModel) ListMissingMovieJavIDByMovieName(ctx context.Context, movieName string) ([]*TSehuatangMagnet, error) {
+	movieName = strings.TrimSpace(movieName)
+	if movieName == "" {
+		return []*TSehuatangMagnet{}, nil
+	}
+
+	query, args, err := squirrel.
+		Select(tSehuatangMagnetRows).
+		From(strings.Trim(m.table, "`")).
+		Where(squirrel.Eq{"movie_name": movieName}).
+		Where(squirrel.Eq{"movie_jav_id": ""}).
+		OrderBy("`id` ASC").
 		ToSql()
 	if err != nil {
 		return nil, err

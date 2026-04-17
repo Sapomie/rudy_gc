@@ -1,6 +1,3 @@
 package consts
 
-const (
-	WFolderSourceLegacyVFilm int64 = WMediaSourceLegacyVFilm
-	WFolderSourceNative      int64 = WMediaSourceNative
-)
+const WFolderSourceNative int64 = WMediaSourceNative

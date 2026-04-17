@@ -42,7 +42,7 @@
             chinese: row.chinese || row.Chinese || '',
             birthDay: row.birthDay || row.BirthDay || 0,
             movieNumber: row.movieNumber || row.MovieNumber || 0,
-            ownedMovieNumber: row.ownedMovieNumber || row.OwnedMovieNumber || 0,
+            ownedWMediaNumber: row.ownedWMediaNumber || row.OwnedWMediaNumber || 0,
             scTimes: row.scTimes || row.ScTimes || 0,
             comeTimes: row.comeTimes || row.ComeTimes || 0,
         };
@@ -79,7 +79,7 @@
         const birthDay = person.birthDay > 0 ? ('生日：' + formatLocalDate(person.birthDay)) : '';
         const metrics = [
             'Movies ' + (person.movieNumber || 0),
-            'Owned ' + (person.ownedMovieNumber || 0),
+            'WOwned ' + (person.ownedWMediaNumber || 0),
             'SC ' + (person.scTimes || 0),
             'COME ' + (person.comeTimes || 0),
         ].join(' / ');
@@ -354,7 +354,7 @@
                     }
                     showMsg('MergePerson 已完成，正在刷新页面');
                     window.setTimeout(function () {
-                        window.location.href = '/cast?id=' + encodeURIComponent(data.result.keepPersonId || personId);
+                        window.location.href = '/cast/' + encodeURIComponent(data.result.keepPersonId || personId);
                     }, 300);
                 })
                 .catch((err) => showMsg('执行失败：' + err.message, false));

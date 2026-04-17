@@ -31,9 +31,7 @@ type (
 )
 
 type SukebeiFetchPageFilter struct {
-	Owned              int64
 	MediaOwned         int64
-	RequireVFilm       bool
 	RequireWMedia      bool
 	Keyword            string
 	FetchStatuses      []int64
@@ -46,10 +44,6 @@ type SukebeiFetchPageFilter struct {
 	ReleaseDateTo      int64
 	HasReleaseDateFrom bool
 	HasReleaseDateTo   bool
-	FilmBirthFrom      int64
-	FilmBirthTo        int64
-	HasFilmBirthFrom   bool
-	HasFilmBirthTo     bool
 	MediaBirthFrom     int64
 	MediaBirthTo       int64
 	HasMediaBirthFrom  bool
@@ -141,7 +135,6 @@ func (m *customTSukebeiTorrentFetchModel) CountPageRows(ctx context.Context, fil
 func (m *customTSukebeiTorrentFetchModel) ListPageRows(ctx context.Context, offset int64, limit int64, orderBy string, filter SukebeiFetchPageFilter) ([]*TSukebeiTorrentFetch, error) {
 	queryBuilder := squirrel.Select("sf.*").
 		From(strings.Trim(m.table, "`") + " sf").
-		LeftJoin(buildLegacyWMediaJoin("`w_media`", "vf", "sf.movie_jav_id")).
 		LeftJoin(buildNativeWMediaJoin("`w_media`", "wm", "sf.movie_jav_id"))
 	queryBuilder = applySukebeiPageFilter(queryBuilder, filter)
 	if strings.TrimSpace(orderBy) != "" {
@@ -200,11 +193,7 @@ func (m *customTSukebeiTorrentFetchModel) CountByFetchStatus(ctx context.Context
 }
 
 func applySukebeiPageFilter(queryBuilder squirrel.SelectBuilder, filter SukebeiFetchPageFilter) squirrel.SelectBuilder {
-	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "sf", filter.Owned, "legacy_w_media", "vf")
 	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "sf", filter.MediaOwned, "w_media", "wm")
-	if filter.RequireVFilm {
-		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_sort", "sf.movie_jav_id"))
-	}
 	if filter.RequireWMedia {
 		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_sort", "sf.movie_jav_id"))
 	}
@@ -231,12 +220,6 @@ func applySukebeiPageFilter(queryBuilder squirrel.SelectBuilder, filter SukebeiF
 	}
 	if filter.HasReleaseDateTo {
 		queryBuilder = queryBuilder.Where(squirrel.LtOrEq{"release_date": filter.ReleaseDateTo})
-	}
-	if filter.HasFilmBirthFrom {
-		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_birth_from", "sf.movie_jav_id", "vf_birth_from.birth_time >= ?"), filter.FilmBirthFrom)
-	}
-	if filter.HasFilmBirthTo {
-		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_birth_to", "sf.movie_jav_id", "vf_birth_to.birth_time <= ?"), filter.FilmBirthTo)
 	}
 	if filter.HasMediaBirthFrom {
 		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_birth_from", "sf.movie_jav_id", "wm_birth_from.birth_time >= ?"), filter.MediaBirthFrom)
@@ -266,26 +249,6 @@ func applyFetchSiteOwnedFilter(queryBuilder squirrel.SelectBuilder, outerAlias s
 			return queryBuilder.Where(buildNativeWMediaExists(tableExpr, alias, outerMovieJavID, alias+".is_removed = ?"), consts.FilmIsRemoved)
 		case consts.OwnedNotOwned:
 			return queryBuilder.Where(buildNativeWMediaNotExists(tableExpr, alias, outerMovieJavID))
-		default:
-			return queryBuilder
-		}
-	}
-	if tableName == "legacy_w_media" {
-		switch owned {
-		case 0, consts.MovieAll:
-			return queryBuilder
-		case consts.OwnedAll:
-			return queryBuilder.Where(buildLegacyWMediaExists("`w_media`", alias, outerMovieJavID))
-		case consts.OwnedAllNotRemoved:
-			return queryBuilder.Where(buildLegacyWMediaExists("`w_media`", alias, outerMovieJavID, alias+".is_removed = ?"), consts.FilmIsNotRemoved)
-		case consts.OwnedHasSubNotRemoved:
-			return queryBuilder.Where(buildLegacyWMediaExists("`w_media`", alias, outerMovieJavID, alias+".is_removed = ?", alias+".has_sub = ?"), consts.FilmIsNotRemoved, consts.FilmHasSub)
-		case consts.OwnedNoSubNotRemoved:
-			return queryBuilder.Where(buildLegacyWMediaExists("`w_media`", alias, outerMovieJavID, alias+".is_removed = ?", alias+".has_sub = ?"), consts.FilmIsNotRemoved, consts.FilmNoSub)
-		case consts.OwnedRemoved:
-			return queryBuilder.Where(buildLegacyWMediaExists("`w_media`", alias, outerMovieJavID, alias+".is_removed = ?"), consts.FilmIsRemoved)
-		case consts.OwnedNotOwned:
-			return queryBuilder.Where(buildLegacyWMediaNotExists("`w_media`", alias, outerMovieJavID))
 		default:
 			return queryBuilder
 		}

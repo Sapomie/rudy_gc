@@ -169,7 +169,7 @@ func (h *WDirectoryHTML) DirDetail(c *gin.Context) {
 		"total":           cardResp.Total,
 		"PageInfo":        cardPageInfo,
 		"pageInfo":        cardPageInfo,
-		"ownedQuery":      buildOwnedFilterInfoWithDefaults(c, "", "3"),
+		"ownedQuery":      buildOwnedFilterInfoWithDefaults(c, "3"),
 		"MovieCardFilter": cardFilter,
 		"Pagination": gin.H{
 			"PageInfo": cardPageInfo,

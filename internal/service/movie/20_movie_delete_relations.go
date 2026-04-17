@@ -21,7 +21,6 @@ type movieDeleteContext struct {
 	Murl       *moviex.BmMurl
 	Item       *moviex.EItem
 	Detail     *spiderx.DDetail
-	Film       *moviex.LegacyFilm
 	RankRows   []*moviex.CRank
 	GListRows  []*moviex.GList
 	ComeScRows []*moviex.GSc
@@ -35,20 +34,19 @@ type movieDeleteContext struct {
 }
 
 type deletedMovieSnapshot struct {
-	JavID       string             `json:"jav_id"`
-	MovieName   string             `json:"movie_name"`
-	Movie       *moviex.AMovie     `json:"movie,omitempty"`
-	Minfo       *moviex.BmMinfo    `json:"minfo,omitempty"`
-	Murl        *moviex.BmMurl     `json:"murl,omitempty"`
-	Item        *moviex.EItem      `json:"item,omitempty"`
-	Detail      *spiderx.DDetail   `json:"detail,omitempty"`
-	Film        *moviex.LegacyFilm `json:"film,omitempty"`
-	CastIDs     []int64            `json:"cast_ids,omitempty"`
-	GenreIDs    []int64            `json:"genre_ids,omitempty"`
-	RankIDs     []int64            `json:"rank_ids,omitempty"`
-	GListNames  []string           `json:"g_list_names,omitempty"`
-	ComeScNames []string           `json:"come_sc_names,omitempty"`
-	Extra       map[string]string  `json:"extra,omitempty"`
+	JavID       string            `json:"jav_id"`
+	MovieName   string            `json:"movie_name"`
+	Movie       *moviex.AMovie    `json:"movie,omitempty"`
+	Minfo       *moviex.BmMinfo   `json:"minfo,omitempty"`
+	Murl        *moviex.BmMurl    `json:"murl,omitempty"`
+	Item        *moviex.EItem     `json:"item,omitempty"`
+	Detail      *spiderx.DDetail  `json:"detail,omitempty"`
+	CastIDs     []int64           `json:"cast_ids,omitempty"`
+	GenreIDs    []int64           `json:"genre_ids,omitempty"`
+	RankIDs     []int64           `json:"rank_ids,omitempty"`
+	GListNames  []string          `json:"g_list_names,omitempty"`
+	ComeScNames []string          `json:"come_sc_names,omitempty"`
+	Extra       map[string]string `json:"extra,omitempty"`
 }
 
 type castScInfo struct {
@@ -109,31 +107,14 @@ func (s *Service) loadMovieDeleteContext(ctx context.Context, javID, fallbackNam
 	}
 	out.Detail = detailRow
 
-	filmRow, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, javID)
-	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return nil, fmt.Errorf("find legacy media by movie_jav_id failed: %w", err)
-	}
-	out.Film = filmRow
-
 	out.MovieName = firstNonEmpty(
 		out.MovieName,
 		fallbackName,
 		nameFromItem(out.Item),
 		nameFromDetail(out.Detail),
-		nameFromFilm(out.Film),
 		nameFromMinfo(out.Minfo),
 		nameFromMurl(out.Murl),
 	)
-
-	if out.Film == nil && out.MovieName != "" {
-		filmByName, ferr := s.deps.WMediaModel.FindOneLegacyFilmByMovieName(ctx, out.MovieName)
-		if ferr != nil && !errors.Is(ferr, moviex.ErrNotFound) {
-			return nil, fmt.Errorf("find legacy media by movie_name failed: %w", ferr)
-		}
-		if filmByName != nil && strings.TrimSpace(filmByName.MovieJavId) == javID {
-			out.Film = filmByName
-		}
-	}
 
 	castIDs, err := s.deps.MovieCastModel.ListCastIDsByMovieJavId(ctx, javID)
 	if err != nil {
@@ -271,11 +252,6 @@ func (s *Service) deleteMovieRows(ctx context.Context, delCtx *movieDeleteContex
 		}
 	}
 
-	if delCtx.Film != nil {
-		if err := s.deps.WMediaModel.Delete(ctx, delCtx.Film.Id); err != nil {
-			return fmt.Errorf("delete legacy media(%d) failed: %w", delCtx.Film.Id, err)
-		}
-	}
 	if delCtx.Detail != nil {
 		if err := s.deps.DetailModel.Delete(ctx, delCtx.Detail.Id); err != nil {
 			return fmt.Errorf("delete d_detail(%d) failed: %w", delCtx.Detail.Id, err)
@@ -725,7 +701,6 @@ func buildDeletedMovieSnapshotJSON(delCtx *movieDeleteContext) (string, error) {
 		Murl:        delCtx.Murl,
 		Item:        delCtx.Item,
 		Detail:      delCtx.Detail,
-		Film:        delCtx.Film,
 		CastIDs:     delCtx.CastIDs,
 		GenreIDs:    delCtx.GenreIDs,
 		RankIDs:     collectRankIDs(delCtx.RankRows),
@@ -826,13 +801,6 @@ func nameFromDetail(detail *spiderx.DDetail) string {
 		return ""
 	}
 	return detail.Name
-}
-
-func nameFromFilm(film *moviex.LegacyFilm) string {
-	if film == nil {
-		return ""
-	}
-	return film.MovieName
 }
 
 func nameFromMinfo(minfo *moviex.BmMinfo) string {

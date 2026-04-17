@@ -75,17 +75,6 @@ func (h *MovieHTMLHandler) ListMovieCardHasRank(c *gin.Context) {
 	})
 }
 
-// /moviecardowned：仅已拥有，按拍摄/生成时间倒序
-func (h *MovieHTMLHandler) ListMovieCardOwned(c *gin.Context) {
-	h.renderMovieCard(c,
-		types.ListMovieFullRequest{
-			Owned:   consts.OwnedAllNotRemoved,
-			OrderBy: consts.OrderByBirthTime,
-		},
-		"MovieCard", "Movies",
-	)
-}
-
 // /cardsmediamowned：仅 media 已拥有，按 media 下载时间倒序
 func (h *MovieHTMLHandler) ListMovieCardMediaOwned(c *gin.Context) {
 	h.renderMovieCard(c,

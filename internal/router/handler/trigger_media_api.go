@@ -7,22 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/service/media"
-	"rudy_gc/internal/service/moviereleaseagg"
-	"rudy_gc/internal/service/wmediaagg"
 	"rudy_gc/internal/svc"
 )
 
 type MediaTriggerAPI struct {
-	mediaSvc      *media.Service
-	wMediaAggSvc  *wmediaagg.Service
-	releaseAggSvc *moviereleaseagg.Service
+	mediaSvc *media.Service
 }
 
 func NewMediaTriggerAPI(deps *svc.Deps) *MediaTriggerAPI {
 	return &MediaTriggerAPI{
-		mediaSvc:      media.NewService(deps),
-		wMediaAggSvc:  wmediaagg.NewService(deps),
-		releaseAggSvc: moviereleaseagg.NewService(deps),
+		mediaSvc: media.NewService(deps),
 	}
 }
 
@@ -46,6 +40,9 @@ type mediaIngestResponse struct {
 	Message         string                   `json:"message"`
 	HasPlan         bool                     `json:"has_plan"`
 	GeneratedAt     int64                    `json:"generated_at"`
+	Total           int                      `json:"total"`
+	Success         int                      `json:"success"`
+	Failed          int                      `json:"failed"`
 	Precheck        media.IngestPrecheckStat `json:"precheck"`
 	CanCommit       bool                     `json:"can_commit"`
 	PartialFailed   bool                     `json:"partial_failed"`
@@ -70,16 +67,6 @@ type mediaRollbackResponse struct {
 
 type mediaRescanRequest struct {
 	Selections []media.LibraryRescanSelection `json:"selections"`
-}
-
-type mediaAggBackfillResponse struct {
-	Message string                    `json:"message"`
-	Result  *wmediaagg.BackfillResult `json:"result"`
-}
-
-type movieReleaseAggBackfillResponse struct {
-	Message string                          `json:"message"`
-	Result  *moviereleaseagg.BackfillResult `json:"result"`
 }
 
 func (h *MediaTriggerAPI) Precheck(c *gin.Context) {
@@ -119,6 +106,9 @@ func (h *MediaTriggerAPI) Plan(c *gin.Context) {
 		Phase:       "plan",
 		HasPlan:     snapshot.HasPlan,
 		GeneratedAt: snapshot.GeneratedAt,
+		Total:       snapshot.Total,
+		Success:     snapshot.Passed,
+		Failed:      snapshot.Failed,
 		Precheck: media.IngestPrecheckStat{
 			Total:  snapshot.Total,
 			Passed: snapshot.Passed,
@@ -167,6 +157,9 @@ func (h *MediaTriggerAPI) Return(c *gin.Context) {
 		Phase:           "return",
 		Message:         "已返回，当前预处理计划已清空",
 		HasPlan:         false,
+		Total:           0,
+		Success:         0,
+		Failed:          0,
 		CanCommit:       false,
 		PartialFailed:   false,
 		PrecheckPass:    []mediaIngestItemRow{},
@@ -209,38 +202,6 @@ func (h *MediaTriggerAPI) Rescan(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *MediaTriggerAPI) BackfillWMediaAgg(c *gin.Context) {
-	result, err := h.wMediaAggSvc.BackfillAll(c.Request.Context())
-	resp := mediaAggBackfillResponse{
-		Message: "WMedia 时间聚合回填完成",
-		Result:  result,
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  err.Error(),
-			"result": resp,
-		})
-		return
-	}
-	c.JSON(http.StatusOK, resp)
-}
-
-func (h *MediaTriggerAPI) BackfillMovieReleaseAgg(c *gin.Context) {
-	result, err := h.releaseAggSvc.BackfillAll(c.Request.Context())
-	resp := movieReleaseAggBackfillResponse{
-		Message: "上映日时间聚合回填完成",
-		Result:  result,
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  err.Error(),
-			"result": resp,
-		})
-		return
-	}
-	c.JSON(http.StatusOK, resp)
-}
-
 func buildMediaPrecheckResponse(phase string, result *media.IngestNewResult) mediaIngestResponse {
 	resp := mediaIngestResponse{
 		Phase:           phase,
@@ -259,6 +220,9 @@ func buildMediaPrecheckResponse(phase string, result *media.IngestNewResult) med
 	}
 
 	resp.Precheck = result.Precheck
+	resp.Total = result.Precheck.Total
+	resp.Success = result.Precheck.Passed
+	resp.Failed = result.Precheck.Failed
 	resp.CanCommit = result.Precheck.Passed > 0
 	resp.PartialFailed = result.Precheck.Failed > 0
 	if result.Precheck.Total == 0 {
@@ -300,6 +264,9 @@ func buildMediaCommitResponse(phase string, result *media.IngestNewResult) media
 	}
 
 	resp.Precheck = result.Precheck
+	resp.Total = result.Total
+	resp.Success = result.Success
+	resp.Failed = result.Failed
 	if result.Total == 0 {
 		resp.Message = "第二段未执行任何插入项"
 	} else if result.Failed == 0 {

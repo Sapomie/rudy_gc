@@ -3,6 +3,7 @@ package loop
 import (
 	"context"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"time"
 
@@ -170,6 +171,7 @@ func (l *FetchLoopService) DetailFetchLoopSingle(ctx context.Context, job <-chan
 	ttl := 10 * time.Minute
 	seen := make(map[string]time.Time)
 	buf := make([]string, 0, maxBatch)
+	pendingAggMovieJavIDs := make(map[string]struct{}, 128)
 
 	window := baseWindow
 	timer := time.NewTimer(window)
@@ -178,35 +180,39 @@ func (l *FetchLoopService) DetailFetchLoopSingle(ctx context.Context, job <-chan
 	for {
 		select {
 		case <-ctx.Done():
-			l.flushBatch(ctx, &buf)
+			l.collectDetailLoopAggBatch(ctx, &buf, pendingAggMovieJavIDs)
+			l.flushDetailLoopAggs(ctx, pendingAggMovieJavIDs, true)
 			return
 		case id, ok := <-job:
 			if !ok {
-				l.flushBatch(ctx, &buf)
+				l.collectDetailLoopAggBatch(ctx, &buf, pendingAggMovieJavIDs)
+				l.flushDetailLoopAggs(ctx, pendingAggMovieJavIDs, true)
 				return
 			}
 			if err := l.waitDetailLoopActive(ctx); err != nil {
-				l.flushBatch(ctx, &buf)
+				l.collectDetailLoopAggBatch(ctx, &buf, pendingAggMovieJavIDs)
+				l.flushDetailLoopAggs(ctx, pendingAggMovieJavIDs, true)
 				return
 			}
 
 			id = strings.TrimSpace(id)
 			if tryAddID(&buf, id, seen, ttl) && len(buf) >= maxBatch {
 				log.Infof("DetailFetchLoopSingle: 达到批次上限(%d)，立即 flush", maxBatch)
-				l.flushBatch(ctx, &buf)
+				l.collectDetailLoopAggBatch(ctx, &buf, pendingAggMovieJavIDs)
 				window = baseWindow / 2
 				resetTimer(timer, window)
 			}
 		case <-timer.C:
 			if err := l.waitDetailLoopActive(ctx); err != nil {
-				l.flushBatch(ctx, &buf)
+				l.collectDetailLoopAggBatch(ctx, &buf, pendingAggMovieJavIDs)
+				l.flushDetailLoopAggs(ctx, pendingAggMovieJavIDs, true)
 				return
 			}
 			beforeFlush := len(buf)
 			if beforeFlush > 0 {
 				log.Infof("DetailFetchLoopSingle: 定时 flush，缓冲数量=%d", beforeFlush)
 			}
-			l.flushBatch(ctx, &buf)
+			l.collectDetailLoopAggBatch(ctx, &buf, pendingAggMovieJavIDs)
 
 			if beforeFlush == 0 {
 				window = minDuration(baseWindow*2, 5*time.Second)
@@ -218,7 +224,7 @@ func (l *FetchLoopService) DetailFetchLoopSingle(ctx context.Context, job <-chan
 	}
 }
 
-func (l *FetchLoopService) flushBatch(ctx context.Context, buf *[]string) {
+func (l *FetchLoopService) collectDetailLoopAggBatch(ctx context.Context, buf *[]string, pendingAggMovieJavIDs map[string]struct{}) {
 	defer func() {
 		if r := recover(); r != nil {
 			l.deps.Log.WithContext(ctx).
@@ -236,12 +242,45 @@ func (l *FetchLoopService) flushBatch(ctx context.Context, buf *[]string) {
 
 	log := l.deps.Log.WithContext(ctx)
 	start := time.Now()
-	n, err := l.crawlLogic.HandleFetchDetailsById(ctx, batch)
+	n, changedMovieJavIDs, err := l.crawlLogic.HandleFetchDetailsById(ctx, batch)
 	if err != nil {
 		log.Errorf("DetailFetchLoopSingle: batch failed (n=%d): %v", n, err)
 		return
 	}
 	log.Infof("DetailFetchLoopSingle: processed %d ids (took %v)", len(batch), time.Since(start))
+	for _, javID := range changedMovieJavIDs {
+		javID = strings.TrimSpace(javID)
+		if javID == "" {
+			continue
+		}
+		pendingAggMovieJavIDs[javID] = struct{}{}
+	}
+	l.flushDetailLoopAggs(ctx, pendingAggMovieJavIDs, false)
+}
+
+func (l *FetchLoopService) flushDetailLoopAggs(ctx context.Context, pendingAggMovieJavIDs map[string]struct{}, force bool) {
+	if len(pendingAggMovieJavIDs) == 0 {
+		return
+	}
+	if !force && len(pendingAggMovieJavIDs) < 100 {
+		return
+	}
+
+	javIDs := make([]string, 0, len(pendingAggMovieJavIDs))
+	for javID := range pendingAggMovieJavIDs {
+		if strings.TrimSpace(javID) == "" {
+			continue
+		}
+		javIDs = append(javIDs, strings.TrimSpace(javID))
+	}
+	if len(javIDs) == 0 {
+		return
+	}
+	sort.Strings(javIDs)
+	l.movieSvc.EnqueueAggRebuildByMovieJavIDs("detail_loop", javIDs...)
+	for _, javID := range javIDs {
+		delete(pendingAggMovieJavIDs, javID)
+	}
 }
 
 func (l *FetchLoopService) reportDetailLoopLog(event taskctx.Log) {

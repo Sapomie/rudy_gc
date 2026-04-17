@@ -81,7 +81,7 @@ func (l *ScService) PickFromRequests(ctx context.Context, reqs []PickRequestWith
 		return nil, err
 	}
 
-	l.LogPicksBySource(movieTypes, SmartPickSourceVFilm)
+	l.LogPicksBySource(movieTypes, SmartPickSourceWMedia)
 	return movieTypes, nil
 }
 
@@ -109,7 +109,7 @@ func (l *ScService) copyFileToDestination(srcFilePath string) error {
 	return nil
 }
 func (l *ScService) LogPicks(mts []*types.MovieType) {
-	l.LogPicksBySource(mts, SmartPickSourceVFilm)
+	l.LogPicksBySource(mts, SmartPickSourceWMedia)
 }
 
 func (l *ScService) LogPicksBySource(mts []*types.MovieType, source string) {
@@ -173,44 +173,29 @@ func SmartPickMovieBirthDate(mt *types.MovieType, source string) string {
 	if mt == nil {
 		return ""
 	}
-	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
-		return mt.FilmBirthDateWMedia
-	}
-	return mt.FilmBirthDate
+	return mt.FilmBirthDateWMedia
 }
 
 func SmartPickMovieVideoURL(mt *types.MovieType, source string) string {
 	if mt == nil {
 		return ""
 	}
-	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
-		return mt.VideoUrlWMedia
-	}
-	return mt.VideoUrl
+	return mt.VideoUrlWMedia
 }
 
 func SmartPickMovieOwned(mt *types.MovieType, source string) int64 {
 	if mt == nil {
 		return 0
 	}
-	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
-		return mt.OwnedWMedia
-	}
-	return mt.Owned
+	return mt.OwnedWMedia
 }
 
 func SmartPickMovieSize(mt *types.MovieType, source string) int64 {
 	if mt == nil {
 		return 0
 	}
-	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
-		if mt.WMedia != nil {
-			return mt.WMedia.Size
-		}
-		return 0
-	}
-	if mt.VFilm != nil {
-		return mt.VFilm.Size
+	if mt.WMedia != nil {
+		return mt.WMedia.Size
 	}
 	return 0
 }

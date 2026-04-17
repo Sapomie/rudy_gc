@@ -121,6 +121,9 @@ func (s *DirectoryService) GetDirectoryPage(ctx context.Context, in *types.DirPa
 				ds = &types.DirStats{Recursive: true}
 			}
 		}
+		if ds.FilmCount <= 0 {
+			continue
+		}
 
 		children = append(children, &types.DirSummaryWithStats{
 			Summary: summary,

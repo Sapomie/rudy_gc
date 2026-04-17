@@ -151,8 +151,12 @@ func (l *CrawlLogic) handleSeed(ctx context.Context, s *types.Seed) error {
 	if newPageNow < s.PageNow {
 		status = consts.SeedStatusEmpty
 	}
-	if err := l.deps.SeedRepo.UpdateProgress(
-		ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg,
+	stats, statsErr := l.deps.SeedRepo.CalcMovieStats(ctx, s)
+	if statsErr != nil {
+		log.Errorf("calc seed movie stats failed: %v", statsErr)
+	}
+	if err := l.deps.SeedRepo.UpdateProgressAndMovieStats(
+		ctx, s.Id, newPageNow, time.Now().Unix(), status, errMsg, stats,
 	); err != nil {
 		log.Errorf("update seed progress failed: %v", err)
 	}

@@ -4,14 +4,12 @@ package contracts
 type ScTriggerKind int
 
 const (
-	ScMove         ScTriggerKind = iota + 1 // 执行 MoveScFilm(scName)
-	ScAdd                                   // 执行 AddSc(dir)
+	ScAdd          ScTriggerKind = iota + 1 // 执行 AddSc(dir)
 	ScRebuildStats                          // 执行 SC 统计回填
 )
 
 type ScTriggerMsg struct {
 	Kind            ScTriggerKind
-	ScName          string // ScMove 用
 	Dir             string // ScAdd 用
 	ComeMovieJavId  string
 	MovieCast       string

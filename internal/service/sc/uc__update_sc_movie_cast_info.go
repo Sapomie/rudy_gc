@@ -72,26 +72,6 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 		}
 
 		needInvalidateMovieType := false
-		vFilm, err := l.filmFindOneByMovieJavID(ctx, movieJavID)
-		if err == nil && vFilm != nil {
-			if vFilm.ScTimes == info.ScTimes &&
-				vFilm.ComeTimes == info.ComeTimes &&
-				vFilm.LastScTime == info.LastScTime {
-				// legacy media stats are still maintained here; g_sc_stat remains the shared aggregate source.
-			} else {
-				vFilm.ScTimes = info.ScTimes
-				vFilm.ComeTimes = info.ComeTimes
-				vFilm.LastScTime = info.LastScTime
-				vFilm, _, err = l.filmUpsert(ctx, vFilm)
-				if err != nil {
-					return fmt.Errorf("FilmRepo.UpsertFilm %s: %w", movieJavID, err)
-				}
-				needInvalidateMovieType = true
-			}
-		} else if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-			return fmt.Errorf("FilmRepo.FindOneByMovieJavId %s: %w", movieJavID, err)
-		}
-
 		if _, statStatus, err := l.gScStatUpsert(ctx, movieJavID, movieRow.Name, releasingDate, mediaBirthTime, info); err != nil {
 			return fmt.Errorf("GScStat.Upsert %s: %w", movieJavID, err)
 		} else if statStatus != consts.UpsertUnchanged {

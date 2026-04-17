@@ -15,7 +15,7 @@ var (
 	ErrAlbumNameExists  = errors.New("相册名称已存在")
 )
 
-func (s *Service) CreateAlbum(ctx context.Context, albumName string) (*AlbumOption, error) {
+func (s *Service) CreateAlbum(ctx context.Context, albumName string) (*TorrentAlbumOption, error) {
 	name := strings.TrimSpace(albumName)
 	if name == "" {
 		return nil, ErrAlbumNameEmpty
@@ -49,7 +49,7 @@ func (s *Service) CreateAlbum(ctx context.Context, albumName string) (*AlbumOpti
 
 	insertID, idErr := result.LastInsertId()
 	if idErr == nil && insertID > 0 {
-		return &AlbumOption{
+		return &TorrentAlbumOption{
 			ID:   insertID,
 			Name: name,
 		}, nil
@@ -59,7 +59,7 @@ func (s *Service) CreateAlbum(ctx context.Context, albumName string) (*AlbumOpti
 	if againErr != nil {
 		return nil, againErr
 	}
-	return &AlbumOption{
+	return &TorrentAlbumOption{
 		ID:   again.Id,
 		Name: strings.TrimSpace(again.Name),
 	}, nil

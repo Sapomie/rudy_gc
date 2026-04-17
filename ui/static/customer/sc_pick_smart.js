@@ -425,8 +425,7 @@
             Page: 1,
             PageSize: 100000,
         };
-        if (pageSource === 'wmedia') req.MediaOwned = 3;
-        else req.Owned = 3;
+        req.MediaOwned = 3;
 
         const inputs = group.querySelectorAll('[data-req-field]');
         inputs.forEach((input) => {

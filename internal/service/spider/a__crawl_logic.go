@@ -7,8 +7,6 @@ import (
 	"rudy_gc/internal/service/fetchqueue"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/movie"
-	"rudy_gc/internal/service/moviereleaseagg"
-	"rudy_gc/internal/service/wmediaagg"
 	"sync"
 	"time"
 
@@ -40,18 +38,12 @@ func NewCrawlLogic(deps *svc.Deps) *CrawlLogic {
 /* ========= 具体流程 ========= */
 
 func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool, autoFetchSite bool) (err error) {
+	start := time.Now()
+	var affected *affectedMovieNumbers
 	flowKey := "spider_daily_best"
 	if isSync {
 		flowKey = "spider_daily_best_sync"
 	}
-	defer func() {
-		if rebuildErr := l.rebuildAggsAfterFlow(ctx, flowKey); rebuildErr != nil {
-			err = errors.Join(err, rebuildErr)
-		}
-	}()
-
-	start := time.Now()
-	var affected *affectedMovieNumbers
 
 	detailNum, err := func(ctx context.Context) (int64, error) {
 		if err := l.FetchAndParseDailyBestinv(ctx, isSync); err != nil {
@@ -62,6 +54,7 @@ func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool, 
 			return 0, err
 		}
 		affected = parsedAffected
+		l.rebuildAffectedMovieAggs(flowKey, affected)
 		return detailNum, nil
 	}(ctx)
 	if err != nil {
@@ -96,12 +89,6 @@ func (l *CrawlLogic) CrawlDailyBestProcession(ctx context.Context, isSync bool, 
 
 // 活跃 Seeds 流程
 func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context, autoFetchSite bool) (err error) {
-	defer func() {
-		if rebuildErr := l.rebuildAggsAfterFlow(ctx, "spider_seeds"); rebuildErr != nil {
-			err = errors.Join(err, rebuildErr)
-		}
-	}()
-
 	var affected *affectedMovieNumbers
 	postSteps := []func(context.Context) error{
 		l.DownLoadAllPicture,
@@ -125,6 +112,7 @@ func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context, autoFetch
 				return 0, err
 			}
 			affected = parsedAffected
+			l.rebuildAffectedMovieAggs("spider_seeds", affected)
 			return detailNum, nil
 		},
 		false, // ✅ 保持记录
@@ -135,12 +123,6 @@ func (l *CrawlLogic) CrawlBySeedsActiveProcession(ctx context.Context, autoFetch
 
 // 指定 Seed 名称流程
 func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string, autoFetchSite bool) (err error) {
-	defer func() {
-		if rebuildErr := l.rebuildAggsAfterFlow(ctx, "spider_seed_by_name"); rebuildErr != nil {
-			err = errors.Join(err, rebuildErr)
-		}
-	}()
-
 	var affected *affectedMovieNumbers
 	postSteps := []func(context.Context) error{
 		l.DownLoadAllPicture,
@@ -164,6 +146,7 @@ func (l *CrawlLogic) CrawlBySeedName(ctx context.Context, name string, autoFetch
 				return 0, err
 			}
 			affected = parsedAffected
+			l.rebuildAffectedMovieAggs("spider_seed_by_name", affected)
 			return detailNum, nil
 		},
 		false, // ✅ 保持记录
@@ -241,13 +224,17 @@ func (l *CrawlLogic) runPipeline(
 	return l.runParallel(ctx, post...)
 }
 
-func (l *CrawlLogic) rebuildAggsAfterFlow(ctx context.Context, flowKey string) error {
-	var err error
-	if rebuildErr := wmediaagg.NewService(l.deps.Deps).RebuildDirtyAndLogEvent(ctx, flowKey); rebuildErr != nil {
-		err = errors.Join(err, rebuildErr)
+func (l *CrawlLogic) rebuildAffectedMovieAggs(flowKey string, affected *affectedMovieNumbers) {
+	if affected == nil || len(affected.movies) == 0 {
+		return
 	}
-	if rebuildErr := moviereleaseagg.NewService(l.deps.Deps).RebuildDirtyAndLogEvent(ctx, flowKey); rebuildErr != nil {
-		err = errors.Join(err, rebuildErr)
+
+	javIDs := make([]string, 0, len(affected.movies))
+	for javID := range affected.movies {
+		if javID == "" {
+			continue
+		}
+		javIDs = append(javIDs, javID)
 	}
-	return err
+	l.movieSvc.EnqueueAggRebuildByMovieJavIDs(flowKey, javIDs...)
 }

@@ -28,7 +28,7 @@ func (h *MovieAggHTMLHandler) aggRelease(c *gin.Context) {
 		page = 1
 	}
 	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultAggPageSize)), defaultAggPageSize))
-	curOD := normalizeOrderBy(c.Query("od"), orderByRelease)
+	curOD := normalizeOrderBy(c.Query("od"), consts.OrderByReleasingDate)
 	sq := buildSortQuery(c, curOD)
 
 	year := atoiDef(c.Query("year"), 0)
@@ -91,7 +91,6 @@ func (h *MovieAggHTMLHandler) aggRelease(c *gin.Context) {
 
 	if vm.Level != "root" {
 		baseReq := types.ListMovieFullRequest{
-			Owned:              consts.MovieAll,
 			OrderBy:            curOD,
 			Page:               int64(page),
 			PageSize:           int64(size),
@@ -120,9 +119,9 @@ func (h *MovieAggHTMLHandler) aggRelease(c *gin.Context) {
 		data["PageInfo"] = BuildPageInfo(c, listResp.Total, listReq.Page, listReq.PageSize, pageWindow)
 		data["pageInfo"] = data["PageInfo"]
 		if aggMode == moviereleaseagg.AggModeOwned {
-			data["ownedQuery"] = buildOwnedFilterInfoWithDefaults(c, "", "3")
+			data["ownedQuery"] = buildOwnedFilterInfoWithDefaults(c, "3")
 		} else {
-			data["ownedQuery"] = buildOwnedFilterInfoWithDefaults(c, "", "")
+			data["ownedQuery"] = buildOwnedFilterInfoWithDefaults(c, "")
 		}
 	}
 

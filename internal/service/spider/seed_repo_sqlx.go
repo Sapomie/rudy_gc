@@ -29,16 +29,53 @@ func (r *SeedRepoSqlx) FindActiveByNameType(ctx context.Context, nameType int64)
 }
 
 func (r *SeedRepoSqlx) UpdateProgress(ctx context.Context, id int64, pageNow int64, lastQueryTime int64, lastStatus int64, lastError string) error {
+	return r.UpdateProgressAndMovieStats(ctx, id, pageNow, lastQueryTime, lastStatus, lastError, nil)
+}
+
+func (r *SeedRepoSqlx) UpdateProgressAndMovieStats(ctx context.Context, id int64, pageNow int64, lastQueryTime int64, lastStatus int64, lastError string, stats *types.SeedMovieStats) error {
 	row, err := r.m.FindOne(ctx, id)
 	if err != nil {
 		return fmt.Errorf("FindOne(id=%d) error: %w", id, err)
 	}
+	oldMovieTotal := row.MovieTotal
 	row.PageNow = pageNow
 	row.LastQueryTime = lastQueryTime
 	row.LastStatus = lastStatus
 	row.LastError = lastError
-	row.UpdatedOn = time.Now().Unix()
+	now := time.Now().Unix()
+	if stats != nil {
+		row.MovieTotal = stats.MovieTotal
+		row.MovieLatestReleasingMovieJavId = stats.MovieLatestReleasingMovieJavId
+		row.MovieLatestReleasingMovieName = stats.MovieLatestReleasingMovieName
+		row.MovieLatestReleasingDate = stats.MovieLatestReleasingDate
+		if stats.MovieTotal > oldMovieTotal {
+			row.LastInsertCount = stats.MovieTotal - oldMovieTotal
+			row.MovieLastAddedTime = now
+		} else {
+			row.LastInsertCount = 0
+		}
+	}
+	row.UpdatedOn = now
 	return r.m.Update(ctx, row)
+}
+
+func (r *SeedRepoSqlx) CalcMovieStats(ctx context.Context, seed *types.Seed) (*types.SeedMovieStats, error) {
+	if seed == nil {
+		return &types.SeedMovieStats{}, nil
+	}
+	row, err := r.m.CalcMovieStats(ctx, seed.NameType, seed.Name)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return &types.SeedMovieStats{}, nil
+	}
+	return &types.SeedMovieStats{
+		MovieTotal:                     row.MovieTotal,
+		MovieLatestReleasingMovieJavId: row.MovieLatestReleasingMovieJavId,
+		MovieLatestReleasingMovieName:  row.MovieLatestReleasingMovieName,
+		MovieLatestReleasingDate:       row.MovieLatestReleasingDate,
+	}, nil
 }
 
 // Upsert：按 name 插入或更新；返回最终 id
@@ -62,6 +99,12 @@ func (r *SeedRepoSqlx) Upsert(ctx context.Context, s *types.Seed) (int64, error)
 		exist.LastQueryTime = s.LastQueryTime
 		exist.LastStatus = s.LastStatus
 		exist.LastError = s.LastError
+		exist.MovieTotal = s.MovieTotal
+		exist.MovieLatestReleasingMovieJavId = s.MovieLatestReleasingMovieJavId
+		exist.MovieLatestReleasingMovieName = s.MovieLatestReleasingMovieName
+		exist.MovieLastAddedTime = s.MovieLastAddedTime
+		exist.LastInsertCount = s.LastInsertCount
+		exist.MovieLatestReleasingDate = s.MovieLatestReleasingDate
 		exist.UpdatedOn = time.Now().Unix()
 		if uerr := r.m.Update(ctx, exist); uerr != nil {
 			return 0, uerr
@@ -72,19 +115,25 @@ func (r *SeedRepoSqlx) Upsert(ctx context.Context, s *types.Seed) (int64, error)
 		// 插入
 		now := time.Now().Unix()
 		row := &spiderx.DSeed{
-			Name:          s.Name,
-			Active:        s.Active,
-			SearchType:    s.SearchType,
-			NameType:      s.NameType,
-			PageNow:       s.PageNow,
-			Offset:        s.Offset,
-			StartPage:     s.StartPage,
-			EndPage:       s.EndPage,
-			LastQueryTime: s.LastQueryTime,
-			LastStatus:    s.LastStatus,
-			LastError:     s.LastError,
-			CreatedOn:     now,
-			UpdatedOn:     now,
+			Name:                           s.Name,
+			Active:                         s.Active,
+			SearchType:                     s.SearchType,
+			NameType:                       s.NameType,
+			PageNow:                        s.PageNow,
+			Offset:                         s.Offset,
+			StartPage:                      s.StartPage,
+			EndPage:                        s.EndPage,
+			LastQueryTime:                  s.LastQueryTime,
+			LastStatus:                     s.LastStatus,
+			LastError:                      s.LastError,
+			MovieTotal:                     s.MovieTotal,
+			MovieLatestReleasingMovieJavId: s.MovieLatestReleasingMovieJavId,
+			MovieLatestReleasingMovieName:  s.MovieLatestReleasingMovieName,
+			MovieLastAddedTime:             s.MovieLastAddedTime,
+			LastInsertCount:                s.LastInsertCount,
+			MovieLatestReleasingDate:       s.MovieLatestReleasingDate,
+			CreatedOn:                      now,
+			UpdatedOn:                      now,
 		}
 		res, ierr := r.m.Insert(ctx, row)
 		if ierr != nil {
@@ -117,19 +166,25 @@ func (r *SeedRepoSqlx) FindOneByName(ctx context.Context, name string) (*types.S
 
 func toSeed(row *spiderx.DSeed) *types.Seed {
 	return &types.Seed{
-		Id:            row.Id,
-		Name:          row.Name,
-		Active:        row.Active,
-		SearchType:    row.SearchType,
-		NameType:      row.NameType,
-		PageNow:       row.PageNow,
-		Offset:        row.Offset,
-		StartPage:     row.StartPage,
-		EndPage:       row.EndPage,
-		LastQueryTime: row.LastQueryTime,
-		LastStatus:    row.LastStatus,
-		LastError:     row.LastError,
-		CreatedOn:     row.CreatedOn,
-		UpdatedOn:     row.UpdatedOn,
+		Id:                             row.Id,
+		Name:                           row.Name,
+		Active:                         row.Active,
+		SearchType:                     row.SearchType,
+		NameType:                       row.NameType,
+		PageNow:                        row.PageNow,
+		Offset:                         row.Offset,
+		StartPage:                      row.StartPage,
+		EndPage:                        row.EndPage,
+		LastQueryTime:                  row.LastQueryTime,
+		LastStatus:                     row.LastStatus,
+		LastError:                      row.LastError,
+		MovieTotal:                     row.MovieTotal,
+		MovieLatestReleasingMovieJavId: row.MovieLatestReleasingMovieJavId,
+		MovieLatestReleasingMovieName:  row.MovieLatestReleasingMovieName,
+		MovieLastAddedTime:             row.MovieLastAddedTime,
+		LastInsertCount:                row.LastInsertCount,
+		MovieLatestReleasingDate:       row.MovieLatestReleasingDate,
+		CreatedOn:                      row.CreatedOn,
+		UpdatedOn:                      row.UpdatedOn,
 	}
 }

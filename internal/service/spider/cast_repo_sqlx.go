@@ -96,7 +96,7 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		// 覆盖式更新（按你的字段一一映射）
 		old.JavId = in.JavId
 		old.MovieNumber = in.MovieNumber
-		old.OwnedMovieNumber = in.OwnedMovieNumber
+		old.OwnedMovieNumber = in.OwnedWMediaNumber
 		old.OwnedWMediaNumber = in.OwnedWMediaNumber
 		old.ScTimes = in.ScTimes
 		old.ComeTimes = in.ComeTimes
@@ -126,7 +126,7 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		Name:               in.Name,
 		JavId:              in.JavId,
 		MovieNumber:        in.MovieNumber,
-		OwnedMovieNumber:   in.OwnedMovieNumber,
+		OwnedMovieNumber:   in.OwnedWMediaNumber,
 		OwnedWMediaNumber:  in.OwnedWMediaNumber,
 		ScTimes:            in.ScTimes,
 		ComeTimes:          in.ComeTimes,
@@ -181,7 +181,7 @@ func mapAmCastToTypes(v *moviex.AmCast) *types.Cast {
 		BirthDay:           0,
 		Height:             0,
 		MovieNumber:        v.MovieNumber,
-		OwnedMovieNumber:   v.OwnedMovieNumber,
+		OwnedMovieNumber:   v.OwnedWMediaNumber,
 		OwnedWMediaNumber:  v.OwnedWMediaNumber,
 		ScTimes:            v.ScTimes,
 		ComeTimes:          v.ComeTimes,
@@ -251,7 +251,7 @@ func (r *CastRepoSqlx) insertPerson(ctx context.Context, name string, cast *type
 	}
 	if cast != nil {
 		row.MovieNumber = cast.MovieNumber
-		row.OwnedMovieNumber = cast.OwnedMovieNumber
+		row.OwnedMovieNumber = cast.OwnedWMediaNumber
 		row.OwnedWMediaNumber = cast.OwnedWMediaNumber
 		row.ScTimes = cast.ScTimes
 		row.ComeTimes = cast.ComeTimes
@@ -289,7 +289,7 @@ func (r *CastRepoSqlx) UpdateMovieNumbersByID(ctx context.Context, id int64, own
 	}
 
 	row.MovieNumber = movieNumber
-	row.OwnedMovieNumber = ownedMovieNumber
+	row.OwnedMovieNumber = ownedWMediaNumber
 	row.OwnedWMediaNumber = ownedWMediaNumber
 	row.UpdatedOn = now
 
@@ -347,7 +347,7 @@ func buildCastOrderBy(sortField, sortOrder string) string {
 	field := normalizeCastSortField(sortField)
 	order := normalizeCastSortOrder(sortOrder)
 
-	column := "ac.owned_movie_number"
+	column := "ac.owned_w_media_number"
 	switch field {
 	case "name":
 		column = "ac.name"
@@ -355,15 +355,15 @@ func buildCastOrderBy(sortField, sortOrder string) string {
 		column = "cc.chinese"
 	case "age":
 		if order == "ASC" {
-			return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day DESC, ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+			return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day DESC, ac.owned_w_media_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
 		}
-		return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day ASC, ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+		return "CASE WHEN cc.birth_day > 0 THEN 0 ELSE 1 END ASC, cc.birth_day ASC, ac.owned_w_media_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
 	case "height":
-		return "CASE WHEN cc.height > 0 THEN 0 ELSE 1 END ASC, cc.height " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+		return "CASE WHEN cc.height > 0 THEN 0 ELSE 1 END ASC, cc.height " + order + ", ac.owned_w_media_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
 	case "movie_number":
 		column = "ac.movie_number"
-	case "owned_movie_number":
-		column = "ac.owned_movie_number"
+	case "owned_movie_number", "owned_w_media_number":
+		column = "ac.owned_w_media_number"
 	case "sc_times":
 		column = "ac.sc_times"
 	case "come_times":
@@ -374,24 +374,26 @@ func buildCastOrderBy(sortField, sortOrder string) string {
 		column = "ac.highest_rank"
 	}
 
-	if column == "ac.owned_movie_number" {
+	if column == "ac.owned_w_media_number" {
 		return column + " " + order + ", ac.movie_number DESC, ac.name ASC, ac.id DESC"
 	}
 	if column == "ac.name" {
-		return column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.id DESC"
+		return column + " " + order + ", ac.owned_w_media_number DESC, ac.movie_number DESC, ac.id DESC"
 	}
 	if column == "cc.chinese" {
-		return "CASE WHEN cc.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+		return "CASE WHEN cc.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", ac.owned_w_media_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
 	}
-	return column + " " + order + ", ac.owned_movie_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
+	return column + " " + order + ", ac.owned_w_media_number DESC, ac.movie_number DESC, ac.name ASC, ac.id DESC"
 }
 
 func normalizeCastSortField(sortField string) string {
 	switch strings.ToLower(strings.TrimSpace(sortField)) {
-	case "name", "chinese", "age", "height", "movie_number", "owned_movie_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
+	case "owned_movie_number":
+		return "owned_w_media_number"
+	case "name", "chinese", "age", "height", "movie_number", "owned_w_media_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
 		return strings.ToLower(strings.TrimSpace(sortField))
 	default:
-		return "owned_movie_number"
+		return "owned_w_media_number"
 	}
 }
 

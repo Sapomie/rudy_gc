@@ -1,7 +1,7 @@
 // internal/types/film.go
 package types
 
-// Film 对应旧影片业务视图字段（底层由 w_media source_type=1 提供）
+// Film 对应目录页媒体视图字段（底层由原生 w_media 提供）
 type Film struct {
 	Id          int64
 	MovieJavId  string

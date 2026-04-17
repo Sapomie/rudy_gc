@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -170,34 +171,6 @@ func (h *CrawlerPages) SeedsPage(c *gin.Context) {
 	})
 }
 
-func (h *CrawlerPages) FilmPage(c *gin.Context) {
-	h.renderJobsPage(c, crawlerJobsPageConfig{
-		Title:             "影片任务",
-		PageTitle:         "影片重命名 / 影片处理",
-		TaskPanelTitle:    "影片任务",
-		PageNote:          "这里只处理影片重命名和影片处理。",
-		TaskTableTitle:    "影片任务",
-		EventTitle:        "影片事件流",
-		StorageKey:        "crawler_jobs_film_selected_job",
-		DefaultTaskType:   loop.TaskFilmRename,
-		OverviewExtraMode: "fetch_site_summary",
-		EmptyStateText:    "等待影片任务触发",
-		AllowedTaskTypes: []string{
-			loop.TaskFilmRename,
-			loop.TaskFilmProcess,
-		},
-		TaskButtons: []crawlerJobsPageTask{
-			{TaskType: loop.TaskFilmRename, Label: "影片重命名"},
-			{TaskType: loop.TaskFilmProcess, Label: "影片处理"},
-		},
-		Labels: crawlerJobsPageLabels{
-			Extra:   "任务类型",
-			Result:  "成功/失败",
-			Elapsed: "已运行时长",
-		},
-	})
-}
-
 func (h *CrawlerPages) PostProcessPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "后处理任务",
@@ -232,11 +205,12 @@ func (h *CrawlerPages) MediaPage(c *gin.Context) {
 	favoriteRows, _ := h.loadFavoriteAlbumRows(c.Request.Context())
 	rootDirs := h.deps.Config.Media.RootDirs
 	c.HTML(http.StatusOK, "page.media_ingest", gin.H{
-		"Title":        "媒体入库",
-		"PageTitle":    "媒体入库（两段执行）",
-		"PageNote":     "第一段只做预处理校验与插入前预览；第二段仅插入通过项。",
-		"RootDirs":     rootDirs,
-		"FavoriteRows": favoriteRows,
+		"Title":         "媒体入库",
+		"PageTitle":     "媒体入库（两段执行）",
+		"PageNote":      "第一段只做预处理校验与插入前预览；第二段仅插入通过项。",
+		"RootDirs":      rootDirs,
+		"FavoriteRows":  favoriteRows,
+		"ScriptVersion": time.Now().Unix(),
 	})
 }
 
@@ -268,30 +242,6 @@ func (h *CrawlerPages) ScMediaMovePage(c *gin.Context) {
 	})
 }
 
-func (h *CrawlerPages) FilmMovePage(c *gin.Context) {
-	base := types.ListMovieFullRequest{
-		OrderBy:  consts.OrderByReleasingDate,
-		Page:     1,
-		PageSize: maxPageSize,
-	}
-	req, err := parseMovieCardRequest(c, base)
-	if err != nil {
-		req = base
-		req.Order = normalizeOrder(c.Query("order"))
-	}
-
-	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
-	filterView.Action = "/triggers/film-move"
-	filterView.ClearHref = "/triggers/film-move"
-
-	c.HTML(http.StatusOK, "page.film_move", gin.H{
-		"Title":           "影片批量移动",
-		"PageTitle":       "影片批量移动（两步执行）",
-		"PageNote":        "第一步按 Cards 同款筛选列出影片；第二步将第一步结果移动到 SC Movie 同款目标目录。",
-		"MovieCardFilter": filterView,
-	})
-}
-
 func (h *CrawlerPages) MediaRescanPage(c *gin.Context) {
 	rootOptions, err := h.mediaSvc.ListLibraryRescanRootOptions(c.Request.Context())
 	if err != nil {
@@ -301,8 +251,16 @@ func (h *CrawlerPages) MediaRescanPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "page.media_rescan", gin.H{
 		"Title":       "媒体重扫",
 		"PageTitle":   "媒体重扫（位置与删除状态同步）",
-		"PageNote":    "同一个 root 下可分别勾选 media 与 watched；若勾选二级目录，则只扫描该子树。未挂载或不存在的范围会直接跳过，并保持现有 w_media 不变。这里也可以手动回填旧的 WMedia 时间聚合数据和上映日时间聚合数据。",
+		"PageNote":    "同一个 root 下可分别勾选 media 与 watched；若勾选二级目录，则只扫描该子树。未挂载或不存在的范围会直接跳过，并保持现有 w_media 不变。",
 		"RootOptions": rootOptions,
+	})
+}
+
+func (h *CrawlerPages) AggTriggersPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "page.agg_triggers", gin.H{
+		"Title":     "聚合回填",
+		"PageTitle": "聚合回填",
+		"PageNote":  "这里只处理 WMedia 时间聚合和上映日时间聚合的手动回填。",
 	})
 }
 
@@ -412,9 +370,9 @@ func (h *CrawlerPages) FetchSiteJavbusFilteredPage(c *gin.Context) {
 func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 	h.renderJobsPage(c, crawlerJobsPageConfig{
 		Title:             "回填任务",
-		PageTitle:         "人物回填 / 演员回填 / 周期排行回填 / SC 统计回填 / SC 影片移动",
+		PageTitle:         "人物回填 / 演员回填 / 周期排行回填 / SC 统计回填",
 		TaskPanelTitle:    "回填任务",
-		PageNote:          "这里只处理 person 回填、演员 Rank 回填、周期排行回填、SC 统计回填和 SC 影片移动。",
+		PageNote:          "这里只处理 person 回填、演员 Rank 回填、周期排行回填和 SC 统计回填。",
 		TaskTableTitle:    "回填任务",
 		EventTitle:        "回填事件流",
 		StorageKey:        "crawler_jobs_backfill_selected_job",
@@ -428,7 +386,6 @@ func (h *CrawlerPages) BackfillPage(c *gin.Context) {
 			loop.TaskSpiderRebuildCastRank,
 			loop.TaskSpiderRebuildActorRank,
 			loop.TaskScRebuildStats,
-			loop.TaskScMove,
 		},
 		TaskButtons: []crawlerJobsPageTask{
 			{TaskType: loop.TaskSpiderBackfillPerson, Label: "person 回填"},

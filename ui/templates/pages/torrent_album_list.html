@@ -1,0 +1,281 @@
+{{ define "page.torrent_album_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <link href="/static/customer/torrent_album_list.css" rel="stylesheet">
+    </head>
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid" id="torrentAlbumsPage" data-album-id="{{ .SelectedAlbumID }}">
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <h4 class="mb-1">{{ .PageTitle }}</h4>
+                        <p class="text-muted mb-0">{{ .PageNote }}</p>
+                    </div>
+                </div>
+
+                <div id="torrentAlbumsMsg" class="alert d-none mb-3" role="alert"></div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="sc-page-summary">
+                        <span class="sc-page-summary-label">相册</span>
+                        <span class="sc-page-summary-value">{{ .SelectedAlbumName }}</span>
+                        <span class="sc-page-summary-label ms-3">总数</span>
+                        <span class="sc-page-summary-value">{{ .Total }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenCreateTorrentAlbumModal">新增相册</button>
+                    </div>
+                    {{ if .Rows }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" id="torrentAlbumsFilterForm" method="get" action="/torrent-albums">
+                            <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+                            <div class="col-12">
+                                <label class="form-label mb-1">快捷相册</label>
+                                <div class="d-flex flex-wrap gap-2 album-quick-filter-group">
+                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "下载中" }}btn-warning{{ else }}btn-outline-warning{{ end }} js-torrent-album-quick-filter" data-album-name="下载中">下载中</button>
+                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "待下载" }}btn-info{{ else }}btn-outline-info{{ end }} js-torrent-album-quick-filter" data-album-name="待下载">待下载</button>
+                                    <button type="button" class="btn btn-sm {{ if eq .SelectedAlbumName "Media" }}btn-primary{{ else }}btn-outline-primary{{ end }} js-torrent-album-quick-filter" data-album-name="Media">Media</button>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">相册</label>
+                                <select class="form-select" id="torrentAlbumsAlbumName" name="album_name">
+                                    {{ range .Albums }}
+                                        <option value="{{ .Name }}" {{ if eq $.SelectedAlbumName .Name }}selected{{ end }}>{{ .Name }}</option>
+                                    {{ end }}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">影片编号 / JavID</label>
+                                <input class="form-control" type="text" name="keyword" value="{{ .Query.Keyword }}" placeholder="movie_name 或 movie_jav_id">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">来源</label>
+                                <select class="form-select" name="source_type">
+                                    <option value="" {{ if eq .Query.SourceType "" }}selected{{ end }}>全部</option>
+                                    <option value="javbus_magnet" {{ if eq .Query.SourceType "javbus_magnet" }}selected{{ end }}>JavBus 磁力</option>
+                                    <option value="sukebei_torrent" {{ if eq .Query.SourceType "sukebei_torrent" }}selected{{ end }}>Sukebei 种子</option>
+                                    <option value="sehuatang_magnet" {{ if eq .Query.SourceType "sehuatang_magnet" }}selected{{ end }}>Sehuatang 磁力</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label mb-1">Info Hash</label>
+                                <input class="form-control" type="text" name="info_hash" value="{{ .Query.InfoHash }}" placeholder="按 Info Hash 模糊筛选">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发布日期开始</label>
+                                <input class="form-control" type="date" name="publish_from" value="{{ .Query.PublishFrom }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发布日期结束</label>
+                                <input class="form-control" type="date" name="publish_to" value="{{ .Query.PublishTo }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">下载中时间开始</label>
+                                <input class="form-control" type="date" name="created_from" value="{{ .Query.CreatedFrom }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">下载中时间结束</label>
+                                <input class="form-control" type="date" name="created_to" value="{{ .Query.CreatedTo }}">
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">筛选</button>
+                                <a class="btn btn-outline-secondary" href="/torrent-albums">清空</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div class="small text-muted">
+                                已选 <span id="torrentAlbumBatchSelectedCount">0</span> 项
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnBatchCopyTorrentAlbumHashes" disabled>
+                                    批量复制 Hash
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnBatchMoveTorrentAlbumItems" disabled>
+                                    批量移动
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="btnBatchRemoveTorrentAlbumItems" disabled>
+                                    批量移除
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th class="text-center text-nowrap">
+                                        <input class="form-check-input js-torrent-album-item-check-all" id="torrentAlbumItemCheckAll" type="checkbox" aria-label="全选当前页">
+                                    </th>
+                                    <th>
+                                        <a class="album-sort-link {{ if .SortQuery.ByMovieName.Active }}active{{ end }}" href="{{ .SortQuery.ByMovieName.Href }}">
+                                            影片{{ if .SortQuery.ByMovieName.Active }}{{ if .SortQuery.ByMovieName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="album-sort-link {{ if .SortQuery.BySourceType.Active }}active{{ end }}" href="{{ .SortQuery.BySourceType.Href }}">
+                                            来源{{ if .SortQuery.BySourceType.Active }}{{ if .SortQuery.BySourceType.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>Info Hash</th>
+                                    <th>大小</th>
+                                    <th>
+                                        <a class="album-sort-link {{ if .SortQuery.ByPublish.Active }}active{{ end }}" href="{{ .SortQuery.ByPublish.Href }}">
+                                            发布日期{{ if .SortQuery.ByPublish.Active }}{{ if .SortQuery.ByPublish.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="album-sort-link {{ if .SortQuery.ByCreated.Active }}active{{ end }}" href="{{ .SortQuery.ByCreated.Href }}">
+                                            下载中时间{{ if .SortQuery.ByCreated.Active }}{{ if .SortQuery.ByCreated.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">操作</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Rows }}
+                                    {{ range .Rows }}
+                                        <tr data-item-id="{{ .ID }}">
+                                            <td class="text-center">
+                                                <input class="form-check-input js-torrent-album-item-check" type="checkbox" value="{{ .ID }}" aria-label="选择 {{ .MovieName }}">
+                                            </td>
+                                            <td class="text-nowrap">
+                                                <a class="fw-semibold" href="/movie/{{ .MovieName }}">{{ .MovieName }}</a>
+                                            </td>
+                                            <td class="text-nowrap">
+                                                {{ if eq .SourceType "javbus_magnet" }}
+                                                    <span class="badge bg-primary-subtle text-primary">JavBus</span>
+                                                {{ else if eq .SourceType "sukebei_torrent" }}
+                                                    <span class="badge bg-danger-subtle text-danger">Sukebei</span>
+                                                {{ else if eq .SourceType "sehuatang_magnet" }}
+                                                    <span class="badge bg-warning-subtle text-warning">Sehuatang</span>
+                                                {{ else }}
+                                                    <span class="badge bg-secondary-subtle text-secondary">未知</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="album-hash-cell">
+                                                <code class="album-hash">{{ .InfoHash }}</code>
+                                            </td>
+                                            <td class="text-nowrap">{{ if .Size }}{{ .Size }}{{ else }}-{{ end }}</td>
+                                            <td class="text-nowrap">{{ formatUnixDate .PublishTime }}</td>
+                                            <td class="text-nowrap">{{ formatUnixMinute .CreatedOn }}</td>
+                                            <td class="text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary js-copy-hash" data-hash="{{ .InfoHash }}">复制 Hash</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger js-remove-torrent-album-item ms-1" data-item-id="{{ .ID }}">移除</button>
+                                            </td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="8">
+                                            <div class="sc-empty-state">当前筛选下没有相册资源数据。</div>
+                                        </td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="torrentAlbumBatchRemoveModal" tabindex="-1" aria-labelledby="torrentAlbumBatchRemoveModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="torrentAlbumBatchRemoveModalLabel">批量移除确认</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="mb-0">确认移除已选中的 <span id="torrentAlbumBatchRemoveCount">0</span> 条记录吗？</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-danger" id="torrentAlbumBatchRemoveConfirmBtn">确认移除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="torrentAlbumBatchMoveModal" tabindex="-1" aria-labelledby="torrentAlbumBatchMoveModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="torrentAlbumBatchMoveModalLabel">批量移动确认</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label class="form-label mb-1" for="torrentAlbumBatchMoveTarget">目标相册</label>
+                                <select class="form-select" id="torrentAlbumBatchMoveTarget">
+                                    <option value="">请选择目标相册</option>
+                                    {{ range .Albums }}
+                                        {{ if and (gt .ID 0) (ne .ID $.SelectedAlbumID) }}
+                                            <option value="{{ .ID }}">{{ .Name }}</option>
+                                        {{ end }}
+                                    {{ end }}
+                                </select>
+                                <p class="text-muted small mt-2 mb-0">将已选中的 <span id="torrentAlbumBatchMoveCount">0</span> 条记录移动到目标相册。</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="torrentAlbumBatchMoveConfirmBtn">确认移动</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="torrentAlbumCreateModal" tabindex="-1" aria-labelledby="torrentAlbumCreateModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="torrentAlbumCreateModalLabel">新增相册</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <label class="form-label mb-1" for="torrentAlbumCreateName">相册名称</label>
+                                <input type="text" class="form-control" id="torrentAlbumCreateName" maxlength="128" placeholder="请输入相册名称">
+                                <p class="text-muted small mt-2 mb-0">创建成功后会自动切换到该相册并刷新列表。</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="torrentAlbumCreateConfirmBtn">确认创建</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/torrent_album_list.js"></script>
+    </body>
+    </html>
+{{ end }}

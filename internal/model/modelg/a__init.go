@@ -53,6 +53,9 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateDropWMediaAggRedundantColumns(db); err != nil {
 		return err
 	}
+	if err := migrateDropLegacyAggDirtyTables(db); err != nil {
+		return err
+	}
 
 	// 1) 迁移表结构
 	if err := batchMigrate(db,
@@ -91,10 +94,8 @@ func AutoMigrate(db *gorm.DB) error {
 		new(Media),
 		new(MediaBirthBucketStat),
 		new(MediaBirthTopStat),
-		new(MediaAggDirty),
 		new(MovieReleaseBucketStat),
 		new(MovieReleaseTopStat),
-		new(MovieReleaseAggDirty),
 		new(AggEvent),
 		new(FetchSite),
 		new(Album),
@@ -115,6 +116,9 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateAddCPersonOwnedWMediaNumber(db); err != nil {
 		return err
 	}
+	if err := migrateAddCPersonOwnedWMediaRatio(db); err != nil {
+		return err
+	}
 	if err := migrateWMediaSourceType(db); err != nil {
 		return err
 	}
@@ -124,10 +128,22 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateMovieNeedDownloadToAlbum(db); err != nil {
 		return err
 	}
+	if err := migrateCMovieAlbumItemReleasingDate(db); err != nil {
+		return err
+	}
 	if err := migrateWFolderSourceType(db); err != nil {
 		return err
 	}
+	if err := migrateDSeedMovieStatsColumns(db); err != nil {
+		return err
+	}
 	if err := ensureBaiduFanyiFetchSite(db); err != nil {
+		return err
+	}
+	if err := backfillDSeedMovieStats(db); err != nil {
+		return err
+	}
+	if err := dropDSeedLegacyMovieMaxNoColumns(db); err != nil {
 		return err
 	}
 	if err := backfillGScStatRedundantColumns(db); err != nil {
@@ -177,6 +193,16 @@ SET owned_w_media_number = (
 	).Error
 }
 
+func migrateDropLegacyAggDirtyTables(db *gorm.DB) error {
+	if err := db.Exec("DROP TABLE IF EXISTS `w_media_agg_dirty`").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("DROP TABLE IF EXISTS `movie_release_agg_dirty`").Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func migrateAddCPersonOwnedWMediaNumber(db *gorm.DB) error {
 	const tableName = "c_person"
 
@@ -201,6 +227,341 @@ func migrateAddCPersonOwnedWMediaNumber(db *gorm.DB) error {
 	return nil
 }
 
+func migrateAddCPersonOwnedWMediaRatio(db *gorm.DB) error {
+	const tableName = "c_person"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	hasColumnValue, err := hasColumn(db, tableName, "owned_w_media_ratio")
+	if err != nil {
+		return err
+	}
+	if !hasColumnValue {
+		if err := db.Exec("ALTER TABLE `c_person` ADD COLUMN `owned_w_media_ratio` bigint NOT NULL DEFAULT 0 AFTER `owned_w_media_number`").Error; err != nil {
+			return err
+		}
+	}
+	if err := db.Exec("ALTER TABLE `c_person` MODIFY COLUMN `owned_w_media_ratio` bigint NOT NULL DEFAULT 0 AFTER `owned_w_media_number`").Error; err != nil {
+		return err
+	}
+
+	hasIndexValue, err := hasIndex(db, tableName, "idx_c_person_owned_w_media_ratio")
+	if err != nil {
+		return err
+	}
+	if !hasIndexValue {
+		if err := db.Exec("ALTER TABLE `c_person` ADD INDEX `idx_c_person_owned_w_media_ratio` (`owned_w_media_ratio`)").Error; err != nil {
+			return err
+		}
+	}
+
+	return db.Exec(`
+UPDATE c_person
+SET owned_w_media_ratio = CASE
+	WHEN owned_w_media_number <> 0 THEN 10000
+	ELSE 0
+END`).Error
+}
+
+func migrateDSeedMovieStatsColumns(db *gorm.DB) error {
+	const tableName = "d_seed"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	if err := ensureDSeedMovieStatColumn(
+		db,
+		tableName,
+		"movie_total",
+		"",
+		"ALTER TABLE `d_seed` ADD COLUMN `movie_total` bigint NOT NULL DEFAULT 0 AFTER `last_error`",
+		"",
+	); err != nil {
+		return err
+	}
+	if err := ensureDSeedMovieStatColumn(
+		db,
+		tableName,
+		"movie_latest_releasing_movie_jav_id",
+		"movie_max_no_jav_id",
+		"ALTER TABLE `d_seed` ADD COLUMN `movie_latest_releasing_movie_jav_id` varchar(64) NOT NULL DEFAULT '' AFTER `movie_total`",
+		"ALTER TABLE `d_seed` CHANGE COLUMN `movie_max_no_jav_id` `movie_latest_releasing_movie_jav_id` varchar(64) NOT NULL DEFAULT ''",
+	); err != nil {
+		return err
+	}
+	if err := ensureDSeedMovieStatColumn(
+		db,
+		tableName,
+		"movie_latest_releasing_movie_name",
+		"movie_max_no_name",
+		"ALTER TABLE `d_seed` ADD COLUMN `movie_latest_releasing_movie_name` varchar(191) NOT NULL DEFAULT '' AFTER `movie_latest_releasing_movie_jav_id`",
+		"ALTER TABLE `d_seed` CHANGE COLUMN `movie_max_no_name` `movie_latest_releasing_movie_name` varchar(191) NOT NULL DEFAULT ''",
+	); err != nil {
+		return err
+	}
+	if err := ensureDSeedMovieStatColumn(
+		db,
+		tableName,
+		"movie_last_added_time",
+		"",
+		"ALTER TABLE `d_seed` ADD COLUMN `movie_last_added_time` bigint NOT NULL DEFAULT 0 AFTER `movie_latest_releasing_movie_name`",
+		"",
+	); err != nil {
+		return err
+	}
+	if err := ensureDSeedMovieStatColumn(
+		db,
+		tableName,
+		"last_insert_count",
+		"",
+		"ALTER TABLE `d_seed` ADD COLUMN `last_insert_count` bigint NOT NULL DEFAULT 0 AFTER `movie_last_added_time`",
+		"",
+	); err != nil {
+		return err
+	}
+	if err := ensureDSeedMovieStatColumn(
+		db,
+		tableName,
+		"movie_latest_releasing_date",
+		"",
+		"ALTER TABLE `d_seed` ADD COLUMN `movie_latest_releasing_date` bigint NOT NULL DEFAULT 0 AFTER `last_insert_count`",
+		"",
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ensureDSeedMovieStatColumn(db *gorm.DB, tableName string, newName string, oldName string, addDDL string, renameDDL string) error {
+	hasNewColumn, err := hasColumn(db, tableName, newName)
+	if err != nil {
+		return err
+	}
+	if hasNewColumn {
+		return nil
+	}
+
+	if oldName != "" {
+		hasOldColumn, err := hasColumn(db, tableName, oldName)
+		if err != nil {
+			return err
+		}
+		if hasOldColumn {
+			return db.Exec(renameDDL).Error
+		}
+	}
+
+	return db.Exec(addDDL).Error
+}
+
+func backfillDSeedMovieStats(db *gorm.DB) error {
+	const tableName = "d_seed"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	requiredColumns := []string{
+		"movie_total",
+		"movie_latest_releasing_movie_jav_id",
+		"movie_latest_releasing_movie_name",
+		"movie_latest_releasing_date",
+	}
+	for _, name := range requiredColumns {
+		hasColumnValue, err := hasColumn(db, tableName, name)
+		if err != nil {
+			return err
+		}
+		if !hasColumnValue {
+			return nil
+		}
+	}
+
+	type seedRow struct {
+		Id       int64  `gorm:"column:id"`
+		Name     string `gorm:"column:name"`
+		NameType int64  `gorm:"column:name_type"`
+	}
+	var rows []seedRow
+	if err := db.Raw("SELECT id, name, name_type FROM `d_seed`").Scan(&rows).Error; err != nil {
+		return err
+	}
+
+	for _, row := range rows {
+		stats, err := calcDSeedMovieStatsForMigration(db, row.NameType, row.Name)
+		if err != nil {
+			return err
+		}
+		if err := db.Exec(
+			"UPDATE `d_seed` SET `movie_total` = ?, `movie_latest_releasing_movie_jav_id` = ?, `movie_latest_releasing_movie_name` = ?, `movie_latest_releasing_date` = ? WHERE `id` = ?",
+			stats.MovieTotal,
+			stats.MovieLatestReleasingMovieJavId,
+			stats.MovieLatestReleasingMovieName,
+			stats.MovieLatestReleasingDate,
+			row.Id,
+		).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func dropDSeedLegacyMovieMaxNoColumns(db *gorm.DB) error {
+	const tableName = "d_seed"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	for _, name := range []string{"movie_max_no_jav_id", "movie_max_no_name"} {
+		hasColumnValue, err := hasColumn(db, tableName, name)
+		if err != nil {
+			return err
+		}
+		if !hasColumnValue {
+			continue
+		}
+		if err := db.Exec("ALTER TABLE `d_seed` DROP COLUMN `" + name + "`").Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type dSeedMovieStatsMigration struct {
+	MovieTotal                     int64  `gorm:"column:movie_total"`
+	MovieLatestReleasingMovieJavId string `gorm:"column:movie_latest_releasing_movie_jav_id"`
+	MovieLatestReleasingMovieName  string `gorm:"column:movie_latest_releasing_movie_name"`
+	MovieLatestReleasingDate       int64  `gorm:"column:movie_latest_releasing_date"`
+}
+
+func calcDSeedMovieStatsForMigration(db *gorm.DB, nameType int64, name string) (*dSeedMovieStatsMigration, error) {
+	var (
+		query string
+		args  []any
+	)
+	switch nameType {
+	case 1:
+		query = `
+SELECT
+	COUNT(*) AS movie_total,
+	COALESCE(MAX(am.releasing_date), 0) AS movie_latest_releasing_date,
+	COALESCE((
+		SELECT am2.jav_id
+		FROM a_movie am2
+		JOIN am_prefix pf2 ON pf2.id = am2.prefix_id
+		WHERE pf2.name = ?
+		  AND am2.releasing_date = (
+			SELECT MAX(am3.releasing_date)
+			FROM a_movie am3
+			JOIN am_prefix pf3 ON pf3.id = am3.prefix_id
+			WHERE pf3.name = ?
+		  )
+		ORDER BY
+		  CASE WHEN SUBSTRING_INDEX(am2.name, '-', -1) REGEXP '^[0-9]+$' THEN CAST(SUBSTRING_INDEX(am2.name, '-', -1) AS UNSIGNED) ELSE 0 END DESC,
+		  am2.name DESC,
+		  am2.jav_id DESC
+		LIMIT 1
+	), '') AS movie_latest_releasing_movie_jav_id,
+	COALESCE((
+		SELECT am2.name
+		FROM a_movie am2
+		JOIN am_prefix pf2 ON pf2.id = am2.prefix_id
+		WHERE pf2.name = ?
+		  AND am2.releasing_date = (
+			SELECT MAX(am3.releasing_date)
+			FROM a_movie am3
+			JOIN am_prefix pf3 ON pf3.id = am3.prefix_id
+			WHERE pf3.name = ?
+		  )
+		ORDER BY
+		  CASE WHEN SUBSTRING_INDEX(am2.name, '-', -1) REGEXP '^[0-9]+$' THEN CAST(SUBSTRING_INDEX(am2.name, '-', -1) AS UNSIGNED) ELSE 0 END DESC,
+		  am2.name DESC,
+		  am2.jav_id DESC
+		LIMIT 1
+	), '') AS movie_latest_releasing_movie_name
+FROM a_movie am
+JOIN am_prefix pf ON pf.id = am.prefix_id
+WHERE pf.name = ?
+`
+		args = []any{name, name, name, name, name}
+	case 2:
+		query = `
+SELECT
+	COUNT(*) AS movie_total,
+	COALESCE(MAX(am.releasing_date), 0) AS movie_latest_releasing_date,
+	COALESCE((
+		SELECT am2.jav_id
+		FROM a_movie am2
+		JOIN am_label lb2 ON lb2.id = am2.label_id
+		WHERE lb2.jav_id = ?
+		  AND am2.releasing_date = (
+			SELECT MAX(am3.releasing_date)
+			FROM a_movie am3
+			JOIN am_label lb3 ON lb3.id = am3.label_id
+			WHERE lb3.jav_id = ?
+		  )
+		ORDER BY
+		  CASE WHEN SUBSTRING_INDEX(am2.name, '-', -1) REGEXP '^[0-9]+$' THEN CAST(SUBSTRING_INDEX(am2.name, '-', -1) AS UNSIGNED) ELSE 0 END DESC,
+		  am2.name DESC,
+		  am2.jav_id DESC
+		LIMIT 1
+	), '') AS movie_latest_releasing_movie_jav_id,
+	COALESCE((
+		SELECT am2.name
+		FROM a_movie am2
+		JOIN am_label lb2 ON lb2.id = am2.label_id
+		WHERE lb2.jav_id = ?
+		  AND am2.releasing_date = (
+			SELECT MAX(am3.releasing_date)
+			FROM a_movie am3
+			JOIN am_label lb3 ON lb3.id = am3.label_id
+			WHERE lb3.jav_id = ?
+		  )
+		ORDER BY
+		  CASE WHEN SUBSTRING_INDEX(am2.name, '-', -1) REGEXP '^[0-9]+$' THEN CAST(SUBSTRING_INDEX(am2.name, '-', -1) AS UNSIGNED) ELSE 0 END DESC,
+		  am2.name DESC,
+		  am2.jav_id DESC
+		LIMIT 1
+	), '') AS movie_latest_releasing_movie_name
+FROM a_movie am
+JOIN am_label lb ON lb.id = am.label_id
+WHERE lb.jav_id = ?
+`
+		args = []any{name, name, name, name, name}
+	default:
+		return &dSeedMovieStatsMigration{}, nil
+	}
+
+	var out dSeedMovieStatsMigration
+	if err := db.Raw(query, args...).Scan(&out).Error; err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func backfillCPersonStatsFromAmCast(db *gorm.DB) error {
 	const query = `
 UPDATE c_person p
@@ -208,7 +569,7 @@ LEFT JOIN (
 	SELECT
 		pm.person_id AS person_id,
 		COUNT(*) AS movie_number,
-		COALESCE(SUM(CASE WHEN vf.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_movie_number,
+		COALESCE(SUM(CASE WHEN wm_owned.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_movie_number,
 		COALESCE(SUM(CASE WHEN wm.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_w_media_number,
 		COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
 		COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
@@ -221,7 +582,7 @@ LEFT JOIN (
 		JOIN amr_movie_cast amr ON amr.cast_id = ac.id
 		WHERE ac.person_id > 0
 	) pm
-	LEFT JOIN w_media vf ON vf.movie_jav_id = pm.movie_jav_id AND vf.source_type = ?
+	LEFT JOIN w_media wm_owned ON wm_owned.movie_jav_id = pm.movie_jav_id AND wm_owned.source_type = ?
 	LEFT JOIN w_media wm ON wm.movie_jav_id = pm.movie_jav_id AND wm.source_type = ?
 	LEFT JOIN g_sc_stat gss ON gss.movie_jav_id = pm.movie_jav_id
 	LEFT JOIN bm_minfo mi ON mi.jav_id = pm.movie_jav_id
@@ -229,8 +590,12 @@ LEFT JOIN (
 ) agg ON agg.person_id = p.id
 SET
 	p.movie_number = COALESCE(agg.movie_number, 0),
-	p.owned_movie_number = COALESCE(agg.owned_movie_number, 0),
+	p.owned_movie_number = COALESCE(agg.owned_w_media_number, 0),
 	p.owned_w_media_number = COALESCE(agg.owned_w_media_number, 0),
+	p.owned_w_media_ratio = CASE
+		WHEN COALESCE(agg.owned_w_media_number, 0) <> 0 THEN 10000
+		ELSE 0
+	END,
 	p.sc_times = COALESCE(agg.sc_times, 0),
 	p.come_times = COALESCE(agg.come_times, 0),
 	p.last_sc_time = COALESCE(agg.last_sc_time, 0),
@@ -240,7 +605,7 @@ SET
 	return db.Exec(query,
 		consts.FilmIsNotRemoved,
 		consts.FilmIsNotRemoved,
-		consts.WMediaSourceLegacyVFilm,
+		consts.WMediaSourceNative,
 		consts.WMediaSourceNative,
 	).Error
 }
@@ -292,11 +657,12 @@ WHERE NOT EXISTS (
 	}
 
 	backfillSQL := `
-INSERT INTO c_movie_album_item (album_id, movie_jav_id, movie_name, sort_no, created_on, updated_on)
+INSERT INTO c_movie_album_item (album_id, movie_jav_id, movie_name, releasing_date, sort_no, created_on, updated_on)
 SELECT
 	ca.id,
 	mi.jav_id,
 	COALESCE(NULLIF(am.name, ''), mi.name, mi.jav_id) AS movie_name,
+	COALESCE(am.releasing_date, 0) AS releasing_date,
 	UNIX_TIMESTAMP(),
 	?,
 	?
@@ -333,6 +699,57 @@ WHERE mi.need_download = ?
 		return err
 	}
 	return nil
+}
+
+func migrateCMovieAlbumItemReleasingDate(db *gorm.DB) error {
+	const tableName = "c_movie_album_item"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	hasColumnValue, err := hasColumn(db, tableName, "releasing_date")
+	if err != nil {
+		return err
+	}
+	if !hasColumnValue {
+		if err := db.Exec("ALTER TABLE `c_movie_album_item` ADD COLUMN `releasing_date` bigint NOT NULL DEFAULT 0 AFTER `movie_name`").Error; err != nil {
+			return err
+		}
+	}
+	if err := db.Exec("ALTER TABLE `c_movie_album_item` MODIFY COLUMN `releasing_date` bigint NOT NULL DEFAULT 0 AFTER `movie_name`").Error; err != nil {
+		return err
+	}
+
+	indexMatches, err := hasIndexColumns(db, tableName, "idx_album_release_name", []string{"album_id", "releasing_date", "movie_name", "movie_jav_id"})
+	if err != nil {
+		return err
+	}
+	if !indexMatches {
+		hasIndexValue, err := hasIndex(db, tableName, "idx_album_release_name")
+		if err != nil {
+			return err
+		}
+		if hasIndexValue {
+			if err := db.Exec("ALTER TABLE `c_movie_album_item` DROP INDEX `idx_album_release_name`").Error; err != nil {
+				return err
+			}
+		}
+		if err := db.Exec("ALTER TABLE `c_movie_album_item` ADD INDEX `idx_album_release_name` (`album_id`, `releasing_date`, `movie_name`, `movie_jav_id`)").Error; err != nil {
+			return err
+		}
+	}
+
+	return db.Exec(`
+UPDATE c_movie_album_item cai
+LEFT JOIN a_movie am
+  ON am.jav_id = cai.movie_jav_id
+SET cai.releasing_date = COALESCE(am.releasing_date, 0)
+WHERE cai.releasing_date <> COALESCE(am.releasing_date, 0)`).Error
 }
 
 func migrateWMediaSourceType(db *gorm.DB) error {
@@ -617,10 +1034,10 @@ func rebuildWFolderTreesFromWMedia(db *gorm.DB) error {
 	if err := db.Raw(`
 SELECT DISTINCT source_type, root_dir, full_dir
 FROM `+"`w_media`"+`
-WHERE source_type IN (?, ?)
+WHERE source_type = ?
   AND TRIM(full_dir) <> ''
 ORDER BY source_type ASC, full_dir ASC
-`, consts.WFolderSourceLegacyVFilm, consts.WFolderSourceNative).Scan(&mediaRows).Error; err != nil {
+`, consts.WFolderSourceNative).Scan(&mediaRows).Error; err != nil {
 		return err
 	}
 
@@ -719,9 +1136,9 @@ WHERE id = ?
 		if err := tx.Raw(`
 SELECT id, source_type, root_dir, full_dir, directory_id
 FROM `+"`w_media`"+`
-WHERE source_type IN (?, ?)
+WHERE source_type = ?
 ORDER BY id ASC
-`, consts.WFolderSourceLegacyVFilm, consts.WFolderSourceNative).Scan(&mappingRows).Error; err != nil {
+`, consts.WFolderSourceNative).Scan(&mappingRows).Error; err != nil {
 			return err
 		}
 		for _, row := range mappingRows {
@@ -1398,6 +1815,32 @@ func hasIndex(db *gorm.DB, tableName string, indexName string) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func hasIndexColumns(db *gorm.DB, tableName string, indexName string, columns []string) (bool, error) {
+	type indexRow struct {
+		SeqInIndex int64  `gorm:"column:SEQ_IN_INDEX"`
+		ColumnName string `gorm:"column:COLUMN_NAME"`
+	}
+
+	var rows []indexRow
+	err := db.Raw(
+		"SELECT SEQ_IN_INDEX, COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? ORDER BY SEQ_IN_INDEX ASC",
+		tableName,
+		indexName,
+	).Scan(&rows).Error
+	if err != nil {
+		return false, err
+	}
+	if len(rows) != len(columns) {
+		return false, nil
+	}
+	for idx, column := range columns {
+		if strings.TrimSpace(rows[idx].ColumnName) != column {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func batchMigrate(db *gorm.DB, models ...interface{}) error {

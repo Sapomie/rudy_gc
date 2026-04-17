@@ -15,6 +15,7 @@ type Person struct {
 	MovieNumber       int64 `gorm:"not null;index"`
 	OwnedMovieNumber  int64 `gorm:"not null;index"`
 	OwnedWMediaNumber int64 `gorm:"not null;index"`
+	OwnedWMediaRatio  int64 `gorm:"not null;default:0;index"`
 	ScTimes           int64 `gorm:"not null;type:MEDIUMINT;index"`
 	ComeTimes         int64 `gorm:"not null;type:MEDIUMINT;index"`
 	LastScTime        int64 `gorm:"not null;index"`

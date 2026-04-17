@@ -26,8 +26,6 @@ func (h *MovieHTMLHandler) MovieDetail(c *gin.Context) {
 	data := gin.H{
 		"Title":         md.MovieType.Title,
 		"movieType":     md.MovieType,
-		"hasFilm":       md.HasFilm,
-		"film":          md.FilmInfo,
 		"media":         md.MediaInfo,
 		"rankInfos":     md.RankInfos,
 		"sc":            md.SC,

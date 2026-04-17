@@ -367,18 +367,23 @@ func (s *Service) readSourcePayload(ctx context.Context, movieJavID string, sour
 }
 
 func (s *Service) loadMovieNameByJavID(ctx context.Context, movieJavID string) (string, error) {
+	movieName, _, err := s.loadMovieNameAndReleasingDateByJavID(ctx, movieJavID)
+	return movieName, err
+}
+
+func (s *Service) loadMovieNameAndReleasingDateByJavID(ctx context.Context, movieJavID string) (string, int64, error) {
 	row, err := s.deps.MovieModel.FindOneByJavId(ctx, strings.TrimSpace(movieJavID))
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
-			return strings.TrimSpace(movieJavID), nil
+			return strings.TrimSpace(movieJavID), 0, nil
 		}
-		return "", err
+		return "", 0, err
 	}
 	movieName := strings.TrimSpace(row.Name)
 	if movieName == "" {
-		return strings.TrimSpace(movieJavID), nil
+		return strings.TrimSpace(movieJavID), row.ReleasingDate, nil
 	}
-	return movieName, nil
+	return movieName, row.ReleasingDate, nil
 }
 
 func (s *Service) getDefaultAlbumID(ctx context.Context, createWhenMissing bool) (int64, error) {

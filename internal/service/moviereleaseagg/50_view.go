@@ -206,5 +206,5 @@ func cardFilterQuery(mode string) string {
 	if NormalizeAggMode(mode) == AggModeOwned {
 		return "mowned=3"
 	}
-	return "owned=1"
+	return "mowned=1"
 }

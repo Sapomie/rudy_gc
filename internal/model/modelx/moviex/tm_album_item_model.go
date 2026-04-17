@@ -17,6 +17,7 @@ type (
 	TmAlbumItemModel interface {
 		tmAlbumItemModel
 		ListByAlbumIdMovieJavId(ctx context.Context, albumId int64, movieJavId string) ([]*TmAlbumItem, error)
+		ListMissingMovieJavIDBySourceRows(ctx context.Context, sourceType string, sourceRowIDs []int64) ([]*TmAlbumItem, error)
 		DeleteByAlbumIdSourceTypeSourceRowId(ctx context.Context, albumId int64, sourceType string, sourceRowId int64) (bool, error)
 		CountPageRows(ctx context.Context, albumId int64, filter AlbumItemPageFilter) (int64, error)
 		ListPageRows(ctx context.Context, albumId int64, offset int64, limit int64, orderBy string, filter AlbumItemPageFilter) ([]*TmAlbumItem, error)
@@ -57,6 +58,34 @@ func (m *customTmAlbumItemModel) ListByAlbumIdMovieJavId(ctx context.Context, al
 			"album_id":     albumId,
 			"movie_jav_id": movieJavId,
 		}).
+		OrderBy("`id` ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*TmAlbumItem
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if err == sqlx.ErrNotFound {
+			return []*TmAlbumItem{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customTmAlbumItemModel) ListMissingMovieJavIDBySourceRows(ctx context.Context, sourceType string, sourceRowIDs []int64) ([]*TmAlbumItem, error) {
+	sourceType = strings.TrimSpace(sourceType)
+	if sourceType == "" || len(sourceRowIDs) == 0 {
+		return []*TmAlbumItem{}, nil
+	}
+
+	query, args, err := squirrel.
+		Select(tmAlbumItemRows).
+		From(strings.Trim(m.table, "`")).
+		Where(squirrel.Eq{"source_type": sourceType}).
+		Where(squirrel.Eq{"source_row_id": sourceRowIDs}).
+		Where(squirrel.Eq{"movie_jav_id": ""}).
 		OrderBy("`id` ASC").
 		ToSql()
 	if err != nil {

@@ -24,7 +24,7 @@
                         <p class="text-muted mb-0">{{ .PageNote }}</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="/album-items?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
+                        <a href="/torrent-albums?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
                         <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
                         <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
                     </div>
@@ -61,13 +61,13 @@
                                 </div>
                                 <div class="col-4">
                                     <div class="overview-item">
-                                        <div class="label">通过</div>
+                                        <div class="label" id="sumPassLabel">通过</div>
                                         <div class="value text-success" id="sumPass">0</div>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="overview-item">
-                                        <div class="label">失败</div>
+                                        <div class="label" id="sumFailLabel">失败</div>
                                         <div class="value text-danger" id="sumFail">0</div>
                                     </div>
                                 </div>
@@ -184,7 +184,7 @@
                         </div>
                     </div>
 
-                    <div class="card">
+                    <div class="card" id="commitSuccessSection">
                         <div class="card-body">
                             <h5 class="card-title">插入成功 Movie</h5>
                             <div class="table-responsive">
@@ -203,7 +203,7 @@
                         </div>
                     </div>
 
-                    <div class="card">
+                    <div class="card" id="commitFailSection">
                         <div class="card-body">
                             <h5 class="card-title">插入失败 Movie</h5>
                             <div class="table-responsive">
@@ -221,7 +221,7 @@
                         </div>
                     </div>
 
-                    <div class="card">
+                    <div class="card" id="commitPreviewSection">
                         <div class="card-body">
                             <h5 class="card-title">插入后预览（成功项）</h5>
                             <div class="table-responsive">
@@ -247,7 +247,7 @@
 
 <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
 
-<script src="/static/customer/media_ingest.js"></script>
+<script src="/static/customer/media_ingest.js?v={{ .ScriptVersion }}"></script>
 <script src="/static/js/jquery.min.js"></script>
 <script src="/static/js/bootstrap.bundle.min.js"></script>
 <script src="/static/js/metisMenu.min.js"></script>

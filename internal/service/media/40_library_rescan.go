@@ -62,12 +62,6 @@ const (
 )
 
 func (s *Service) RescanLibrary(ctx context.Context, selections []LibraryRescanSelection) (result *LibraryRescanResult, err error) {
-	defer func() {
-		if rebuildErr := s.rebuildMediaAggsAfterFlow(ctx, "media_rescan"); rebuildErr != nil {
-			err = joinFlowErr(err, rebuildErr)
-		}
-	}()
-
 	allRoots := s.mediaRoots()
 	safeSelections := sanitizeRescanSelections(selections, allRoots)
 
@@ -162,8 +156,9 @@ func (s *Service) RescanLibrary(ctx context.Context, selections []LibraryRescanS
 	}
 
 	seenIDs := make(map[int64]struct{}, len(trackedRows))
+	touchedMovieJavIDs := make(map[string]struct{}, len(trackedRows))
 	for _, scope := range scopes {
-		if err := s.rescanOneScope(ctx, scope, nowUnix, result, seenIDs); err != nil {
+		if err := s.rescanOneScope(ctx, scope, nowUnix, result, seenIDs, touchedMovieJavIDs); err != nil {
 			return result, err
 		}
 	}
@@ -195,8 +190,22 @@ func (s *Service) RescanLibrary(ctx context.Context, selections []LibraryRescanS
 			})
 			continue
 		}
-		s.markMediaAggDirty(ctx, row, updated)
+		if err := s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
+			result.Errors++
+			result.ErrorItems = append(result.ErrorItems, &LibraryRescanItem{
+				MovieName:  updated.MovieName,
+				MovieJavId: updated.MovieJavId,
+				FileName:   updated.FileName,
+				Path:       joinMediaPath(updated.FullDir, updated.FileName),
+				RootDir:    updated.RootDir,
+				Error:      err.Error(),
+			})
+			continue
+		}
 		s.invalidateMovieTypeCaches(ctx, updated.MovieJavId)
+		if strings.TrimSpace(updated.MovieJavId) != "" {
+			touchedMovieJavIDs[strings.TrimSpace(updated.MovieJavId)] = struct{}{}
+		}
 
 		result.MarkedRemoved++
 		result.RemovedItems = append(result.RemovedItems, &LibraryRescanItem{
@@ -206,6 +215,17 @@ func (s *Service) RescanLibrary(ctx context.Context, selections []LibraryRescanS
 			Path:       joinMediaPath(updated.FullDir, updated.FileName),
 			RootDir:    updated.RootDir,
 		})
+	}
+	if len(touchedMovieJavIDs) > 0 {
+		javIDs := make([]string, 0, len(touchedMovieJavIDs))
+		for javID := range touchedMovieJavIDs {
+			javIDs = append(javIDs, javID)
+		}
+		sort.Strings(javIDs)
+		if err := s.syncPersonStatsByMovieJavIDs(ctx, nowUnix, javIDs...); err != nil {
+			return result, err
+		}
+		s.movieSvc.EnqueueAggRebuildByMovieJavIDs("media_rescan", javIDs...)
 	}
 
 	sort.Strings(result.SelectedTargets)

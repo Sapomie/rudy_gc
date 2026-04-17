@@ -39,35 +39,14 @@ func (s *Service) BackfillAll(ctx context.Context) (*BackfillResult, error) {
 		}
 	}
 
-	dirtyRows, err := s.deps.WMediaAggDirtyModel.ListAll(ctx, 0)
-	if err != nil {
-		return nil, err
-	}
-	result.ClearedDirtyRows = len(dirtyRows)
-	for _, row := range dirtyRows {
-		if row == nil || row.Id <= 0 {
-			continue
-		}
-		if err := s.deps.WMediaAggDirtyModel.Delete(ctx, row.Id); err != nil {
-			return nil, err
-		}
-	}
-
 	days, err := s.deps.WMediaModel.ListDistinctBirthDays(ctx)
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now().Unix()
 	result.DirtyDays = len(days)
-	for _, bucketDay := range days {
-		dayScope := scopeFromBucketDay(bucketDay)
-		if err := s.deps.WMediaAggDirtyModel.TouchDay(ctx, bucketDay, dayScope.Key, now); err != nil {
-			return nil, err
-		}
-	}
 
 	if len(days) > 0 {
-		if err := s.RebuildDirtyAndLogEvent(ctx, "backfill"); err != nil {
+		if err := s.RebuildByBirthDaysAndLogEvent(ctx, "backfill", days...); err != nil {
 			return nil, err
 		}
 	}

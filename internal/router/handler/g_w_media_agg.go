@@ -121,7 +121,7 @@ func (h *WMediaAggHTMLHandler) birthCommon(c *gin.Context) {
 		"SortQuery":    sq,
 		"sortQuery":    sq,
 		"CurrentSort":  curOD,
-		"ownedQuery":   buildOwnedFilterInfoWithDefaults(c, "", "3"),
+		"ownedQuery":   buildOwnedFilterInfoWithDefaults(c, "3"),
 	}
 
 	c.HTML(200, "page.w_media_agg_birth_time", data)

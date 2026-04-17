@@ -17,6 +17,7 @@ type (
 	AmLabelModel interface {
 		amLabelModel
 		GetMovieNumbersByID(ctx context.Context, id int64, ownedRemovedStatus int64) (int64, int64, error)
+		FindOneByJavId(ctx context.Context, javId string) (*AmLabel, error)
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		ListAllIDs(ctx context.Context) ([]int64, error)
@@ -48,17 +49,29 @@ SELECT
 	(SELECT COUNT(DISTINCT jav_id) FROM a_movie WHERE label_id = ?) AS movie_number,
 	(SELECT COUNT(DISTINCT am.jav_id)
 		FROM a_movie am
-		JOIN w_media vf ON vf.movie_jav_id = am.jav_id AND vf.source_type = ? AND vf.is_removed = ?
+		JOIN w_media wm_owned ON wm_owned.movie_jav_id = am.jav_id AND wm_owned.source_type = ? AND wm_owned.is_removed = ?
 		WHERE am.label_id = ?) AS owned_movie_number
 `
 	var resp struct {
 		MovieNumber      int64 `db:"movie_number"`
 		OwnedMovieNumber int64 `db:"owned_movie_number"`
 	}
-	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, id, consts.WMediaSourceLegacyVFilm, ownedRemovedStatus, id); err != nil {
+	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, id, consts.WMediaSourceNative, ownedRemovedStatus, id); err != nil {
 		return 0, 0, err
 	}
 	return resp.MovieNumber, resp.OwnedMovieNumber, nil
+}
+
+func (m *customAmLabelModel) FindOneByJavId(ctx context.Context, javId string) (*AmLabel, error) {
+	query := "SELECT " + amLabelRows + " FROM `am_label` WHERE `jav_id` = ? LIMIT 1"
+	var resp AmLabel
+	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, javId); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (m *customAmLabelModel) ListAllIDs(ctx context.Context) ([]int64, error) {

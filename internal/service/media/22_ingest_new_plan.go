@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ingestPrecheckPlanVersion  = 2
+	ingestPrecheckPlanVersion  = 3
 	ingestPrecheckPlanFileName = "media_ingest_precheck_plan.json"
 )
 
@@ -40,6 +40,7 @@ type ingestPrecheckPlanEntry struct {
 	MovieJavID          string `json:"movie_jav_id"`
 	ReleasingDay        int64  `json:"releasing_day"`
 	FavoriteAlbumID     int64  `json:"favorite_album_id"`
+	FavoriteItemID      int64  `json:"favorite_item_id"`
 	FavoriteSourceType  string `json:"favorite_source_type"`
 	FavoriteSourceRowID int64  `json:"favorite_source_row_id"`
 	FavoriteInfoHash    string `json:"favorite_info_hash"`
@@ -85,6 +86,7 @@ func buildIngestPrecheckPlan(layout rootLayout, passPrepared []*ingestPreparedIt
 			MovieJavID:          prepared.movieInfo.javID,
 			ReleasingDay:        prepared.movieInfo.releasingDay,
 			FavoriteAlbumID:     prepared.favoriteSource.favoriteAlbumID,
+			FavoriteItemID:      sourceItem.Id,
 			FavoriteSourceType:  sourceItem.SourceType,
 			FavoriteSourceRowID: sourceItem.SourceRowId,
 			FavoriteInfoHash:    prepared.favoriteSource.infoHash,
@@ -249,6 +251,9 @@ func buildPreparedFromPlanEntry(entry *ingestPrecheckPlanEntry) (*ingestPrepared
 	if entry.FavoriteAlbumID <= 0 {
 		return nil, fmt.Errorf("invalid favorite album_id in precheck plan: %s", sourcePath)
 	}
+	if entry.FavoriteItemID <= 0 {
+		return nil, fmt.Errorf("invalid favorite item_id in precheck plan: %s", sourcePath)
+	}
 
 	meta := rawMovieMeta{
 		movieName: movieName,
@@ -268,6 +273,7 @@ func buildPreparedFromPlanEntry(entry *ingestPrecheckPlanEntry) (*ingestPrepared
 			favoriteAlbumID: entry.FavoriteAlbumID,
 			infoHash:        infoHash,
 			item: &moviex.TmAlbumItem{
+				Id:          entry.FavoriteItemID,
 				SourceType:  sourceType,
 				SourceRowId: entry.FavoriteSourceRowID,
 				MovieJavId:  movieJavID,

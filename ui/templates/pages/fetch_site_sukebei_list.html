@@ -71,7 +71,6 @@
                             <input type="hidden" name="ps" value="{{ .Query.PageSize }}">
                             {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
                             {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
-                            {{ if .Query.Owned }}<input type="hidden" name="owned" value="{{ .Query.Owned }}">{{ end }}
                             {{ if .Query.MediaOwned }}<input type="hidden" name="mowned" value="{{ .Query.MediaOwned }}">{{ end }}
                             <div class="col-12">
                                 <div class="fetch-site-filter-grid fetch-site-filter-grid-5 fetch-site-sukebei-filter-top">
@@ -131,19 +130,11 @@
                                         <input class="form-control" type="text" name="release_date_to" value="{{ .Query.ReleaseDateTo }}">
                                     </div>
                                     <div class="fetch-site-filter-item">
-                                        <label class="form-label mb-1">下载时间开始</label>
-                                        <input class="form-control" type="text" name="film_birth_from" value="{{ .Query.FilmBirthFrom }}">
-                                    </div>
-                                    <div class="fetch-site-filter-item">
-                                        <label class="form-label mb-1">下载时间结束</label>
-                                        <input class="form-control" type="text" name="film_birth_to" value="{{ .Query.FilmBirthTo }}">
-                                    </div>
-                                    <div class="fetch-site-filter-item">
-                                        <label class="form-label mb-1">M下载时间开始</label>
+                                        <label class="form-label mb-1">WMedia 下载时间开始</label>
                                         <input class="form-control" type="text" name="media_birth_from" value="{{ .Query.MediaBirthFrom }}">
                                     </div>
                                     <div class="fetch-site-filter-item">
-                                        <label class="form-label mb-1">M下载时间结束</label>
+                                        <label class="form-label mb-1">WMedia 下载时间结束</label>
                                         <input class="form-control" type="text" name="media_birth_to" value="{{ .Query.MediaBirthTo }}">
                                     </div>
                                 </div>
@@ -173,8 +164,7 @@
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByLastFetchTime.Active }}active{{ end }}" href="{{ .SortQuery.ByLastFetchTime.Href }}">最后抓取{{ if .SortQuery.ByLastFetchTime.Active }}{{ if .SortQuery.ByLastFetchTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByHashCount.Active }}active{{ end }}" href="{{ .SortQuery.ByHashCount.Href }}">Hash 数{{ if .SortQuery.ByHashCount.Active }}{{ if .SortQuery.ByHashCount.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th><a class="fetch-site-sort-link {{ if .SortQuery.ByLatestPublish.Active }}active{{ end }}" href="{{ .SortQuery.ByLatestPublish.Href }}">最新日期{{ if .SortQuery.ByLatestPublish.Active }}{{ if .SortQuery.ByLatestPublish.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
-                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByFilmBirthTime.Active }}active{{ end }}" href="{{ .SortQuery.ByFilmBirthTime.Href }}">下载时间{{ if .SortQuery.ByFilmBirthTime.Active }}{{ if .SortQuery.ByFilmBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
-                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMediaBirthTime.Active }}active{{ end }}" href="{{ .SortQuery.ByMediaBirthTime.Href }}">M下载时间{{ if .SortQuery.ByMediaBirthTime.Active }}{{ if .SortQuery.ByMediaBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
+                                    <th><a class="fetch-site-sort-link {{ if .SortQuery.ByMediaBirthTime.Active }}active{{ end }}" href="{{ .SortQuery.ByMediaBirthTime.Href }}">WMedia 下载时间{{ if .SortQuery.ByMediaBirthTime.Active }}{{ if .SortQuery.ByMediaBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}</a></th>
                                     <th>错误</th>
                                     <th class="text-nowrap">操作</th>
                                 </tr>
@@ -191,24 +181,12 @@
                                             <td>{{ .TorrentHashCount }}</td>
                                             <td class="text-nowrap">{{ .LatestPublishText }}</td>
                                             <td class="text-nowrap">
-                                                {{ if eq .Owned 5 }}
-                                                    <a href="{{ .VideoURL }}" class="btn btn-sm btn-info me-2">Play</a>
-                                                {{ else if eq .Owned 4 }}
-                                                    <a href="{{ .VideoURL }}" class="btn btn-sm btn-success me-2">Play</a>
-                                                {{ else if eq .Owned 6 }}
-                                                    <a href="{{ .VideoURL }}" class="btn btn-sm btn-secondary me-2">ReMoved</a>
-                                                {{ else }}
-                                                    -
-                                                {{ end }}
-                                                {{ if .FilmBirthDate }}<span class="text-muted small ms-1">{{ .FilmBirthDate }}</span>{{ end }}
-                                            </td>
-                                            <td class="text-nowrap">
                                                 {{ if eq .OwnedWMedia 5 }}
-                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-outline-primary me-2">MPlay</a>
+                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-info me-2">MPlay</a>
                                                 {{ else if eq .OwnedWMedia 4 }}
-                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-primary me-2">MPlay</a>
+                                                    <a href="{{ .VideoURLWMedia }}" class="btn btn-sm btn-success me-2">MPlay</a>
                                                 {{ else if eq .OwnedWMedia 6 }}
-                                                    <span class="btn btn-sm btn-outline-secondary me-2 disabled" aria-disabled="true">MRemoved</span>
+                                                    <span class="btn btn-sm btn-secondary me-2 disabled" aria-disabled="true">MRemoved</span>
                                                 {{ else }}
                                                     -
                                                 {{ end }}

@@ -40,7 +40,6 @@ type MovieType struct {
 	AMovie               *Movie      `json:"a_movie"`
 	BmMinfo              *Minfo      `json:"bm_minfo"`
 	BmMurl               *Murl       `json:"bm_murl"`
-	VFilm                *Film       `json:"v_film"`
 	WMedia               *Media      `json:"w_media,omitempty"`
 }
 

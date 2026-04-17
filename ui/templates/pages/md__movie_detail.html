@@ -106,8 +106,8 @@
                     </div>
                 </div>
 
-                <!-- FilmInfo -->
-                {{ if or (eq .hasFilm 2) (and .media (ne .movieType.OwnedWMedia 6)) }}
+                <!-- MediaInfo -->
+                {{ if and .media (ne .movieType.OwnedWMedia 6) }}
                     <div class="row mt-3">
                         <div class="col-12">
                             {{ template "partials.md.film_info" . }}

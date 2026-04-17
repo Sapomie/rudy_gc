@@ -19,7 +19,6 @@ import (
 type PickConfig struct {
 	// 候选集请求参数
 	PageSize int64
-	Owned    int64
 
 	// 多样性：减少演员重复（越大惩罚越强）
 	DiversityBeta float64
@@ -44,7 +43,6 @@ type PickConfig struct {
 func DefaultPickConfig() PickConfig {
 	return PickConfig{
 		PageSize:          100000,
-		Owned:             3,
 		DiversityBeta:     100, // 你当前使用的默认
 		ActorPenaltyAlpha: 0.6,
 		HalfLifeActorDays: 50,

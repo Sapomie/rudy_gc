@@ -33,10 +33,7 @@ const (
 	TaskSpiderFetchSukebeiFilter = "spider_fetch_sukebei_filtered_resources"
 	TaskSpiderFetchSiteBoth      = "spider_fetch_site_both_resources"
 	TaskSpiderFetchSehuatang     = "spider_fetch_sehuatang_magnets"
-	TaskFilmRename               = "film_rename"
-	TaskFilmProcess              = "film_process"
 	TaskScRebuildStats           = "sc_rebuild_stats"
-	TaskScMove                   = "sc_move"
 	TaskScAdd                    = "sc_add"
 )
 
@@ -61,8 +58,6 @@ type StartTaskRequest struct {
 	LastFetchTo     string   `json:"last_fetch_to"`
 	ReleaseDateFrom string   `json:"release_date_from"`
 	ReleaseDateTo   string   `json:"release_date_to"`
-	FilmBirthFrom   string   `json:"film_birth_from"`
-	FilmBirthTo     string   `json:"film_birth_to"`
 	MediaBirthFrom  string   `json:"media_birth_from"`
 	MediaBirthTo    string   `json:"media_birth_to"`
 	StartPage       int64    `json:"start_page"`
@@ -71,7 +66,6 @@ type StartTaskRequest struct {
 	Number          int64    `json:"number"`
 	MovieJavID      string   `json:"movie_jav_id"`
 	MovieName       string   `json:"movie_name"`
-	ScName          string   `json:"sc_name"`
 	Dir             string   `json:"dir"`
 	ComeMovieJavID  string   `json:"come_movie_jav_id"`
 	MovieCast       string   `json:"movie_cast"`
@@ -89,8 +83,6 @@ type StartTaskRequest struct {
 	LabelName               string `json:"ln"`
 	ReleasingDateStart      string `json:"rs"`
 	ReleasingDateEnd        string `json:"re"`
-	FilmBirthTimeStart      string `json:"bs"`
-	FilmBirthTimeEnd        string `json:"be"`
 	MediaBirthTimeStart     string `json:"mbs"`
 	MediaBirthTimeEnd       string `json:"mbe"`
 	CastAgeMin              string `json:"cay"`
@@ -100,7 +92,6 @@ type StartTaskRequest struct {
 	DaysInRankMin           string `json:"drkmin"`
 	NeedDownload            string `json:"nd"`
 	Word                    string `json:"wd"`
-	Owned                   string `json:"owned"`
 	MediaOwned              string `json:"mowned"`
 	ViewWatchedMin          string `json:"vwmin"`
 	ViewWatchedMax          string `json:"vwmax"`
@@ -112,10 +103,6 @@ type StartTaskRequest struct {
 	ScTimesMax              string `json:"scmax"`
 	ComeTimesMin            string `json:"comin"`
 	ComeTimesMax            string `json:"comax"`
-	Dir1                    string `json:"d1"`
-	Dir2                    string `json:"d2"`
-	Dir3                    string `json:"d3"`
-	Dir4                    string `json:"d4"`
 	MediaDir1               string `json:"md1"`
 	MediaDir2               string `json:"md2"`
 	MediaDir3               string `json:"md3"`
@@ -327,18 +314,8 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartFetchSiteBothResources(req)
 	case TaskSpiderFetchSehuatang:
 		return l.StartFetchSehuatangMagnets(req)
-	case TaskFilmRename:
-		return l.StartFilmRename()
-	case TaskFilmProcess:
-		return l.StartFilmProcess()
 	case TaskScRebuildStats:
 		return l.StartScRebuildStats()
-	case TaskScMove:
-		scName := strings.TrimSpace(req.ScName)
-		if scName == "" {
-			return "", fmt.Errorf("sc_name is required")
-		}
-		return l.StartScMove(scName)
 	case TaskScAdd:
 		dir := strings.TrimSpace(req.Dir)
 		if dir == "" {
@@ -754,31 +731,10 @@ func (l *FetchLoopService) StartFetchSehuatangMagnets(req StartTaskRequest) (str
 	})
 }
 
-func (l *FetchLoopService) StartFilmRename() (string, error) {
-	return l.startManagedTask(TaskFilmRename, taskRuntimePolicy{}, func(ctx context.Context) error {
-		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "film_prepare", Message: "开始重命名影片"})
-		return l.filmSvc.RenameFilm(ctx)
-	})
-}
-
-func (l *FetchLoopService) StartFilmProcess() (string, error) {
-	return l.startManagedTask(TaskFilmProcess, taskRuntimePolicy{}, func(ctx context.Context) error {
-		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "film_prepare", Message: "开始处理影片"})
-		return l.filmSvc.ProcessFilm(ctx)
-	})
-}
-
 func (l *FetchLoopService) StartScRebuildStats() (string, error) {
 	return l.startManagedTask(TaskScRebuildStats, taskRuntimePolicy{}, func(ctx context.Context) error {
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "sc_prepare", Message: "开始回填 SC 统计"})
 		return l.scSvc.RebuildAllScStats(ctx)
-	})
-}
-
-func (l *FetchLoopService) StartScMove(scName string) (string, error) {
-	return l.startManagedTask(TaskScMove, taskRuntimePolicy{}, func(ctx context.Context) error {
-		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "sc_prepare", Message: fmt.Sprintf("开始移动 SC 影片：%s", scName)})
-		return l.scSvc.MoveScFilm(ctx, scName)
 	})
 }
 

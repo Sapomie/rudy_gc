@@ -23,20 +23,6 @@ type MoveWMediaResult struct {
 	Error      string `json:"error"`
 }
 
-func (s *Service) MoveWMediaToRemoved(ctx context.Context, javId string) (*MoveWMediaResult, error) {
-	result, row, updated, err := s.moveWMediaToRemoved(ctx, javId)
-	if err != nil || result == nil || !result.Ok {
-		return result, err
-	}
-
-	s.markMediaAggDirty(ctx, row, updated)
-	s.invalidateMovieTypeCaches(ctx, javId)
-	if err := s.rebuildMediaAggsAfterFlow(ctx, "move_removed"); err != nil {
-		return result, err
-	}
-	return result, nil
-}
-
 func (s *Service) MoveWMediaToRemovedDeferRefresh(ctx context.Context, javId string) (*MoveWMediaResult, error) {
 	result, _, _, err := s.moveWMediaToRemoved(ctx, javId)
 	return result, err
@@ -92,6 +78,9 @@ func (s *Service) moveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 	if err := s.deps.WMediaModel.Update(ctx, updated); err != nil {
 		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
 	}
+	if err := s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
 
 	return &MoveWMediaResult{
 		MovieJavId: javId,
@@ -103,7 +92,6 @@ func (s *Service) moveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 
 func (s *Service) FinalizeMoveRemovedBatch(ctx context.Context, javIds ...string) error {
 	seen := make(map[string]struct{}, len(javIds))
-	rows := make([]*moviex.WMedia, 0, len(javIds))
 	dirtyJavIDs := make([]string, 0, len(javIds))
 	for _, javId := range javIds {
 		javId = strings.TrimSpace(javId)
@@ -116,28 +104,23 @@ func (s *Service) FinalizeMoveRemovedBatch(ctx context.Context, javIds ...string
 		seen[javId] = struct{}{}
 		dirtyJavIDs = append(dirtyJavIDs, javId)
 
-		row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
+		_, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
 		if err != nil {
 			if errors.Is(err, moviex.ErrNotFound) {
 				continue
 			}
 			return err
 		}
-		if row != nil {
-			rows = append(rows, row)
-		}
 	}
 
-	if len(rows) > 0 {
-		s.markMediaAggDirty(ctx, rows...)
-	}
 	if len(dirtyJavIDs) > 0 {
+		s.movieSvc.EnqueueAggRebuildByMovieJavIDs("move_removed_batch", dirtyJavIDs...)
 		s.invalidateMovieTypeCaches(ctx, dirtyJavIDs...)
 	}
-	if len(rows) == 0 && len(dirtyJavIDs) == 0 {
+	if len(dirtyJavIDs) == 0 {
 		return nil
 	}
-	return s.rebuildMediaAggsAfterFlow(ctx, "move_removed_batch")
+	return nil
 }
 
 func buildRemovedDir(rootDir string) string {

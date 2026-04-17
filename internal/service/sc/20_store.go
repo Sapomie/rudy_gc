@@ -309,34 +309,6 @@ func (s *Service) movieFindOneByJavID(ctx context.Context, javID string) (*movie
 	return row, nil
 }
 
-func (s *Service) filmFindOneByMovieJavID(ctx context.Context, javID string) (*types.Film, error) {
-	row, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, javID)
-	if err != nil {
-		return nil, err
-	}
-	return mapFilmModelToTypes(row), nil
-}
-
-func (s *Service) filmFindOneByMovieName(ctx context.Context, name string) (*types.Film, error) {
-	row, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieName(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	return mapFilmModelToTypes(row), nil
-}
-
-func (s *Service) filmFindAll(ctx context.Context, removedStatus int64) ([]*types.Film, error) {
-	rows, err := s.deps.WMediaModel.FindAllLegacyFilms(ctx, removedStatus)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*types.Film, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, mapFilmModelToTypes(row))
-	}
-	return out, nil
-}
-
 func (s *Service) gScStatFindOneByMovieJavID(ctx context.Context, javID string) (*moviex.GScStat, error) {
 	row, err := s.deps.GScStatModel.FindOneByMovieJavId(ctx, javID)
 	if err != nil {
@@ -432,129 +404,6 @@ func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName strin
 	return ins, consts.UpsertInserted, nil
 }
 
-func (s *Service) filmUpsert(ctx context.Context, in *types.Film) (*types.Film, consts.UpsertStatus, error) {
-	if in == nil {
-		return nil, 0, errors.New("nil input")
-	}
-	if row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, in.MovieJavId, consts.WMediaSourceLegacyVFilm); err == nil && row != nil {
-		changed := false
-		if row.MovieName != in.MovieName {
-			row.MovieName = in.MovieName
-			changed = true
-		}
-		if row.FileName != in.FileName {
-			row.FileName = in.FileName
-			changed = true
-		}
-		if row.DirectoryId != in.DirectoryId {
-			row.DirectoryId = in.DirectoryId
-			changed = true
-		}
-		if row.RootDir != in.RootDir {
-			row.RootDir = in.RootDir
-			changed = true
-		}
-		if row.FullDir != in.FullDir {
-			row.FullDir = in.FullDir
-			changed = true
-		}
-		if row.Alias != in.Alias {
-			row.Alias = in.Alias
-			changed = true
-		}
-		if row.Size != in.Size {
-			row.Size = in.Size
-			changed = true
-		}
-		if row.Width != in.Width {
-			row.Width = in.Width
-			changed = true
-		}
-		if row.Height != in.Height {
-			row.Height = in.Height
-			changed = true
-		}
-		if row.BitRate != in.BitRate {
-			row.BitRate = in.BitRate
-			changed = true
-		}
-		if row.Duration != in.Duration {
-			row.Duration = in.Duration
-			changed = true
-		}
-		if row.FrameAverage != in.FrameAverage {
-			row.FrameAverage = in.FrameAverage
-			changed = true
-		}
-		if row.HasSub != in.HasSub {
-			row.HasSub = in.HasSub
-			changed = true
-		}
-		if row.SelfMake != in.SelfMake {
-			row.SelfMake = in.SelfMake
-			changed = true
-		}
-		if row.HasMask != in.HasMask {
-			row.HasMask = in.HasMask
-			changed = true
-		}
-		if row.NeedScanMeta != in.NeedScanMeta {
-			row.NeedScanMeta = in.NeedScanMeta
-			changed = true
-		}
-		if row.IsRemoved != in.IsRemoved {
-			row.IsRemoved = in.IsRemoved
-			changed = true
-		}
-		if row.RemoveTime != in.RemoveTime {
-			row.RemoveTime = in.RemoveTime
-			changed = true
-		}
-		if row.BirthTime != in.BirthTime {
-			row.BirthTime = in.BirthTime
-			changed = true
-		}
-		if row.ReleasingDate != in.ReleasingDate {
-			row.ReleasingDate = in.ReleasingDate
-			changed = true
-		}
-		if changed {
-			row.UpdatedOn = time.Now().Unix()
-			if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
-				return nil, 0, err
-			}
-			updated, err := s.filmFindOneByMovieJavID(ctx, in.MovieJavId)
-			if err != nil {
-				return nil, 0, err
-			}
-			return updated, consts.UpsertUpdated, nil
-		}
-		current, err := s.filmFindOneByMovieJavID(ctx, in.MovieJavId)
-		if err != nil {
-			return nil, 0, err
-		}
-		return current, consts.UpsertUnchanged, nil
-	}
-
-	mv := mapFilmTypesToModel(in)
-	now := time.Now().Unix()
-	mv.SourceType = consts.WMediaSourceLegacyVFilm
-	mv.SourceTorrentHash = ""
-	mv.CreatedOn = now
-	mv.UpdatedOn = now
-	if _, err := s.deps.WMediaModel.Insert(ctx, mv); err != nil {
-		if row2, err2 := s.filmFindOneByMovieJavID(ctx, in.MovieJavId); err2 == nil && row2 != nil {
-			return row2, consts.UpsertUpdated, nil
-		}
-		return nil, 0, err
-	}
-	row3, err := s.filmFindOneByMovieJavID(ctx, in.MovieJavId)
-	if err != nil {
-		return nil, 0, err
-	}
-	return row3, consts.UpsertInserted, nil
-}
-
 func (s *Service) castFindOne(ctx context.Context, id int64) (*types.Cast, error) {
 	row, err := s.deps.CastModel.FindOne(ctx, id)
 	if err != nil {
@@ -616,7 +465,7 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		}
 		old.JavId = in.JavId
 		old.MovieNumber = in.MovieNumber
-		old.OwnedMovieNumber = in.OwnedMovieNumber
+		old.OwnedMovieNumber = in.OwnedWMediaNumber
 		old.OwnedWMediaNumber = in.OwnedWMediaNumber
 		old.ScTimes = in.ScTimes
 		old.ComeTimes = in.ComeTimes
@@ -644,7 +493,7 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		Name:               in.Name,
 		JavId:              in.JavId,
 		MovieNumber:        in.MovieNumber,
-		OwnedMovieNumber:   in.OwnedMovieNumber,
+		OwnedMovieNumber:   in.OwnedWMediaNumber,
 		OwnedWMediaNumber:  in.OwnedWMediaNumber,
 		ScTimes:            in.ScTimes,
 		ComeTimes:          in.ComeTimes,
@@ -696,7 +545,7 @@ func (s *Service) castUpdateMovieNumbersByID(ctx context.Context, id int64, owne
 		return nil
 	}
 	row.MovieNumber = movieNumber
-	row.OwnedMovieNumber = ownedMovieNumber
+	row.OwnedMovieNumber = ownedWMediaNumber
 	row.OwnedWMediaNumber = ownedWMediaNumber
 	row.UpdatedOn = now
 	if err := s.deps.CastModel.Update(ctx, row); err != nil {
@@ -747,22 +596,6 @@ func (s *Service) movieCastListMovieJavIDsByCastID(ctx context.Context, castID i
 	return s.deps.MovieCastModel.ListMovieJavIDsByCastID(ctx, castID)
 }
 
-func (s *Service) directoryFindOneByName(ctx context.Context, name string) (*types.Directory, error) {
-	row, err := s.deps.WFolderModel.FindOneByNameSourceType(ctx, name, consts.WFolderSourceLegacyVFilm)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Directory{
-		Id:        row.Id,
-		ParentId:  row.ParentId,
-		Name:      row.Name,
-		Depth:     row.Depth,
-		Path:      row.Path,
-		CreatedOn: row.CreatedOn,
-		UpdatedOn: row.UpdatedOn,
-	}, nil
-}
-
 func mapScModelToTypes(v *moviex.GSc) *types.GSc {
 	if v == nil {
 		return nil
@@ -800,74 +633,6 @@ func mapGListModelToTypes(v *moviex.GList) *types.GList {
 	}
 }
 
-func mapFilmModelToTypes(v *moviex.LegacyFilm) *types.Film {
-	if v == nil {
-		return nil
-	}
-	return &types.Film{
-		Id:            v.Id,
-		MovieJavId:    v.MovieJavId,
-		MovieName:     v.MovieName,
-		FileName:      v.FileName,
-		DirectoryId:   v.DirectoryId,
-		RootDir:       v.RootDir,
-		FullDir:       v.FullDir,
-		Dir1Id:        v.Dir1Id,
-		Dir2Id:        v.Dir2Id,
-		Dir3Id:        v.Dir3Id,
-		Dir4Id:        v.Dir4Id,
-		Alias:         v.Alias,
-		Size:          v.Size,
-		Width:         v.Width,
-		Height:        v.Height,
-		BitRate:       v.BitRate,
-		Duration:      v.Duration,
-		FrameAverage:  v.FrameAverage,
-		HasSub:        v.HasSub,
-		SelfMake:      v.SelfMake,
-		HasMask:       v.HasMask,
-		NeedScanMeta:  v.NeedScanMeta,
-		IsRemoved:     v.IsRemoved,
-		RemoveTime:    v.RemoveTime,
-		ScTimes:       v.ScTimes,
-		ComeTimes:     v.ComeTimes,
-		LastScTime:    v.LastScTime,
-		BirthTime:     v.BirthTime,
-		ReleasingDate: v.ReleasingDate,
-		CreatedOn:     v.CreatedOn,
-		UpdatedOn:     v.UpdatedOn,
-	}
-}
-
-func mapFilmTypesToModel(in *types.Film) *moviex.WMedia {
-	return &moviex.WMedia{
-		Id:            in.Id,
-		MovieJavId:    in.MovieJavId,
-		MovieName:     in.MovieName,
-		FileName:      in.FileName,
-		DirectoryId:   in.DirectoryId,
-		RootDir:       in.RootDir,
-		FullDir:       in.FullDir,
-		Alias:         in.Alias,
-		Size:          in.Size,
-		Width:         in.Width,
-		Height:        in.Height,
-		BitRate:       in.BitRate,
-		Duration:      in.Duration,
-		FrameAverage:  in.FrameAverage,
-		HasSub:        in.HasSub,
-		SelfMake:      in.SelfMake,
-		HasMask:       in.HasMask,
-		NeedScanMeta:  in.NeedScanMeta,
-		IsRemoved:     in.IsRemoved,
-		RemoveTime:    in.RemoveTime,
-		BirthTime:     in.BirthTime,
-		ReleasingDate: in.ReleasingDate,
-		CreatedOn:     in.CreatedOn,
-		UpdatedOn:     in.UpdatedOn,
-	}
-}
-
 func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
 	if v == nil {
 		return nil
@@ -881,7 +646,7 @@ func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
 		BirthDay:           0,
 		Height:             0,
 		MovieNumber:        v.MovieNumber,
-		OwnedMovieNumber:   v.OwnedMovieNumber,
+		OwnedMovieNumber:   v.OwnedWMediaNumber,
 		OwnedWMediaNumber:  v.OwnedWMediaNumber,
 		ScTimes:            v.ScTimes,
 		ComeTimes:          v.ComeTimes,
@@ -911,7 +676,7 @@ func mapPersonModelToTypes(v *moviex.CPerson) *types.Person {
 		Bwh:               v.Bwh,
 		Avatar:            v.Avatar,
 		MovieNumber:       v.MovieNumber,
-		OwnedMovieNumber:  v.OwnedMovieNumber,
+		OwnedMovieNumber:  v.OwnedWMediaNumber,
 		OwnedWMediaNumber: v.OwnedWMediaNumber,
 		ScTimes:           v.ScTimes,
 		ComeTimes:         v.ComeTimes,
@@ -948,7 +713,7 @@ func (s *Service) insertPersonForCast(ctx context.Context, cast *types.Cast, now
 		Bwh:               "",
 		Avatar:            "",
 		MovieNumber:       cast.MovieNumber,
-		OwnedMovieNumber:  cast.OwnedMovieNumber,
+		OwnedMovieNumber:  cast.OwnedWMediaNumber,
 		OwnedWMediaNumber: cast.OwnedWMediaNumber,
 		ScTimes:           cast.ScTimes,
 		ComeTimes:         cast.ComeTimes,

@@ -27,8 +27,6 @@
         spider_fetch_sehuatang_magnets: '色花堂磁力抓取',
         spider_rebuild_cast_rank: '演员 Rank 回填',
         spider_rebuild_actor_rank: '单演员 Rank',
-        film_rename: '影片重命名',
-        film_process: '影片处理',
         sc_rebuild_stats: 'SC 统计回填',
         sc_move: 'SC 影片移动',
         sc_add: 'SC 新增',

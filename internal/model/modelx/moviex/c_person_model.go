@@ -66,7 +66,7 @@ func (m *customCPersonModel) FindOneByNameOrAliasToken(ctx context.Context, name
 		return nil, ErrNotFound
 	}
 
-	query := "select " + cPersonRows + " from " + m.table + " where `name` = ? or `alias` like ? escape '\\\\' order by case when `name` = ? then 0 else 1 end, `movie_number` desc, `owned_movie_number` desc, `id` asc limit 64"
+	query := "select " + cPersonRows + " from " + m.table + " where `name` = ? or `alias` like ? escape '\\\\' order by case when `name` = ? then 0 else 1 end, `movie_number` desc, `owned_w_media_number` desc, `id` asc limit 64"
 	likePattern := "%" + escapeSQLLikeValue(name) + "%"
 
 	var rows []*CPerson
@@ -121,8 +121,9 @@ SELECT DISTINCT
 	p.bwh AS bwh,
 	p.avatar AS avatar,
 	p.movie_number AS movie_number,
-	p.owned_movie_number AS owned_movie_number,
+	p.owned_w_media_number AS owned_movie_number,
 	p.owned_w_media_number AS owned_w_media_number,
+	p.owned_w_media_ratio AS owned_w_media_ratio,
 	p.sc_times AS sc_times,
 	p.come_times AS come_times,
 	p.last_sc_time AS last_sc_time,
@@ -148,7 +149,7 @@ WHERE (
 		}
 	}
 
-	query += " ORDER BY p.movie_number DESC, p.owned_movie_number DESC, p.name ASC, p.id ASC LIMIT ?"
+	query += " ORDER BY p.movie_number DESC, p.owned_w_media_number DESC, p.name ASC, p.id ASC LIMIT ?"
 	args = append(args, limit)
 
 	var rows []*CPerson
@@ -171,7 +172,7 @@ WHERE (
 
 func (m *customCPersonModel) ListPage(ctx context.Context, offset, limit int64, orderBy string, filter types.PersonListFilter) ([]*types.Person, error) {
 	if orderBy == "" {
-		orderBy = "p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
+		orderBy = "p.owned_w_media_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	}
 
 	sqlStr, args, err := squirrel.
@@ -186,8 +187,9 @@ func (m *customCPersonModel) ListPage(ctx context.Context, offset, limit int64, 
 			"p.bwh",
 			"p.avatar",
 			"p.movie_number",
-			"p.owned_movie_number",
+			"p.owned_w_media_number AS owned_movie_number",
 			"p.owned_w_media_number",
+			"p.owned_w_media_ratio",
 			"p.sc_times",
 			"p.come_times",
 			"p.last_sc_time",
@@ -288,12 +290,12 @@ func (m *customCPersonModel) CountOwnedScMovieNumbersByIDs(ctx context.Context, 
 	sqlStr, args, err := squirrel.
 		Select(
 			"p.id AS id",
-			"COUNT(DISTINCT CASE WHEN vf.is_removed = ? AND COALESCE(gss.sc_times, 0) > 0 THEN amr.movie_jav_id END) AS owned_sc_movie_number",
+			"COUNT(DISTINCT CASE WHEN wm.is_removed = ? AND COALESCE(gss.sc_times, 0) > 0 THEN amr.movie_jav_id END) AS owned_sc_movie_number",
 		).
 		From(m.table + " p").
 		LeftJoin("`am_cast` ac ON ac.person_id = p.id").
 		LeftJoin("`amr_movie_cast` amr ON amr.cast_id = ac.id").
-		LeftJoin(buildLegacyWMediaJoin("`w_media`", "vf", "amr.movie_jav_id")).
+		LeftJoin(buildNativeWMediaJoin("`w_media`", "wm", "amr.movie_jav_id")).
 		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = amr.movie_jav_id").
 		Where(squirrel.Eq{"p.id": uniq}).
 		GroupBy("p.id").
@@ -338,8 +340,9 @@ func mapCPersonModelToTypes(v *CPerson) *types.Person {
 		Bwh:               v.Bwh,
 		Avatar:            v.Avatar,
 		MovieNumber:       v.MovieNumber,
-		OwnedMovieNumber:  v.OwnedMovieNumber,
+		OwnedMovieNumber:  v.OwnedWMediaNumber,
 		OwnedWMediaNumber: v.OwnedWMediaNumber,
+		OwnedWMediaRatio:  v.OwnedWMediaRatio,
 		ScTimes:           v.ScTimes,
 		ComeTimes:         v.ComeTimes,
 		LastScTime:        v.LastScTime,
@@ -362,10 +365,10 @@ func applyCPersonListFilter(filter types.PersonListFilter) squirrel.And {
 		))
 	}
 	if filter.HasOwnedMin {
-		w = append(w, squirrel.GtOrEq{"p.owned_movie_number": filter.OwnedMin})
+		w = append(w, squirrel.GtOrEq{"p.owned_w_media_number": filter.OwnedMin})
 	}
 	if filter.HasOwnedMax {
-		w = append(w, squirrel.LtOrEq{"p.owned_movie_number": filter.OwnedMax})
+		w = append(w, squirrel.LtOrEq{"p.owned_w_media_number": filter.OwnedMax})
 	}
 	if filter.HasScTimesMin {
 		w = append(w, squirrel.GtOrEq{"p.sc_times": filter.ScTimesMin})
@@ -384,6 +387,9 @@ func applyCPersonListFilter(filter types.PersonListFilter) squirrel.And {
 	}
 	if filter.HasLastScTo {
 		w = append(w, squirrel.LtOrEq{"p.last_sc_time": filter.LastScTo})
+	}
+	if filter.OnlyValidOwnedWMediaRatio {
+		w = append(w, squirrel.NotEq{"p.owned_w_media_number": 0})
 	}
 	return w
 }

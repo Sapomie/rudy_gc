@@ -37,20 +37,26 @@ type (
 	}
 
 	DSeed struct {
-		Id            int64  `db:"id"`
-		Name          string `db:"name"`            // '查询名'
-		Active        int64  `db:"active"`          // '状态'
-		SearchType    int64  `db:"search_type"`     // '查询类型'
-		NameType      int64  `db:"name_type"`       // '名称类型'
-		PageNow       int64  `db:"page_now"`        // '当前页'
-		Offset        int64  `db:"offset"`          // '偏移量'
-		StartPage     int64  `db:"start_page"`      // '起始页'
-		EndPage       int64  `db:"end_page"`        // '结束页'
-		LastQueryTime int64  `db:"last_query_time"` // '最后一次抓取时间'
-		LastStatus    int64  `db:"last_status"`     // '最后状态'
-		LastError     string `db:"last_error"`      // '最后错误摘要'
-		CreatedOn     int64  `db:"created_on"`
-		UpdatedOn     int64  `db:"updated_on"`
+		Id                             int64  `db:"id"`
+		Name                           string `db:"name"`                                // '查询名'
+		Active                         int64  `db:"active"`                              // '状态'
+		SearchType                     int64  `db:"search_type"`                         // '查询类型'
+		NameType                       int64  `db:"name_type"`                           // '名称类型'
+		PageNow                        int64  `db:"page_now"`                            // '当前页'
+		Offset                         int64  `db:"offset"`                              // '偏移量'
+		StartPage                      int64  `db:"start_page"`                          // '起始页'
+		EndPage                        int64  `db:"end_page"`                            // '结束页'
+		LastQueryTime                  int64  `db:"last_query_time"`                     // '最后一次抓取时间'
+		LastStatus                     int64  `db:"last_status"`                         // '最后状态'
+		LastError                      string `db:"last_error"`                          // '最后错误摘要'
+		MovieTotal                     int64  `db:"movie_total"`                         // '当前 seed 对应 movie 总量'
+		MovieLatestReleasingMovieJavId string `db:"movie_latest_releasing_movie_jav_id"` // '最新上映 movie 的 jav_id'
+		MovieLatestReleasingMovieName  string `db:"movie_latest_releasing_movie_name"`   // '最新上映 movie 的番号 name'
+		MovieLastAddedTime             int64  `db:"movie_last_added_time"`               // '最后一次 movie 增加时间'
+		LastInsertCount                int64  `db:"last_insert_count"`                   // '本轮新增 movie 数'
+		MovieLatestReleasingDate       int64  `db:"movie_latest_releasing_date"`         // '当前 seed 最新 movie 的上映时间'
+		CreatedOn                      int64  `db:"created_on"`
+		UpdatedOn                      int64  `db:"updated_on"`
 	}
 )
 
@@ -96,14 +102,14 @@ func (m *defaultDSeedModel) FindOneByName(ctx context.Context, name string) (*DS
 }
 
 func (m *defaultDSeedModel) Insert(ctx context.Context, data *DSeed) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, dSeedRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.Name, data.Active, data.SearchType, data.NameType, data.PageNow, data.Offset, data.StartPage, data.EndPage, data.LastQueryTime, data.LastStatus, data.LastError, data.CreatedOn, data.UpdatedOn)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, dSeedRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Name, data.Active, data.SearchType, data.NameType, data.PageNow, data.Offset, data.StartPage, data.EndPage, data.LastQueryTime, data.LastStatus, data.LastError, data.MovieTotal, data.MovieLatestReleasingMovieJavId, data.MovieLatestReleasingMovieName, data.MovieLastAddedTime, data.LastInsertCount, data.MovieLatestReleasingDate, data.CreatedOn, data.UpdatedOn)
 	return ret, err
 }
 
 func (m *defaultDSeedModel) Update(ctx context.Context, newData *DSeed) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, dSeedRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.Name, newData.Active, newData.SearchType, newData.NameType, newData.PageNow, newData.Offset, newData.StartPage, newData.EndPage, newData.LastQueryTime, newData.LastStatus, newData.LastError, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.Name, newData.Active, newData.SearchType, newData.NameType, newData.PageNow, newData.Offset, newData.StartPage, newData.EndPage, newData.LastQueryTime, newData.LastStatus, newData.LastError, newData.MovieTotal, newData.MovieLatestReleasingMovieJavId, newData.MovieLatestReleasingMovieName, newData.MovieLastAddedTime, newData.LastInsertCount, newData.MovieLatestReleasingDate, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	return err
 }
 

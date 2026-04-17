@@ -42,6 +42,16 @@ func (s *Service) allocateTargetDirectoryUnder(ctx context.Context, baseDir stri
 		return "", 0, err
 	}
 
+	if bucket, _, found, err := firstAvailableLeafBucketUnderBase(mediaRoot); err != nil {
+		return "", 0, err
+	} else if found {
+		dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, bucket.path, nowUnix)
+		if err != nil {
+			return "", 0, err
+		}
+		return bucket.path, dayFolder.Id, nil
+	}
+
 	yearPath, _, err := chooseYearBucket(mediaRoot, now)
 	if err != nil {
 		return "", 0, err
@@ -83,6 +93,14 @@ func previewTargetDirectoryUnder(baseDir string, now time.Time) (string, error) 
 	mediaRoot := filepath.Clean(strings.TrimSpace(baseDir))
 	if mediaRoot == "" {
 		return "", fmt.Errorf("base media dir is empty")
+	}
+
+	if bucket, _, found, err := firstAvailableLeafBucketUnderBase(mediaRoot); err != nil {
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+	} else if found {
+		return bucket.path, nil
 	}
 
 	yearPath, yearName, err := chooseYearBucket(mediaRoot, now)
@@ -153,6 +171,23 @@ func canAllocateInYearBucket(yearPath string) (bool, error) {
 		return false, err
 	}
 	return len(buckets) < maxLeafDirsPerYear, nil
+}
+
+func firstAvailableLeafBucketUnderBase(mediaRoot string) (bucketInfo, int, bool, error) {
+	buckets, err := listAllDayBucketsUnderBase(mediaRoot)
+	if err != nil {
+		return bucketInfo{}, 0, false, err
+	}
+	for _, bucket := range buckets {
+		count, err := countVideoFiles(bucket.path)
+		if err != nil {
+			return bucketInfo{}, 0, false, err
+		}
+		if count < maxFilesPerLeafDir {
+			return bucket, count, true, nil
+		}
+	}
+	return bucketInfo{}, 0, false, nil
 }
 
 func firstAvailableDayBucket(yearPath string) (bucketInfo, int, bool, error) {
@@ -263,6 +298,38 @@ func listDayBuckets(yearPath string) ([]bucketInfo, error) {
 			path: filepath.Join(yearPath, name),
 			seq:  seq,
 		})
+	}
+	return out, nil
+}
+
+func listAllDayBucketsUnderBase(mediaRoot string) ([]bucketInfo, error) {
+	yearBuckets, err := listYearBuckets(mediaRoot, "")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	sort.Slice(yearBuckets, func(i, j int) bool {
+		if yearBuckets[i].seq == yearBuckets[j].seq {
+			return yearBuckets[i].name < yearBuckets[j].name
+		}
+		return yearBuckets[i].seq < yearBuckets[j].seq
+	})
+
+	out := make([]bucketInfo, 0, len(yearBuckets)*maxLeafDirsPerYear)
+	for _, yearBucket := range yearBuckets {
+		dayBuckets, err := listDayBuckets(yearBucket.path)
+		if err != nil {
+			return nil, err
+		}
+		sort.Slice(dayBuckets, func(i, j int) bool {
+			if dayBuckets[i].name == dayBuckets[j].name {
+				return dayBuckets[i].seq < dayBuckets[j].seq
+			}
+			return dayBuckets[i].name < dayBuckets[j].name
+		})
+		out = append(out, dayBuckets...)
 	}
 	return out, nil
 }

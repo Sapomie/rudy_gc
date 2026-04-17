@@ -160,19 +160,15 @@ func (s *Service) ListMovieFullRandom(ctx context.Context, r *types.ListMovieFul
 }
 
 func (s *Service) ListMovieOwned(ctx context.Context) ([]*types.MovieType, error) {
-	allRows, err := s.deps.WMediaModel.FindAllLegacyFilms(ctx, consts.FilmIsNotRemoved)
+	resp, err := s.ListMovieFull(ctx, &types.ListMovieFullRequest{
+		MediaOwned: consts.OwnedAllNotRemoved,
+		Page:       1,
+		PageSize:   999999,
+	})
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*types.MovieType, 0, len(allRows))
-	for _, filmRow := range allRows {
-		mt, err := s.GetMovieType(ctx, filmRow.MovieJavId)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, mt)
-	}
-	return out, nil
+	return resp.List, nil
 }
 
 func (s *Service) FindLatestRankDayNumber(ctx context.Context) (int64, error) {

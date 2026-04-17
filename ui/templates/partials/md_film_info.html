@@ -18,25 +18,6 @@
             </tr>
             </thead>
             <tbody>
-            {{ if .film }}
-                <tr>
-                    <td>VFilm</td>
-                    <td><span class="text-muted">-</span></td>
-                    <td>{{.film.BirthTime}}</td>
-                    <td><a href="{{.film.FilePath}}">{{ printf "%.2f" .film.Size }}</a></td>
-                    <td>{{.film.Height}}</td>
-                    <td>{{ printf "%.0f" .film.BitRate }}</td>
-                    <td>{{ printf "%.2f" .film.DurationMinutes }}</td>
-                    <td>{{.film.Frame}}</td>
-                    <td>{{.film.SelfMake}}</td>
-                    <td>
-                        <a href="#" class="open-in-finder" data-path="{{.film.Directory}}" title="在 Finder 打开">
-                            {{.film.Directory}}
-                        </a>
-                    </td>
-                </tr>
-            {{ end }}
-
             {{ if and .media (ne .movieType.OwnedWMedia 6) }}
                 <tr>
                     <td>WMedia</td>

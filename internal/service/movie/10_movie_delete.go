@@ -3,8 +3,6 @@ package movie
 import (
 	"context"
 	"strings"
-
-	"rudy_gc/internal/service/moviereleaseagg"
 )
 
 func (s *Service) DeleteMovieByJavID(ctx context.Context, javID, fallbackName, deleteSource string) error {
@@ -32,12 +30,12 @@ func (s *Service) DeleteMovieByJavID(ctx context.Context, javID, fallbackName, d
 	if err := s.rebuildMovieDeleteAffectedStats(ctx, delCtx); err != nil {
 		return err
 	}
+	releaseTimes := make([]int64, 0, 1)
 	if delCtx.Movie != nil && delCtx.Movie.ReleasingDate > 0 {
-		if err := moviereleaseagg.NewService(s.deps).MarkReleaseTimesDirty(ctx, delCtx.Movie.ReleasingDate); err != nil {
-			return err
-		}
+		releaseTimes = append(releaseTimes, delCtx.Movie.ReleasingDate)
 	}
+	s.EnqueueAggRebuild("movie_delete", []string{javID}, releaseTimes)
 
 	s.InvalidateMovieType(ctx, javID)
-	return s.rebuildAggsAfterFlow(ctx, "movie_delete")
+	return nil
 }

@@ -12,7 +12,7 @@ import (
 	"rudy_gc/internal/model/modelx/moviex"
 )
 
-func (s *Service) rescanOneScope(ctx context.Context, scope libraryRescanScope, nowUnix int64, result *LibraryRescanResult, seenIDs map[int64]struct{}) error {
+func (s *Service) rescanOneScope(ctx context.Context, scope libraryRescanScope, nowUnix int64, result *LibraryRescanResult, seenIDs map[int64]struct{}, touchedMovieJavIDs map[string]struct{}) error {
 	return filepath.WalkDir(scope.Path, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			result.Errors++
@@ -73,6 +73,9 @@ func (s *Service) rescanOneScope(ctx context.Context, scope libraryRescanScope, 
 
 		result.Matched++
 		seenIDs[row.Id] = struct{}{}
+		if row.MovieJavId != "" {
+			touchedMovieJavIDs[strings.TrimSpace(row.MovieJavId)] = struct{}{}
+		}
 
 		before := buildRescanItemFromMedia(row)
 		updated := cloneWMedia(row)
@@ -103,7 +106,6 @@ func (s *Service) rescanOneScope(ctx context.Context, scope libraryRescanScope, 
 			})
 			return nil
 		}
-		s.markMediaAggDirty(ctx, row, updated)
 		s.invalidateMovieTypeCaches(ctx, updated.MovieJavId)
 
 		if locationChanged {

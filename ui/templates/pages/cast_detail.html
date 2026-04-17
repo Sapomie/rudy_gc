@@ -113,12 +113,6 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="sc-metric-card">
-                                        <div class="sc-metric-label">Owned</div>
-                                        <div class="sc-metric-value">{{ .Page.Actor.OwnedMovieNumber }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="sc-metric-card">
                                         <div class="sc-metric-label">WOwned</div>
                                         <div class="sc-metric-value">{{ .Page.Actor.OwnedWMediaNumber }}</div>
                                     </div>
@@ -216,7 +210,7 @@
                     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
                         <div>
                             <h5 class="cast-section-title mb-0">代表影片</h5>
-                            <div class="text-muted small">当前模块与 Cards 同步，支持分页、排序、Owned 与筛选。</div>
+                            <div class="text-muted small">当前模块与 Cards 同步，支持分页、排序、WOwned 与筛选。</div>
                         </div>
                         <div class="d-flex align-items-center">
                             {{ template "pagination" . }}

@@ -18,8 +18,10 @@ type castListQuery struct {
 	Sort         string `form:"sort"`
 	Order        string `form:"order"`
 	Keyword      string `form:"keyword"`
-	OwnedMin     string `form:"owned_min"`
-	OwnedMax     string `form:"owned_max"`
+	OwnedMin     string `form:"wowned_min"`
+	OwnedMax     string `form:"wowned_max"`
+	LegacyMin    string `form:"owned_min"`
+	LegacyMax    string `form:"owned_max"`
 	ScTimesMin   string `form:"sc_times_min"`
 	ScTimesMax   string `form:"sc_times_max"`
 	ComeTimesMin string `form:"come_times_min"`
@@ -41,6 +43,12 @@ func (h *MovieHTMLHandler) CastListPage(c *gin.Context) {
 	if q.PageSize <= 0 || q.PageSize > 100 {
 		q.PageSize = 24
 	}
+	if strings.TrimSpace(q.OwnedMin) == "" {
+		q.OwnedMin = strings.TrimSpace(q.LegacyMin)
+	}
+	if strings.TrimSpace(q.OwnedMax) == "" {
+		q.OwnedMax = strings.TrimSpace(q.LegacyMax)
+	}
 	q.Sort = normalizeCastSortFieldForPage(q.Sort)
 	q.Order = normalizeCastSortOrderForPage(q.Order)
 
@@ -49,7 +57,6 @@ func (h *MovieHTMLHandler) CastListPage(c *gin.Context) {
 		c.String(http.StatusBadRequest, "筛选参数错误: %v", err)
 		return
 	}
-
 	total, err := h.deps.PersonModel.CountAll(c.Request.Context(), filter)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "演员列表加载失败: %v", err)
@@ -169,7 +176,7 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 		order = "ASC"
 	}
 
-	column := "p.owned_movie_number"
+	column := "p.owned_w_media_number"
 	switch field {
 	case "name":
 		column = "p.name"
@@ -177,15 +184,13 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 		column = "p.chinese"
 	case "age":
 		if order == "ASC" {
-			return "CASE WHEN p.birth_day > 0 THEN 0 ELSE 1 END ASC, p.birth_day DESC, p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
+			return "CASE WHEN p.birth_day > 0 THEN 0 ELSE 1 END ASC, p.birth_day DESC, p.owned_w_media_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 		}
-		return "CASE WHEN p.birth_day > 0 THEN 0 ELSE 1 END ASC, p.birth_day ASC, p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
+		return "CASE WHEN p.birth_day > 0 THEN 0 ELSE 1 END ASC, p.birth_day ASC, p.owned_w_media_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	case "height":
-		return "CASE WHEN p.height > 0 THEN 0 ELSE 1 END ASC, p.height " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
+		return "CASE WHEN p.height > 0 THEN 0 ELSE 1 END ASC, p.height " + order + ", p.owned_w_media_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	case "movie_number":
 		column = "p.movie_number"
-	case "owned_movie_number":
-		column = "p.owned_movie_number"
 	case "owned_w_media_number":
 		column = "p.owned_w_media_number"
 	case "sc_times":
@@ -198,17 +203,14 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 		column = "p.highest_rank"
 	}
 
-	if column == "p.owned_movie_number" {
+	if column == "p.owned_w_media_number" {
 		return column + " " + order + ", p.movie_number DESC, p.name ASC, p.id DESC"
 	}
-	if column == "p.owned_w_media_number" {
-		return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
-	}
 	if column == "p.name" {
-		return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.id DESC"
+		return column + " " + order + ", p.owned_w_media_number DESC, p.movie_number DESC, p.id DESC"
 	}
 	if column == "p.chinese" {
-		return "CASE WHEN p.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
+		return "CASE WHEN p.chinese <> '' THEN 0 ELSE 1 END ASC, " + column + " " + order + ", p.owned_w_media_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 	}
-	return column + " " + order + ", p.owned_movie_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
+	return column + " " + order + ", p.owned_w_media_number DESC, p.movie_number DESC, p.name ASC, p.id DESC"
 }

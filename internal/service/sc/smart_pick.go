@@ -25,7 +25,6 @@ type SmartPickOptions struct {
 }
 
 const (
-	SmartPickSourceVFilm  = "vfilm"
 	SmartPickSourceWMedia = "wmedia"
 )
 
@@ -39,7 +38,7 @@ type smartPickGroup struct {
 
 type smartCastStat struct {
 	LastScTime         int64
-	OwnedMovieNumber   int64
+	OwnedWMediaNumber  int64
 	OwnedScMovieNumber int64
 }
 
@@ -59,12 +58,7 @@ type smartBucketPlan struct {
 }
 
 func NormalizeSmartPickSource(source string) string {
-	switch source {
-	case SmartPickSourceWMedia:
-		return SmartPickSourceWMedia
-	default:
-		return SmartPickSourceVFilm
-	}
+	return SmartPickSourceWMedia
 }
 
 func (l *ScService) SmartPickCopyFromRequests(ctx context.Context, reqs []PickRequestWithWeight, n int, opt SmartPickOptions, source string) ([]*types.MovieType, error) {
@@ -189,13 +183,8 @@ func (l *ScService) buildSmartPickGroups(ctx context.Context, reqs []PickRequest
 }
 
 func normalizeSmartPickReq(req *types.ListMovieFullRequest, source string) {
-	req.Owned = consts.MovieAll
 	req.MediaOwned = consts.MovieAll
-	if NormalizeSmartPickSource(source) == SmartPickSourceWMedia {
-		req.MediaOwned = consts.OwnedAllNotRemoved
-	} else {
-		req.Owned = consts.OwnedAllNotRemoved
-	}
+	req.MediaOwned = consts.OwnedAllNotRemoved
 	req.Page = 1
 	req.PageSize = 100000
 	ensureReqDefaults(req)
@@ -240,7 +229,7 @@ func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickG
 		}
 		stats["p:"+fmt.Sprintf("%d", row.Id)] = smartCastStat{
 			LastScTime:         row.LastScTime,
-			OwnedMovieNumber:   row.OwnedMovieNumber,
+			OwnedWMediaNumber:  row.OwnedWMediaNumber,
 			OwnedScMovieNumber: personOwnedScMap[row.Id],
 		}
 	}
@@ -259,7 +248,7 @@ func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickG
 		}
 		stats["n:"+row.Name] = smartCastStat{
 			LastScTime:         row.LastScTime,
-			OwnedMovieNumber:   row.OwnedMovieNumber,
+			OwnedWMediaNumber:  row.OwnedWMediaNumber,
 			OwnedScMovieNumber: ownedScMap[row.Name],
 		}
 	}
@@ -323,8 +312,8 @@ func smartMovieBaseWeight(movie *types.MovieType, castStats map[string]smartCast
 		}
 
 		ownedScRatio := 0.0
-		if stat.OwnedMovieNumber > 0 {
-			ownedScRatio = float64(stat.OwnedScMovieNumber) / float64(stat.OwnedMovieNumber)
+		if stat.OwnedWMediaNumber > 0 {
+			ownedScRatio = float64(stat.OwnedScMovieNumber) / float64(stat.OwnedWMediaNumber)
 		}
 
 		factor := (1.0 - opt.CastLastScPenaltyAlpha*recentPenalty) * (1.0 - opt.CastOwnedScRatioPenaltyAlpha*ownedScRatio)
@@ -590,8 +579,8 @@ func pruneMovieFromSmartGroups(groups []*smartPickGroup, javID string) {
 
 func sortSmartPickedMoviesByBirth(movies []*types.MovieType) {
 	sort.Slice(movies, func(i, j int) bool {
-		ti := parseDate(movies[i].FilmBirthDate)
-		tj := parseDate(movies[j].FilmBirthDate)
+		ti := parseDate(movies[i].FilmBirthDateWMedia)
+		tj := parseDate(movies[j].FilmBirthDateWMedia)
 		return ti.Before(tj)
 	})
 }

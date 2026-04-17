@@ -17,7 +17,6 @@ type fetchSiteSukebeiPageQuery struct {
 	PageSize        int64    `form:"ps"`
 	Sort            string   `form:"sort"`
 	Order           string   `form:"order"`
-	Owned           string   `form:"owned"`
 	MediaOwned      string   `form:"mowned"`
 	Keyword         string   `form:"keyword"`
 	Status          string   `form:"status"`
@@ -27,8 +26,6 @@ type fetchSiteSukebeiPageQuery struct {
 	LastFetchTo     string   `form:"last_fetch_to"`
 	ReleaseDateFrom string   `form:"release_date_from"`
 	ReleaseDateTo   string   `form:"release_date_to"`
-	FilmBirthFrom   string   `form:"film_birth_from"`
-	FilmBirthTo     string   `form:"film_birth_to"`
 	MediaBirthFrom  string   `form:"media_birth_from"`
 	MediaBirthTo    string   `form:"media_birth_to"`
 }
@@ -47,7 +44,6 @@ type fetchSiteSukebeiSortQuery struct {
 	ByResultCount    fetchSiteSukebeiSortLink
 	ByHashCount      fetchSiteSukebeiSortLink
 	ByLatestPublish  fetchSiteSukebeiSortLink
-	ByFilmBirthTime  fetchSiteSukebeiSortLink
 	ByMediaBirthTime fetchSiteSukebeiSortLink
 }
 
@@ -73,12 +69,6 @@ func (h *CrawlerPages) FetchSiteSukebeiListPageMain(c *gin.Context) {
 		Sort:     q.Sort,
 		Order:    q.Order,
 		Keyword:  strings.TrimSpace(q.Keyword),
-	}
-	if v, ok, err := parseOwnedFilterValue(q.Owned); err != nil {
-		c.String(http.StatusBadRequest, "VFilm 库存筛选错误: %v", err)
-		return
-	} else if ok {
-		pageQuery.Owned = v
 	}
 	if v, ok, err := parseOwnedFilterValue(q.MediaOwned); err != nil {
 		c.String(http.StatusBadRequest, "WMedia 库存筛选错误: %v", err)
@@ -121,29 +111,15 @@ func (h *CrawlerPages) FetchSiteSukebeiListPageMain(c *gin.Context) {
 		pageQuery.ReleaseDateTo = ts
 		pageQuery.HasReleaseDateTo = true
 	}
-	if ts, ok, err := parseOptionalDateStart(q.FilmBirthFrom); err != nil {
-		c.String(http.StatusBadRequest, "Sukebei 下载时间开始日期错误: %v", err)
-		return
-	} else if ok {
-		pageQuery.FilmBirthFrom = ts
-		pageQuery.HasFilmBirthFrom = true
-	}
-	if ts, ok, err := parseOptionalDateEnd(q.FilmBirthTo); err != nil {
-		c.String(http.StatusBadRequest, "Sukebei 下载时间结束日期错误: %v", err)
-		return
-	} else if ok {
-		pageQuery.FilmBirthTo = ts
-		pageQuery.HasFilmBirthTo = true
-	}
 	if ts, ok, err := parseOptionalDateStart(q.MediaBirthFrom); err != nil {
-		c.String(http.StatusBadRequest, "Sukebei M下载时间开始日期错误: %v", err)
+		c.String(http.StatusBadRequest, "Sukebei WMedia 下载时间开始日期错误: %v", err)
 		return
 	} else if ok {
 		pageQuery.MediaBirthFrom = ts
 		pageQuery.HasMediaBirthFrom = true
 	}
 	if ts, ok, err := parseOptionalDateEnd(q.MediaBirthTo); err != nil {
-		c.String(http.StatusBadRequest, "Sukebei M下载时间结束日期错误: %v", err)
+		c.String(http.StatusBadRequest, "Sukebei WMedia 下载时间结束日期错误: %v", err)
 		return
 	} else if ok {
 		pageQuery.MediaBirthTo = ts
@@ -210,14 +186,13 @@ func buildFetchSiteSukebeiSortQuery(c *gin.Context, currentField string, current
 		ByResultCount:    makeHref("last_result_count"),
 		ByHashCount:      makeHref("torrent_hash_count"),
 		ByLatestPublish:  makeHref("latest_publish_time"),
-		ByFilmBirthTime:  makeHref("film_birth_time"),
 		ByMediaBirthTime: makeHref("media_birth_time"),
 	}
 }
 
 func normalizeFetchSiteSukebeiSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
-	case "movie_name", "release_date", "fetch_status", "last_fetch_time", "last_result_count", "torrent_hash_count", "latest_publish_time", "film_birth_time", "media_birth_time":
+	case "movie_name", "release_date", "fetch_status", "last_fetch_time", "last_result_count", "torrent_hash_count", "latest_publish_time", "media_birth_time":
 		return strings.TrimSpace(raw)
 	default:
 		return "last_fetch_time"

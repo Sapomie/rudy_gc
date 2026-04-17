@@ -48,14 +48,14 @@ SELECT
 	(SELECT COUNT(DISTINCT jav_id) FROM a_movie WHERE director_id = ?) AS movie_number,
 	(SELECT COUNT(DISTINCT am.jav_id)
 		FROM a_movie am
-		JOIN w_media vf ON vf.movie_jav_id = am.jav_id AND vf.source_type = ? AND vf.is_removed = ?
+		JOIN w_media wm_owned ON wm_owned.movie_jav_id = am.jav_id AND wm_owned.source_type = ? AND wm_owned.is_removed = ?
 		WHERE am.director_id = ?) AS owned_movie_number
 `
 	var resp struct {
 		MovieNumber      int64 `db:"movie_number"`
 		OwnedMovieNumber int64 `db:"owned_movie_number"`
 	}
-	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, id, consts.WMediaSourceLegacyVFilm, ownedRemovedStatus, id); err != nil {
+	if err := m.QueryRowNoCacheCtx(ctx, &resp, query, id, consts.WMediaSourceNative, ownedRemovedStatus, id); err != nil {
 		return 0, 0, err
 	}
 	return resp.MovieNumber, resp.OwnedMovieNumber, nil

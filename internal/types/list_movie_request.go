@@ -14,11 +14,11 @@ type ListMovieFullRequest struct {
 	PrefixName   string `form:"pn"`
 	MakerName    string `form:"mn"`
 	LabelName    string `form:"ln"`
+	LabelJavID   string `form:"lj"`
+	AlbumName    string `form:"an"`
 
 	ReleasingDateStart  string `form:"rs"`
 	ReleasingDateEnd    string `form:"re"`
-	FilmBirthTimeStart  string `form:"bs"`
-	FilmBirthTimeEnd    string `form:"be"`
 	MediaBirthTimeStart string `form:"mbs"`
 	MediaBirthTimeEnd   string `form:"mbe"`
 
@@ -31,7 +31,6 @@ type ListMovieFullRequest struct {
 	DaysInRankMin int64  `form:"drkmin"`
 	NeedDownload  int64  `form:"nd"`
 	Word          string `form:"wd"`
-	Owned         int64  `form:"owned"`
 	MediaOwned    int64  `form:"mowned"`
 
 	ViewWatchedMin int64   `form:"vwmin"`
@@ -45,11 +44,6 @@ type ListMovieFullRequest struct {
 	ScTimesMax    *int64 `form:"scmax"`
 	ComeTimesMin  int64  `form:"comin"`
 	ComeTimesMax  *int64 `form:"comax"`
-
-	Dir1 string `form:"d1"`
-	Dir2 string `form:"d2"`
-	Dir3 string `form:"d3"`
-	Dir4 string `form:"d4"`
 
 	MediaDir1    string `form:"md1"`
 	MediaDir2    string `form:"md2"`

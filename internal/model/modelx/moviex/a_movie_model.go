@@ -208,9 +208,9 @@ func (m *customAMovieModel) CalcReleaseBucketByMode(ctx context.Context, startUn
 	query := `
 SELECT
 	COUNT(*) AS count_all,
-	SUM(CASE WHEN wm.movie_jav_id IS NOT NULL THEN 1 ELSE 0 END) AS count_owned,
-	SUM(COALESCE(wm.size_bytes, 0)) AS size_bytes,
-	MAX(COALESCE(am.releasing_date, 0)) AS latest_releasing_date
+	COALESCE(SUM(CASE WHEN wm.movie_jav_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS count_owned,
+	COALESCE(SUM(COALESCE(wm.size_bytes, 0)), 0) AS size_bytes,
+	COALESCE(MAX(COALESCE(am.releasing_date, 0)), 0) AS latest_releasing_date
 FROM a_movie am
 LEFT JOIN ` + nativeOwnedWMediaAggByMovieSQL("wm") + `
   ON wm.movie_jav_id = am.jav_id
@@ -222,8 +222,8 @@ WHERE am.releasing_date >= ? AND am.releasing_date <= ?
 SELECT
 	COUNT(*) AS count_all,
 	COUNT(*) AS count_owned,
-	SUM(COALESCE(wm.size_bytes, 0)) AS size_bytes,
-	MAX(COALESCE(am.releasing_date, 0)) AS latest_releasing_date
+	COALESCE(SUM(COALESCE(wm.size_bytes, 0)), 0) AS size_bytes,
+	COALESCE(MAX(COALESCE(am.releasing_date, 0)), 0) AS latest_releasing_date
 FROM a_movie am
 JOIN ` + nativeOwnedWMediaAggByMovieSQL("wm") + `
   ON wm.movie_jav_id = am.jav_id

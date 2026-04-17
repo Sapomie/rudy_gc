@@ -39,35 +39,14 @@ func (s *Service) BackfillAll(ctx context.Context) (*BackfillResult, error) {
 		}
 	}
 
-	dirtyRows, err := s.deps.MovieReleaseAggDirtyModel.ListAll(ctx, 0)
-	if err != nil {
-		return nil, err
-	}
-	result.ClearedDirtyRows = len(dirtyRows)
-	for _, row := range dirtyRows {
-		if row == nil || row.Id <= 0 {
-			continue
-		}
-		if err := s.deps.MovieReleaseAggDirtyModel.Delete(ctx, row.Id); err != nil {
-			return nil, err
-		}
-	}
-
 	months, err := s.deps.MovieModel.ListDistinctReleaseMonths(ctx)
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now().Unix()
 	result.DirtyMonths = len(months)
-	for _, bucketMonth := range months {
-		sc := scopeFromBucketMonth(bucketMonth)
-		if err := s.deps.MovieReleaseAggDirtyModel.TouchMonth(ctx, bucketMonth, sc.Key, now); err != nil {
-			return nil, err
-		}
-	}
 
 	if len(months) > 0 {
-		if err := s.RebuildDirtyAndLogEvent(ctx, "backfill"); err != nil {
+		if err := s.RebuildByReleaseMonthsAndLogEvent(ctx, "backfill", months...); err != nil {
 			return nil, err
 		}
 	}

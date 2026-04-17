@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"sort"
-	"strings"
 	"time"
 
 	"rudy_gc/internal/model/modelx/moviex"
@@ -23,19 +22,8 @@ type rebuildSummary struct {
 	TopCount    int64
 }
 
-func (s *Service) RebuildDirtyAndLogEvent(ctx context.Context, flowKey string) error {
-	dirtyRows, err := s.deps.WMediaAggDirtyModel.ListAll(ctx, 0)
-	if err != nil {
-		return err
-	}
-	if len(dirtyRows) == 0 {
-		return nil
-	}
-	return s.rebuildDirtyAndLogEvent(ctx, strings.TrimSpace(flowKey), dirtyRows)
-}
-
-func (s *Service) rebuildDirtyAndLogEvent(ctx context.Context, flowKey string, dirtyRows []*moviex.WMediaAggDirty) error {
-	if len(dirtyRows) == 0 {
+func (s *Service) rebuildByBucketDaysAndLogEvent(ctx context.Context, flowKey string, scopeCount int64, bucketDays []int64) error {
+	if len(bucketDays) == 0 {
 		return nil
 	}
 	if flowKey == "" {
@@ -48,7 +36,7 @@ func (s *Service) rebuildDirtyAndLogEvent(ctx context.Context, flowKey string, d
 		return err
 	}
 
-	summary, rebuildErr := s.rebuildDirty(ctx, dirtyRows)
+	summary, rebuildErr := s.rebuildByBucketDays(ctx, bucketDays, scopeCount)
 	if finishErr := s.finishAggEvent(ctx, eventRow, startedAt, summary, rebuildErr); finishErr != nil {
 		if rebuildErr != nil {
 			return errors.Join(rebuildErr, finishErr)
@@ -58,18 +46,21 @@ func (s *Service) rebuildDirtyAndLogEvent(ctx context.Context, flowKey string, d
 	return rebuildErr
 }
 
-func (s *Service) rebuildDirty(ctx context.Context, dirtyRows []*moviex.WMediaAggDirty) (rebuildSummary, error) {
-	summary := rebuildSummary{ScopeCount: int64(len(dirtyRows))}
+func (s *Service) rebuildByBucketDays(ctx context.Context, bucketDays []int64, scopeCount int64) (rebuildSummary, error) {
+	if scopeCount <= 0 {
+		scopeCount = int64(len(bucketDays))
+	}
+	summary := rebuildSummary{ScopeCount: scopeCount}
 	dayScopes := make(map[string]scope)
 	monthScopes := make(map[string]scope)
 	quarterScopes := make(map[string]scope)
 	yearScopes := make(map[string]scope)
 
-	for _, row := range dirtyRows {
-		if row == nil || row.BucketDay <= 0 {
+	for _, bucketDay := range bucketDays {
+		if bucketDay <= 0 {
 			continue
 		}
-		dayScope := scopeFromBucketDay(row.BucketDay)
+		dayScope := scopeFromBucketDay(bucketDay)
 		dayScopes[dayScope.Key] = dayScope
 		monthScope := buildScope(dayScope.Year, 0, dayScope.Month, 0)
 		quarterScope := buildScope(dayScope.Year, dayScope.Quarter, 0, 0)
@@ -123,15 +114,6 @@ func (s *Service) rebuildDirty(ctx context.Context, dirtyRows []*moviex.WMediaAg
 		return summary, err
 	}
 	summary.TopCount += topCount
-
-	for _, row := range dirtyRows {
-		if row == nil || row.Id <= 0 {
-			continue
-		}
-		if err := s.deps.WMediaAggDirtyModel.Delete(ctx, row.Id); err != nil {
-			return summary, err
-		}
-	}
 	return summary, nil
 }
 

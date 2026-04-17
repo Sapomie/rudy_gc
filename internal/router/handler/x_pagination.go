@@ -34,24 +34,17 @@ type OwnedLink struct {
 	Active bool
 }
 type OwnedQuery struct {
-	All           OwnedLink // owned=1
-	Owned         OwnedLink // owned=3
-	NotOwned      OwnedLink // owned=7
 	MediaAll      OwnedLink // mowned=1
 	MediaOwned    OwnedLink // mowned=3
 	MediaNotOwned OwnedLink // mowned=7
 }
 
 func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
-	return buildOwnedFilterInfoWithDefaults(c, "", "")
+	return buildOwnedFilterInfoWithDefaults(c, "")
 }
 
-func buildOwnedFilterInfoWithDefaults(c *gin.Context, defaultOwned string, defaultMediaOwned string) *OwnedQuery {
-	curOwned := c.Query("owned")
+func buildOwnedFilterInfoWithDefaults(c *gin.Context, defaultMediaOwned string) *OwnedQuery {
 	curMediaOwned := c.Query("mowned")
-	if curOwned == "" {
-		curOwned = defaultOwned
-	}
 	if curMediaOwned == "" {
 		curMediaOwned = defaultMediaOwned
 	}
@@ -67,38 +60,23 @@ func buildOwnedFilterInfoWithDefaults(c *gin.Context, defaultOwned string, defau
 		return path
 	}
 
-	allHref := makeHref(func(q mapSetter) {
-		q.Set("owned", "1")
-	})
 	mediaAllHref := makeHref(func(q mapSetter) {
 		q.Set("mowned", "1")
 	})
-	ownedHref := makeHref(func(q mapSetter) {
-		q.Set("owned", "3")
-	})
 	mediaOwnedHref := makeHref(func(q mapSetter) {
 		q.Set("mowned", "3")
-	})
-	notHref := makeHref(func(q mapSetter) {
-		q.Set("owned", "7")
 	})
 	mediaNotOwnedHref := makeHref(func(q mapSetter) {
 		q.Set("mowned", "7")
 	})
 
-	allAct := curOwned == "" || curOwned == "1"
-	ownedAct := curOwned == "3"
 	mediaAllAct := curMediaOwned == "" || curMediaOwned == "1"
 	mediaOwnedAct := curMediaOwned == "3"
-	notAct := curOwned == "7"
 	mediaNotAct := curMediaOwned == "7"
 
 	return &OwnedQuery{
-		All:           OwnedLink{Href: allHref, Active: allAct},
-		Owned:         OwnedLink{Href: ownedHref, Active: ownedAct},
 		MediaAll:      OwnedLink{Href: mediaAllHref, Active: mediaAllAct},
 		MediaOwned:    OwnedLink{Href: mediaOwnedHref, Active: mediaOwnedAct},
-		NotOwned:      OwnedLink{Href: notHref, Active: notAct},
 		MediaNotOwned: OwnedLink{Href: mediaNotOwnedHref, Active: mediaNotAct},
 	}
 }

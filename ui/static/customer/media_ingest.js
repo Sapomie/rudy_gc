@@ -6,11 +6,18 @@
         back: '/api/triggers/media/return',
     };
 
+    const page = document.getElementById('mediaIngestPage');
+    if (!page) {
+        return;
+    }
+
     const btnPrecheck = document.getElementById('btnPrecheck');
     const btnCommit = document.getElementById('btnCommit');
     const btnReturn = document.getElementById('btnReturn');
     const sumTotal = document.getElementById('sumTotal');
+    const sumPassLabel = document.getElementById('sumPassLabel');
     const sumPass = document.getElementById('sumPass');
+    const sumFailLabel = document.getElementById('sumFailLabel');
     const sumFail = document.getElementById('sumFail');
     const statusText = document.getElementById('statusText');
     const generatedAtText = document.getElementById('generatedAtText');
@@ -85,6 +92,21 @@
         return (value / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
     }
 
+    function isCommitPhase(data) {
+        return String((data && data.phase) || '').trim() === 'commit';
+    }
+
+    function focusCommitResults(data) {
+        const safe = data || {};
+        const targetId = Array.isArray(safe.commit_fail) && safe.commit_fail.length
+            ? 'commitFailSection'
+            : (Array.isArray(safe.commit_success) && safe.commit_success.length ? 'commitSuccessSection' : 'commitPreviewSection');
+        const target = document.getElementById(targetId);
+        if (target && typeof target.scrollIntoView === 'function') {
+            target.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+    }
+
     function setLoading(next) {
         loading = !!next;
         if (btnPrecheck) {
@@ -145,13 +167,23 @@
     function renderState(data) {
         const safe = data || {};
         const precheck = safe.precheck || {total: 0, passed: 0, failed: 0};
+        const commitPhase = isCommitPhase(safe);
+        const total = commitPhase ? Number(safe.total || 0) : Number(precheck.total || 0);
+        const success = commitPhase ? Number(safe.success || 0) : Number(precheck.passed || 0);
+        const failed = commitPhase ? Number(safe.failed || 0) : Number(precheck.failed || 0);
 
-        if (sumTotal) sumTotal.textContent = String(precheck.total || 0);
-        if (sumPass) sumPass.textContent = String(precheck.passed || 0);
-        if (sumFail) sumFail.textContent = String(precheck.failed || 0);
+        if (sumPassLabel) sumPassLabel.textContent = commitPhase ? '成功' : '通过';
+        if (sumFailLabel) sumFailLabel.textContent = '失败';
+        if (sumTotal) sumTotal.textContent = String(total);
+        if (sumPass) sumPass.textContent = String(success);
+        if (sumFail) sumFail.textContent = String(failed);
         if (statusText) statusText.textContent = safe.message || '等待操作';
         if (generatedAtText) {
-            generatedAtText.textContent = safe.generated_at ? ('预处理时间：' + formatUnix(safe.generated_at)) : '';
+            if (commitPhase) {
+                generatedAtText.textContent = '';
+            } else {
+                generatedAtText.textContent = safe.generated_at ? ('预处理时间：' + formatUnix(safe.generated_at)) : '';
+            }
         }
 
         const canCommit = !!safe.can_commit;
@@ -260,15 +292,20 @@
                 return;
             }
             setLoading(true);
+            if (statusText) {
+                statusText.textContent = '正在执行第二段插入...';
+            }
             request(API.commit, 'POST')
                 .then(function (data) {
                     renderState(data);
+                    focusCommitResults(data);
                     showMsg(data.message || '第二段执行完成', true);
                 })
                 .catch(function (err) {
                     showMsg(err.message || '第二段执行失败', false);
                     if (err.result) {
                         renderState(err.result);
+                        focusCommitResults(err.result);
                     }
                 })
                 .finally(function () {
@@ -294,4 +331,5 @@
         });
     }
 
+    loadPlan();
 })();

@@ -29,9 +29,7 @@ type (
 )
 
 type JavbusFetchPageFilter struct {
-	Owned              int64
 	MediaOwned         int64
-	RequireVFilm       bool
 	RequireWMedia      bool
 	Keyword            string
 	FetchStatuses      []int64
@@ -44,10 +42,6 @@ type JavbusFetchPageFilter struct {
 	ReleaseDateTo      int64
 	HasReleaseDateFrom bool
 	HasReleaseDateTo   bool
-	FilmBirthFrom      int64
-	FilmBirthTo        int64
-	HasFilmBirthFrom   bool
-	HasFilmBirthTo     bool
 	MediaBirthFrom     int64
 	MediaBirthTo       int64
 	HasMediaBirthFrom  bool
@@ -139,7 +133,6 @@ func (m *customTJavbusMagnetFetchModel) CountPageRows(ctx context.Context, filte
 func (m *customTJavbusMagnetFetchModel) ListPageRows(ctx context.Context, offset int64, limit int64, orderBy string, filter JavbusFetchPageFilter) ([]*TJavbusMagnetFetch, error) {
 	queryBuilder := squirrel.Select("jf.*").
 		From(strings.Trim(m.table, "`") + " jf").
-		LeftJoin(buildLegacyWMediaJoin("`w_media`", "vf", "jf.movie_jav_id")).
 		LeftJoin(buildNativeWMediaJoin("`w_media`", "wm", "jf.movie_jav_id"))
 	queryBuilder = applyJavbusPageFilter(queryBuilder, filter)
 	if strings.TrimSpace(orderBy) != "" {
@@ -198,11 +191,7 @@ func (m *customTJavbusMagnetFetchModel) CountByFetchStatus(ctx context.Context, 
 }
 
 func applyJavbusPageFilter(queryBuilder squirrel.SelectBuilder, filter JavbusFetchPageFilter) squirrel.SelectBuilder {
-	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "jf", filter.Owned, "legacy_w_media", "vf")
 	queryBuilder = applyFetchSiteOwnedFilter(queryBuilder, "jf", filter.MediaOwned, "w_media", "wm")
-	if filter.RequireVFilm {
-		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_sort", "jf.movie_jav_id"))
-	}
 	if filter.RequireWMedia {
 		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_sort", "jf.movie_jav_id"))
 	}
@@ -226,12 +215,6 @@ func applyJavbusPageFilter(queryBuilder squirrel.SelectBuilder, filter JavbusFet
 	}
 	if filter.HasReleaseDateTo {
 		queryBuilder = queryBuilder.Where(squirrel.LtOrEq{"release_date": filter.ReleaseDateTo})
-	}
-	if filter.HasFilmBirthFrom {
-		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_birth_from", "jf.movie_jav_id", "vf_birth_from.birth_time >= ?"), filter.FilmBirthFrom)
-	}
-	if filter.HasFilmBirthTo {
-		queryBuilder = queryBuilder.Where(buildLegacyWMediaExists("`w_media`", "vf_birth_to", "jf.movie_jav_id", "vf_birth_to.birth_time <= ?"), filter.FilmBirthTo)
 	}
 	if filter.HasMediaBirthFrom {
 		queryBuilder = queryBuilder.Where(buildNativeWMediaExists("`w_media`", "wm_birth_from", "jf.movie_jav_id", "wm_birth_from.birth_time >= ?"), filter.MediaBirthFrom)

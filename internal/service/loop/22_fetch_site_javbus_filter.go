@@ -23,11 +23,6 @@ func buildJavbusPageQueryFromTask(req StartTaskRequest) (fetchsite.JavbusPageQue
 		Keyword: strings.TrimSpace(req.Keyword),
 	}
 
-	if v, ok, err := parseSukebeiTaskOwned(req.Owned); err != nil {
-		return fetchsite.JavbusPageQuery{}, fmt.Errorf("VFilm 库存筛选错误: %w", err)
-	} else if ok {
-		out.Owned = v
-	}
 	if v, ok, err := parseSukebeiTaskOwned(req.MediaOwned); err != nil {
 		return fetchsite.JavbusPageQuery{}, fmt.Errorf("WMedia 库存筛选错误: %w", err)
 	} else if ok {
@@ -64,26 +59,14 @@ func buildJavbusPageQueryFromTask(req StartTaskRequest) (fetchsite.JavbusPageQue
 		out.ReleaseDateTo = ts
 		out.HasReleaseDateTo = true
 	}
-	if ts, ok, err := parseSukebeiTaskDateStart(req.FilmBirthFrom); err != nil {
-		return fetchsite.JavbusPageQuery{}, fmt.Errorf("JavBus 下载时间开始日期错误: %w", err)
-	} else if ok {
-		out.FilmBirthFrom = ts
-		out.HasFilmBirthFrom = true
-	}
-	if ts, ok, err := parseSukebeiTaskDateEnd(req.FilmBirthTo); err != nil {
-		return fetchsite.JavbusPageQuery{}, fmt.Errorf("JavBus 下载时间结束日期错误: %w", err)
-	} else if ok {
-		out.FilmBirthTo = ts
-		out.HasFilmBirthTo = true
-	}
 	if ts, ok, err := parseSukebeiTaskDateStart(req.MediaBirthFrom); err != nil {
-		return fetchsite.JavbusPageQuery{}, fmt.Errorf("JavBus M下载时间开始日期错误: %w", err)
+		return fetchsite.JavbusPageQuery{}, fmt.Errorf("JavBus WMedia 下载时间开始日期错误: %w", err)
 	} else if ok {
 		out.MediaBirthFrom = ts
 		out.HasMediaBirthFrom = true
 	}
 	if ts, ok, err := parseSukebeiTaskDateEnd(req.MediaBirthTo); err != nil {
-		return fetchsite.JavbusPageQuery{}, fmt.Errorf("JavBus M下载时间结束日期错误: %w", err)
+		return fetchsite.JavbusPageQuery{}, fmt.Errorf("JavBus WMedia 下载时间结束日期错误: %w", err)
 	} else if ok {
 		out.MediaBirthTo = ts
 		out.HasMediaBirthTo = true
@@ -94,7 +77,7 @@ func buildJavbusPageQueryFromTask(req StartTaskRequest) (fetchsite.JavbusPageQue
 
 func normalizeJavbusTaskSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
-	case "movie_name", "release_date", "fetch_status", "last_fetch_time", "last_result_count", "torrent_hash_count", "latest_publish_time", "film_birth_time", "media_birth_time":
+	case "movie_name", "release_date", "fetch_status", "last_fetch_time", "last_result_count", "torrent_hash_count", "latest_publish_time", "media_birth_time":
 		return strings.TrimSpace(raw)
 	default:
 		return "last_fetch_time"

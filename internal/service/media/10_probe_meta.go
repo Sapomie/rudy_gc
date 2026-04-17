@@ -47,7 +47,6 @@ func (s *Service) ProbeMediaMetaByID(ctx context.Context, id int64) (*types.Medi
 	if err := s.deps.WMediaModel.Update(ctx, &updated); err != nil {
 		return nil, err
 	}
-	s.markMediaAggDirty(ctx, row, &updated)
 	s.invalidateMovieTypeCaches(ctx, updated.MovieJavId)
 
 	return &types.MediaProbeMetaResult{

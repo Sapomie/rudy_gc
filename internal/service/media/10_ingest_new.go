@@ -2,7 +2,6 @@ package media
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"rudy_gc/internal/taskctx"
@@ -118,16 +117,6 @@ func (s *Service) IngestPrecheck(ctx context.Context) (*IngestNewResult, error) 
 }
 
 func (s *Service) IngestCommit(ctx context.Context) (result *IngestNewResult, err error) {
-	defer func() {
-		if rebuildErr := s.rebuildMediaAggsAfterFlow(ctx, "media_ingest"); rebuildErr != nil {
-			if err == nil {
-				err = rebuildErr
-			} else {
-				err = errors.Join(err, rebuildErr)
-			}
-		}
-	}()
-
 	roots := s.mediaRoots()
 	result = &IngestNewResult{
 		Roots: len(roots),

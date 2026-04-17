@@ -127,7 +127,7 @@ func buildMediaListCastItems(casts []*types.CastInfo) []*types.MediaListCastItem
 			Name: name,
 		}
 		if cast.PersonId > 0 {
-			item.Href = "/cast?id=" + strconv.FormatInt(cast.PersonId, 10)
+			item.Href = "/cast/" + strconv.FormatInt(cast.PersonId, 10)
 		}
 		items = append(items, item)
 	}

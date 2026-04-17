@@ -33,29 +33,19 @@
                     {{ end }}
                 </li>
 
-                {{ if or (eq .Owned 4) (eq .Owned 5) (eq .OwnedWMedia 4) (eq .OwnedWMedia 5) }}
+                {{ if ge .OwnedWMedia 4 }}
                     <li class="list-group-item py-2">
                         <div class="card-play-stack">
-                            {{ if or (eq .Owned 4) (eq .Owned 5) }}
-                                <div class="card-play-row">
-                                    {{ if eq .Owned 5 }}
-                                        <a href="{{ .VideoUrl }}" class="btn btn-sm btn-info">Play</a>
-                                    {{ else if eq .Owned 4 }}
-                                        <a href="{{ .VideoUrl }}" class="btn btn-sm btn-success">Play</a>
-                                    {{ end }}
-                                    {{ if .FilmBirthDate }}<span class="text-muted small card-play-date">{{ .FilmBirthDate }}</span>{{ end }}
-                                </div>
-                            {{ end }}
-                            {{ if or (eq .OwnedWMedia 4) (eq .OwnedWMedia 5) }}
-                                <div class="card-play-row">
-                                    {{ if eq .OwnedWMedia 5 }}
-                                        <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-outline-primary">MPlay</a>
-                                    {{ else if eq .OwnedWMedia 4 }}
-                                        <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-primary">MPlay</a>
-                                    {{ end }}
-                                    {{ if .FilmBirthDateWMedia }}<span class="text-muted small card-play-date">{{ .FilmBirthDateWMedia }}</span>{{ end }}
-                                </div>
-                            {{ end }}
+                            <div class="card-play-row">
+                                {{ if eq .OwnedWMedia 5 }}
+                                    <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-info">MPlay</a>
+                                {{ else if eq .OwnedWMedia 4 }}
+                                    <a href="{{ .VideoUrlWMedia }}" class="btn btn-sm btn-success">MPlay</a>
+                                {{ else if eq .OwnedWMedia 6 }}
+                                    <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">MRemoved</span>
+                                {{ end }}
+                                {{ if .FilmBirthDateWMedia }}<span class="text-muted small card-play-date">{{ .FilmBirthDateWMedia }}</span>{{ end }}
+                            </div>
                         </div>
                     </li>
                 {{ end }}
@@ -69,7 +59,7 @@
                 <li class="list-group-item">
                     {{ range $i, $c := .Cast }}
                         {{ if gt $c.PersonId 0 }}
-                            <a href="/cast?id={{ $c.PersonId }}" class="person-tag mr-2"
+                            <a href="/cast/{{ $c.PersonId }}" class="person-tag mr-2"
                                title="{{ $c.NameShow }}">{{ $c.NameShow }}</a>
                         {{ else }}
                             <a href="/cards?cn={{ $c.Name }}" class="person-tag mr-2"

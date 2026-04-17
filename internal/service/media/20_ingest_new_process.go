@@ -144,6 +144,7 @@ func (s *Service) ingestCommitOneRoot(ctx context.Context, root string, now time
 		return result, nil
 	}
 
+	touchedMovieJavIDs := make(map[string]struct{}, len(plan.Entries))
 	for _, entry := range plan.Entries {
 		if err = taskctx.WaitIfPaused(ctx); err != nil {
 			return result, err
@@ -171,8 +172,15 @@ func (s *Service) ingestCommitOneRoot(ctx context.Context, root string, now time
 			continue
 		}
 
-		item := s.processOneIngestFile(ctx, layout, prepared, now)
+		item, changedMovieJavIDs := s.processOneIngestFile(ctx, layout, prepared, now)
 		result.Items = append(result.Items, item)
+		for _, javID := range changedMovieJavIDs {
+			javID = strings.TrimSpace(javID)
+			if javID == "" {
+				continue
+			}
+			touchedMovieJavIDs[javID] = struct{}{}
+		}
 
 		stage := "media_commit_item_done"
 		if item.Error != "" {
@@ -187,16 +195,26 @@ func (s *Service) ingestCommitOneRoot(ctx context.Context, root string, now time
 	if clearErr := s.clearIngestPrecheckPlan(layout); clearErr != nil {
 		return result, clearErr
 	}
+	if _, err := s.rebalanceMediaLeafDirsForLayout(ctx, layout); err != nil {
+		return result, err
+	}
+	if len(touchedMovieJavIDs) > 0 {
+		javIDs := make([]string, 0, len(touchedMovieJavIDs))
+		for javID := range touchedMovieJavIDs {
+			javIDs = append(javIDs, javID)
+		}
+		s.movieSvc.EnqueueAggRebuildByMovieJavIDs("media_ingest", javIDs...)
+	}
 	return result, nil
 }
 
-func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, prepared *ingestPreparedItem, now time.Time) (item *IngestFileItem) {
+func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, prepared *ingestPreparedItem, now time.Time) (item *IngestFileItem, changedMovieJavIDs []string) {
 	if prepared == nil {
 		return &IngestFileItem{
 			Status:  ingestItemStatusFail,
 			RootDir: layout.rootDir,
 			Error:   "nil ingest prepared item",
-		}
+		}, nil
 	}
 
 	sourcePath := prepared.sourcePath
@@ -232,29 +250,29 @@ func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, p
 
 	movedToTmp, err = moveIntoDirUnique(sourcePath, layout.tmp)
 	if err != nil {
-		return item
+		return item, nil
 	}
 	holding = movedToTmp
 
 	videoMeta, err := probeVideoMeta(movedToTmp)
 	if err != nil {
-		return item
+		return item, nil
 	}
 
 	targetDir, folderID, err := s.allocateTargetDirectory(ctx, layout, now)
 	if err != nil {
-		return item
+		return item, nil
 	}
 
 	finalName := buildTargetFileName(prepared.meta)
 	finalName, err = ensureUniqueFileName(targetDir, finalName)
 	if err != nil {
-		return item
+		return item, nil
 	}
 	targetPath := filepath.Join(targetDir, finalName)
 
 	if err = os.Rename(movedToTmp, targetPath); err != nil {
-		return item
+		return item, nil
 	}
 	holding = targetPath
 	item.TargetFileName = filepath.Base(targetPath)
@@ -263,7 +281,7 @@ func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, p
 
 	stat, err := os.Stat(targetPath)
 	if err != nil {
-		return item
+		return item, nil
 	}
 
 	birthTime := stat.ModTime().Unix()
@@ -292,16 +310,17 @@ func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, p
 	item.SourceTorrentHash = row.SourceTorrentHash
 
 	if err = s.upsertMedia(ctx, row); err != nil {
-		return item
+		return item, nil
 	}
+	changedMovieJavIDs = append(changedMovieJavIDs, row.MovieJavId)
 
 	holding = ""
 	if err = s.moveFavoriteItemToMediaAlbum(ctx, prepared.favoriteSource); err != nil {
-		return item
+		return item, changedMovieJavIDs
 	}
 
 	holding = ""
-	return item
+	return item, changedMovieJavIDs
 }
 
 func buildPrecheckPreviewItem(layout rootLayout, prepared *ingestPreparedItem, now time.Time) (*IngestFileItem, error) {

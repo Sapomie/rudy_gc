@@ -8,6 +8,8 @@ func (s *Service) movieListQuery() *moviex.MovieListRepoSqlx {
 		s.deps.MinfoModel,
 		s.deps.WMediaModel,
 		s.deps.GScStatModel,
+		s.deps.MovieAlbumModel,
+		s.deps.MovieAlbumItemModel,
 		s.deps.LabelModel,
 		s.deps.MakerModel,
 		s.deps.DirectorModel,

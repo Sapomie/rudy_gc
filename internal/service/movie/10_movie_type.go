@@ -15,9 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"rudy_gc/internal/service/moviereleaseagg"
-	"rudy_gc/internal/service/wmediaagg"
-
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -53,12 +50,6 @@ func (s *Service) InvalidateMovieType(ctx context.Context, javId string) {
 			logx.WithContext(ctx).Infof("del MovieType cache ok, javId=%s", javId)
 		}
 	}
-	if err := wmediaagg.NewService(s.deps).MarkMovieDirty(ctx, javId); err != nil {
-		logx.WithContext(ctx).Errorf("mark w_media agg dirty failed, javId=%s, err=%v", javId, err)
-	}
-	if err := moviereleaseagg.NewService(s.deps).MarkMovieDirty(ctx, javId); err != nil {
-		logx.WithContext(ctx).Errorf("mark movie release agg dirty failed, javId=%s, err=%v", javId, err)
-	}
 }
 
 func (s *Service) InvalidateMovieTypes(ctx context.Context, javIds ...string) {
@@ -88,15 +79,6 @@ func (s *Service) InvalidateMovieTypes(ctx context.Context, javIds ...string) {
 	}
 	if len(dirtyIDs) == 0 {
 		return
-	}
-	if err := wmediaagg.NewService(s.deps).MarkMoviesDirty(ctx, dirtyIDs...); err != nil {
-		logx.WithContext(ctx).Errorf("mark w_media agg dirty failed, javIds=%v, err=%v", dirtyIDs, err)
-	}
-	if err := moviereleaseagg.NewService(s.deps).MarkMoviesDirty(ctx, dirtyIDs...); err != nil {
-		logx.WithContext(ctx).Errorf("mark movie release agg dirty failed, javIds=%v, err=%v", dirtyIDs, err)
-	}
-	if err := s.rebuildAggsAfterFlow(ctx, "movie_type_refresh"); err != nil {
-		logx.WithContext(ctx).Errorf("rebuild aggs after movie type refresh failed, javIds=%v, err=%v", dirtyIDs, err)
 	}
 }
 
@@ -198,18 +180,6 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		out.LastScTime = scStatRow.LastScTime
 	}
 
-	filmRow, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, mv.JavId)
-	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return nil, fmt.Errorf("WMediaModel.FindOneLegacyFilmByMovieJavId failed: %w", err)
-	}
-	if filmRow != nil {
-		film := mapVFilmToTypes(filmRow)
-		out.VFilm = film
-		out.FilmBirthDate = tsToDate(film.BirthTime)
-		out.VideoUrl = film.FullDir + string(filepath.Separator) + film.FileName
-		out.Owned = determineOwnership(film)
-	}
-
 	mediaRow, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, mv.JavId)
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
 		return nil, fmt.Errorf("WMediaModel.FindOneByMovieJavId failed: %w", err)
@@ -218,9 +188,12 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 		media := mapWMediaToTypes(mediaRow)
 		out.WMedia = media
 		out.OwnedWMedia = determineOwnershipByState(media.IsRemoved, media.HasSub)
+		out.Owned = out.OwnedWMedia
 		if media.IsRemoved != consts.FilmIsRemoved {
 			out.FilmBirthDateWMedia = tsToDate(media.BirthTime)
 			out.VideoUrlWMedia = media.FullDir + string(filepath.Separator) + media.FileName
+			out.FilmBirthDate = out.FilmBirthDateWMedia
+			out.VideoUrl = out.VideoUrlWMedia
 		}
 	}
 
@@ -273,7 +246,7 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 					displayName = personRow.Name
 				}
 				birthDay = personRow.BirthDay
-				ci.Url = fmt.Sprintf("cast?id=%d", castRow.PersonId)
+				ci.Url = fmt.Sprintf("/cast/%d", castRow.PersonId)
 			}
 		}
 		displayKey := buildMovieTypeCastDisplayKey(castRow.PersonId, castRow.Name)
@@ -324,10 +297,6 @@ func (s *Service) getGenreNames(ctx context.Context, movieJavId string) ([]strin
 		names = append(names, row.Name)
 	}
 	return names, nil
-}
-
-func determineOwnership(film *types.Film) int64 {
-	return determineOwnershipByState(film.IsRemoved, film.HasSub)
 }
 
 func determineOwnershipByState(isRemoved, hasSub int64) int64 {
@@ -427,37 +396,6 @@ func (s *Service) findRankInfo(ctx context.Context, movieJavId string) ([]*types
 		})
 	}
 	return rankInfos, nil
-}
-
-func (s *Service) findFilmInfo(ctx context.Context, movieJavId string) (*types.FilmInfo, error) {
-	vf, err := s.deps.WMediaModel.FindOneLegacyFilmByMovieJavId(ctx, movieJavId)
-	if err != nil {
-		if errors.Is(err, moviex.ErrNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	if vf == nil || vf.IsRemoved == consts.FilmIsRemoved {
-		return nil, nil
-	}
-
-	durationMinutes := float64(vf.Duration) / 60
-	filmInfo := &types.FilmInfo{
-		Name:              vf.MovieName,
-		BirthTime:         time.Unix(vf.BirthTime, 0).Format(time.DateTime),
-		Size:              float64(vf.Size) / 1e9,
-		FilePath:          vf.FullDir,
-		FileName:          vf.FileName,
-		Directory:         vf.FullDir,
-		Height:            vf.Height,
-		BitRate:           float64(vf.BitRate) / 1e3,
-		DurationMinutes:   durationMinutes,
-		Frame:             vf.FrameAverage,
-		SizeDurationRatio: calcFilmSizeDurationRatio(vf.Size, vf.Duration),
-		SelfMake:          formatMovieFilmSelfMake(vf.SelfMake),
-		Erased:            formatMovieFilmErased(vf.HasMask),
-	}
-	return filmInfo, nil
 }
 
 func (s *Service) findMediaInfo(ctx context.Context, movieJavId string) (*types.FilmInfo, error) {
@@ -567,10 +505,6 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 	if err != nil {
 		return nil, err
 	}
-	filmInfo, err := s.findFilmInfo(ctx, m.JavId)
-	if err != nil {
-		return nil, err
-	}
 	mediaInfo, err := s.findMediaInfo(ctx, m.JavId)
 	if err != nil {
 		return nil, err
@@ -583,15 +517,9 @@ func (s *Service) buildMovieDetail(ctx context.Context, m *types.Movie) (*types.
 	if err != nil {
 		return nil, err
 	}
-	hasFilm := int64(2)
-	if filmInfo == nil {
-		hasFilm = 1
-	}
 	return &types.MovieDetail{
 		MovieType:        movieType,
-		FilmInfo:         filmInfo,
 		MediaInfo:        mediaInfo,
-		HasFilm:          hasFilm,
 		RankInfos:        rankInfos,
 		SC:               scInfo,
 		JavbusFetch:      javbusFetch,

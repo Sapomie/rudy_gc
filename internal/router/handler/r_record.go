@@ -1,90 +1,220 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
 )
 
-type ListRecordQuery struct {
-	Type  string
-	Limit int
+type crawlRecordListQuery struct {
+	Type     string `form:"type"`
+	Page     int64  `form:"p"`
+	PageSize int64  `form:"ps"`
+	Sort     string `form:"sort"`
+	Order    string `form:"order"`
 }
 
-// 传给模板的视图模型
-type recordView struct {
-	Name         string
-	Type         string
-	DetailNumber int64
-	DurationMin  int64
-	Date         string // ✅ 新增：格式化后的 StartTime
+type crawlRecordListRow struct {
+	Name            string
+	Type            string
+	DetailNumber    int64
+	DurationMinText string
+	StartedTime     int64
+}
+
+type crawlRecordTypeLink struct {
+	Label  string
+	Href   string
+	Active bool
+}
+
+type crawlRecordSortLink struct {
+	Label  string
+	Href   string
+	Active bool
+	Desc   bool
+}
+
+type crawlRecordHeaderLinks struct {
+	StartedTime  crawlRecordSortLink
+	Type         crawlRecordSortLink
+	DetailNumber crawlRecordSortLink
+	DurationMin  crawlRecordSortLink
+	Name         crawlRecordSortLink
 }
 
 func (h *MovieHTMLHandler) ListRecordsPage(c *gin.Context) {
-	q := ListRecordQuery{
-		Type:  c.Query("type"),
-		Limit: parseIntDefault(c.Query("limit"), 200),
-	}
-	if q.Limit <= 0 || q.Limit > 1000 {
-		q.Limit = 200
-	}
+	c.Redirect(http.StatusFound, "/crawl-records")
+}
 
-	const startFrom int64 = 0
-	records, err := h.movieSvc.ListRecords(c, startFrom, q.Type, q.Limit)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "query records failed: %v", err)
+func (h *MovieHTMLHandler) CrawlRecordListPage(c *gin.Context) {
+	var q crawlRecordListQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		c.String(http.StatusBadRequest, "参数解析错误: %v", err)
 		return
 	}
 
-	views := make([]recordView, 0, len(records))
-	for _, r := range records {
-		durSec := r.EndTime - r.StartTime
-		if durSec < 0 {
-			durSec = 0
-		}
-		durMin := int64(0)
-		if durSec > 0 {
-			durMin = (durSec + 59) / 60 // 向上取整
-		}
+	if q.Page <= 0 {
+		q.Page = 1
+	}
+	if q.PageSize <= 0 {
+		q.PageSize = 50
+	}
+	if q.Type == "" {
+		q.Type = consts.RecordTypeSeedsActive
+	}
+	q.Sort = normalizeCrawlRecordSort(q.Sort)
+	q.Order = normalizeCrawlRecordOrder(q.Order)
 
-		dateStr := "-"
-		if r.StartTime > 0 {
-			dateStr = time.Unix(r.StartTime, 0).Format("2006-01-02 15:04")
-		}
-
-		views = append(views, recordView{
-			Name:         r.Name,
-			Type:         r.Type,
-			DetailNumber: r.DetailNumber,
-			DurationMin:  durMin,
-			Date:         dateStr,
-		})
+	rows, total, err := h.deps.RecordModel.ListPage(c.Request.Context(), moviex.ERecordListFilter{
+		Type:     q.Type,
+		Sort:     q.Sort,
+		Order:    q.Order,
+		Page:     q.Page,
+		PageSize: q.PageSize,
+	})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "query crawl records failed: %v", err)
+		return
 	}
 
-	typeOptions := []string{
-		consts.RecordTypeDailyBest,
-		consts.RecordTypeSeedsActive,
-		consts.RecordTypeSeedName,
-	}
+	pageInfo := BuildPageInfo(c, total, q.Page, q.PageSize, pageWindow)
 
-	c.HTML(http.StatusOK, "page.list_record", gin.H{
-		"Title":       "Records",
-		"Records":     views,
+	c.HTML(http.StatusOK, "page.crawl_record_list", gin.H{
+		"Title":       "CrawlRecords",
+		"PageTitle":   "CrawlRecords 列表",
+		"PageNote":    "直接查看抓取流程写入的 e_record 记录。",
+		"Rows":        buildCrawlRecordListRows(rows),
+		"Total":       total,
+		"PageInfo":    pageInfo,
+		"pageInfo":    pageInfo,
 		"Query":       q,
-		"TypeOptions": typeOptions,
+		"TypeLinks":   buildCrawlRecordTypeLinks(c, q.Type),
+		"HeaderLinks": buildCrawlRecordHeaderLinks(c, q.Sort, q.Order),
+		"ClearHref":   "/crawl-records",
 	})
 }
-func parseIntDefault(s string, def int) int {
-	if s == "" {
-		return def
+
+func buildCrawlRecordListRows(rows []*moviex.ERecord) []*crawlRecordListRow {
+	if len(rows) == 0 {
+		return []*crawlRecordListRow{}
 	}
-	v, err := strconv.Atoi(s)
-	if err != nil {
-		return def
+
+	out := make([]*crawlRecordListRow, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		out = append(out, &crawlRecordListRow{
+			Name:            row.Name,
+			Type:            row.Type,
+			DetailNumber:    row.DetailNumber,
+			DurationMinText: formatCrawlRecordDurationMinutes(row.StartTime, row.EndTime),
+			StartedTime:     row.StartTime,
+		})
 	}
-	return v
+	return out
+}
+
+func formatCrawlRecordDurationMinutes(startTime int64, endTime int64) string {
+	duration := endTime - startTime
+	if duration <= 0 {
+		return "-"
+	}
+	minutes := (duration + 59) / 60
+	return fmt.Sprintf("%d", minutes)
+}
+
+func normalizeCrawlRecordSort(sortField string) string {
+	switch sortField {
+	case "type":
+		return "type"
+	case "detail_number":
+		return "detail_number"
+	case "duration":
+		return "duration"
+	case "name":
+		return "name"
+	default:
+		return "start_time"
+	}
+}
+
+func normalizeCrawlRecordOrder(sortOrder string) string {
+	if sortOrder == "asc" {
+		return "asc"
+	}
+	return "desc"
+}
+
+func buildCrawlRecordTypeLinks(c *gin.Context, currentType string) []crawlRecordTypeLink {
+	options := []struct {
+		Label string
+		Value string
+	}{
+		{Label: "All", Value: ""},
+		{Label: consts.RecordTypeDailyBest, Value: consts.RecordTypeDailyBest},
+		{Label: consts.RecordTypeSeedsActive, Value: consts.RecordTypeSeedsActive},
+		{Label: consts.RecordTypeSeedName, Value: consts.RecordTypeSeedName},
+	}
+
+	out := make([]crawlRecordTypeLink, 0, len(options))
+	for _, option := range options {
+		q := c.Request.URL.Query()
+		q.Set("p", "1")
+		if option.Value == "" {
+			q.Del("type")
+		} else {
+			q.Set("type", option.Value)
+		}
+
+		href := c.Request.URL.Path
+		if encoded := q.Encode(); encoded != "" {
+			href += "?" + encoded
+		}
+		out = append(out, crawlRecordTypeLink{
+			Label:  option.Label,
+			Href:   href,
+			Active: currentType == option.Value || (currentType == "" && option.Value == consts.RecordTypeSeedsActive),
+		})
+	}
+	return out
+}
+
+func buildCrawlRecordHeaderLinks(c *gin.Context, currentSort string, currentOrder string) crawlRecordHeaderLinks {
+	return crawlRecordHeaderLinks{
+		StartedTime:  buildCrawlRecordSortLink(c, currentSort, currentOrder, "start_time", "StartedTime"),
+		Type:         buildCrawlRecordSortLink(c, currentSort, currentOrder, "type", "Type"),
+		DetailNumber: buildCrawlRecordSortLink(c, currentSort, currentOrder, "detail_number", "DetailNumber"),
+		DurationMin:  buildCrawlRecordSortLink(c, currentSort, currentOrder, "duration", "Duration(min)"),
+		Name:         buildCrawlRecordSortLink(c, currentSort, currentOrder, "name", "Name"),
+	}
+}
+
+func buildCrawlRecordSortLink(c *gin.Context, currentSort string, currentOrder string, sortField string, label string) crawlRecordSortLink {
+	nextOrder := "desc"
+	active := currentSort == sortField
+	if active && currentOrder == "desc" {
+		nextOrder = "asc"
+	}
+
+	q := c.Request.URL.Query()
+	q.Set("p", "1")
+	q.Set("sort", sortField)
+	q.Set("order", nextOrder)
+	href := c.Request.URL.Path
+	if encoded := q.Encode(); encoded != "" {
+		href += "?" + encoded
+	}
+
+	return crawlRecordSortLink{
+		Label:  label,
+		Href:   href,
+		Active: active,
+		Desc:   active && currentOrder == "desc",
+	}
 }

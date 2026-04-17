@@ -2,9 +2,7 @@ package types
 
 type MovieDetail struct {
 	MovieType        *MovieType
-	FilmInfo         *FilmInfo
 	MediaInfo        *FilmInfo
-	HasFilm          int64
 	RankInfos        []*RankInfo
 	SC               []*MovieScEvent
 	JavbusFetch      *MovieFetchSiteStatus
