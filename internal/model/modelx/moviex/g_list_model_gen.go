@@ -47,6 +47,7 @@ type (
 		ScName     string `db:"sc_name"`
 		MovieJavId string `db:"movie_jav_id"`
 		IsCome     int64  `db:"is_come"`
+		IsSc       int64  `db:"is_sc"`
 		CreatedOn  int64  `db:"created_on"`
 		UpdatedOn  int64  `db:"updated_on"`
 	}
@@ -115,8 +116,8 @@ func (m *defaultGListModel) Insert(ctx context.Context, data *GList) (sql.Result
 	rudyGcGListIdKey := fmt.Sprintf("%s%v", cacheRudyGcGListIdPrefix, data.Id)
 	rudyGcGListNameKey := fmt.Sprintf("%s%v", cacheRudyGcGListNamePrefix, data.Name)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?)", m.table, gListRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Name, data.ScName, data.MovieJavId, data.IsCome, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, gListRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Name, data.ScName, data.MovieJavId, data.IsCome, data.IsSc, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcGListIdKey, rudyGcGListNameKey)
 	return ret, err
 }
@@ -131,7 +132,7 @@ func (m *defaultGListModel) Update(ctx context.Context, newData *GList) error {
 	rudyGcGListNameKey := fmt.Sprintf("%s%v", cacheRudyGcGListNamePrefix, data.Name)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, gListRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.Name, newData.ScName, newData.MovieJavId, newData.IsCome, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.Name, newData.ScName, newData.MovieJavId, newData.IsCome, newData.IsSc, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcGListIdKey, rudyGcGListNameKey)
 	return err
 }

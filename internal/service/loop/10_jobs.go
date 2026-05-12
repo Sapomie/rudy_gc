@@ -43,36 +43,38 @@ const (
 )
 
 type StartTaskRequest struct {
-	TaskType        string   `json:"task_type"`
-	Name            string   `json:"name"`
-	ActorName       string   `json:"actor_name"`
-	AutoFetchSite   string   `json:"auto_fetch_site"`
-	ListURL         string   `json:"list_url"`
-	Keyword         string   `json:"keyword"`
-	Sort            string   `json:"sort"`
-	Status          string   `json:"status"`
-	Statuses        []string `json:"statuses"`
-	TriggerSort     string   `json:"trigger_sort"`
-	TriggerOrder    string   `json:"trigger_order"`
-	LastFetchFrom   string   `json:"last_fetch_from"`
-	LastFetchTo     string   `json:"last_fetch_to"`
-	ReleaseDateFrom string   `json:"release_date_from"`
-	ReleaseDateTo   string   `json:"release_date_to"`
-	MediaBirthFrom  string   `json:"media_birth_from"`
-	MediaBirthTo    string   `json:"media_birth_to"`
-	StartPage       int64    `json:"start_page"`
-	EndPage         int64    `json:"end_page"`
-	PersistMode     string   `json:"persist_mode"`
-	Number          int64    `json:"number"`
-	MovieJavID      string   `json:"movie_jav_id"`
-	MovieName       string   `json:"movie_name"`
-	Dir             string   `json:"dir"`
-	ComeMovieJavID  string   `json:"come_movie_jav_id"`
-	MovieCast       string   `json:"movie_cast"`
-	DurationMinutes int64    `json:"duration"`
-	Fg              string   `json:"fg"`
-	Vessel          string   `json:"vessel"`
-	Remarks         string   `json:"remarks"`
+	TaskType        string               `json:"task_type"`
+	Name            string               `json:"name"`
+	ActorName       string               `json:"actor_name"`
+	AutoFetchSite   string               `json:"auto_fetch_site"`
+	ListURL         string               `json:"list_url"`
+	Keyword         string               `json:"keyword"`
+	Sort            string               `json:"sort"`
+	Status          string               `json:"status"`
+	Statuses        []string             `json:"statuses"`
+	TriggerSort     string               `json:"trigger_sort"`
+	TriggerOrder    string               `json:"trigger_order"`
+	LastFetchFrom   string               `json:"last_fetch_from"`
+	LastFetchTo     string               `json:"last_fetch_to"`
+	ReleaseDateFrom string               `json:"release_date_from"`
+	ReleaseDateTo   string               `json:"release_date_to"`
+	MediaBirthFrom  string               `json:"media_birth_from"`
+	MediaBirthTo    string               `json:"media_birth_to"`
+	StartPage       int64                `json:"start_page"`
+	EndPage         int64                `json:"end_page"`
+	PersistMode     string               `json:"persist_mode"`
+	Number          int64                `json:"number"`
+	MovieJavID      string               `json:"movie_jav_id"`
+	MovieName       string               `json:"movie_name"`
+	Dir             string               `json:"dir"`
+	ComeMovieJavID  string               `json:"come_movie_jav_id"`
+	MovieCast       string               `json:"movie_cast"`
+	Kind            string               `json:"kind"`
+	DurationMinutes int64                `json:"duration"`
+	Fg              string               `json:"fg"`
+	Vessel          string               `json:"vessel"`
+	Remarks         string               `json:"remarks"`
+	Movies          []sc.AddScInputMovie `json:"movies"`
 
 	CastNames               string `json:"cn"`
 	PersonIds               string `json:"pid"`
@@ -325,10 +327,12 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 			Dir:             dir,
 			ComeMovieJavId:  strings.TrimSpace(req.ComeMovieJavID),
 			MovieCast:       strings.TrimSpace(req.MovieCast),
+			Kind:            strings.TrimSpace(req.Kind),
 			DurationMinutes: req.DurationMinutes,
 			Fg:              strings.TrimSpace(req.Fg),
 			Vessel:          strings.TrimSpace(req.Vessel),
 			Remarks:         strings.TrimSpace(req.Remarks),
+			Movies:          req.Movies,
 		})
 	default:
 		return "", fmt.Errorf("unsupported task_type: %s", req.TaskType)

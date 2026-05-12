@@ -48,25 +48,54 @@ func (h *ScTriggerAPI) Add(c *gin.Context) {
 		Dir:             dir,
 		ComeMovieJavID:  strings.TrimSpace(req.ComeMovieJavId),
 		MovieCast:       strings.TrimSpace(req.MovieCast),
+		Kind:            strings.TrimSpace(req.Kind),
 		DurationMinutes: req.DurationMinutes,
 		Fg:              strings.TrimSpace(req.Fg),
 		Vessel:          strings.TrimSpace(req.Vessel),
 		Remarks:         strings.TrimSpace(req.Remarks),
+		Movies:          buildScAddInputMovies(req.Movies),
 	})
 }
 
 type scAddReq struct {
-	ComeMovieJavId  string `json:"comeMovieJavId"`
-	MovieCast       string `json:"movieCast"`
-	DurationMinutes int64  `json:"duration"`
-	Fg              string `json:"fg"`
-	Vessel          string `json:"vessel"`
-	Remarks         string `json:"remarks"`
+	ComeMovieJavId  string          `json:"comeMovieJavId"`
+	MovieCast       string          `json:"movieCast"`
+	Kind            string          `json:"kind"`
+	DurationMinutes int64           `json:"duration"`
+	Fg              string          `json:"fg"`
+	Vessel          string          `json:"vessel"`
+	Remarks         string          `json:"remarks"`
+	Movies          []scAddMovieReq `json:"movies"`
+}
+
+type scAddMovieReq struct {
+	MovieJavId string `json:"movieJavId"`
+	IsSc       int64  `json:"isSc"`
+}
+
+func buildScAddInputMovies(reqs []scAddMovieReq) []sc.AddScInputMovie {
+	if len(reqs) == 0 {
+		return nil
+	}
+	out := make([]sc.AddScInputMovie, 0, len(reqs))
+	for _, req := range reqs {
+		movieJavId := strings.TrimSpace(req.MovieJavId)
+		if movieJavId == "" {
+			continue
+		}
+		out = append(out, sc.AddScInputMovie{
+			MovieJavId: movieJavId,
+			IsSc:       req.IsSc,
+		})
+	}
+	return out
 }
 
 type scAddPreviewMovieResp struct {
 	MovieName  string   `json:"movieName"`
 	MovieJavId string   `json:"movieJavId"`
+	MovieHref  string   `json:"movieHref"`
+	JacketImg  string   `json:"jacketImg"`
 	Casts      []string `json:"casts"`
 }
 
@@ -109,6 +138,8 @@ func (h *ScTriggerAPI) AddPreview(c *gin.Context) {
 		resp.Movies = append(resp.Movies, scAddPreviewMovieResp{
 			MovieName:  movie.MovieName,
 			MovieJavId: movie.MovieJavId,
+			MovieHref:  movie.MovieHref,
+			JacketImg:  movie.JacketImg,
 			Casts:      movie.Casts,
 		})
 	}
@@ -299,16 +330,20 @@ func (h *ScTriggerAPI) PickSmartOnly(c *gin.Context) {
 	}
 
 	source := sc.NormalizeSmartPickSource(req.Source)
-	movies, err := h.scSvc.SmartPickFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
+	result, err := h.scSvc.SmartPickWithInfoFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	totalSizeGB := buildPickedTotalSizeGB(result.Movies, source)
+	pickInfo := result.Info
+	pickInfo.TotalSizeGB = totalSizeGB
 	c.JSON(http.StatusOK, gin.H{
-		"picked":        len(movies),
-		"movies":        buildPickCopyMovies(movies, source),
-		"total_size_gb": buildPickedTotalSizeGB(movies, source),
+		"picked":        len(result.Movies),
+		"movies":        buildPickCopyMovies(result.Movies, source),
+		"total_size_gb": totalSizeGB,
 		"source":        source,
+		"pick_info":     pickInfo,
 	})
 }
 
@@ -333,17 +368,21 @@ func (h *ScTriggerAPI) PickSmartCopy(c *gin.Context) {
 	}
 
 	source := sc.NormalizeSmartPickSource(req.Source)
-	movies, err := h.scSvc.SmartPickCopyFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
+	result, err := h.scSvc.SmartPickWithInfoFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	started, status := h.scSvc.StartCopyAsync(movies, source)
+	totalSizeGB := buildPickedTotalSizeGB(result.Movies, source)
+	pickInfo := result.Info
+	pickInfo.TotalSizeGB = totalSizeGB
+	started, status := h.scSvc.StartCopyAsync(result.Movies, source)
 	c.JSON(http.StatusOK, gin.H{
-		"picked":        len(movies),
-		"movies":        buildPickCopyMovies(movies, source),
-		"total_size_gb": buildPickedTotalSizeGB(movies, source),
+		"picked":        len(result.Movies),
+		"movies":        buildPickCopyMovies(result.Movies, source),
+		"total_size_gb": totalSizeGB,
 		"source":        source,
+		"pick_info":     pickInfo,
 		"copy_started":  started,
 		"copy_status":   status,
 	})

@@ -19,6 +19,7 @@ type Person struct {
 	ScTimes           int64 `gorm:"not null;type:MEDIUMINT;index"`
 	ComeTimes         int64 `gorm:"not null;type:MEDIUMINT;index"`
 	LastScTime        int64 `gorm:"not null;index"`
+	LastScEventTime   int64 `gorm:"not null;index"`
 	HighestRank       int64 `gorm:"not null;type:MEDIUMINT;index"`
 	RankTimes         int64 `gorm:"not null;type:MEDIUMINT;index"`
 

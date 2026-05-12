@@ -140,7 +140,7 @@ func buildScMediaMovePrecheckResult(scName string, generatedAt int64, items []*S
 }
 
 func (s *Service) buildScMediaMovePrecheckItems(ctx context.Context, scName string, now time.Time) ([]*ScMediaMoveItem, error) {
-	rows, err := s.deps.GListModel.ListByScName(ctx, scName)
+	rows, err := s.deps.GListModel.ListScOnlyByScName(ctx, scName)
 	if err != nil {
 		return nil, err
 	}

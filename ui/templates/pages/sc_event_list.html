@@ -76,9 +76,12 @@
                                         </a>
                                     </th>
                                     <th>
+                                        总片数
+                                    </th>
+                                    <th>
                                         <a class="sc-sort-link {{ if .ScSortQuery.ByMovieCnt.Active }}active{{ end }}"
                                            href="{{ .ScSortQuery.ByMovieCnt.Href }}">
-                                            片数{{ if .ScSortQuery.ByMovieCnt.Active }}{{ if .ScSortQuery.ByMovieCnt.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                            有 SC{{ if .ScSortQuery.ByMovieCnt.Active }}{{ if .ScSortQuery.ByMovieCnt.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
                                         </a>
                                     </th>
                                     <th>
@@ -97,6 +100,12 @@
                                         <a class="sc-sort-link {{ if .ScSortQuery.ByDuration.Active }}active{{ end }}"
                                            href="{{ .ScSortQuery.ByDuration.Href }}">
                                             时长(分钟){{ if .ScSortQuery.ByDuration.Active }}{{ if .ScSortQuery.ByDuration.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByKind.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByKind.Href }}">
+                                            种类{{ if .ScSortQuery.ByKind.Active }}{{ if .ScSortQuery.ByKind.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
                                         </a>
                                     </th>
                                     <th>
@@ -133,7 +142,8 @@
                                                     </span>
                                                 </a>
                                             </td>
-                                            <td>{{ .Event.MovieNumber }}</td>
+                                            <td>{{ .TotalMovieCount }}</td>
+                                            <td>{{ .ScMovieCount }}</td>
                                             <td>
                                                 {{ if .Event.ComeMovieName }}
                                                     <a href="/movie/{{ .Event.ComeMovieName }}">{{ .Event.ComeMovieName }}</a>
@@ -151,6 +161,13 @@
                                             <td class="sc-muted">
                                                 {{ if gt .Event.DurationMinutes 0 }}
                                                     {{ .Event.DurationMinutes }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
+                                                {{ if .Event.Kind }}
+                                                    {{ .Event.Kind }}
                                                 {{ else }}
                                                     <span class="text-muted">-</span>
                                                 {{ end }}
@@ -180,7 +197,7 @@
                                     {{ end }}
                                 {{ else }}
                                     <tr>
-                                        <td colspan="8">
+                                        <td colspan="10">
                                             <div class="sc-empty-state">还没有可展示的 SC 事件。</div>
                                         </td>
                                     </tr>

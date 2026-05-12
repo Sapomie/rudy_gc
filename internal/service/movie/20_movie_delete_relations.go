@@ -50,9 +50,10 @@ type deletedMovieSnapshot struct {
 }
 
 type castScInfo struct {
-	ScTimes    int64
-	ComeTimes  int64
-	LastScTime int64
+	ScTimes         int64
+	ComeTimes       int64
+	LastScTime      int64
+	LastScEventTime int64
 }
 
 type castRankInfo struct {
@@ -134,7 +135,7 @@ func (s *Service) loadMovieDeleteContext(ctx context.Context, javID, fallbackNam
 	}
 	out.RankRows = rankRows
 
-	gListRows, err := s.deps.GListModel.ListByMovieJavId(ctx, javID)
+	gListRows, err := s.deps.GListModel.ListScOnlyByMovieJavId(ctx, javID)
 	if err != nil {
 		return nil, fmt.Errorf("list g_list by movie_jav_id failed: %w", err)
 	}
@@ -337,12 +338,18 @@ func (s *Service) rebuildScMovieNumbers(ctx context.Context, delCtx *movieDelete
 			continue
 		}
 
-		gLists, err := s.deps.GListModel.ListByScName(ctx, scName)
+		gLists, err := s.deps.GListModel.ListScOnlyByScName(ctx, scName)
 		if err != nil {
 			return fmt.Errorf("list g_list by sc_name failed: %w", err)
 		}
 
-		movieNumber := int64(len(gLists))
+		var movieNumber int64
+		for _, gl := range gLists {
+			if gl == nil || gl.IsSc != consts.GListIsSc {
+				continue
+			}
+			movieNumber++
+		}
 		if scRow.MovieNumber == movieNumber {
 			continue
 		}
@@ -399,6 +406,7 @@ func (s *Service) rebuildCastStatsByID(ctx context.Context, castID, now int64) e
 		castRow.ScTimes == scInfo.ScTimes &&
 		castRow.ComeTimes == scInfo.ComeTimes &&
 		castRow.LastScTime == scInfo.LastScTime &&
+		castRow.LastScEventTime == scInfo.LastScEventTime &&
 		castRow.Rank500MovieNumber == rankInfo.Rank500MovieNumber &&
 		castRow.Rank20MovieNumber == rankInfo.Rank20MovieNumber &&
 		castRow.Rank1MovieNumber == rankInfo.Rank1MovieNumber &&
@@ -413,6 +421,7 @@ func (s *Service) rebuildCastStatsByID(ctx context.Context, castID, now int64) e
 	castRow.ScTimes = scInfo.ScTimes
 	castRow.ComeTimes = scInfo.ComeTimes
 	castRow.LastScTime = scInfo.LastScTime
+	castRow.LastScEventTime = scInfo.LastScEventTime
 	castRow.Rank500MovieNumber = rankInfo.Rank500MovieNumber
 	castRow.Rank20MovieNumber = rankInfo.Rank20MovieNumber
 	castRow.Rank1MovieNumber = rankInfo.Rank1MovieNumber
@@ -435,7 +444,8 @@ func (s *Service) buildCastScInfo(ctx context.Context, movieJavIDs []string) (ca
 		return out, nil
 	}
 
-	pairs := make(map[string]int64)
+	scPairs := make(map[string]int64)
+	eventPairs := make(map[string]struct{})
 	scNames := make(map[string]struct{})
 	for _, movieJavID := range uniqueStrings(movieJavIDs) {
 		rows, err := s.deps.GListModel.ListByMovieJavId(ctx, movieJavID)
@@ -446,18 +456,25 @@ func (s *Service) buildCastScInfo(ctx context.Context, movieJavIDs []string) (ca
 			if row == nil || strings.TrimSpace(row.ScName) == "" {
 				continue
 			}
+			if row.IsSc != consts.GListIsNotSc && row.IsSc != consts.GListIsSc {
+				continue
+			}
 			key := movieJavID + "\x00" + strings.TrimSpace(row.ScName)
-			if old, ok := pairs[key]; ok {
+			eventPairs[key] = struct{}{}
+			scNames[strings.TrimSpace(row.ScName)] = struct{}{}
+			if row.IsSc != consts.GListIsSc {
+				continue
+			}
+			if old, ok := scPairs[key]; ok {
 				if old == consts.GListIsCome || row.IsCome != consts.GListIsCome {
 					continue
 				}
 			}
-			pairs[key] = row.IsCome
-			scNames[strings.TrimSpace(row.ScName)] = struct{}{}
+			scPairs[key] = row.IsCome
 		}
 	}
 
-	if len(pairs) == 0 {
+	if len(eventPairs) == 0 {
 		return out, nil
 	}
 
@@ -477,7 +494,17 @@ func (s *Service) buildCastScInfo(ctx context.Context, movieJavIDs []string) (ca
 		scTimeMap[strings.TrimSpace(row.Name)] = row.ScTime
 	}
 
-	for key, isCome := range pairs {
+	for key := range eventPairs {
+		parts := strings.SplitN(key, "\x00", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if scTimeMap[parts[1]] > out.LastScEventTime {
+			out.LastScEventTime = scTimeMap[parts[1]]
+		}
+	}
+
+	for key, isCome := range scPairs {
 		parts := strings.SplitN(key, "\x00", 2)
 		if len(parts) != 2 {
 			continue

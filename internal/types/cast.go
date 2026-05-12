@@ -15,6 +15,7 @@ type Cast struct {
 	ScTimes            int64
 	ComeTimes          int64
 	LastScTime         int64
+	LastScEventTime    int64
 	Rank500MovieNumber int64
 	Rank20MovieNumber  int64
 	Rank1MovieNumber   int64

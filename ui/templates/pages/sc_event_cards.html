@@ -51,6 +51,9 @@
                             <a href="{{ .ScSortQuery.ByCooldown.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByCooldown.Active }}active disabled{{ end }}">
                                 Cooldown{{ if .ScSortQuery.ByCooldown.Active }}{{ if .ScSortQuery.ByCooldown.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
                             </a>
+                            <a href="{{ .ScSortQuery.ByKind.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByKind.Active }}active disabled{{ end }}">
+                                种类{{ if .ScSortQuery.ByKind.Active }}{{ if .ScSortQuery.ByKind.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                            </a>
                             <a href="{{ .ScSortQuery.ByMovieCast.Href }}" class="btn btn-sm btn-outline-primary {{ if .ScSortQuery.ByMovieCast.Active }}active disabled{{ end }}">
                                 演员{{ if .ScSortQuery.ByMovieCast.Active }}{{ if .ScSortQuery.ByMovieCast.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
                             </a>
@@ -120,6 +123,7 @@
 
                                         <div class="sc-event-meta-grid">
                                             <span class="sc-pill">{{ if gt .Event.Cooldown 0 }}{{ humanDays .Event.Cooldown }}{{ else }}Cooldown -{{ end }}</span>
+                                            <span class="sc-pill">{{ if .Event.Kind }}种类 {{ .Event.Kind }}{{ else }}种类 -{{ end }}</span>
                                             <span class="sc-pill">{{ if .Event.MovieCast }}{{ .Event.MovieCast }}{{ else }}演员 -{{ end }}</span>
                                             <span class="sc-pill">{{ if .Event.Vessel }}Vessel {{ .Event.Vessel }}{{ else }}Vessel -{{ end }}</span>
                                             <span class="sc-pill">{{ if .Event.Fg }}FG {{ .Event.Fg }}{{ else }}FG -{{ end }}</span>

@@ -10,9 +10,10 @@ type Cast struct {
 	OwnedMovieNumber  int64 `gorm:"not null;index"`
 	OwnedWMediaNumber int64 `gorm:"not null;index"`
 
-	ScTimes    int64 `gorm:"not null;type:MEDIUMINT;index"`
-	ComeTimes  int64 `gorm:"not null;type:MEDIUMINT;index"`
-	LastScTime int64 `gorm:"not null;index"`
+	ScTimes         int64 `gorm:"not null;type:MEDIUMINT;index"`
+	ComeTimes       int64 `gorm:"not null;type:MEDIUMINT;index"`
+	LastScTime      int64 `gorm:"not null;index"`
+	LastScEventTime int64 `gorm:"not null;index"`
 
 	Rank500MovieNumber int64 `gorm:"not null;type:MEDIUMINT;index"`
 	Rank20MovieNumber  int64 `gorm:"not null;type:MEDIUMINT;index"`

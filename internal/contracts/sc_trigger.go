@@ -17,4 +17,10 @@ type ScTriggerMsg struct {
 	Fg              string
 	Vessel          string
 	Remarks         string
+	Movies          []ScTriggerMovie
+}
+
+type ScTriggerMovie struct {
+	MovieJavId string
+	IsSc       int64
 }

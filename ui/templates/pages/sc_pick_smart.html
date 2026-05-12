@@ -49,6 +49,10 @@
                                             <input type="number" min="0" class="form-control" id="castLastScBlockDays" value="60" required>
                                         </div>
                                         <div class="col-md-2">
+                                            <label for="lastScEventBlockDays" class="form-label">LastSc Event 阻断天数</label>
+                                            <input type="number" min="0" class="form-control" id="lastScEventBlockDays" value="30" required>
+                                        </div>
+                                        <div class="col-md-2">
                                             <label for="rank20Min" class="form-label">Rank20 至少</label>
                                             <input type="number" min="0" class="form-control" id="rank20Min" value="0" required>
                                         </div>
@@ -63,6 +67,10 @@
                                         <div class="col-md-2">
                                             <label for="castLastScPenaltyAlpha" class="form-label">Cast LastSc 惩罚系数</label>
                                             <input type="number" min="0" step="0.1" class="form-control" id="castLastScPenaltyAlpha" value="0.7" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label for="lastScEventPenaltyAlpha" class="form-label">LastSc Event 惩罚系数</label>
+                                            <input type="number" min="0" step="0.1" class="form-control" id="lastScEventPenaltyAlpha" value="0.7" required>
                                         </div>
                                         <div class="col-md-2">
                                             <label for="castOwnedScRatioPenaltyAlpha" class="form-label">Cast SC Ratio 惩罚系数</label>
@@ -106,6 +114,16 @@
                         </div>
                         <div class="small text-muted" id="copyCurrent"></div>
                         <div class="small text-danger mt-1" id="copyError" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="card mt-3" id="pickInfoCard" style="display: none;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                            <h5 class="mb-0">Pick 概览</h5>
+                            <span class="text-muted small" id="pickInfoSummary"></span>
+                        </div>
+                        <div class="row g-3" id="pickInfoGrid"></div>
                     </div>
                 </div>
 

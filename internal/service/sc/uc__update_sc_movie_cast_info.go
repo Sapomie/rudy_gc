@@ -11,9 +11,10 @@ import (
 )
 
 type movieScInfo struct {
-	ScTimes    int64
-	ComeTimes  int64
-	LastScTime int64
+	ScEventTimes int64
+	ScTimes      int64
+	ComeTimes    int64
+	LastScTime   int64
 }
 
 func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map[string]struct{}) error {
@@ -144,7 +145,7 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 		return result, nil
 	}
 
-	gls, err := l.glFindByMovieJavIDs(ctx, movieJavIDs)
+	gls, err := l.glFindAllByMovieJavIDs(ctx, movieJavIDs)
 	if err != nil {
 		return nil, fmt.Errorf("find g_list by movies: %w", err)
 	}
@@ -175,6 +176,11 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 			continue
 		}
 		info := result[gl.MovieJavId]
+		info.ScEventTimes++
+		if gl.IsSc != consts.GListIsSc {
+			result[gl.MovieJavId] = info
+			continue
+		}
 		info.ScTimes++
 		if gl.IsCome == consts.GListIsCome {
 			info.ComeTimes++

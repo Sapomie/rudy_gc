@@ -2,25 +2,37 @@ package sc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"rudy_gc/internal/consts"
-	"rudy_gc/internal/taskctx"
-	"rudy_gc/internal/types"
 	"strings"
 	"time"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+
+	"rudy_gc/internal/consts"
+	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/taskctx"
+	"rudy_gc/internal/types"
 )
 
 type AddScInput struct {
 	Dir             string
 	ComeMovieJavId  string
 	MovieCast       string
+	Kind            string
 	DurationMinutes int64
 	Fg              string
 	Vessel          string
 	Remarks         string
+	Movies          []AddScInputMovie
+}
+
+type AddScInputMovie struct {
+	MovieJavId string
+	IsSc       int64
 }
 
 type AddScPreview struct {
@@ -36,6 +48,8 @@ type AddScPreview struct {
 type AddScPreviewMovie struct {
 	MovieName  string
 	MovieJavId string
+	MovieHref  string
+	JacketImg  string
 	Casts      []string
 }
 
@@ -45,6 +59,9 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 	if dir == "" {
 		return fmt.Errorf("dir is required")
 	}
+	if in.DurationMinutes < 0 {
+		return fmt.Errorf("duration must not be negative")
+	}
 
 	preview, imageFilePath, err := l.buildAddScPreview(ctx, dir)
 	if err != nil {
@@ -53,18 +70,23 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 	if preview == nil {
 		return fmt.Errorf("empty sc preview")
 	}
+	if err := l.validateAddScNameAvailable(ctx, preview.ScName); err != nil {
+		return err
+	}
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:   "sc_add_preview_ready",
 		Message: fmt.Sprintf("预览完成，影片数=%d", preview.MovieCount),
 	})
 
 	comeMovieJavId := strings.TrimSpace(in.ComeMovieJavId)
-	if comeMovieJavId == "" {
-		return fmt.Errorf("come movie is required")
+	if strings.TrimSpace(in.MovieCast) != "" && comeMovieJavId == "" {
+		return fmt.Errorf("movie cast requires come movie")
 	}
+	selectedIsScMap := buildAddScMovieSelectionMap(in.Movies)
 
 	var (
-		count         int64
+		totalCount    int64
+		scCount       int64
 		comeMovie     string
 		movieJavIdMap = make(map[string]struct{})
 		comeFound     bool
@@ -79,26 +101,33 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 		movieJavIdMap[movie.MovieJavId] = struct{}{}
 
 		isCome := movie.MovieJavId == comeMovieJavId
-		gl := createGList(preview.ScName, movie.MovieName, movie.MovieJavId, isCome)
+		isSc := resolveAddScMovieIsSc(selectedIsScMap, movie.MovieJavId)
+		if isCome && isSc != consts.GListIsSc {
+			return fmt.Errorf("come movie must be selected from is_sc=2 movies")
+		}
+		gl := createGList(preview.ScName, movie.MovieName, movie.MovieJavId, isCome, isSc)
 		if isCome {
 			comeMovie = movie.MovieName
 			comeFound = true
+		}
+		if isSc == consts.GListIsSc {
+			scCount++
 		}
 
 		_, err = l.glUpsert(ctx, gl)
 		if err != nil {
 			return fmt.Errorf("failed to upsert glist: %w", err)
 		}
-		count++
+		totalCount++
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:        "sc_add_movie_done",
 			Message:      fmt.Sprintf("已写入影片：%s", movie.MovieName),
-			HandledCount: int(count),
-			SuccessCount: int(count),
-			QueuedCount:  int(preview.MovieCount - count),
+			HandledCount: int(totalCount),
+			SuccessCount: int(totalCount),
+			QueuedCount:  int(preview.MovieCount - totalCount),
 		})
 	}
-	if !comeFound {
+	if comeMovieJavId != "" && !comeFound {
 		return fmt.Errorf("selected come movie not found in preview movies")
 	}
 
@@ -111,8 +140,9 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 	sc := &types.GSc{
 		Name:            scName,
 		ScTime:          preview.ScTime,
+		Kind:            strings.TrimSpace(in.Kind),
 		ComeMovieName:   comeMovie,
-		MovieNumber:     count,
+		MovieNumber:     scCount,
 		Cooldown:        0,
 		DurationMinutes: in.DurationMinutes,
 		Fg:              strings.TrimSpace(in.Fg),
@@ -128,15 +158,13 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 		sc.ImagePath = imagePath
 	}
 
-	if sc.MovieCast == "" {
-		return fmt.Errorf("movie cast is required")
-	}
-
 	prev, err := l.scFindNearest(ctx, preview.ScTime)
-	if err != nil {
+	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return fmt.Errorf("failed to find previous sc: %w", err)
 	}
-	sc.Cooldown = preview.ScTime - prev.ScTime
+	if prev != nil {
+		sc.Cooldown = preview.ScTime - prev.ScTime
+	}
 
 	_, err = l.scUpsert(ctx, sc)
 	if err != nil {
@@ -150,8 +178,8 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:        "sc_add_done",
 		Message:      fmt.Sprintf("SC 新增完成：%s", scName),
-		HandledCount: int(count),
-		SuccessCount: int(count),
+		HandledCount: int(totalCount),
+		SuccessCount: int(totalCount),
 	})
 
 	return nil
@@ -221,6 +249,8 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 		previewMovie := &AddScPreviewMovie{
 			MovieName:  wm.MovieName,
 			MovieJavId: wm.MovieJavId,
+			MovieHref:  buildMovieHref(wm.MovieName),
+			JacketImg:  strings.TrimSpace(mt.JacketImg),
 			Casts:      collectCastNames(mt),
 		}
 		preview.Movies = append(preview.Movies, previewMovie)
@@ -234,17 +264,75 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 	return preview, imageFilePath, nil
 }
 
-func createGList(scName, movieName, movieJavId string, isCome bool) *types.GList {
+func createGList(scName, movieName, movieJavId string, isCome bool, isSc int64) *types.GList {
 	comeFlag := consts.GListIsNotCome
 	if isCome {
 		comeFlag = consts.GListIsCome
+	}
+	if isSc != consts.GListIsSc {
+		isSc = consts.GListIsNotSc
 	}
 	return &types.GList{
 		Name:       fmt.Sprintf("%s__%s", scName, movieName),
 		ScName:     scName,
 		MovieJavId: movieJavId,
 		IsCome:     comeFlag,
+		IsSc:       isSc,
 	}
+}
+
+func buildAddScMovieSelectionMap(items []AddScInputMovie) map[string]int64 {
+	out := make(map[string]int64, len(items))
+	for _, item := range items {
+		movieJavId := strings.TrimSpace(item.MovieJavId)
+		if movieJavId == "" {
+			continue
+		}
+		out[movieJavId] = normalizeAddScMovieIsSc(item.IsSc)
+	}
+	return out
+}
+
+func resolveAddScMovieIsSc(selected map[string]int64, movieJavId string) int64 {
+	if selected == nil {
+		return consts.GListIsSc
+	}
+	if v, ok := selected[strings.TrimSpace(movieJavId)]; ok {
+		return normalizeAddScMovieIsSc(v)
+	}
+	return consts.GListIsSc
+}
+
+func normalizeAddScMovieIsSc(v int64) int64 {
+	if v == consts.GListIsSc {
+		return consts.GListIsSc
+	}
+	return consts.GListIsNotSc
+}
+
+func (l *ScService) validateAddScNameAvailable(ctx context.Context, scName string) error {
+	scName = strings.TrimSpace(scName)
+	if scName == "" {
+		return fmt.Errorf("sc name is required")
+	}
+
+	row, err := l.deps.ScModel.FindOneByName(ctx, scName)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return fmt.Errorf("check existing sc failed: %w", err)
+	}
+	if row != nil {
+		return fmt.Errorf("sc name already exists: %s", scName)
+	}
+
+	rows, err := l.deps.GListModel.ListByScName(ctx, scName)
+	if err != nil {
+		return fmt.Errorf("check existing g_list sc failed: %w", err)
+	}
+	if len(rows) > 0 {
+		return fmt.Errorf("sc name already exists: %s", scName)
+	}
+
+	return nil
 }
 
 func getScTime(scName string) (int64, error) {

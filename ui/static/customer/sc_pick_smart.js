@@ -29,6 +29,9 @@
     const pickedGrid = document.getElementById('pickedGrid');
     const pickedCount = document.getElementById('pickedCount');
     const pickedSortBar = document.getElementById('pickedSortBar');
+    const pickInfoCard = document.getElementById('pickInfoCard');
+    const pickInfoSummary = document.getElementById('pickInfoSummary');
+    const pickInfoGrid = document.getElementById('pickInfoGrid');
     const copyCard = document.getElementById('copyCard');
     const copyMeta = document.getElementById('copyMeta');
     const copyProgress = document.getElementById('copyProgress');
@@ -325,6 +328,48 @@
         applyPickedSort(true);
     }
 
+    function infoNumber(info, key) {
+        const value = info && Number(info[key]);
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    function clearPickInfo() {
+        if (pickInfoCard) pickInfoCard.style.display = 'none';
+        if (pickInfoSummary) pickInfoSummary.textContent = '';
+        if (pickInfoGrid) pickInfoGrid.innerHTML = '';
+    }
+
+    function renderPickInfo(info) {
+        if (!pickInfoCard || !pickInfoSummary || !pickInfoGrid || !info) {
+            clearPickInfo();
+            return;
+        }
+        const totalSizeGb = info.total_size_gb || '';
+        const rows = [
+            ['原始候选电影', infoNumber(info, 'raw_candidate_movie_count')],
+            ['参与计算 Cast', infoNumber(info, 'cast_count')],
+            ['阻断后剩余 Cast', infoNumber(info, 'after_block_cast_count')],
+            ['阻断后剩余 Movie', infoNumber(info, 'after_block_movie_count')],
+            ['总大小(GB)', totalSizeGb || '-'],
+            ['Cast LastSc 阻断 Cast', infoNumber(info, 'cast_last_sc_blocked_cast_count')],
+            ['LastSc Event 阻断 Cast', infoNumber(info, 'last_sc_event_blocked_cast_count')],
+            ['Cast LastSc 影响 Movie', infoNumber(info, 'cast_last_sc_blocked_movie_count')],
+            ['LastSc Event 影响 Movie', infoNumber(info, 'last_sc_event_blocked_movie_count')],
+            ['演员去重跳过 Movie', infoNumber(info, 'selected_actor_skipped_movie_count')],
+        ];
+        pickInfoSummary.textContent = '阻断后 Movie ' + infoNumber(info, 'after_block_movie_count') + ' 部';
+        pickInfoGrid.innerHTML = rows.map(function (row) {
+            return '' +
+                '<div class="col-6 col-md-3 col-xl-2">' +
+                '<div class="border rounded p-2 h-100">' +
+                '<div class="text-muted small">' + escapeHtml(row[0]) + '</div>' +
+                '<div class="fw-semibold">' + escapeHtml(row[1]) + '</div>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+        pickInfoCard.style.display = 'block';
+    }
+
     let copyTimer = null;
     let copyStatusBootstrapped = false;
     let copyStartedInPage = false;
@@ -464,10 +509,12 @@
 
     function buildOptions(n) {
         const castLastScBlockDays = parseNumber(document.getElementById('castLastScBlockDays').value.trim(), false);
+        const lastScEventBlockDays = parseNumber(document.getElementById('lastScEventBlockDays').value.trim(), false);
         const rawRank20Min = document.getElementById('rank20Min').value.trim();
         const rawRank100Min = document.getElementById('rank100Min').value.trim();
         const rawRank500Min = document.getElementById('rank500Min').value.trim();
         const castLastScPenaltyAlpha = parseNumber(document.getElementById('castLastScPenaltyAlpha').value.trim(), true);
+        const lastScEventPenaltyAlpha = parseNumber(document.getElementById('lastScEventPenaltyAlpha').value.trim(), true);
         const castOwnedScRatioPenaltyAlpha = parseNumber(document.getElementById('castOwnedScRatioPenaltyAlpha').value.trim(), true);
         const movieHasScPenaltyAlpha = parseNumber(document.getElementById('movieHasScPenaltyAlpha').value.trim(), true);
 
@@ -480,8 +527,8 @@
             if (rank500Min === null) rank500Min = rank100Min;
         }
 
-        if (castLastScBlockDays === null || rank20Min === null || rank100Min === null || rank500Min === null ||
-            castLastScPenaltyAlpha === null || castOwnedScRatioPenaltyAlpha === null || movieHasScPenaltyAlpha === null) {
+        if (castLastScBlockDays === null || lastScEventBlockDays === null || rank20Min === null || rank100Min === null || rank500Min === null ||
+            castLastScPenaltyAlpha === null || lastScEventPenaltyAlpha === null || castOwnedScRatioPenaltyAlpha === null || movieHasScPenaltyAlpha === null) {
             showMsg('全局抽取策略参数不完整', false);
             return null;
         }
@@ -492,10 +539,12 @@
 
         return {
             castLastScBlockDays,
+            lastScEventBlockDays,
             rank20Min,
             rank100Min,
             rank500Min,
             castLastScPenaltyAlpha,
+            lastScEventPenaltyAlpha,
             castOwnedScRatioPenaltyAlpha,
             movieHasScPenaltyAlpha,
         };
@@ -544,6 +593,7 @@
         const payload = buildPayload();
         if (!payload) return;
 
+        clearPickInfo();
         post(url, payload)
             .then(async (r) => {
                 if (!r.ok) {
@@ -554,6 +604,7 @@
                 }
                 const data = await r.json().catch(() => ({}));
                 const picked = data.picked || 0;
+                renderPickInfo(data.pick_info || null);
                 renderMovies(data.movies || [], data.total_size_gb || '');
                 if (data.copy_status) {
                     copyStatusBootstrapped = true;

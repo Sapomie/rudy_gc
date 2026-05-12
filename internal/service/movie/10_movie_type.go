@@ -227,9 +227,10 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 			return nil, err
 		}
 		ci := &types.CastInfo{
-			PersonId:   castRow.PersonId,
-			LastScTime: castRow.LastScTime,
-			Name:       castRow.Name,
+			PersonId:        castRow.PersonId,
+			LastScTime:      castRow.LastScTime,
+			LastScEventTime: castRow.LastScEventTime,
+			Name:            castRow.Name,
 		}
 
 		displayName := castRow.Name
@@ -428,7 +429,7 @@ func (s *Service) findMediaInfo(ctx context.Context, movieJavId string) (*types.
 }
 
 func (s *Service) findScInfo(ctx context.Context, movieJavId string) ([]*types.MovieScEvent, error) {
-	gLists, err := s.deps.GListModel.ListByMovieJavId(ctx, movieJavId)
+	gLists, err := s.deps.GListModel.ListScOnlyByMovieJavId(ctx, movieJavId)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
 			return nil, nil
@@ -442,7 +443,7 @@ func (s *Service) findScInfo(ctx context.Context, movieJavId string) ([]*types.M
 	nameSet := make(map[string]struct{}, len(gLists))
 	names := make([]string, 0, len(gLists))
 	for _, gl := range gLists {
-		if gl == nil || gl.ScName == "" {
+		if gl == nil || gl.ScName == "" || gl.IsSc != consts.GListIsSc {
 			continue
 		}
 		if _, ok := nameSet[gl.ScName]; ok {
@@ -467,7 +468,7 @@ func (s *Service) findScInfo(ctx context.Context, movieJavId string) ([]*types.M
 	items := make([]*types.MovieScEvent, 0, len(gLists))
 	seen := make(map[string]struct{}, len(gLists))
 	for _, gl := range gLists {
-		if gl == nil || gl.ScName == "" {
+		if gl == nil || gl.ScName == "" || gl.IsSc != consts.GListIsSc {
 			continue
 		}
 		if _, ok := seen[gl.ScName]; ok {

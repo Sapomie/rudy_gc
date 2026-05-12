@@ -137,6 +137,12 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="sc-metric-card">
+                                        <div class="sc-metric-label">Last SC Event</div>
+                                        <div class="sc-metric-value">{{ humanTime .Page.Actor.LastScEventTime }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="sc-metric-card">
                                         <div class="sc-metric-label">Highest Rank</div>
                                         <div class="sc-metric-value">{{ if gt .Page.Actor.HighestRank 0 }}#{{ .Page.Actor.HighestRank }}{{ else }}-{{ end }}</div>
                                     </div>

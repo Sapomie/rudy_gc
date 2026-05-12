@@ -18,6 +18,7 @@ type Person struct {
 	ScTimes              int64
 	ComeTimes            int64
 	LastScTime           int64
+	LastScEventTime      int64
 	HighestRank          int64
 	RankTimes            int64
 	CreatedOn            int64

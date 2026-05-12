@@ -119,6 +119,12 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateAddCPersonOwnedWMediaRatio(db); err != nil {
 		return err
 	}
+	if err := migrateAddAmCastLastScEventTime(db); err != nil {
+		return err
+	}
+	if err := migrateAddCPersonLastScEventTime(db); err != nil {
+		return err
+	}
 	if err := migrateWMediaSourceType(db); err != nil {
 		return err
 	}
@@ -267,6 +273,70 @@ SET owned_w_media_ratio = CASE
 	WHEN owned_w_media_number <> 0 THEN 10000
 	ELSE 0
 END`).Error
+}
+
+func migrateAddAmCastLastScEventTime(db *gorm.DB) error {
+	const tableName = "am_cast"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	hasColumnValue, err := hasColumn(db, tableName, "last_sc_event_time")
+	if err != nil {
+		return err
+	}
+	if !hasColumnValue {
+		if err := db.Exec("ALTER TABLE `am_cast` ADD COLUMN `last_sc_event_time` bigint NOT NULL DEFAULT 0 AFTER `last_sc_time`").Error; err != nil {
+			return err
+		}
+	}
+
+	return db.Exec(`
+UPDATE am_cast ac
+LEFT JOIN (
+	SELECT
+		amr.cast_id AS cast_id,
+		COALESCE(MAX(gs.sc_time), 0) AS last_sc_event_time
+	FROM amr_movie_cast amr
+	JOIN g_list gl ON gl.movie_jav_id = amr.movie_jav_id
+	JOIN g_sc gs ON gs.name = gl.sc_name
+	WHERE gl.is_sc IN (?, ?)
+	GROUP BY amr.cast_id
+) agg ON agg.cast_id = ac.id
+SET ac.last_sc_event_time = COALESCE(agg.last_sc_event_time, 0)
+`,
+		consts.GListIsNotSc,
+		consts.GListIsSc,
+	).Error
+}
+
+func migrateAddCPersonLastScEventTime(db *gorm.DB) error {
+	const tableName = "c_person"
+
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil {
+		return err
+	}
+	if !hasTableValue {
+		return nil
+	}
+
+	hasColumnValue, err := hasColumn(db, tableName, "last_sc_event_time")
+	if err != nil {
+		return err
+	}
+	if !hasColumnValue {
+		if err := db.Exec("ALTER TABLE `c_person` ADD COLUMN `last_sc_event_time` bigint NOT NULL DEFAULT 0 AFTER `last_sc_time`").Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func migrateDSeedMovieStatsColumns(db *gorm.DB) error {
@@ -574,6 +644,7 @@ LEFT JOIN (
 		COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
 		COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
 		COALESCE(MAX(COALESCE(gss.last_sc_time, 0)), 0) AS last_sc_time,
+		COALESCE(MAX(COALESCE(gse.last_sc_event_time, 0)), 0) AS last_sc_event_time,
 		COALESCE(MIN(CASE WHEN mi.highest_rank > 0 AND mi.highest_rank < 1000 THEN mi.highest_rank END), 0) AS highest_rank,
 		COALESCE(SUM(CASE WHEN mi.days_in_rank > 0 THEN mi.days_in_rank ELSE 0 END), 0) AS rank_times
 	FROM (
@@ -585,6 +656,15 @@ LEFT JOIN (
 	LEFT JOIN w_media wm_owned ON wm_owned.movie_jav_id = pm.movie_jav_id AND wm_owned.source_type = ?
 	LEFT JOIN w_media wm ON wm.movie_jav_id = pm.movie_jav_id AND wm.source_type = ?
 	LEFT JOIN g_sc_stat gss ON gss.movie_jav_id = pm.movie_jav_id
+	LEFT JOIN (
+		SELECT
+			gl.movie_jav_id AS movie_jav_id,
+			COALESCE(MAX(gs.sc_time), 0) AS last_sc_event_time
+		FROM g_list gl
+		JOIN g_sc gs ON gs.name = gl.sc_name
+		WHERE gl.is_sc IN (?, ?)
+		GROUP BY gl.movie_jav_id
+	) gse ON gse.movie_jav_id = pm.movie_jav_id
 	LEFT JOIN bm_minfo mi ON mi.jav_id = pm.movie_jav_id
 	GROUP BY pm.person_id
 ) agg ON agg.person_id = p.id
@@ -599,6 +679,7 @@ SET
 	p.sc_times = COALESCE(agg.sc_times, 0),
 	p.come_times = COALESCE(agg.come_times, 0),
 	p.last_sc_time = COALESCE(agg.last_sc_time, 0),
+	p.last_sc_event_time = COALESCE(agg.last_sc_event_time, 0),
 	p.highest_rank = COALESCE(agg.highest_rank, 0),
 	p.rank_times = COALESCE(agg.rank_times, 0)`
 
@@ -607,6 +688,8 @@ SET
 		consts.FilmIsNotRemoved,
 		consts.WMediaSourceNative,
 		consts.WMediaSourceNative,
+		consts.GListIsNotSc,
+		consts.GListIsSc,
 	).Error
 }
 

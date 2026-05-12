@@ -115,6 +115,7 @@ func (m *customAmCastModel) AggregatePersonStatsByIDs(ctx context.Context, ids [
 		ScTimes           int64 `db:"sc_times"`
 		ComeTimes         int64 `db:"come_times"`
 		LastScTime        int64 `db:"last_sc_time"`
+		LastScEventTime   int64 `db:"last_sc_event_time"`
 		HighestRank       int64 `db:"highest_rank"`
 		RankTimes         int64 `db:"rank_times"`
 	}
@@ -129,6 +130,7 @@ SELECT
 	COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
 	COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
 	COALESCE(MAX(COALESCE(gss.last_sc_time, 0)), 0) AS last_sc_time,
+	COALESCE(MAX(COALESCE(gse.last_sc_event_time, 0)), 0) AS last_sc_event_time,
 	COALESCE(MIN(CASE WHEN mi.highest_rank > 0 AND mi.highest_rank < 1000 THEN mi.highest_rank END), 0) AS highest_rank,
 	COALESCE(SUM(CASE WHEN mi.days_in_rank > 0 THEN mi.days_in_rank ELSE 0 END), 0) AS rank_times
 FROM (
@@ -140,6 +142,15 @@ FROM (
 LEFT JOIN w_media wm_owned ON wm_owned.movie_jav_id = pm.movie_jav_id AND wm_owned.source_type = ?
 LEFT JOIN w_media wm ON wm.movie_jav_id = pm.movie_jav_id AND wm.source_type = ?
 LEFT JOIN g_sc_stat gss ON gss.movie_jav_id = pm.movie_jav_id
+LEFT JOIN (
+	SELECT
+		gl.movie_jav_id AS movie_jav_id,
+		COALESCE(MAX(gs.sc_time), 0) AS last_sc_event_time
+	FROM g_list gl
+	JOIN g_sc gs ON gs.name = gl.sc_name
+	WHERE gl.is_sc IN (?, ?)
+	GROUP BY gl.movie_jav_id
+) gse ON gse.movie_jav_id = pm.movie_jav_id
 LEFT JOIN bm_minfo mi ON mi.jav_id = pm.movie_jav_id
 GROUP BY pm.person_id
 `
@@ -149,7 +160,7 @@ GROUP BY pm.person_id
 	for _, id := range uniq {
 		args = append(args, id)
 	}
-	args = append(args, consts.WMediaSourceNative, consts.WMediaSourceNative)
+	args = append(args, consts.WMediaSourceNative, consts.WMediaSourceNative, consts.GListIsNotSc, consts.GListIsSc)
 
 	var rows []*row
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
@@ -172,6 +183,7 @@ GROUP BY pm.person_id
 			ScTimes:           item.ScTimes,
 			ComeTimes:         item.ComeTimes,
 			LastScTime:        item.LastScTime,
+			LastScEventTime:   item.LastScEventTime,
 			HighestRank:       item.HighestRank,
 			RankTimes:         item.RankTimes,
 		}
@@ -248,6 +260,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 		ScTimes            int64  `db:"sc_times"`
 		ComeTimes          int64  `db:"come_times"`
 		LastScTime         int64  `db:"last_sc_time"`
+		LastScEventTime    int64  `db:"last_sc_event_time"`
 		Rank500MovieNumber int64  `db:"rank500_movie_number"`
 		Rank20MovieNumber  int64  `db:"rank20_movie_number"`
 		Rank1MovieNumber   int64  `db:"rank1_movie_number"`
@@ -272,6 +285,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			"ac.sc_times AS sc_times",
 			"ac.come_times AS come_times",
 			"ac.last_sc_time AS last_sc_time",
+			"ac.last_sc_event_time AS last_sc_event_time",
 			"ac.rank500_movie_number AS rank500_movie_number",
 			"ac.rank20_movie_number AS rank20_movie_number",
 			"ac.rank1_movie_number AS rank1_movie_number",
@@ -321,6 +335,7 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			ScTimes:            row.ScTimes,
 			ComeTimes:          row.ComeTimes,
 			LastScTime:         row.LastScTime,
+			LastScEventTime:    row.LastScEventTime,
 			Rank500MovieNumber: row.Rank500MovieNumber,
 			Rank20MovieNumber:  row.Rank20MovieNumber,
 			Rank1MovieNumber:   row.Rank1MovieNumber,
@@ -369,6 +384,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 		ScTimes            int64  `db:"sc_times"`
 		ComeTimes          int64  `db:"come_times"`
 		LastScTime         int64  `db:"last_sc_time"`
+		LastScEventTime    int64  `db:"last_sc_event_time"`
 		Rank500MovieNumber int64  `db:"rank500_movie_number"`
 		Rank20MovieNumber  int64  `db:"rank20_movie_number"`
 		Rank1MovieNumber   int64  `db:"rank1_movie_number"`
@@ -390,6 +406,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 			"sc_times",
 			"come_times",
 			"last_sc_time",
+			"last_sc_event_time",
 			"rank500_movie_number",
 			"rank20_movie_number",
 			"rank1_movie_number",
@@ -429,6 +446,7 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 			ScTimes:            row.ScTimes,
 			ComeTimes:          row.ComeTimes,
 			LastScTime:         row.LastScTime,
+			LastScEventTime:    row.LastScEventTime,
 			Rank500MovieNumber: row.Rank500MovieNumber,
 			Rank20MovieNumber:  row.Rank20MovieNumber,
 			Rank1MovieNumber:   row.Rank1MovieNumber,

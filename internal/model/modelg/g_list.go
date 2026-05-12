@@ -6,6 +6,7 @@ type List struct {
 	ScName     string `gorm:"not null;type:varchar(191)"`
 	MovieJavId string `gorm:"not null;type:varchar(191)"`
 	IsCome     int64  `gorm:"not null;type:tinyint"`
+	IsSc       int64  `gorm:"not null;type:tinyint"`
 
 	CreatedOn int64 `gorm:"not null;default:0"`
 	UpdatedOn int64 `gorm:"not null;default:0"`

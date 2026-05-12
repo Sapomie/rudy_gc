@@ -6,6 +6,7 @@ type GScStat struct {
 	MovieJavID string `gorm:"column:movie_jav_id;type:varchar(191);not null;uniqueIndex"`
 	MovieName  string `gorm:"column:movie_name;type:varchar(191);not null;index:idx_sc_last_name,priority:3,sort:desc;index:idx_come_last_name,priority:3,sort:desc;index:idx_lastsc_name,priority:2,sort:desc"`
 
+	ScEventTimes   int64 `gorm:"column:sc_event_times;type:mediumint;not null"`
 	ScTimes        int64 `gorm:"column:sc_times;type:mediumint;not null;index:idx_sc_last_name,priority:1,sort:desc"`
 	ComeTimes      int64 `gorm:"column:come_times;type:mediumint;not null;index:idx_come_last_name,priority:1,sort:desc"`
 	LastScTime     int64 `gorm:"column:last_sc_time;not null;index:idx_sc_last_name,priority:2,sort:desc;index:idx_come_last_name,priority:2,sort:desc;index:idx_lastsc_name,priority:1,sort:desc"`

@@ -7,6 +7,7 @@ type GList struct {
 	ScName     string
 	MovieJavId string
 	IsCome     int64
+	IsSc       int64
 	CreatedOn  int64
 	UpdatedOn  int64
 }
@@ -16,6 +17,7 @@ type GSc struct {
 	Name            string
 	MovieNumber     int64
 	ScTime          int64
+	Kind            string
 	ComeMovieName   string
 	Cooldown        int64
 	DurationMinutes int64 // 分钟

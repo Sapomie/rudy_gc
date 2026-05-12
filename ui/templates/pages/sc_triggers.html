@@ -16,6 +16,97 @@
                 z-index: 2000;
                 display: none;
             }
+
+            .sc-preview-movie-grid {
+                display: grid;
+                grid-template-columns: repeat(8, minmax(0, 1fr));
+                gap: 12px;
+            }
+
+            .sc-preview-movie-card {
+                border: 1px solid #e9ecef;
+                border-radius: 6px;
+                padding: 10px;
+                min-height: 188px;
+            }
+
+            .sc-preview-movie-poster {
+                width: 100%;
+                aspect-ratio: 2 / 3;
+                border-radius: 6px;
+                object-fit: cover;
+                object-position: right center;
+                background: #f8f9fa;
+                display: block;
+            }
+
+            .sc-preview-movie-poster-empty {
+                width: 100%;
+                aspect-ratio: 2 / 3;
+                border-radius: 6px;
+                background: #f8f9fa;
+                border: 1px dashed #dee2e6;
+            }
+
+            .sc-preview-movie-link {
+                display: block;
+                margin-top: 8px;
+                margin-bottom: 8px;
+                color: #212529;
+                font-size: 12px;
+                line-height: 1.35;
+                text-decoration: none;
+                word-break: break-word;
+            }
+
+            .sc-preview-movie-link:hover {
+                color: #0d6efd;
+            }
+
+            .sc-preview-is-sc-buttons {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .sc-preview-is-sc-btn {
+                min-width: 54px;
+                height: 28px;
+                border-radius: 6px;
+                padding: 0 6px;
+                font-size: 12px;
+                line-height: 26px;
+            }
+
+            .sc-preview-is-sc-input-1:checked + .sc-preview-is-sc-btn-1 {
+                background: #6c757d;
+                border-color: #6c757d;
+                color: #fff;
+            }
+
+            .sc-preview-is-sc-input-2:checked + .sc-preview-is-sc-btn-2 {
+                background: #f1c40f;
+                border-color: #f1c40f;
+                color: #212529;
+            }
+
+            @media (max-width: 1399.98px) {
+                .sc-preview-movie-grid {
+                    grid-template-columns: repeat(6, minmax(0, 1fr));
+                }
+            }
+
+            @media (max-width: 1199.98px) {
+                .sc-preview-movie-grid {
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                }
+            }
+
+            @media (max-width: 767.98px) {
+                .sc-preview-movie-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
         </style>
     </head>
 
@@ -49,70 +140,77 @@
                         <button id="btnScAddPreview" type="button" class="btn btn-outline-success">Add Preview</button>
                     </div>
                 </div>
+
+                <div class="card mt-3 d-none" id="scPreviewPanel">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">添加 SC 事件</h4>
+                        <form id="formScAddConfirm">
+                            <div id="scAddPreviewMsg" class="small mb-3"></div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">事件名</label>
+                                    <input type="text" class="form-control" id="scPreviewName" readonly>
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">图片</label>
+                                    <input type="text" class="form-control" id="scPreviewImage" readonly>
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">影片数</label>
+                                    <input type="text" class="form-control" id="scPreviewMovieCount" readonly>
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">SC 影片数</label>
+                                    <input type="text" class="form-control" id="scPreviewSelectedMovieCount" readonly>
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">Come Movie</label>
+                                    <select class="form-select" id="scPreviewComeMovie"></select>
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">Movie Cast</label>
+                                    <select class="form-select" id="scPreviewMovieCast"></select>
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">种类</label>
+                                    <input type="text" class="form-control" id="scPreviewKind" placeholder="可为空">
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">时长(分钟)</label>
+                                    <input type="number" class="form-control" id="scPreviewDuration" placeholder="分钟">
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">FG</label>
+                                    <input type="text" class="form-control" id="scPreviewFg" placeholder="可为空">
+                                </div>
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <label class="form-label">Vessel</label>
+                                    <input type="text" class="form-control" id="scPreviewVessel" placeholder="可为空">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Remarks</label>
+                                    <textarea class="form-control" id="scPreviewRemarks" rows="3" placeholder="可为空"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">影片明细</label>
+                                    <div class="sc-preview-movie-grid" id="scPreviewMovieTableBody">
+                                        <div class="text-muted">暂无预览数据</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-success">确认提交</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
 
     <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
-
-    <div class="modal fade" id="addScPreviewModal" tabindex="-1" aria-labelledby="addScPreviewModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addScPreviewModalLabel">添加 SC 事件</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="formScAddConfirm">
-                    <div class="modal-body">
-                        <div id="scAddPreviewMsg" class="small mb-3"></div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">事件名</label>
-                                <input type="text" class="form-control" id="scPreviewName" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">图片</label>
-                                <input type="text" class="form-control" id="scPreviewImage" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">影片数</label>
-                                <input type="text" class="form-control" id="scPreviewMovieCount" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Come Movie</label>
-                                <select class="form-select" id="scPreviewComeMovie" required></select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Movie Cast</label>
-                                <select class="form-select" id="scPreviewMovieCast" required></select>
-                            </div>
-	                            <div class="col-md-6">
-	                                <label class="form-label">时长(分钟)</label>
-	                                <input type="number" class="form-control" id="scPreviewDuration" placeholder="分钟">
-	                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">FG</label>
-                                <input type="text" class="form-control" id="scPreviewFg" placeholder="可为空">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Vessel</label>
-                                <input type="text" class="form-control" id="scPreviewVessel" placeholder="可为空">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Remarks</label>
-                                <textarea class="form-control" id="scPreviewRemarks" rows="3" placeholder="可为空"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
-                        <button type="submit" class="btn btn-success">确认提交</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <script src="/static/customer/sc_triggers.js"></script>
     <script src="/static/js/jquery.min.js"></script>

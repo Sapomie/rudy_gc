@@ -5,6 +5,7 @@ type Sc struct {
 	Name          string `gorm:"not null;unique"`
 	MovieNumber   int64  `gorm:"not null;type:smallint"`
 	ScTime        int64  `gorm:"not null"`
+	Kind          string `gorm:"not null;type:varchar(32);index"`
 	ComeMovieName string `gorm:"not null;type:varchar(191)"`
 
 	Cooldown  int64  `gorm:"not null;default:0"`

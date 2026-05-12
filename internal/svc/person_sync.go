@@ -42,6 +42,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 			scTimes           int64
 			comeTimes         int64
 			lastScTime        int64
+			lastScEventTime   int64
 			highestRank       int64
 			rankTimes         int64
 		)
@@ -53,6 +54,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 			scTimes = stat.ScTimes
 			comeTimes = stat.ComeTimes
 			lastScTime = stat.LastScTime
+			lastScEventTime = stat.LastScEventTime
 			highestRank = stat.HighestRank
 			rankTimes = stat.RankTimes
 		}
@@ -64,6 +66,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 			row.ScTimes == scTimes &&
 			row.ComeTimes == comeTimes &&
 			row.LastScTime == lastScTime &&
+			row.LastScEventTime == lastScEventTime &&
 			row.HighestRank == highestRank &&
 			row.RankTimes == rankTimes {
 			continue
@@ -76,6 +79,7 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		row.ScTimes = scTimes
 		row.ComeTimes = comeTimes
 		row.LastScTime = lastScTime
+		row.LastScEventTime = lastScEventTime
 		row.HighestRank = highestRank
 		row.RankTimes = rankTimes
 		row.UpdatedOn = now

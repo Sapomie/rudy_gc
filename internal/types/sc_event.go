@@ -1,7 +1,9 @@
 package types
 
 type ScEventListItem struct {
-	Event *GSc
+	Event           *GSc
+	TotalMovieCount int64
+	ScMovieCount    int64
 }
 
 type ScEventListPage struct {
@@ -24,10 +26,34 @@ type ScEventCardPage struct {
 }
 
 type ScEventDetail struct {
-	Event       *GSc
-	Items       []*ScEventMovie
-	FailedItems []*ScEventMovie
-	ComeCount   int64
+	Event                     *GSc
+	Items                     []*ScEventMovie
+	FailedItems               []*ScEventMovie
+	ComeCount                 int64
+	EditImageName             string
+	EditMovieCount            int64
+	EditScMovieCount          int64
+	EditComeMovieJavId        string
+	EditComeMovieOptions      []*ScEventEditMovieOption
+	EditCurrentMovieCastNames []string
+}
+
+type ScEventEditForm struct {
+	Name            string
+	ComeMovieJavId  string
+	Kind            string
+	DurationMinutes int64
+	Fg              string
+	Vessel          string
+	MovieCast       string
+	Remarks         string
+}
+
+type ScEventEditMovieOption struct {
+	MovieJavId  string
+	MovieName   string
+	CastOptions []string
+	IsCome      bool
 }
 
 type ScEventMovie struct {

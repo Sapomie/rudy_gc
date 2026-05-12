@@ -14,6 +14,7 @@ type scEventSortQuery struct {
 	ByComeMovie scEventSortLink
 	ByCooldown  scEventSortLink
 	ByDuration  scEventSortLink
+	ByKind      scEventSortLink
 	ByMovieCast scEventSortLink
 	ByVessel    scEventSortLink
 	ByFg        scEventSortLink
@@ -49,6 +50,7 @@ func buildScEventSortQuery(c *gin.Context, currentField, currentOrder string) *s
 		ByComeMovie: makeHref("come_movie_name"),
 		ByCooldown:  makeHref("cooldown"),
 		ByDuration:  makeHref("duration"),
+		ByKind:      makeHref("kind"),
 		ByMovieCast: makeHref("movie_cast"),
 		ByVessel:    makeHref("vessel"),
 		ByFg:        makeHref("fg"),
@@ -57,7 +59,7 @@ func buildScEventSortQuery(c *gin.Context, currentField, currentOrder string) *s
 
 func normalizeScEventSortField(v string) string {
 	switch v {
-	case "movie_number", "come_movie_name", "cooldown", "duration", "movie_cast", "vessel", "fg", "sc_time":
+	case "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
 		return v
 	default:
 		return "sc_time"

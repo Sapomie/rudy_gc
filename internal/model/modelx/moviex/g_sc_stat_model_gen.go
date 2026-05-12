@@ -45,6 +45,7 @@ type (
 		Id             int64  `db:"id"`
 		MovieJavId     string `db:"movie_jav_id"`
 		MovieName      string `db:"movie_name"`
+		ScEventTimes   int64  `db:"sc_event_times"`
 		ScTimes        int64  `db:"sc_times"`
 		ComeTimes      int64  `db:"come_times"`
 		LastScTime     int64  `db:"last_sc_time"`
@@ -118,8 +119,8 @@ func (m *defaultGScStatModel) Insert(ctx context.Context, data *GScStat) (sql.Re
 	rudyGcGScStatIdKey := fmt.Sprintf("%s%v", cacheRudyGcGScStatIdPrefix, data.Id)
 	rudyGcGScStatMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcGScStatMovieJavIdPrefix, data.MovieJavId)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, gScStatRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.ScTimes, data.ComeTimes, data.LastScTime, data.ReleasingDate, data.MediaBirthTime, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, gScStatRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.MovieJavId, data.MovieName, data.ScEventTimes, data.ScTimes, data.ComeTimes, data.LastScTime, data.ReleasingDate, data.MediaBirthTime, data.CreatedOn, data.UpdatedOn)
 	}, rudyGcGScStatIdKey, rudyGcGScStatMovieJavIdKey)
 	return ret, err
 }
@@ -134,7 +135,7 @@ func (m *defaultGScStatModel) Update(ctx context.Context, newData *GScStat) erro
 	rudyGcGScStatMovieJavIdKey := fmt.Sprintf("%s%v", cacheRudyGcGScStatMovieJavIdPrefix, data.MovieJavId)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, gScStatRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.ReleasingDate, newData.MediaBirthTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.MovieJavId, newData.MovieName, newData.ScEventTimes, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.ReleasingDate, newData.MediaBirthTime, newData.CreatedOn, newData.UpdatedOn, newData.Id)
 	}, rudyGcGScStatIdKey, rudyGcGScStatMovieJavIdKey)
 	return err
 }

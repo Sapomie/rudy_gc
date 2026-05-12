@@ -97,6 +97,10 @@ func (s *Service) scUpsert(ctx context.Context, in *types.GSc) (*types.GSc, erro
 			old.ScTime = in.ScTime
 			changed = true
 		}
+		if old.Kind != in.Kind {
+			old.Kind = in.Kind
+			changed = true
+		}
 		if old.ComeMovieName != in.ComeMovieName {
 			old.ComeMovieName = in.ComeMovieName
 			changed = true
@@ -145,6 +149,7 @@ func (s *Service) scUpsert(ctx context.Context, in *types.GSc) (*types.GSc, erro
 		Name:          in.Name,
 		MovieNumber:   in.MovieNumber,
 		ScTime:        in.ScTime,
+		Kind:          in.Kind,
 		ComeMovieName: in.ComeMovieName,
 		Cooldown:      in.Cooldown,
 		Duration:      in.DurationMinutes,
@@ -206,6 +211,10 @@ func (s *Service) glUpsert(ctx context.Context, in *types.GList) (*types.GList, 
 			old.IsCome = in.IsCome
 			changed = true
 		}
+		if old.IsSc != in.IsSc {
+			old.IsSc = in.IsSc
+			changed = true
+		}
 		if changed {
 			old.UpdatedOn = now
 			if err := s.deps.GListModel.Update(ctx, old); err != nil {
@@ -223,6 +232,7 @@ func (s *Service) glUpsert(ctx context.Context, in *types.GList) (*types.GList, 
 		ScName:     in.ScName,
 		MovieJavId: in.MovieJavId,
 		IsCome:     in.IsCome,
+		IsSc:       in.IsSc,
 		CreatedOn:  now,
 		UpdatedOn:  now,
 	}
@@ -243,6 +253,18 @@ func (s *Service) glUpsert(ctx context.Context, in *types.GList) (*types.GList, 
 }
 
 func (s *Service) glFindByScName(ctx context.Context, scName string) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.ListScOnlyByScName(ctx, scName)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) glFindAllByScName(ctx context.Context, scName string) ([]*types.GList, error) {
 	rows, err := s.deps.GListModel.ListByScName(ctx, scName)
 	if err != nil {
 		return nil, err
@@ -262,7 +284,7 @@ func (s *Service) glFindByFilters(ctx context.Context, scName string, isCome *in
 		pageSize = 20
 	}
 	offset := int64((page - 1) * pageSize)
-	rows, err := s.deps.GListModel.ListByFilters(ctx, scName, isCome, offset, int64(pageSize))
+	rows, err := s.deps.GListModel.ListScOnlyByFilters(ctx, scName, isCome, offset, int64(pageSize))
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +296,18 @@ func (s *Service) glFindByFilters(ctx context.Context, scName string, isCome *in
 }
 
 func (s *Service) glFindByMovieJavIDs(ctx context.Context, javIDs []string) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.ListScOnlyByMovieJavIds(ctx, javIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
+func (s *Service) glFindAllByMovieJavIDs(ctx context.Context, javIDs []string) ([]*types.GList, error) {
 	rows, err := s.deps.GListModel.ListByMovieJavIds(ctx, javIDs)
 	if err != nil {
 		return nil, err
@@ -286,7 +320,7 @@ func (s *Service) glFindByMovieJavIDs(ctx context.Context, javIDs []string) ([]*
 }
 
 func (s *Service) glFindByMovieJavID(ctx context.Context, javID string) ([]*types.GList, error) {
-	rows, err := s.deps.GListModel.ListByMovieJavId(ctx, javID)
+	rows, err := s.deps.GListModel.ListScOnlyByMovieJavId(ctx, javID)
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +332,10 @@ func (s *Service) glFindByMovieJavID(ctx context.Context, javID string) ([]*type
 }
 
 func (s *Service) glListDistinctMovieJavIDs(ctx context.Context) ([]string, error) {
+	return s.deps.GListModel.ListDistinctScMovieJavIds(ctx)
+}
+
+func (s *Service) glListDistinctAllMovieJavIDs(ctx context.Context) ([]string, error) {
 	return s.deps.GListModel.ListDistinctMovieJavIds(ctx)
 }
 
@@ -350,6 +388,10 @@ func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName strin
 			old.MovieName = movieName
 			changed = true
 		}
+		if old.ScEventTimes != info.ScEventTimes {
+			old.ScEventTimes = info.ScEventTimes
+			changed = true
+		}
 		if old.ScTimes != info.ScTimes {
 			old.ScTimes = info.ScTimes
 			changed = true
@@ -383,6 +425,7 @@ func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName strin
 	row := &moviex.GScStat{
 		MovieJavId:     movieJavID,
 		MovieName:      movieName,
+		ScEventTimes:   info.ScEventTimes,
 		ScTimes:        info.ScTimes,
 		ComeTimes:      info.ComeTimes,
 		LastScTime:     info.LastScTime,
@@ -470,6 +513,7 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		old.ScTimes = in.ScTimes
 		old.ComeTimes = in.ComeTimes
 		old.LastScTime = in.LastScTime
+		old.LastScEventTime = in.LastScEventTime
 		old.Rank500MovieNumber = in.Rank500MovieNumber
 		old.Rank20MovieNumber = in.Rank20MovieNumber
 		old.Rank1MovieNumber = in.Rank1MovieNumber
@@ -498,6 +542,7 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		ScTimes:            in.ScTimes,
 		ComeTimes:          in.ComeTimes,
 		LastScTime:         in.LastScTime,
+		LastScEventTime:    in.LastScEventTime,
 		Rank500MovieNumber: in.Rank500MovieNumber,
 		Rank20MovieNumber:  in.Rank20MovieNumber,
 		Rank1MovieNumber:   in.Rank1MovieNumber,
@@ -605,6 +650,7 @@ func mapScModelToTypes(v *moviex.GSc) *types.GSc {
 		Name:            v.Name,
 		MovieNumber:     v.MovieNumber,
 		ScTime:          v.ScTime,
+		Kind:            v.Kind,
 		ComeMovieName:   v.ComeMovieName,
 		Cooldown:        v.Cooldown,
 		DurationMinutes: v.Duration,
@@ -628,6 +674,7 @@ func mapGListModelToTypes(v *moviex.GList) *types.GList {
 		ScName:     v.ScName,
 		MovieJavId: v.MovieJavId,
 		IsCome:     v.IsCome,
+		IsSc:       v.IsSc,
 		CreatedOn:  v.CreatedOn,
 		UpdatedOn:  v.UpdatedOn,
 	}
@@ -651,6 +698,7 @@ func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
 		ScTimes:            v.ScTimes,
 		ComeTimes:          v.ComeTimes,
 		LastScTime:         v.LastScTime,
+		LastScEventTime:    v.LastScEventTime,
 		Rank500MovieNumber: v.Rank500MovieNumber,
 		Rank20MovieNumber:  v.Rank20MovieNumber,
 		Rank1MovieNumber:   v.Rank1MovieNumber,
@@ -681,6 +729,7 @@ func mapPersonModelToTypes(v *moviex.CPerson) *types.Person {
 		ScTimes:           v.ScTimes,
 		ComeTimes:         v.ComeTimes,
 		LastScTime:        v.LastScTime,
+		LastScEventTime:   v.LastScEventTime,
 		HighestRank:       v.HighestRank,
 		RankTimes:         v.RankTimes,
 		CreatedOn:         v.CreatedOn,
@@ -718,6 +767,7 @@ func (s *Service) insertPersonForCast(ctx context.Context, cast *types.Cast, now
 		ScTimes:           cast.ScTimes,
 		ComeTimes:         cast.ComeTimes,
 		LastScTime:        cast.LastScTime,
+		LastScEventTime:   cast.LastScEventTime,
 		HighestRank:       cast.HighestRank,
 		RankTimes:         cast.RankTimes,
 		CreatedOn:         ifElseInt64(cast.CreatedOn > 0, cast.CreatedOn, now),
@@ -774,6 +824,8 @@ func buildScOrderBy(sortField, sortOrder string) string {
 		column = "cooldown"
 	case "duration":
 		column = "duration"
+	case "kind":
+		column = "kind"
 	case "movie_cast":
 		column = "movie_cast"
 	case "vessel":
@@ -792,7 +844,7 @@ func buildScOrderBy(sortField, sortOrder string) string {
 
 func normalizeScSortField(sortField string) string {
 	switch strings.ToLower(strings.TrimSpace(sortField)) {
-	case "movie_number", "come_movie_name", "cooldown", "duration", "movie_cast", "vessel", "fg", "sc_time":
+	case "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
 		return strings.ToLower(strings.TrimSpace(sortField))
 	default:
 		return "sc_time"

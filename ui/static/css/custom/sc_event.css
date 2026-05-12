@@ -259,6 +259,7 @@ tr.sc-month-even > td {
     font-weight: 560;
 }
 
+
 @media (max-width: 767.98px) {
     .sc-detail-info-grid {
         grid-template-columns: 1fr;

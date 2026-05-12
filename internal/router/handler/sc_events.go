@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -96,8 +97,9 @@ func (h *MovieHTMLHandler) ScEventDetailPage(c *gin.Context) {
 		c.String(http.StatusBadRequest, "缺少参数: name")
 		return
 	}
+	movieFilter := normalizeScEventDetailMovieFilter(c.Query("mf"))
 
-	detail, err := h.scSvc.GetEventDetail(c.Request.Context(), name)
+	detail, err := h.scSvc.GetEventDetail(c.Request.Context(), name, movieFilter)
 	if err != nil {
 		if errors.Is(err, types.ErrNotFound) {
 			c.String(http.StatusNotFound, "未找到 SC 事件: %s", name)
@@ -112,9 +114,42 @@ func (h *MovieHTMLHandler) ScEventDetailPage(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "page.sc_event_detail", gin.H{
-		"Title":     detail.Event.Name,
-		"Event":     detail.Event,
-		"Items":     detail.Items,
-		"ComeCount": detail.ComeCount,
+		"Title":                     detail.Event.Name,
+		"Event":                     detail.Event,
+		"Items":                     detail.Items,
+		"FailedItems":               detail.FailedItems,
+		"ComeCount":                 detail.ComeCount,
+		"EditImageName":             detail.EditImageName,
+		"EditMovieCount":            detail.EditMovieCount,
+		"EditScMovieCount":          detail.EditScMovieCount,
+		"EditComeMovieJavId":        detail.EditComeMovieJavId,
+		"EditComeMovieOptions":      detail.EditComeMovieOptions,
+		"EditCurrentMovieCastNames": detail.EditCurrentMovieCastNames,
+		"MovieFilter":               movieFilter,
+		"MovieFilterAllHref":        buildScEventDetailMovieFilterHref(c, "all"),
+		"MovieFilterScHref":         buildScEventDetailMovieFilterHref(c, "sc"),
+		"MovieFilterNoScHref":       buildScEventDetailMovieFilterHref(c, "nosc"),
 	})
+}
+
+func normalizeScEventDetailMovieFilter(v string) string {
+	switch strings.TrimSpace(v) {
+	case "all":
+		return "all"
+	case "nosc":
+		return "nosc"
+	default:
+		return "sc"
+	}
+}
+
+func buildScEventDetailMovieFilterHref(c *gin.Context, movieFilter string) string {
+	path := c.Request.URL.Path
+	query := c.Request.URL.Query()
+	query.Set("mf", normalizeScEventDetailMovieFilter(movieFilter))
+	encoded := query.Encode()
+	if encoded == "" {
+		return path
+	}
+	return path + "?" + encoded
 }

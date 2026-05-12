@@ -24,12 +24,112 @@
                         <p class="text-muted mb-0">本次 SC 的基础信息、影片清单与快速操作入口。</p>
                     </div>
                     <div class="sc-action-row">
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                id="btnOpenScEventEditModal"
+                                data-bs-toggle="modal"
+                                data-bs-target="#scEventEditModal">
+                            编辑信息
+                        </button>
                         <a href="/sc-events" class="btn btn-outline-secondary">返回列表</a>
                         <a href="/triggers/sc-media?sc_name={{ urlquery .Event.Name }}"
                            class="btn btn-outline-primary">
                             移动 SC Media
                         </a>
                         <a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a>
+                    </div>
+                </div>
+
+                <div id="scEventPageMsg" class="alert d-none mb-3" role="alert"></div>
+
+                <div class="modal fade" id="scEventEditModal" tabindex="-1" aria-hidden="true" aria-labelledby="scEventEditModalTitle">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <form id="scEventEditForm"
+                                  data-update-url="/api/sc-events/{{ urlquery .Event.Name }}">
+                                <div class="modal-header">
+                                    <div>
+                                        <h5 class="modal-title mb-1" id="scEventEditModalTitle">编辑 SC Event</h5>
+                                        <div class="small text-muted">{{ .Event.Name }}</div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-3">
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditName">事件名</label>
+                                            <input class="form-control" id="scEventEditName" type="text" value="{{ .Event.Name }}" readonly>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditImage">图片</label>
+                                            <input class="form-control" id="scEventEditImage" type="text" value="{{ if .EditImageName }}{{ .EditImageName }}{{ else }}无图片{{ end }}" readonly>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditMovieCount">影片数</label>
+                                            <input class="form-control" id="scEventEditMovieCount" type="text" value="{{ .EditMovieCount }}" readonly>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditScMovieCount">SC 影片数</label>
+                                            <input class="form-control" id="scEventEditScMovieCount" type="text" value="{{ .EditScMovieCount }}" readonly>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditComeMovie">Come Movie</label>
+                                            <select class="form-select" id="scEventEditComeMovie">
+                                                <option value="">可为空</option>
+                                                {{ range .EditComeMovieOptions }}
+                                                    <option value="{{ .MovieJavId }}" {{ if .IsCome }}selected{{ end }}>{{ .MovieName }}</option>
+                                                {{ end }}
+                                            </select>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditMovieCast">Movie Cast</label>
+                                            <select class="form-select" id="scEventEditMovieCast" data-selected-value="{{ .Event.MovieCast }}">
+                                                <option value="">可为空</option>
+                                                {{ range .EditCurrentMovieCastNames }}
+                                                    <option value="{{ . }}" {{ if eq $.Event.MovieCast . }}selected{{ end }}>{{ . }}</option>
+                                                {{ end }}
+                                            </select>
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditKind">种类</label>
+                                            <input class="form-control" id="scEventEditKind" type="text" value="{{ .Event.Kind }}" placeholder="可为空">
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditDuration">时长(分钟)</label>
+                                            <input class="form-control" id="scEventEditDuration" type="number" step="1" value="{{ .Event.DurationMinutes }}">
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditFg">FG</label>
+                                            <input class="form-control" id="scEventEditFg" type="text" value="{{ .Event.Fg }}" placeholder="可为空">
+                                        </div>
+                                        <div class="col-xl-3 col-lg-4 col-md-6">
+                                            <label class="form-label mb-1" for="scEventEditVessel">Vessel</label>
+                                            <input class="form-control" id="scEventEditVessel" type="text" value="{{ .Event.Vessel }}" placeholder="可为空">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label mb-1" for="scEventEditRemarks">Remarks</label>
+                                            <textarea class="form-control" id="scEventEditRemarks" rows="3" placeholder="可为空">{{ .Event.Remarks }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-none" id="scEventEditCastSourcePool">
+                                        {{ range .EditComeMovieOptions }}
+                                            <div class="js-sc-event-cast-source" data-movie-jav-id="{{ .MovieJavId }}">
+                                                {{ range .CastOptions }}
+                                                    <span class="js-sc-event-cast-item" data-cast-name="{{ . }}"></span>
+                                                {{ end }}
+                                            </div>
+                                        {{ end }}
+                                    </div>
+
+                                    <div class="alert d-none mt-3 mb-0" id="scEventEditMsg" role="alert"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn btn-primary" id="scEventEditSubmit">保存</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
 
@@ -76,6 +176,12 @@
                                             {{ else }}
                                                 -
                                             {{ end }}
+                                        </div>
+                                    </div>
+                                    <div class="sc-detail-info-item sc-metric-card">
+                                        <div class="sc-metric-label">种类</div>
+                                        <div class="sc-metric-value">
+                                            {{ if .Event.Kind }}{{ .Event.Kind }}{{ else }}-{{ end }}
                                         </div>
                                     </div>
                                     <div class="sc-detail-info-item sc-metric-card">
@@ -127,7 +233,23 @@
                 </div>
 
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="mb-0">Movies</h5>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <h5 class="mb-0">Movies</h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="电影筛选">
+                            <a href="{{ .MovieFilterAllHref }}"
+                               class="btn {{ if eq .MovieFilter "all" }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                全部电影
+                            </a>
+                            <a href="{{ .MovieFilterScHref }}"
+                               class="btn {{ if eq .MovieFilter "sc" }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                有 SC
+                            </a>
+                            <a href="{{ .MovieFilterNoScHref }}"
+                               class="btn {{ if eq .MovieFilter "nosc" }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                无 SC
+                            </a>
+                        </div>
+                    </div>
                     <span class="text-muted small">{{ len .Items }} items</span>
                 </div>
 
@@ -170,7 +292,15 @@
                         </div>
                     {{ end }}
                 {{ else }}
-                    <div class="sc-empty-state">本次 SC 还没有影片明细。</div>
+                    <div class="sc-empty-state">
+                        {{ if eq .MovieFilter "all" }}
+                            本次 SC 还没有电影明细。
+                        {{ else if eq .MovieFilter "nosc" }}
+                            当前筛选下没有 is_sc=1 的电影。
+                        {{ else }}
+                            当前筛选下没有 is_sc=2 的电影。
+                        {{ end }}
+                    </div>
                 {{ end }}
             </div>
         </div>
@@ -183,6 +313,7 @@
     <script src="/static/js/waves.min.js"></script>
     <script src="/static/js/jquery.sparkline.min.js"></script>
     <script src="/static/js/app.js"></script>
+    <script src="/static/customer/sc_event_detail.js"></script>
     </body>
     </html>
 {{ end }}
