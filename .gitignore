@@ -21,3 +21,15 @@ vendor/
 z_text/*
 cmd/own_tst/*
 z_reference/
+legacy/z_text/*
+legacy/z_reference/
+v2/gc-web/node_modules
+v2/gc-web/dist
+v2/gc-web/src/**/*.js
+v2/gc-web/*.js
+v2/gc-web/*.d.ts
+v2/gc-web/*.tsbuildinfo
+v2/make/local.secrets.mk
+v2/deploy/data
+v2/deploy/conf
+v2/deploy/*.config.yaml

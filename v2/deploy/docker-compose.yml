@@ -1,0 +1,33 @@
+services:
+  gc-api:
+    build:
+      context: ..
+      dockerfile: deploy/gc-api.Dockerfile
+    image: ${GC_API_IMAGE:-rudy-gc-v2-api}:${GC_API_TAG:-latest}
+    container_name: rudy_gc_v2_api
+    restart: unless-stopped
+    volumes:
+      - ./gc-api.config.yaml:/app/config.yaml:ro
+      - /Volumes/Expansion:/Volumes/Expansion:ro
+      - /Volumes/Getea:/Volumes/Getea:ro
+      - /Volumes/movie-un:/Volumes/movie-un:ro
+      - /Volumes/T7/data:/Volumes/T7/data:ro
+    ports:
+      - "127.0.0.1:2041:2041"
+
+  gc-web:
+    build:
+      context: ..
+      dockerfile: deploy/gc-web.Dockerfile
+    image: ${GC_WEB_IMAGE:-rudy-gc-v2-web}:${GC_WEB_TAG:-latest}
+    container_name: rudy_gc_v2_web
+    restart: unless-stopped
+    depends_on:
+      - gc-api
+    environment:
+      PORT: "2040"
+      API_PREFIX: "/api/gc/v2"
+      API_ORIGIN: "http://gc-api:2041"
+      PROXY_PREFIXES: "/Volumes/Expansion,/Volumes/Getea,/Volumes/movie-un,/Volumes/T7/data"
+    ports:
+      - "127.0.0.1:2040:2040"
