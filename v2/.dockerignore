@@ -1,0 +1,14 @@
+gc-web/node_modules
+gc-web/dist
+make/local.secrets.mk
+deploy/data
+deploy/conf
+deploy/images
+deploy/*.config.yaml
+deploy/*.tar
+deploy/*.tar.gz
+**/.DS_Store
+**/.git
+**/.gitignore
+**/.env
+**/tmp

@@ -1,0 +1,37 @@
+DataSource: root:password@tcp(mysql:3306)/rudy_gc?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+Port: ":2041"
+LogxMode: disable_stat
+
+Cache:
+  - Host: redis:6379
+    Pass: ""
+    Type: node
+    Weight: 100
+
+BizRedis:
+  Host: redis:6379
+  Pass: ""
+  Type: node
+
+MovieTypeCache:
+  Prefix: rudy:mt
+  Version: v2
+  TTL: 24h
+
+Fetcher:
+  UserAgent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36
+  Cookie: ""
+  Proxy: ""
+  Timeout: 60
+  JavAddress: www.c97k.com
+  BusAddress: www.javbus.com
+  LocalImageDir: /data/jacket_cover/
+
+Film:
+  CopyDestinationPath: /data/sc/
+  ScRootDir: /data/sc/
+  RenamePaths: []
+  Pairs: []
+
+Media:
+  RootDirs: []
