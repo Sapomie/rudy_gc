@@ -10,6 +10,7 @@ type RankDayResponse struct {
 	PrevDate     string       `json:"prev_date"`
 	NextDate     string       `json:"next_date"`
 	RandomDate   string       `json:"random_date"`
+	LatestDate   string       `json:"latest_date"`
 	PrevDisabled bool         `json:"prev_disabled"`
 	NextDisabled bool         `json:"next_disabled"`
 }
@@ -29,6 +30,9 @@ type RankPeriodResponse struct {
 	PageSize        int64             `json:"page_size"`
 	PrevKey         string            `json:"prev_key"`
 	NextKey         string            `json:"next_key"`
+	PrevHref        string            `json:"prev_href"`
+	NextHref        string            `json:"next_href"`
+	RandomHref      string            `json:"random_href"`
 	PrevDisabled    bool              `json:"prev_disabled"`
 	NextDisabled    bool              `json:"next_disabled"`
 	TypeLinks       []*RankSwitchLink `json:"type_links"`

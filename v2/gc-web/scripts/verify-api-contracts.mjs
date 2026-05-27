@@ -8,6 +8,10 @@ const files = {
   routes: readFileSync(resolve(root, "src/data/routes.ts"), "utf8"),
   tile: readFileSync(resolve(root, "src/components/MovieTile.vue"), "utf8"),
   movie: readFileSync(resolve(root, "src/pages/movie/index.vue"), "utf8"),
+  generic: readFileSync(resolve(root, "src/pages/generic/index.vue"), "utf8"),
+  table: readFileSync(resolve(root, "src/components/DataTable.vue"), "utf8"),
+  rankDay: readFileSync(resolve(root, "src/pages/rank/day.vue"), "utf8"),
+  rankPeriod: readFileSync(resolve(root, "src/pages/rank/period.vue"), "utf8"),
   css: readFileSync(resolve(root, "src/styles/index.css"), "utf8"),
 };
 
@@ -60,6 +64,15 @@ if (!files.api.includes('apiGet<CardsListResponse>("/cards", params)')) {
 if (!files.api.includes("apiGet<MovieDetailResponse>")) {
   failed.push("movie detail API wrapper missing");
 }
+if (!files.api.includes('apiGet<RankDayResponse>("/rank/day", params)')) {
+  failed.push("rank day API wrapper missing");
+}
+if (!files.api.includes('apiGet<RankPeriodResponse>("/rank/period", params)')) {
+  failed.push("rank period API wrapper missing");
+}
+if (!files.api.includes('apiGet<PageListResponse>(`/pages/${encodeURIComponent(key)}`, params)')) {
+  failed.push("generic page API wrapper missing");
+}
 if (!files.cards.includes("currentView") || !files.cards.includes("view: currentView.value")) {
   failed.push("cards page must pass current route view to API");
 }
@@ -104,6 +117,26 @@ for (const token of [
     failed.push(`missing movie detail behavior token ${token}`);
   }
 }
+for (const token of ["latest_date", "random_date", "goDate", "rankNumber", "PaginationControl", "MovieTile"]) {
+  if (!files.rankDay.includes(token)) {
+    failed.push(`missing rank day behavior token ${token}`);
+  }
+}
+for (const token of ["prev_href", "next_href", "random_href", "latest_href", "type_links", "category_links", "rank_change_text", "MovieTile"]) {
+  if (!files.rankPeriod.includes(token)) {
+    failed.push(`missing rank period behavior token ${token}`);
+  }
+}
+for (const token of ["visibleLinks", "rgc-generic-toolbar", "DataTable", "PaginationControl", "sortBy", "pageWindowText"]) {
+  if (!files.generic.includes(token)) {
+    failed.push(`missing generic list behavior token ${token}`);
+  }
+}
+for (const token of ["RouterLink", "isExternalLink", "rgc-table-cell-long", "↑", "↓"]) {
+  if (!files.table.includes(token)) {
+    failed.push(`missing generic table behavior token ${token}`);
+  }
+}
 for (const token of [".rgc-cards-toolbar", ".rgc-view-tabs", ".rgc-sort-strip", ".rgc-owned-bar", ".rgc-filter-panel", ".rgc-movie-grid"]) {
   if (!files.css.includes(token)) {
     failed.push(`cards styling missing ${token}`);
@@ -112,6 +145,16 @@ for (const token of [".rgc-cards-toolbar", ".rgc-view-tabs", ".rgc-sort-strip", 
 for (const token of [".rgc-detail-hero", ".rgc-detail-info-panel", ".rgc-detail-data-table", ".rgc-detail-fetch-grid"]) {
   if (!files.css.includes(token)) {
     failed.push(`movie detail styling missing ${token}`);
+  }
+}
+for (const token of [".rgc-rank-tools", ".rgc-rank-card-wrap", ".rgc-period-summary", ".rgc-period-card"]) {
+  if (!files.css.includes(token)) {
+    failed.push(`rank styling missing ${token}`);
+  }
+}
+for (const token of [".rgc-generic-toolbar", ".rgc-generic-fields", ".rgc-generic-statusbar", ".rgc-table-wrap", ".rgc-table th.active"]) {
+  if (!files.css.includes(token)) {
+    failed.push(`generic list styling missing ${token}`);
   }
 }
 if (!files.css.includes("grid-template-columns: repeat(6")) {
@@ -126,4 +169,4 @@ if (failed.length > 0) {
   process.exit(1);
 }
 
-console.log("Verified /cards and /movie detail API, page, route, styling, and no-fake-action contracts.");
+console.log("Verified /cards, /movie detail, rank, and generic list API, page, route, styling, and no-fake-action contracts.");

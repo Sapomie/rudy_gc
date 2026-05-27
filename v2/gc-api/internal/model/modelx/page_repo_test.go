@@ -69,13 +69,51 @@ func TestPageConfigColumnsHaveSafeSQLExpressions(t *testing.T) {
 		if cfg.DefaultOrderBy != "" && cfg.SortColumns[cfg.DefaultOrderBy] == "" {
 			t.Fatalf("%s default sort %q has no sql expression", cfg.Key, cfg.DefaultOrderBy)
 		}
+		seenColumns := map[string]bool{}
 		for _, column := range cfg.Columns {
 			if column == nil {
 				t.Fatalf("%s has nil column", cfg.Key)
 			}
+			if seenColumns[column.Key] {
+				t.Fatalf("%s has duplicate column %q", cfg.Key, column.Key)
+			}
+			seenColumns[column.Key] = true
 			if cfg.SortColumns[column.Key] == "" {
 				t.Fatalf("%s column %q has no sql expression", cfg.Key, column.Key)
 			}
+		}
+	}
+}
+
+func TestGenericListPageScope(t *testing.T) {
+	required := []string{
+		"casts",
+		"cast-detail",
+		"records",
+		"crawl-records",
+		"sc-events",
+		"medias",
+		"w-agg-events",
+		"e-items",
+		"torrent-albums",
+		"movie-albums",
+		"d-seeds",
+		"fetch-site-javbus-list",
+		"fetch-site-sukebei-list",
+		"fetch-site-sehuatang-list",
+		"wdir",
+		"w-media-agg-birth",
+		"w-media-agg-bucket-list",
+		"movie-agg-all-release",
+		"movie-release-bucket-list",
+	}
+	for _, key := range required {
+		cfg, ok := FindPageConfig(key)
+		if !ok {
+			t.Fatalf("missing generic list page %q", key)
+		}
+		if cfg.Kind != pageKindList {
+			t.Fatalf("%s kind = %q, want %q", key, cfg.Kind, pageKindList)
 		}
 	}
 }

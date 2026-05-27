@@ -69,6 +69,7 @@ func (s *Service) Day(ctx context.Context, date string, page, pageSize int64) (*
 		PrevDate:     consts.GetDateStringByRankDayNumber(prevDay),
 		NextDate:     consts.GetDateStringByRankDayNumber(nextDay),
 		RandomDate:   consts.GetDateStringByRankDayNumber(randomDay),
+		LatestDate:   consts.GetDateStringByRankDayNumber(maxDay),
 		PrevDisabled: dayNumber <= minDay,
 		NextDisabled: dayNumber >= maxDay,
 	}, nil

@@ -3,8 +3,11 @@ package rank
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"rudy-gc-api/internal/consts"
+	"rudy-gc-api/internal/model/modelx"
 	"rudy-gc-api/internal/types"
 )
 
@@ -102,6 +105,15 @@ func (s *Service) Period(ctx context.Context, typeName string, category, page, p
 	if err != nil {
 		return nil, err
 	}
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomPeriod, err := s.repo.LoadRandomRankPeriod(ctx, period.PeriodType, period.Category, rng.Int63)
+	if err != nil {
+		return nil, err
+	}
+
+	prevKey, prevHref := periodKeyAndHref(typeName, period.Category, prevPeriod)
+	nextKey, nextHref := periodKeyAndHref(typeName, period.Category, nextPeriod)
+	_, randomHref := periodKeyAndHref(typeName, period.Category, randomPeriod)
 
 	return &types.RankPeriodResponse{
 		Title:           fmt.Sprintf("MovieCard %s %s", consts.RankPeriodTypeLabel(period.PeriodType), period.PeriodKey),
@@ -116,10 +128,22 @@ func (s *Service) Period(ctx context.Context, typeName string, category, page, p
 		Total:           total,
 		Page:            page,
 		PageSize:        pageSize,
+		PrevKey:         prevKey,
+		NextKey:         nextKey,
+		PrevHref:        prevHref,
+		NextHref:        nextHref,
+		RandomHref:      randomHref,
 		PrevDisabled:    prevPeriod == nil,
 		NextDisabled:    nextPeriod == nil,
 		TypeLinks:       buildTypeLinks(typeName, period.Category),
 		CategoryLinks:   buildCategoryLinks(typeName, period.Category),
 		LatestHref:      buildPeriodHref(typeName, period.Category, ""),
 	}, nil
+}
+
+func periodKeyAndHref(typeName string, category int64, period *modelx.CRankPeriod) (string, string) {
+	if period == nil {
+		return "", ""
+	}
+	return period.PeriodKey, buildPeriodHref(typeName, category, period.PeriodKey)
 }

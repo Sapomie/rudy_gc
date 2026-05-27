@@ -1,31 +1,40 @@
 <template>
-  <PageFrame :title="response?.title || String(route.meta.title || 'Page')" eyebrow="Data Page" :description="response?.description || ''">
-    <template #actions>
-      <RouterLink v-for="link in response?.links || []" :key="link.href" class="rgc-button" :to="link.href">{{ link.label }}</RouterLink>
+  <PageFrame :title="response?.title || String(route.meta.title || 'Page')" eyebrow="List Page" :description="response?.description || ''">
+    <template #actions v-if="visibleLinks.length > 0">
+      <RouterLink v-for="link in visibleLinks" :key="link.href" class="rgc-button compact" :to="link.href">{{ link.label }}</RouterLink>
     </template>
 
-    <form class="rgc-panel rgc-generic-form" @submit.prevent="apply">
-      <label v-for="filter in activeFilters" :key="filter.key">
-        <span>{{ filter.label }}</span>
-        <select v-if="filter.type === 'select'" v-model="filterValues[filter.key]">
-          <option v-for="option in filter.options || []" :key="option.value" :value="option.value">{{ option.label }}</option>
-        </select>
-        <input v-else v-model="filterValues[filter.key]" :placeholder="filter.placeholder" />
-      </label>
-      <label>
-        <span>Page Size</span>
-        <input v-model="pageSize" type="number" />
-      </label>
-      <button class="rgc-button primary" type="submit">查询</button>
-      <button class="rgc-button" type="button" @click="clear">清空</button>
+    <form class="rgc-panel rgc-generic-toolbar" @submit.prevent="apply">
+      <div class="rgc-generic-current">
+        <strong>{{ response?.title || route.meta.title || "List" }}</strong>
+        <span>{{ summaryText }}</span>
+      </div>
+      <div class="rgc-generic-fields">
+        <label v-for="filter in activeFilters" :key="filter.key">
+          <span>{{ filter.label }}</span>
+          <select v-if="filter.type === 'select'" v-model="filterValues[filter.key]">
+            <option v-for="option in filter.options || []" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+          <input v-else v-model="filterValues[filter.key]" :placeholder="filter.placeholder" />
+        </label>
+        <label>
+          <span>Page Size</span>
+          <input v-model="pageSize" type="number" inputmode="numeric" />
+        </label>
+      </div>
+      <div class="rgc-generic-actions">
+        <button class="rgc-button compact primary" type="submit">查询</button>
+        <button class="rgc-button compact" type="button" @click="clear">清空</button>
+      </div>
     </form>
 
     <StateBlock v-if="loading" title="加载中" message="正在读取页面数据。" />
     <StateBlock v-else-if="errorMessage" title="加载失败" :message="errorMessage" tone="error" />
     <template v-else-if="response">
-      <div class="rgc-panel rgc-meta-strip">
-        <span>{{ response.kind }}</span>
+      <div class="rgc-generic-statusbar">
         <span>{{ response.total }} rows</span>
+        <span>Page {{ response.page }}</span>
+        <span>Order {{ response.order_by || "-" }} {{ response.order || "" }}</span>
         <span v-for="stat in response.stats" :key="stat.label">{{ stat.label }} {{ stat.value }}</span>
       </div>
       <template v-if="response.kind === 'operation'">
@@ -41,7 +50,8 @@
           @sort="sortBy"
         />
         <StateBlock v-else title="无数据" message="当前筛选条件没有行。" tone="empty" />
-        <div class="rgc-panel rgc-list-foot">
+        <div class="rgc-generic-listbar">
+          <span>{{ pageWindowText }}</span>
           <PaginationControl :page="response.page" :page-size="response.page_size" :total="response.total" @go="goPage" />
         </div>
       </template>
@@ -58,7 +68,7 @@ import DataTable from "@/components/DataTable.vue";
 import PageFrame from "@/components/PageFrame.vue";
 import PaginationControl from "@/components/PaginationControl.vue";
 import StateBlock from "@/components/StateBlock.vue";
-import type { PageFilter, PageListResponse } from "@/types/api";
+import type { PageFilter, PageLink, PageListResponse } from "@/types/api";
 
 const route = useRoute();
 const router = useRouter();
@@ -70,6 +80,21 @@ const pageSize = ref("");
 
 const pageKey = computed(() => String(route.meta.pageKey || ""));
 const activeFilters = computed<PageFilter[]>(() => response.value?.filters || [{ key: "q", label: "关键词", type: "text" }]);
+const visibleLinks = computed<PageLink[]>(() => (response.value?.links || []).filter((link) => link.kind !== "operation"));
+const summaryText = computed(() => {
+  if (!response.value) {
+    return "等待数据";
+  }
+  return `${response.value.kind} · ${response.value.total} rows · page ${response.value.page}`;
+});
+const pageWindowText = computed(() => {
+  if (!response.value || response.value.total === 0) {
+    return "0 rows";
+  }
+  const start = (response.value.page - 1) * response.value.page_size + 1;
+  const end = Math.min(response.value.total, response.value.page * response.value.page_size);
+  return `${start}-${end} / ${response.value.total}`;
+});
 
 watch(() => route.fullPath, load);
 onMounted(load);
@@ -102,16 +127,27 @@ function buildRouteParams() {
 }
 
 function syncFilters(filters: PageFilter[]) {
+  const activeKeys = new Set(filters.map((filter) => filter.key));
+  Object.keys(filterValues).forEach((key) => {
+    if (!activeKeys.has(key)) {
+      delete filterValues[key];
+    }
+  });
   filters.forEach((filter) => {
+    if (filter.key === "id" && route.params.id) {
+      filterValues[filter.key] = String(route.params.id);
+      return;
+    }
     filterValues[filter.key] = String(route.query[filter.key] ?? filter.value ?? "");
   });
 }
 
 function apply() {
   const query: Record<string, string | number> = { p: 1 };
-  Object.entries(filterValues).forEach(([key, value]) => {
+  activeFilters.value.forEach((filter) => {
+    const value = filterValues[filter.key] || "";
     if (value !== "") {
-      query[key] = value;
+      query[filter.key] = value;
     }
   });
   if (pageSize.value !== "") {
@@ -125,7 +161,8 @@ function clear() {
 }
 
 function sortBy(key: string) {
-  const nextOrder = response.value?.order_by === key && response.value?.order === "asc" ? "desc" : "asc";
+  const currentOrder = String(response.value?.order || "").toLowerCase();
+  const nextOrder = response.value?.order_by === key && currentOrder === "asc" ? "desc" : "asc";
   router.push({ path: route.path, query: { ...route.query, od: key, order: nextOrder, p: 1 } });
 }
 

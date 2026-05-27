@@ -391,7 +391,7 @@ func fetchSehuatangPage() *PageConfig {
 			linkCol("movie_name", "Movie", "/movie/{movie_name}", true),
 			col("tag", "Tag", true),
 			col("thread_title", "Title", true),
-			col("thread_url", "URL", false),
+			linkCol("thread_url", "URL", "{thread_url}", false),
 			col("info_hash", "Hash", true),
 			col("post_time", "Post Time", true),
 			col("last_seen_time", "Last Seen", true),

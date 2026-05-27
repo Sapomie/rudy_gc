@@ -81,12 +81,18 @@ make -f deploy.mk docker-config
 - `make build-web`：构建前端产物。
 - `make verify`：串行执行后端测试、前端测试、后端构建、前端构建。
 - `make docker-config`：检查 Compose 配置能否正常解析。
-- 浏览器验证：启动 `make run-all` 后打开 `http://127.0.0.1:2040`，逐页截图对比 legacy 页面，检查导航、筛选、排序、分页、图片、按钮、详情页和 API 性能。
+- 浏览器验证：启动 `make run-all` 后打开 `http://127.0.0.1:2040`，逐页截图对比历史只读基准页面，检查导航、筛选、排序、分页、图片、按钮、详情页和 API 性能。
+
+## 本轮 rank 页面验证口径
+
+- 需要验证 v2 `/moviecarddayrank` 与 `/moviecardperiodrank`。
+- 默认 Web 端口为 `2040`，默认 API 端口为 `2041`。
+- 若本轮临时启动服务，验证结束后必须执行 `make stop-all` 或等价清理，并确认 `2040`、`2041` 无本轮遗留监听。
 
 ## 完成度记录
 
-- API 拆分：`in_progress`，已具备 `gc-api` 独立 Go 模块、配置、基础路由和测试入口；legacy 真实动作 API 仍需逐项迁移。
-- Web 拆分：`in_progress`，已具备 `gc-web` 独立 Vue/Vite 模块、路由覆盖和测试入口；通用页不能作为 legacy 页面完成态。
+- API 拆分：`in_progress`，已具备 `gc-api` 独立 Go 模块、配置、基础路由和测试入口；真实动作 API 仍需逐项迁移。
+- Web 拆分：`in_progress`，已具备 `gc-web` 独立 Vue/Vite 模块、路由覆盖和测试入口；通用页不能作为最终完成态。
 - Make 拆分：已完成根 Makefile 与 `make/*.mk` 叶子入口，支持从 `v2` 和 `v2/make` 两种目录执行。
-- Deploy 拆分：`in_progress`，已完成 Dockerfile、Compose、配置模板、部署 Make 入口和 legacy `/Volumes/...` 只读挂载；仍需随功能迁移补齐实际验收记录。
+- Deploy 拆分：`in_progress`，已完成 Dockerfile、Compose、配置模板、部署 Make 入口和 `/Volumes/...` 只读挂载；仍需随功能迁移补齐实际验收记录。
 - 验证入口：已完成 API/Web 测试、构建、统一 verify、Compose 配置检查入口。

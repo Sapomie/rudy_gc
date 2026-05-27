@@ -813,6 +813,32 @@ func (r *MovieReadRepo) LoadNextRankPeriod(ctx context.Context, periodType, cate
 	return &row, nil
 }
 
+func (r *MovieReadRepo) LoadRandomRankPeriod(ctx context.Context, periodType, category int64, nextInt63 func() int64) (*CRankPeriod, error) {
+	var total int64
+	if err := r.conn.QueryRowCtx(ctx, &total, `SELECT COUNT(*) FROM c_rank_period WHERE period_type = ? AND category = ?`, periodType, category); err != nil {
+		return nil, err
+	}
+	if total <= 0 {
+		return nil, nil
+	}
+	var offset int64
+	if nextInt63 != nil && total > 1 {
+		offset = nextInt63() % total
+		if offset < 0 {
+			offset = -offset
+		}
+	}
+	query := `SELECT * FROM c_rank_period FORCE INDEX (idx_period_range) WHERE period_type = ? AND category = ? ORDER BY start_day_number DESC LIMIT 1 OFFSET ?`
+	var row CRankPeriod
+	if err := r.conn.QueryRowCtx(ctx, &row, query, periodType, category, offset); err != nil {
+		if err == sqlc.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &row, nil
+}
+
 func (r *MovieReadRepo) LoadRankPeriodItems(ctx context.Context, periodID, page, pageSize int64) ([]*CRankPeriodItem, int64, error) {
 	var total int64
 	if err := r.conn.QueryRowCtx(ctx, &total, `SELECT COUNT(*) FROM c_rank_period_item WHERE period_id = ?`, periodID); err != nil {
@@ -863,8 +889,8 @@ func (r *MovieReadRepo) LoadMovieMedia(ctx context.Context, movieJavID string) (
 		Height:            row.Height,
 		BitRate:           round1(float64(row.BitRate)),
 		DurationMinutes:   round1(float64(row.Duration) / 60.0),
-		Frame:             int64(math.Round(row.FrameAverage)),
-		SelfMake:          row.SelfMake,
+		Frame:             round1(row.FrameAverage),
+		SelfMake:          formatSelfMake(row.SelfMake),
 		IsRemoved:         row.IsRemoved,
 	}, nil
 }
@@ -1391,6 +1417,13 @@ func buildCastHref(personID int64, castName string) string {
 
 func round1(v float64) float64 {
 	return math.Round(v*10) / 10
+}
+
+func formatSelfMake(value int64) string {
+	if value > 0 {
+		return "YES"
+	}
+	return "NO"
 }
 
 func cardReleaseTS(_ string, releasingDate string) int64 {

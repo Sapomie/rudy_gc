@@ -57,8 +57,13 @@ export const genericRoutes: NavRoute[] = [
   { path: "/triggers/agg", key: "triggers-agg", title: "Agg Triggers", group: "Aggregation", kind: "operation" },
 ];
 
-export const allNavRoutes = [...cardRoutes];
+export const genericListRoutes = genericRoutes.filter((item) => item.kind === "page");
+
+export const operationRoutes = genericRoutes.filter((item) => item.kind === "operation");
+
+export const allNavRoutes = [...cardRoutes, ...fixedRoutes, ...genericListRoutes];
 
 export const quickNav = [
   ...cardRoutes,
+  ...fixedRoutes,
 ];

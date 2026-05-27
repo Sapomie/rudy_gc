@@ -10,14 +10,21 @@
 
 本顺序适用于所有 v2 任务，包括前端、后端、SQL、缓存、部署、图片链路、测试和排查。
 
+## 当前维护口径
+
+- 后续只更新 `v2/` 功能。
+- 历史系统不会继续更新，不再作为 v2 实现规则、复用来源或风格约束。
+- 历史系统仅作为只读验收基准：功能结果、字段完整性、交互语义、API 输出、截图接近度。
+- v2 实现必须属于 `v2/gc-api` 与 `v2/gc-web` 自己的代码体系。
+- 禁止使用 `z_reference`、历史模板、历史 CSS、历史 JS、历史 class、历史静态资源、历史页面壳和历史交互代码。
+
 ## 前端重写总原则
 
 - 当前 v2 前端全部重写。
-- 使用全新的前端设计，不使用旧项目前端的模板、CSS、JS、class、静态资源和布局结构。
-- 旧版本只作为验收基准：功能、字段、交互语义、API 输出、截图接近度。
-- 页面功能必须对齐之前版本，代码实现必须属于 v2 新前端。
+- 使用全新的 Vue/Vite/TypeScript 前端设计。
+- 页面功能必须覆盖既定功能范围，代码实现必须属于 v2 新前端。
 - 不准为了快而做半套页面、假交互、假按钮、空实现。
-- 每个页面写完后必须打开旧版页面和 v2 页面，使用 MCP Chrome 截图观察对比。
+- 每个页面写完后必须打开历史只读基准页面和 v2 页面，使用 MCP Chrome 截图观察对比。
 - 页面验收必须按“截图对比 -> 记录不足点 -> 修改 -> 再截图对比”循环执行。
 - 页面功能接近且视觉/交互相似度达到 90% 后，才允许进入合格候选。
 - 构建通过、API 200、页面能打开、基础功能可点，都不能作为页面合格依据。
@@ -36,16 +43,16 @@
 - `src/types`：按 API 语义定义类型，不复用不同语义 DTO。
 - `src/router`：覆盖 v2 页面路由。
 - `src/layouts`：全新 v2 布局。
-- `src/components`：全新组件体系，使用 v2 自有 class。
+- `src/components`：全新组件体系。
 - `src/pages`：cards、movie detail、rank、generic、notfound。
-- `src/styles`：全新样式，不使用旧项目前端 class。
+- `src/styles`：全新样式体系。
 
 ## 页面与 API 对照
 
 | 页面 | 前端路由 | 后端 API | 状态 | 要求 |
 | --- | --- | --- | --- | --- |
 | Cards | `/cards` | `GET /api/gc/v2/cards` | in_progress | 筛选、排序、分页、卡片、图片全部对齐。 |
-| Today | `/cardstoday` | `GET /api/gc/v2/cards?view=cardstoday` | in_progress | 今日卡片输出与之前版本对齐。 |
+| Today | `/cardstoday` | `GET /api/gc/v2/cards?view=cardstoday` | in_progress | 今日卡片输出对齐。 |
 | Has Rank | `/cardshasrank` | `GET /api/gc/v2/cards?view=cardshasrank` | in_progress | 排名相关筛选和排序对齐。 |
 | Media Owned | `/cardsmediamowned` | `GET /api/gc/v2/cards?view=cardsmediamowned` | in_progress | 媒体状态、MPlay、图片对齐。 |
 | Need Download | `/cardsneeddownload` | `GET /api/gc/v2/cards?view=cardsneeddownload` | in_progress | 下载状态筛选对齐。 |
@@ -55,33 +62,6 @@
 | Period Rank | `/moviecardperiodrank` | `GET /api/gc/v2/rank/period` | in_progress | 周期筛选、分类、分页、周期元数据对齐。 |
 | Generic Pages | 多路由 | `GET /api/gc/v2/pages/:key` | in_progress | 表格、筛选、表头排序、分页、空态对齐。 |
 | Operation Pages | 多路由 | 待真实动作 API | blocked | 无真实 API 前不得渲染可用动作按钮。 |
-
-## 本轮前端范围：补齐 cards 相关页面
-
-状态：`in_progress`
-
-本轮只写：
-- `/cardstoday`
-- `/cardshasrank`
-- `/cardsmediamowned`
-- `/cardsneeddownload`
-- `/cardsrandom`
-- cards 相关路由、页面绑定、API 参数、样式和契约检查。
-
-实现要求：
-- 使用 v2 全新前端实现。
-- 禁止复用旧项目前端模板、CSS、JS、class、静态资源。
-- 每个页面接入对应 `GET /api/gc/v2/cards?view=...`。
-- cards 相关页面功能和性能至少等于旧项目，优先更好；凡是比旧项目差的实现一律不合格。
-
-本轮实际结果：
-- 6 个 cards 相关页面已使用 v2 新前端补齐：`/cards`、`/cardstoday`、`/cardshasrank`、`/cardsmediamowned`、`/cardsneeddownload`、`/cardsrandom`。
-- 侧边栏、顶部快捷入口和页面内 view tabs 统一来自 `cardRoutes`，每个页面路由保留自身 URL，不在前端默认入口携带 `view` 查询参数。
-- 页面调用统一通过 `GET /api/gc/v2/cards`，由当前路由 meta 写入对应 `view`。
-- 已验证排序链接、顶部/底部分页、WMedia 快捷筛选、筛选面板、view 切换、电影详情链接、Bus/Suk/Lib 外链。
-- MCP Chrome 已逐页打开 legacy 与 v2，并保存截图到 `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/`。
-- v2 最终浏览器复测：6 个页面均无破图、无 v2 控制台 warn/error；首屏数量分别为 18、18、18、18、18、6。
-- cards 相关页面进入合格候选；v2 全量仍保持 `in_progress`。
 
 ## 后端 API 要求
 
@@ -93,34 +73,31 @@
 - API 响应必须区分展示 ID、内部 ID、外部 ID、路由参数。
 - `/movie/:movie` 页面参数使用电影番号 `a_movie.name`。
 - 数据库关联和内部 API 可使用 `jav_id`，但页面链接不得用 `jav_id` 拼 `/movie/...`。
+- 查询链路以 v2 自有模型、缓存和索引设计为准。
 
-## 本轮后端范围：cards 查询重写
+## 已完成候选记录
+
+### Cards
 
 状态：`in_progress`
 
-本轮只写：
-- cards 相关后端查询链路。
-- cards 相关 model/service/handler/types/cache 代码。
-- cards 查询重写所需测试与文档记录。
+当前结果：
+- 6 个 cards 相关页面已使用 v2 新前端补齐：`/cards`、`/cardstoday`、`/cardshasrank`、`/cardsmediamowned`、`/cardsneeddownload`、`/cardsrandom`。
+- 侧边栏、顶部快捷入口和页面内 view tabs 统一来自 `cardRoutes`。
+- 页面调用统一通过 `GET /api/gc/v2/cards`，由当前路由 meta 写入对应 `view`。
+- 已验证排序链接、顶部/底部分页、WMedia 快捷筛选、筛选面板、view 切换、电影详情链接、Bus/Suk/Lib 外链。
+- MCP Chrome 已逐页打开历史只读基准与 v2，并保存截图到 `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/`。
+- v2 浏览器复测：6 个页面均无破图、无 v2 控制台 warn/error；首屏数量分别为 18、18、18、18、18、6。
+- cards 相关页面进入合格候选；v2 全量仍保持 `in_progress`。
 
-实现要求：
-- 以旧项目 cards 查询策略为基准。
-- 禁止自己新造复杂低效 SQL。
-- cards 相关后端查询性能必须至少等于旧项目，优先更好；凡是比旧项目慢的实现一律不合格。
-
-本轮实际结果：
+后端结果：
 - 已重建 cards service。
-- 已接入 `MovieTypeCache` 等价业务缓存，cards 列表按 ID 优先读缓存。
-- 已把 cards 查询入口切到旧项目同型专用路径。
+- 已接入 `MovieTypeCache`，cards 列表按 ID 优先读缓存。
 - 已移除 cards 查询里的通用宽 JOIN、`COUNT(DISTINCT)`、无必要 `GROUP BY`、`MAX(...) ORDER BY` 残留实现。
 - 已修正 `/cardsneeddownload` 的真实相册名为 `待下载电影`，接口 Total 恢复为 278。
 - 已将 `/cardshasrank` 排序尾键对齐 `bm_minfo.idx_first_rank_name`，避免 filesort。
 - 已将 `/cardsmediamowned` 改为 w_media 单源分页，并对齐 `idx_w_media_birth_name`。
 - 已执行 `go test ./...`、前端 `npm run test`、前端 `npm run build` 和 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify`，均通过。
-- 已执行接口级耗时对比，cards 相关 6 个 API 的 5 次中位数均达到本轮性能口径。
-
-剩余缺口：
-- cards 相关后端查询已达到本轮性能口径；v2 全量 API、真实动作和非 cards 页面仍保持 `in_progress`。
 
 ## 前端验收清单
 
@@ -137,8 +114,8 @@
 - 图片可显示。
 - 内部链接语义正确。
 - 外链正确。
-- 截图与之前版本接近。
-- 旧版截图路径。
+- 截图与历史只读基准接近。
+- 历史基准截图路径。
 - v2 截图路径。
 - 不足点清单。
 - 修复轮次。
@@ -159,14 +136,119 @@ Movie Card 专项：
 - 图片路径不做静默替换。
 - 筛选参数只在用户显式传入时生效。
 
+## 当前执行记录：generic list pages
+
+状态：`in_progress`
+
+本轮一次性完成以下 19 个 v2 List 页面：
+- `/casts`
+- `/cast/:id`
+- `/records`
+- `/crawl-records`
+- `/sc-events`
+- `/medias`
+- `/w-agg-events`
+- `/e-items`
+- `/torrent-albums`
+- `/movie-albums`
+- `/d-seeds`
+- `/fetch-site-javbus-list`
+- `/fetch-site-sukebei-list`
+- `/fetch-site-sehuatang-list`
+- `/wdir`
+- `/w-media-agg/birth`
+- `/w-media-agg/bucket-list`
+- `/movie-agg-all/release`
+- `/movie-agg-all/release-bucket-list`
+
+后端基础结果：
+- 已重建 cards service。
+- 已接入 `MovieTypeCache`，cards 列表按 ID 优先读缓存。
+- 已移除 cards 查询里的通用宽 JOIN、`COUNT(DISTINCT)`、无必要 `GROUP BY`、`MAX(...) ORDER BY` 残留实现。
+- 已修正 `/cardsneeddownload` 的真实相册名为 `待下载电影`，接口 Total 恢复为 278。
+- 已将 `/cardshasrank` 排序尾键对齐 `bm_minfo.idx_first_rank_name`，避免 filesort。
+- 已将 `/cardsmediamowned` 改为 w_media 单源分页，并对齐 `idx_w_media_birth_name`。
+- 已执行 `go test ./...`、前端 `npm run test`、前端 `npm run build` 和 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify`，均通过。
+
+设计规则：
+- 这 19 个页面全部使用 v2 新前端 `generic` 列表承载页。
+- 页面主体使用紧凑后台列表设计：页头、筛选工具栏、状态条、表格、分页。
+- 筛选、Page Size、查询、清空合并到同一条工具栏。
+- 表格为主体，分页贴近表格，不单独做大面板。
+- 表头排序必须可点、可切换升降序、保留当前筛选参数、当前列有激活态和方向提示。
+- 内部链接必须保持语义正确：电影链接使用 movie name，`/cast/:id` 使用 cast id，`/wdir` 使用目录 id。
+- 没有真实动作 API 的按钮不渲染。
+- 禁止 pending action、通用假 action、空实现、禁用按钮冒充完成。
+- 禁止使用 `z_reference`、历史模板、历史 CSS、历史 JS、历史 class、历史静态资源。
+
+计划修改文件：
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/router/index.ts`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/data/routes.ts`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/layouts/AppLayout.vue`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/pages/generic/index.vue`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/components/DataTable.vue`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/styles/index.css`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/scripts/verify-routes.mjs`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/scripts/verify-api-contracts.mjs`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/scripts/verify-source.mjs`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-api/internal/model/modelx/page_registry.go`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-api/internal/model/modelx/page_repo.go`
+- `/Users/gaojinwei/src/my/rudy_gc/v2/gc-api/internal/model/modelx/page_repo_test.go`
+
+逐页验收记录字段固定为：
+
+| 页面 | 路由可访问 | 导航可进入 | API 调用成功 | 错误态可见 | 空态可见 | 筛选可用 | 排序可用 | 分页可用 | 图片可显示 | 内部链接语义正确 | 外链正确 | 历史基准截图路径 | v2 截图路径 | 不足点清单 | 修复轮次 | 复查截图 | 最终相似度判断 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/casts` | 通过 | 通过 | 通过，Total 12696 | 通过，共用截图 `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-error-state.png` | 通过，共用截图 `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-empty-state.png` | 通过 | 通过 | 通过 | 无图片 | 通过，`/cast/{id}` | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-casts.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-casts.png` | 表头 ASC 箭头显示错误，已修复 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-casts.png` | 达到 90% | in_progress |
+| `/cast/:id` | 通过，样例 `/cast/33` | 通过 `/casts` 进入 | 通过，Total 1 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，id 参数 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-cast-detail.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-cast-detail.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-cast-detail.png` | 达到 90% | in_progress |
+| `/records` | 通过 | 通过 | 通过，Total 103 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-records.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-records.png` | 历史基准 `/records` 跳转到 `/crawl-records`，已记录 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-records.png` | 达到 90% | in_progress |
+| `/crawl-records` | 通过 | 通过 | 通过，Total 103 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-crawl-records.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-crawl-records.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-crawl-records.png` | 达到 90% | in_progress |
+| `/sc-events` | 通过 | 通过 | 通过，Total 124 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-sc-events.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-sc-events.png` | 无真实 operation 链接已隐藏 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-sc-events.png` | 达到 90% | in_progress |
+| `/medias` | 通过 | 通过 | 通过，Total 2771 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-medias.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-medias.png` | 无真实 operation 链接已隐藏 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-medias.png` | 达到 90% | in_progress |
+| `/w-agg-events` | 通过 | 通过 | 通过，Total 324 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-w-agg-events.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-w-agg-events.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-w-agg-events.png` | 达到 90% | in_progress |
+| `/e-items` | 通过 | 通过 | 通过，Total 111385 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-e-items.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-e-items.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-e-items.png` | 达到 90% | in_progress |
+| `/torrent-albums` | 通过 | 通过 | 通过，Total 1040 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-torrent-albums.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-torrent-albums.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-torrent-albums.png` | 达到 90% | in_progress |
+| `/movie-albums` | 通过 | 通过 | 通过，Total 6939 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-movie-albums.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-movie-albums.png` | 表头 ASC 箭头显示错误，已修复 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-movie-albums.png` | 达到 90% | in_progress |
+| `/d-seeds` | 通过 | 通过 | 通过，Total 186 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-d-seeds.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-d-seeds.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-d-seeds.png` | 达到 90% | in_progress |
+| `/fetch-site-javbus-list` | 通过 | 通过 | 通过，Total 111385 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-fetch-site-javbus-list.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-fetch-site-javbus-list.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-fetch-site-javbus-list.png` | 达到 90% | in_progress |
+| `/fetch-site-sukebei-list` | 通过 | 通过 | 通过，Total 111385 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-fetch-site-sukebei-list.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-fetch-site-sukebei-list.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-fetch-site-sukebei-list.png` | 达到 90% | in_progress |
+| `/fetch-site-sehuatang-list` | 通过 | 通过 | 通过，Total 962 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，movie 链接使用 movie name | 通过，`thread_url` 渲染为外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-fetch-site-sehuatang-list.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-fetch-site-sehuatang-list.png` | 外链列补充真实链接渲染 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-fetch-site-sehuatang-list.png` | 达到 90% | in_progress |
+| `/wdir` | 通过 | 通过 | 通过，Total 85 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过，目录 id 链接 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-wdir.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-wdir.png` | 表头 ASC 箭头显示错误，已修复 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-wdir.png` | 达到 90% | in_progress |
+| `/w-media-agg/birth` | 通过 | 通过 | 通过，Total 38 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-w-media-agg-birth.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-w-media-agg-birth.png` | 无真实 operation 链接已隐藏 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-w-media-agg-birth.png` | 达到 90% | in_progress |
+| `/w-media-agg/bucket-list` | 通过 | 通过 | 通过，Total 38 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-w-media-agg-bucket-list.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-w-media-agg-bucket-list.png` | 无真实 operation 链接已隐藏 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-w-media-agg-bucket-list.png` | 达到 90% | in_progress |
+| `/movie-agg-all/release` | 通过 | 通过 | 通过，Total 5445 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-movie-agg-all-release.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-movie-agg-all-release.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-movie-agg-all-release.png` | 达到 90% | in_progress |
+| `/movie-agg-all/release-bucket-list` | 通过 | 通过 | 通过，Total 5445 | 通过，共用错误态 | 通过，共用空态 | 通过 | 通过 | 通过 | 无图片 | 通过 | 无外链 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-generic-movie-release-bucket-list.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-movie-release-bucket-list.png` | 无新增不足 | 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-generic-movie-release-bucket-list.png` | 达到 90% | in_progress |
+
+验收动作：
+- 逐页打开历史只读基准。
+- 逐页打开 v2 页面。
+- 保存历史基准截图和 v2 截图到 `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/`。
+- 记录不足点清单。
+- 按不足点修复并复查截图。
+- 最终相似度判断必须达到 90%。
+- 执行 `go test ./...`、`npm run test`、`npm run build` 和 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify`。
+- 验证结束后关闭本轮临时启动的 v2 服务并确认 `2040`、`2041` 无监听。
+
+本轮执行结果：
+- 已接入 19 个 List 页面 v2 路由和侧边栏导航；`/cast/:id` 通过 `/casts` 表格链接进入。
+- `generic` 页面已改为紧凑列表承载页：筛选工具栏、状态条、DataTable、表头排序、分页、空态、错误态。
+- DataTable 已支持内部 `RouterLink` 与外部 `http/https` 链接。
+- API 抽检 19 个页面均为 200，Total 已记录在逐页验收表。
+- 浏览器交互验收：表头排序可点，升降序可切换并保留参数；分页可切到第 2 页；空态和错误态可见。
+- 内部链接验收：movie 链接使用 movie name，cast 链接使用 id，wdir 链接使用目录 id。
+- 外链验收：`/fetch-site-sehuatang-list` 的 `thread_url` 渲染为新标签外链。
+- 控制台验收：正常页面无 warn/error；错误态截图中的 400 与 number input warning 为刻意触发错误态的验证证据。
+- 全量验证：`go test ./...`、`npm run test`、`npm run build`、`make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify` 均通过。
+- 端口清理：本轮临时启动的 v2 服务已关闭，`2040` Web 与 `2041` API 均无监听。
+
 ## 禁止项
 
-- 禁止使用旧项目前端模板。
-- 禁止使用旧项目前端 CSS。
-- 禁止使用旧项目前端 JS。
-- 禁止使用旧项目前端 class 命名体系。
-- 禁止复制旧静态资源作为 v2 设计基础。
-- 禁止把旧页面结构直接搬进 Vue。
+- 禁止使用历史系统模板。
+- 禁止使用历史系统 CSS。
+- 禁止使用历史系统 JS。
+- 禁止使用历史系统 class 命名体系。
+- 禁止复制历史静态资源作为 v2 设计基础。
+- 禁止把历史页面结构直接搬进 Vue。
 - 禁止 pending action。
 - 禁止通用假 action。
 - 禁止空实现。
@@ -178,134 +260,24 @@ Movie Card 专项：
 
 当前状态：`in_progress`
 
-后续每轮必须填写：
-
 | 时间 | 命令 | 结果 | 说明 |
 | --- | --- | --- | --- |
-| 2026-05-27 | 未执行 | in_progress | 本轮只重写文档，不运行测试或服务。 |
 | 2026-05-27 | `npm install` | 通过 | 为新 v2 前端安装依赖并生成 lockfile。 |
 | 2026-05-27 | `npm run test` | 通过 | `vue-tsc --noEmit`、`verify-source`、`verify-routes`、`verify-api-contracts` 均通过。 |
 | 2026-05-27 | `npm run build` | 通过 | Vite 生产构建通过。 |
-| 2026-05-27 | 文档规则写入 | in_progress | 新增 MCP Chrome 新旧截图对比、差异修复循环和 90% 相似度验收规则；未运行服务。 |
 
-## 本轮前端范围：/cards
-
-状态：`in_progress`
-
-当前覆盖说明：
-- 本历史小节记录的是上一轮只做 `/cards` 时的失败口径。
-- 本轮 cards 相关页面补齐后，`/cards` 已纳入 6 个 cards 页面统一验收并进入合格候选。
-- v2 全量仍保持 `in_progress`。
-
-本轮只写：
-- `/cards`
-- `/api/gc/v2/cards?view=cards` 请求封装和页面调用
-- `/cards` 页面需要的全新布局、卡片、分页、筛选、排序组件
-
-本轮不写：
-- `/cardstoday`
-- `/cardshasrank`
-- `/cardsmediamowned`
-- `/cardsneeddownload`
-- `/cardsrandom`
-- `/movie/:movie`
-- `/moviecarddayrank`
-- `/moviecardperiodrank`
-- generic pages
-- 操作页动作
-
-实现要求：
-- 使用全新 v2 前端设计。
-- 不使用旧项目前端模板、CSS、JS、class、静态资源。
-- 保留 `/cards` 功能语义：筛选、排序、分页、卡片字段、图片展示、内部链接、外链。
-- 没有真实动作 API 的按钮不渲染。
-- 写完后必须打开旧版 `/cards` 和 v2 `/cards`。
-- 必须使用 MCP Chrome 截图观察新旧页面差异。
-- 必须记录不足点，并按“修改 -> 截图复查”循环修复。
-- `/cards` 功能接近且视觉/交互相似度达到 90% 后，才允许进入合格候选。
-- 构建通过、API 200、页面能打开、基础筛选分页能用，都不能作为 `/cards` 合格依据。
-- 验证后回写真实结果。
-
-本轮实现结果：
-- `/cards` 已有全新 v2 页面、布局、卡片、分页、筛选、排序、样式和 API 请求封装。
-- 路由范围已收敛到 `/cards` 与 404；本轮未开放其它 cards 变体。
-- `/cards` 页面固定向后端传 `view=cards`。
-- 电影卡片保留 `0` 分数和 `0` 观看数显示。
-- 电影卡片详情链接使用后端 `movie_href`。
-- 验证脚本覆盖 `/cards` 源码有效性、路由范围、API/筛选/卡片/分页契约和无假动作。
-- 上一轮历史记录曾判定 `/cards` 不合格；本轮 cards 相关 6 页面补齐后已被覆盖。
-- 当前 `/cards` 已纳入 cards 相关页面统一截图、功能、交互、接口和性能验收，并进入合格候选。
-- v2 全量仍保持 `in_progress`。
-
-## /cards 新旧截图对比记录
-
-状态：`in_progress`
-
-| 轮次 | 旧版截图 | v2 截图 | 不足点 | 修复记录 | 相似度判断 |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 未生成 | 未生成 | 历史轮次仅有最小可运行页面壳，未完成旧版功能完整对齐和 MCP Chrome 截图观察。 | 未修复。 | 未达到 90%。 |
-| 1 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/cards-legacy-round1.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/cards-v2-round1.png` | 顶部栏和左侧菜单与旧版差距明显；cards 主工具栏和卡片字段已接近。 | 继续修改 v2 自有 `AppLayout` 与样式。 | 未达到 90%。 |
-| 2 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/cards-legacy-round1.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/cards-v2-round2.png` | 旧版首屏没有年龄排序按钮；v2 活动态偏黑，和旧版紫色活动态有差距。 | 继续修改 `/cards` 排序可见项和活动态样式。 | 未达到 90%。 |
-| 3 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/cards-legacy-final.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/cards-v2-final.png` | v2 首屏卡片密度偏低，同宽视口下卡片数少于旧版；需要调整新 v2 CSS 网格断点。 | 修改 `/Users/gaojinwei/src/my/rudy_gc/v2/gc-web/src/styles/index.css` 的 `/cards` 网格密度。 | 未达到 90%。 |
-| 4 | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-cards.png` | `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-cards.png` | 本轮 `/cards` 已随 6 个 cards 相关页面统一复测：Total 111385、首屏 18 卡、18 图完成加载、排序/分页/筛选/view 切换/外链可用。 | 进入合格候选；v2 全量仍保持 `in_progress`。 | 达到本轮页面口径。 |
-
-## 本轮 /cards 重做计划
-
-状态：`in_progress`
-
-开始时间：2026-05-27
-
-执行范围：
-- 只处理 `/cards`。
-- 旧版 `/cards` 作为功能、字段、交互、截图和输出基准。
-- v2 前端继续使用全新 Vue/Vite/TypeScript 实现，禁止复用旧前端模板、CSS、JS、class、静态资源。
-- 允许为 `/cards` 首屏相似度调整 v2 自有 layout 的 header/sidebar 可见结构，但不得恢复旧前端模板、CSS、JS、class、静态资源。
-
-功能对齐清单：
-- 顶部页面信息和结果统计。
-- 筛选区：关键词、演员、person id、类型、导演、prefix、maker、label、本地 label、album、发行时间、媒体时间、年龄、上榜时间、上榜天数、下载状态、媒体状态、观看数、评分、SC、Come、媒体目录。
-- 排序区：发行日期、详情更新、年龄、观看数、上榜日期、最高排名、上榜天数、媒体时间、SC、Come、最近 SC。
-- 分页区：顶部和底部都可操作，并保留当前 query。
-- 卡片区：封面、番号、标题、评分、观看数、排名、Come、SC、MPlay、类型、演员、导演、外链、发行日期。
-- 状态区：加载态、错误态、空态、图片加载失败态。
-
-验收动作：
-- `npm run test`
-- `npm run build`
-- 打开旧版 `/cards`。
-- 打开 v2 `/cards`。
-- MCP Chrome 截图观察。
-- 按不足点修改并复查。
-- 回写截图路径、差异清单、修复轮次和相似度判断。
-
-## 端口清理记录
-
-当前状态：`in_progress`
-
-- 默认 API 端口：`2041`
-- 默认 Web 端口：`2040`
-- 每次启动临时服务后，必须关闭并记录。
-- 本轮 `/cards` 实现未启动服务。
-- 端口检查结果：`2041` 已有 api 监听；本轮未启动该进程，也未关闭非本轮启动进程。
-- 端口检查结果：未发现 `2040` Web 监听。
-
-## 下一步
-
-1. 本轮按用户要求在 `/cards` 完成后停止。
-2. 后续任何继续动作仍必须先更新文档。
-
-## 本轮前端范围：movie detail MIDA-593
+## 当前执行记录：movie detail MIDA-593
 
 状态：`in_progress`
 
 本轮只写：
 - `/movie/:movie` v2 详情页。
 - `GET /api/gc/v2/movie/:movie` 详情接口字段补齐。
-- 固定验收样例：legacy `http://localhost:5010/movie/MIDA-593` 与 v2 `http://localhost:2040/movie/MIDA-593`。
+- 固定只读验收样例：`MIDA-593`。
 
 实现要求：
-- 使用 v2 全新前端实现，不使用旧项目前端模板、CSS、JS、class、静态资源。
-- 旧版详情页只作为功能、字段、交互、截图和输出基准。
+- 使用 v2 全新前端实现。
+- 历史详情页只作为功能、字段、交互、截图和输出基准。
 - 页面路由参数使用电影番号 `a_movie.name`。
 - 页面链接必须使用后端返回的 name 语义链接，禁止用内部 `jav_id` 拼 `/movie/...`。
 - 只渲染已有真实后端 API 支撑的动作；没有真实 API 的动作不渲染可用按钮。
@@ -318,9 +290,70 @@ Movie Card 专项：
 - 加载态、错误态、空态、图片加载失败态。
 
 验收动作：
-- 打开 legacy `/movie/MIDA-593`。
+- 打开历史只读基准 `/movie/MIDA-593`。
 - 打开 v2 `/movie/MIDA-593`。
 - MCP Chrome 截图观察并记录差异。
 - 按差异修改并复查，直到达到本轮页面口径。
 - 执行 `go test ./...`、`npm run test`、`npm run build` 和 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify`。
 - 关闭本轮临时启动的 v2 服务并确认 2040/2041 无监听。
+
+## 当前执行记录：rank day / rank period
+
+状态：`in_progress`
+
+本轮只写：
+- `/moviecarddayrank` v2 页面。
+- `/moviecardperiodrank` v2 页面。
+- `GET /api/gc/v2/rank/day` 输出补齐。
+- `GET /api/gc/v2/rank/period` 输出补齐。
+
+实现要求：
+- 使用 v2 全新前端实现。
+- 历史 rank 页面只作为功能、字段、交互、截图和输出基准。
+- 禁止读取或使用 `z_reference`。
+- 禁止复用历史模板、CSS、JS、class、静态资源、页面壳和交互代码。
+- 电影详情链接必须使用 movie name 或后端返回的 `movie_href`。
+- 不渲染没有真实业务 API 支撑的动作按钮。
+
+Day Rank 功能清单：
+- 日期筛选。
+- 前一天、后一天、随机、最新。
+- 顶部和底部分页。
+- 排名卡片、图片、电影详情链接。
+
+Period Rank 功能清单：
+- 周期类型、分类、周期 key。
+- 前一周期、后一周期、随机、最新。
+- 顶部和底部分页。
+- 周期排名元数据。
+- 排名卡片、图片、电影详情链接。
+
+验收动作：
+- 打开历史只读基准 `/moviecarddayrank`。
+- 打开 v2 `/moviecarddayrank`。
+- 打开历史只读基准 `/moviecardperiodrank`。
+- 打开 v2 `/moviecardperiodrank`。
+- MCP Chrome 截图观察并记录差异。
+- 按差异修改并复查，直到达到本轮页面口径。
+- 执行 `go test ./...`、`npm run test`、`npm run build` 和 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify`。
+- 关闭本轮临时启动的 v2 服务并确认 2040/2041 无监听。
+
+本轮执行结果：
+- 后端补齐 `rank/day.latest_date`，用于“最新”动作。
+- 后端补齐 `rank/period.prev_href`、`next_href`、`random_href`，用于周期导航。
+- period 随机期数查询使用 `idx_period_range` 避免 filesort；本轮 EXPLAIN 结果为 `Using where; Backward index scan`。
+- 前端新增 v2 自有 `/moviecarddayrank` 与 `/moviecardperiodrank` 页面，接入侧边栏和顶部快捷入口。
+- 两个页面都使用 `MovieTile`、`PaginationControl`、`PageFrame`、`StateBlock` 和 v2 自有样式。
+- 截图文件：
+  - `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-moviecarddayrank.png`
+  - `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-moviecarddayrank.png`
+  - `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/legacy-moviecardperiodrank.png`
+  - `/Users/gaojinwei/src/my/rudy_gc/v2/tmp/v2-moviecardperiodrank.png`
+- 浏览器交互验收：
+  - Day Rank 分页切到 `?p=2` 后首个排名为 `#19`。
+  - Day Rank 前一天切到 `2026-05-25`。
+  - Period Rank 分页切到 `?p=2` 后首个排名为 `#19`。
+  - Period Rank 上一期切到 `Month 2026-04`。
+- 控制台验收：v2 两页均无 warn/error。
+- 全量验证：`make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify` 通过。
+- 端口清理：`2040` Web 与 `2041` API 均已无监听。

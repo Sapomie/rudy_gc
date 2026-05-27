@@ -144,7 +144,7 @@ export interface MovieMedia {
   bit_rate: number;
   duration_minutes: number;
   frame: number;
-  self_make: number;
+  self_make: string;
   is_removed: number;
 }
 
@@ -226,6 +226,7 @@ export interface RankDayResponse {
   prev_date: string;
   next_date: string;
   random_date: string;
+  latest_date: string;
   prev_disabled: boolean;
   next_disabled: boolean;
 }
@@ -245,6 +246,9 @@ export interface RankPeriodResponse {
   page_size: number;
   prev_key: string;
   next_key: string;
+  prev_href: string;
+  next_href: string;
+  random_href: string;
   prev_disabled: boolean;
   next_disabled: boolean;
   type_links: RankSwitchLink[];

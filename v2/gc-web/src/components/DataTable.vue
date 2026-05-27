@@ -10,17 +10,30 @@
             @click="column.sortable && $emit('sort', column.key)"
           >
             <span>{{ column.label }}</span>
-            <b v-if="column.key === orderBy">{{ order === "asc" ? "↑" : "↓" }}</b>
+            <b v-if="column.key === orderBy">{{ order.toLowerCase() === "asc" ? "↑" : "↓" }}</b>
           </th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(row, rowIndex) in rows" :key="row.id || row.name || rowIndex">
           <td v-for="column in columns" :key="column.key">
-            <RouterLink v-if="column.link && row[column.key]" :to="fillLink(column.link, row)">
+            <RouterLink
+              v-if="column.link && row[column.key] && !isExternalLink(fillLink(column.link, row))"
+              :to="fillLink(column.link, row)"
+              :class="cellClass(column.key)"
+            >
               {{ row[column.key] }}
             </RouterLink>
-            <span v-else>{{ row[column.key] }}</span>
+            <a
+              v-else-if="column.link && row[column.key]"
+              :href="fillLink(column.link, row)"
+              target="_blank"
+              rel="noreferrer"
+              :class="cellClass(column.key)"
+            >
+              {{ row[column.key] }}
+            </a>
+            <span v-else :class="cellClass(column.key)">{{ row[column.key] }}</span>
           </td>
         </tr>
       </tbody>
@@ -43,6 +56,20 @@ defineEmits<{
 }>();
 
 function fillLink(pattern: string, row: PageRow) {
+  const directMatch = pattern.match(/^\{([^}]+)\}$/);
+  if (directMatch) {
+    return row[directMatch[1]] || "";
+  }
   return pattern.replace(/\{([^}]+)\}/g, (_, key: string) => encodeURIComponent(row[key] || ""));
+}
+
+function isExternalLink(target: string) {
+  return /^https?:\/\//i.test(target);
+}
+
+function cellClass(key: string) {
+  return {
+    "rgc-table-cell-long": /file|dir|path|title|url|error|remarks|hash/i.test(key),
+  };
 }
 </script>
