@@ -12,6 +12,21 @@ const sortLabels = [
   ["ByComeTimes", "co次数"]
 ];
 
+const apiPathByPage = new Map([
+  ["/cards", "/api/cards"],
+  ["/cardstoday", "/api/cardstoday"],
+  ["/cardshasrank", "/api/cardshasrank"],
+  ["/cardsmediamowned", "/api/cardsmediamowned"],
+  ["/cardsneeddownload", "/api/cardsneeddownload"],
+  ["/cardsrandom", "/api/cardsrandom"],
+  ["/moviecarddayrank", "/api/moviecarddayrank"],
+  ["/moviecardperiodrank", "/api/moviecardperiodrank"]
+]);
+
+function apiPathForCurrentPage() {
+  return apiPathByPage.get(window.location.pathname) || "/api/cards";
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -141,6 +156,95 @@ function renderPlayRow(movie) {
       ${movie.film_birth_date_w_media ? `<span class="text-muted small card-play-date">${escapeHtml(movie.film_birth_date_w_media)}</span>` : ""}
     </div></div>
   </li>`;
+}
+
+function renderPeriodPlayRow(movie) {
+  if ((movie.owned_w_media || 0) < 2) {
+    return "";
+  }
+  let play = "";
+  if (movie.owned_w_media === 5) {
+    play = `<a href="${attr(movie.video_url_w_media)}" class="btn btn-sm btn-info me-2">MPlay</a>`;
+  } else if (movie.owned_w_media === 4) {
+    play = `<a href="${attr(movie.video_url_w_media)}" class="btn btn-sm btn-success me-2">MPlay</a>`;
+  } else if (movie.owned_w_media === 6) {
+    play = `<span class="btn btn-sm btn-secondary me-2 disabled" aria-disabled="true">MRemoved</span>`;
+  }
+  return `<li class="list-group-item d-flex align-items-center">
+    ${play}
+    ${movie.film_birth_date_w_media ? `<span class="text-muted small ms-2">| M ${escapeHtml(movie.film_birth_date_w_media)}</span>` : ""}
+  </li>`;
+}
+
+function renderPeriodMovieCard(card) {
+  const movie = card.Movie || card.movie || {};
+  const item = card.Item || {};
+  const genres = (movie.genre || []).map((genre) =>
+    `<a href="/cards?gn=${encodeURIComponent(genre)}" class="badge badge-genre me-1 mb-1">${escapeHtml(genre)}</a>`
+  ).join("");
+  const casts = (movie.cast || []).map((cast) => {
+    const nameShow = cast.NameShow || cast.DisplayName || cast.Name || "";
+    if ((cast.PersonId || 0) > 0) {
+      return `<a href="/cast/${attr(cast.PersonId)}" class="person-tag mr-2" title="${attr(nameShow)}">${escapeHtml(nameShow)}</a>`;
+    }
+    return `<a href="/cards?cn=${encodeURIComponent(cast.Name || "")}" class="person-tag mr-2" title="${attr(nameShow)}">${escapeHtml(nameShow)}</a>`;
+  }).join("");
+  const director = movie.director
+    ? `<a href="/cards?dn=${encodeURIComponent(movie.director)}" class="person-tag ml-2" title="${attr(movie.director)}">${escapeHtml(movie.director)}</a>`
+    : "";
+  const scoreBadge = String(movie.score ?? "") !== "" ? `<span class="badge-score">★ ${escapeHtml(movie.score)}</span>` : "";
+  const watched = String(movie.score ?? "") !== "" && String(movie.viewers_number_watched ?? "") !== ""
+    ? `<small class="text-muted ml-2">(${escapeHtml(movie.viewers_number_watched)})</small>`
+    : "";
+  const itemScore = Number(item.Score || 0).toFixed(2);
+  return `
+    <div class="col">
+      <article class="card shadow-sm h-100 card-lift">
+        <a href="/movie/${attr(movie.name)}" class="d-block" aria-label="查看 ${attr(movie.name)} 详情">
+          <div class="thumb-2x3">
+            <img src="${attr(movie.jacket_img)}" alt="${attr(movie.name)} 海报" loading="lazy" decoding="async">
+            <div class="badge-top-left">
+              ${(movie.come_times || 0) > 0 ? `<span class="badge-come">❤ ${escapeHtml(movie.come_times)}</span>` : ""}
+              ${(movie.sc_times || 0) > 0 ? ` <span class="badge-times">× ${escapeHtml(movie.sc_times)}</span>` : ""}
+            </div>
+            <div class="badge-bottom-right">
+              ${(movie.highest_rank || 0) > 0 ? `<span class="badge-rank">#${escapeHtml(movie.highest_rank)}</span>` : ""}
+              ${scoreBadge}
+            </div>
+          </div>
+        </a>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item">
+            <h6 class="mb-1 text-truncate" title="${attr(movie.title)}">
+              <a href="/cards?pn=${encodeURIComponent(movie.prefix || "")}" class="stretched-link text-reset text-decoration-none">${escapeHtml(movie.name)}</a>
+              ${watched}
+            </h6>
+            ${movie.title ? `<p class="mb-0 text-muted line-clamp-2" title="${attr(movie.title)}">${escapeHtml(movie.title)}</p>` : ""}
+          </li>
+          <li class="list-group-item">
+            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+              <span class="badge bg-dark">周期 #${escapeHtml(item.RankPos)}</span>
+              <span class="badge ${attr(card.RankChangeClass || "bg-secondary")}">${escapeHtml(card.RankChangeText || "")}</span>
+            </div>
+            <div class="small text-muted mt-2">
+              上期 ${escapeHtml(card.PrevRankText || "--")} · 峰值 #${escapeHtml(item.PeakRank)} · 最佳日 #${escapeHtml(item.BestRank)}
+            </div>
+            <div class="small text-muted mt-1">
+              上榜 ${escapeHtml(item.DaysInRank)} 天 · 取样 ${escapeHtml(item.UsedPickDays)} 天 · 分数 ${escapeHtml(itemScore)}
+            </div>
+          </li>
+          ${renderPeriodPlayRow(movie)}
+          <li class="list-group-item text-muted">${genres}</li>
+          <li class="list-group-item">${casts}${director}</li>
+          <li class="list-group-item d-flex align-items-center small">
+            ${movie.bus_url ? `<a href="${attr(movie.bus_url)}" class="me-2" target="_blank" rel="noopener">Bus</a>` : ""}
+            ${movie.search_url ? `<a href="${attr(movie.search_url)}" class="me-2" target="_blank" rel="noopener">Suk</a>` : ""}
+            ${movie.jav_url ? `<a href="${attr(movie.jav_url)}" class="me-2" target="_blank" rel="noopener">Lib</a>` : ""}
+            <span class="ms-auto text-muted">${escapeHtml(movie.releasing_date)}</span>
+          </li>
+        </ul>
+      </article>
+    </div>`;
 }
 
 function renderFilter(data) {
@@ -285,19 +389,130 @@ function shouldSkipElement(element) {
   return type === "submit" || type === "button" || type === "reset" || type === "fieldset";
 }
 
-async function main() {
-  const response = await fetch(`/api/cards${window.location.search}`);
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || `请求失败(${response.status})`);
-  }
-  document.title = `${data.Title || "MovieCard"} - Rudy-GC`;
+function renderRankDayHeader(data) {
+  const prevHref = `/moviecarddayrank?date=${encodeURIComponent(data.prevDate || "")}`;
+  const nextHref = `/moviecarddayrank?date=${encodeURIComponent(data.nextDate || "")}`;
+  const randHref = `/moviecarddayrank?date=${encodeURIComponent(data.randDate || "")}`;
+  return `<div class="w-100 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+    <div class="alert alert-success py-2 mb-0">
+      <div class="d-flex flex-column gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <strong class="font-size-14">Rank Date</strong>
+          <span class="font-18 fw-semibold">${escapeHtml(data.rankDate || "")}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <strong class="font-size-14">Total</strong>
+          <span class="font-18 fw-semibold">${escapeHtml(data.total)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="d-flex flex-column flex-md-row gap-2 align-items-start align-items-md-center">
+      <div class="btn-group btn-group-sm" role="group" aria-label="Rank day navigation">
+        <a href="${attr(prevHref)}" class="btn btn-outline-primary ${data.prevDisabled ? "disabled" : ""}" aria-disabled="${data.prevDisabled ? "true" : "false"}">前一天</a>
+        <a href="${attr(nextHref)}" class="btn btn-outline-primary ${data.nextDisabled ? "disabled" : ""}" aria-disabled="${data.nextDisabled ? "true" : "false"}">后一天</a>
+        <a href="${attr(randHref)}" class="btn btn-outline-primary">随机</a>
+      </div>
+      <form class="d-flex gap-2" method="get" action="/moviecarddayrank">
+        <input type="text" class="form-control form-control-sm" name="date" value="${attr(data.rankDate || "")}"
+               placeholder="YYYY-MM-DD" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" inputmode="numeric">
+        <button class="btn btn-sm btn-outline-primary" type="submit">Go</button>
+      </form>
+    </div>
+  </div>`;
+}
+
+function renderRankPeriodHeader(data) {
+  const renderLinks = (links, activeClass, inactiveClass) => (links || []).map((item) =>
+    `<a href="${attr(item.Href || "#")}" class="btn ${item.Active ? `${activeClass} active disabled` : inactiveClass}">${escapeHtml(item.Label)}</a>`
+  ).join("");
+  return `<div class="w-100 d-flex flex-column gap-3">
+    <div class="alert alert-success py-2 mb-0">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+        <div class="d-flex flex-column gap-1">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <strong class="font-size-14">${escapeHtml(data.periodTypeLabel || "")}</strong>
+            <span class="font-18 fw-semibold">${escapeHtml(data.periodKey || "")}</span>
+            <span class="badge bg-light text-dark border">${escapeHtml(data.categoryLabel || "")}</span>
+          </div>
+          <div class="small text-muted">
+            ${escapeHtml(data.rangeStart || "")} ~ ${escapeHtml(data.rangeEnd || "")} | Total ${escapeHtml(data.total)}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Period type switch">
+            ${renderLinks(data.typeLinks, "btn-primary", "btn-outline-primary")}
+          </div>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Period category switch">
+            ${renderLinks(data.categoryLinks, "btn-secondary", "btn-outline-secondary")}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-group btn-group-sm" role="group" aria-label="Period navigation">
+      <a href="${attr(data.prevHref || "#")}" class="btn btn-outline-primary ${data.prevDisabled ? "disabled" : ""}" aria-disabled="${data.prevDisabled ? "true" : "false"}">上一期</a>
+      <a href="${attr(data.nextHref || "#")}" class="btn btn-outline-primary ${data.nextDisabled ? "disabled" : ""}" aria-disabled="${data.nextDisabled ? "true" : "false"}">下一期</a>
+      <a href="${attr(data.latestHref || "/moviecardperiodrank")}" class="btn btn-outline-primary">最新</a>
+    </div>
+  </div>`;
+}
+
+function renderMessage(data) {
+  document.getElementById("sort-bar").innerHTML = "";
+  document.getElementById("owned-filter").innerHTML = "";
+  document.getElementById("pagination-top").innerHTML = "";
+  document.getElementById("movie-card-filter").innerHTML = "";
+  document.getElementById("movie-grid").innerHTML = `<div class="col-12"><div class="alert alert-info">${escapeHtml(data.message || "暂无数据")}</div></div>`;
+}
+
+function renderCardsPage(data) {
   document.getElementById("sort-bar").innerHTML = renderSortBar(data.sortQuery);
   document.getElementById("owned-filter").innerHTML = renderOwnedFilter(data);
   document.getElementById("pagination-top").innerHTML = renderPagination(data.PageInfo);
   document.getElementById("movie-card-filter").innerHTML = renderFilter(data);
   document.getElementById("movie-grid").innerHTML = (data.movies || []).map(renderMovieCard).join("");
   initFilterForm();
+}
+
+function renderRankDayPage(data) {
+  if (data.message) {
+    renderMessage(data);
+    return;
+  }
+  document.getElementById("sort-bar").innerHTML = renderRankDayHeader(data);
+  document.getElementById("owned-filter").innerHTML = "";
+  document.getElementById("pagination-top").innerHTML = renderPagination(data.PageInfo);
+  document.getElementById("movie-card-filter").innerHTML = "";
+  document.getElementById("movie-grid").innerHTML = (data.movies || []).map(renderMovieCard).join("");
+}
+
+function renderRankPeriodPage(data) {
+  if (data.message) {
+    renderMessage(data);
+    return;
+  }
+  document.getElementById("sort-bar").innerHTML = renderRankPeriodHeader(data);
+  document.getElementById("owned-filter").innerHTML = "";
+  document.getElementById("pagination-top").innerHTML = renderPagination(data.PageInfo);
+  document.getElementById("movie-card-filter").innerHTML = "";
+  document.getElementById("movie-grid").innerHTML = (data.cards || []).map(renderPeriodMovieCard).join("");
+}
+
+async function main() {
+  const response = await fetch(`${apiPathForCurrentPage()}${window.location.search}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || `请求失败(${response.status})`);
+  }
+  document.title = `${data.Title || "MovieCard"} - Rudy-GC`;
+  if (data.ViewType === "rank-day") {
+    renderRankDayPage(data);
+    return;
+  }
+  if (data.ViewType === "rank-period") {
+    renderRankPeriodPage(data);
+    return;
+  }
+  renderCardsPage(data);
 }
 
 main().catch((err) => {

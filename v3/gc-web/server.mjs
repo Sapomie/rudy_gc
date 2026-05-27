@@ -6,8 +6,25 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = __dirname;
 const staticRoot = path.join(webRoot, "legacy-ui", "static");
+const textRoot = path.resolve(webRoot, "..", "z_text");
 const apiOrigin = process.env.V3_API_ORIGIN || "http://127.0.0.1:5013";
 const port = Number(process.env.PORT || 3053);
+const volumeRoots = [
+  "/Volumes/Expansion",
+  "/Volumes/Getea",
+  "/Volumes/movie-un",
+  "/Volumes/T7/data"
+];
+const cardsPagePaths = new Set([
+  "/cards",
+  "/cardstoday",
+  "/cardshasrank",
+  "/cardsmediamowned",
+  "/cardsneeddownload",
+  "/cardsrandom",
+  "/moviecarddayrank",
+  "/moviecardperiodrank"
+]);
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -61,6 +78,17 @@ function proxy(req, res) {
   req.pipe(proxyReq);
 }
 
+function resolveVolumePath(requestPath) {
+  const decoded = decodeURIComponent(requestPath);
+  const normalized = path.normalize(decoded);
+  for (const root of volumeRoots) {
+    if (normalized === root || normalized.startsWith(root + path.sep)) {
+      return normalized;
+    }
+  }
+  return "";
+}
+
 http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
   if (url.pathname === "/") {
@@ -68,7 +96,7 @@ http.createServer((req, res) => {
     res.end();
     return;
   }
-  if (url.pathname === "/cards") {
+  if (cardsPagePaths.has(url.pathname)) {
     sendFile(res, path.join(webRoot, "cards.html"));
     return;
   }
@@ -77,8 +105,28 @@ http.createServer((req, res) => {
     res.end();
     return;
   }
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/Volumes/") || url.pathname === "/text" || url.pathname.startsWith("/text/")) {
+  if (url.pathname.startsWith("/api/")) {
     proxy(req, res);
+    return;
+  }
+  if (url.pathname.startsWith("/Volumes/")) {
+    const filePath = resolveVolumePath(url.pathname);
+    if (!filePath) {
+      res.writeHead(403);
+      res.end("forbidden");
+      return;
+    }
+    sendFile(res, filePath);
+    return;
+  }
+  if (url.pathname.startsWith("/text/")) {
+    const filePath = safeJoin(textRoot, url.pathname.slice("/text/".length));
+    if (!filePath) {
+      res.writeHead(403);
+      res.end("forbidden");
+      return;
+    }
+    sendFile(res, filePath);
     return;
   }
   if (url.pathname.startsWith("/static/")) {
@@ -101,7 +149,8 @@ http.createServer((req, res) => {
     sendFile(res, filePath);
     return;
   }
-  proxy(req, res);
+  res.writeHead(404);
+  res.end("not found");
 }).listen(port, () => {
   console.log(`v3 gc-web listening on http://127.0.0.1:${port}`);
   console.log(`proxying API to ${apiOrigin}`);
