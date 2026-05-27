@@ -2,6 +2,7 @@ package page
 
 import (
 	"net/http"
+	"strings"
 
 	"rudy-gc-api/internal/dep"
 	pagesvc "rudy-gc-api/internal/service/page"
@@ -31,10 +32,31 @@ func (h *Handler) Load(c *gin.Context) {
 		response.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	req.Extra = c.Request.URL.Query()
+	if strings.TrimSpace(req.Query) == "" {
+		req.Query = firstQueryValue(req.Extra, "keyword")
+	}
+	if strings.TrimSpace(req.OrderBy) == "" {
+		req.OrderBy = firstQueryValue(req.Extra, "sort")
+	}
+	if strings.TrimSpace(req.Order) == "" {
+		req.Order = firstQueryValue(req.Extra, "dir")
+	}
 	data, err := h.service.Load(c.Request.Context(), c.Param("key"), &req)
 	if err != nil {
 		response.Fail(c, http.StatusBadRequest, "load_page_failed", err.Error())
 		return
 	}
 	response.JSON(c, http.StatusOK, data)
+}
+
+func firstQueryValue(values map[string][]string, key string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	items := values[key]
+	if len(items) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(items[len(items)-1])
 }

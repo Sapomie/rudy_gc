@@ -283,6 +283,7 @@ export interface PageColumn {
   label: string;
   sortable: boolean;
   link?: string;
+  hidden?: boolean;
 }
 
 export interface PageFilter {
@@ -329,6 +330,7 @@ export interface PageListResponse {
   description: string;
   legacy_path: string;
   kind: "list" | "operation" | string;
+  group: string;
   page: number;
   page_size: number;
   total: number;

@@ -11,6 +11,7 @@ type PageListRequest struct {
 	Level    string `form:"level"`
 	Status   string `form:"status"`
 	Album    string `form:"album"`
+	Extra    map[string][]string
 }
 
 type PageListResponse struct {
@@ -19,6 +20,7 @@ type PageListResponse struct {
 	Description string        `json:"description"`
 	LegacyPath  string        `json:"legacy_path"`
 	Kind        string        `json:"kind"`
+	Group       string        `json:"group"`
 	Page        int64         `json:"page"`
 	PageSize    int64         `json:"page_size"`
 	Total       int64         `json:"total"`
@@ -47,6 +49,7 @@ type PageColumn struct {
 	Label    string `json:"label"`
 	Sortable bool   `json:"sortable"`
 	Link     string `json:"link,omitempty"`
+	Hidden   bool   `json:"hidden,omitempty"`
 }
 
 type PageFilter struct {

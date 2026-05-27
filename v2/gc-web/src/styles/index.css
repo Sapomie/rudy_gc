@@ -40,9 +40,8 @@ select {
 }
 
 .rgc-sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   overflow-y: auto;
   border-right: 1px solid #d1d9e2;
   background: #243647;
@@ -116,8 +115,6 @@ select {
 }
 
 .rgc-topbar {
-  position: sticky;
-  top: 0;
   z-index: 20;
   min-height: 70px;
   display: flex;
@@ -363,8 +360,6 @@ select {
 }
 
 .rgc-cards-toolbar {
-  position: sticky;
-  top: 70px;
   z-index: 15;
   display: grid;
   gap: 8px;
@@ -586,6 +581,446 @@ select {
   background: #ffffff;
 }
 
+.rgc-list-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.rgc-list-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.5fr) minmax(560px, 1.8fr) auto;
+  align-items: end;
+  gap: 10px;
+  border: 1px solid #dce4ee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.04);
+}
+
+.rgc-list-toolbar-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.rgc-list-toolbar-main strong {
+  overflow: hidden;
+  color: #101828;
+  font-size: 17px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rgc-list-toolbar-main span,
+.rgc-list-counts span,
+.rgc-list-controlbar > span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rgc-list-filter-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(108px, 1fr));
+  gap: 7px;
+}
+
+.rgc-list-filter-grid label {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.rgc-list-filter-grid label.compact {
+  max-width: 150px;
+}
+
+.rgc-list-filter-grid span {
+  overflow: hidden;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rgc-list-filter-grid input,
+.rgc-list-filter-grid select {
+  width: 100%;
+  height: 31px;
+  min-width: 0;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  padding: 0 8px;
+  color: #101828;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+.rgc-list-toolbar-actions,
+.rgc-list-controlbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rgc-list-controlbar {
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 2px;
+}
+
+.rgc-list-controlbar.bottom {
+  border-top: 1px solid #eef2f6;
+  padding-top: 8px;
+}
+
+.rgc-list-counts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rgc-list-counts b {
+  color: #101828;
+  font-size: 13px;
+}
+
+.rgc-cast-card-section {
+  display: grid;
+  gap: 10px;
+}
+
+.rgc-agg-overview,
+.rgc-agg-section {
+  display: grid;
+  gap: 12px;
+}
+
+.rgc-agg-section {
+  border-top: 1px solid #e4e7ec;
+  padding-top: 10px;
+}
+
+.rgc-agg-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.rgc-agg-section-head,
+.rgc-agg-tile {
+  display: flex;
+  align-items: center;
+}
+
+.rgc-agg-section-head {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rgc-agg-section-head h2 {
+  margin: 0;
+  color: #101828;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.rgc-agg-section-head span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rgc-agg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 8px;
+}
+
+.rgc-agg-grid.top {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.rgc-agg-tile {
+  min-height: 74px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #dce4ee;
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #101828;
+  background: #ffffff;
+  text-decoration: none;
+}
+
+.rgc-agg-tile strong,
+.rgc-agg-tile span,
+.rgc-agg-tile small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rgc-agg-tile strong {
+  font-size: 13px;
+}
+
+.rgc-agg-tile span {
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.rgc-agg-tile small {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.rgc-release-agg-page .rgc-frame-head,
+.rgc-release-bucket-page .rgc-frame-head,
+.rgc-period-page .rgc-frame-head {
+  display: none;
+}
+
+.rgc-release-agg-shell {
+  gap: 14px;
+}
+
+.rgc-release-agg-hero,
+.rgc-release-agg-panel {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.04);
+}
+
+.rgc-release-agg-hero {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.rgc-release-agg-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rgc-release-agg-hero > .rgc-button {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+}
+
+.rgc-release-agg-title {
+  display: grid;
+  gap: 7px;
+}
+
+.rgc-release-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.rgc-release-breadcrumbs a {
+  color: #667085;
+  text-decoration: none;
+}
+
+.rgc-release-breadcrumbs span {
+  color: #101828;
+}
+
+.rgc-release-agg-title span {
+  color: #101828;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.rgc-release-agg-title b,
+.rgc-release-agg-panel-head h2 {
+  margin: 0;
+  border-left: 5px solid #67d6e8;
+  padding-left: 8px;
+  color: #101828;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.rgc-agg-overview.release {
+  gap: 18px;
+}
+
+.rgc-release-agg-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 22px;
+}
+
+.rgc-release-agg-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rgc-release-agg-panel-head span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.rgc-release-year-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px 22px;
+}
+
+.rgc-release-year-grid.level-quarter {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.rgc-release-tabbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  border-bottom: 1px solid #dce4ee;
+}
+
+.rgc-release-tabbar button {
+  min-height: 40px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #667085;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.rgc-release-tabbar button.active {
+  border-bottom-color: #8b7cf6;
+  color: #7667d8;
+}
+
+.rgc-release-year-card {
+  min-height: 108px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid #edf0f4;
+  border-radius: 6px;
+  padding: 14px 18px;
+  color: #344054;
+  background: #ffffff;
+  box-shadow: 0 8px 16px rgba(16, 24, 40, 0.05);
+  text-decoration: none;
+}
+
+.rgc-release-year-card strong {
+  color: #514b83;
+  font-size: 15px;
+}
+
+.rgc-release-year-card span,
+.rgc-release-year-card small {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.rgc-release-top-tabs {
+  display: grid;
+  gap: 18px;
+}
+
+.rgc-release-top-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(112px, 1fr));
+  gap: 18px 12px;
+}
+
+.rgc-release-top-card {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px solid #edf0f4;
+  border-radius: 6px;
+  padding: 12px 10px;
+  color: #344054;
+  background: #fbfcfe;
+  box-shadow: 0 8px 16px rgba(16, 24, 40, 0.05);
+  text-align: center;
+  text-decoration: none;
+}
+
+.rgc-release-top-card span {
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #7667d8;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.rgc-release-top-card b {
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: #ffffff;
+  background: #667085;
+  font-size: 12px;
+}
+
+.rgc-release-top-card small {
+  border: 1px solid #edf0f4;
+  border-radius: 5px;
+  padding: 2px 8px;
+  color: #344054;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.rgc-release-bucket-shell {
+  gap: 8px;
+}
+
+.rgc-release-bucket-page .rgc-list-toolbar {
+  grid-template-columns: minmax(170px, 0.35fr) minmax(620px, 1fr) auto;
+  padding: 8px 10px;
+}
+
+.rgc-release-bucket-page .rgc-list-toolbar-main strong {
+  font-size: 15px;
+}
+
+.rgc-release-bucket-page .rgc-list-filter-grid {
+  grid-template-columns: repeat(4, minmax(112px, 1fr));
+  gap: 6px;
+}
+
 .rgc-table-wrap {
   overflow: auto;
   border: 1px solid #dce4ee;
@@ -612,8 +1047,6 @@ select {
 }
 
 .rgc-table th {
-  position: sticky;
-  top: 0;
   z-index: 1;
   color: #475467;
   background: #f8fafc;
@@ -667,6 +1100,10 @@ select {
   white-space: nowrap;
 }
 
+.rgc-table-cell-number {
+  font-variant-numeric: tabular-nums;
+}
+
 .rgc-filter-actions {
   display: flex;
   align-items: center;
@@ -713,6 +1150,11 @@ select {
   align-items: end;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.rgc-period-page .rgc-rank-tools {
+  border-color: #b7e4c4;
+  background: #e6f7e9;
 }
 
 .rgc-rank-tools.rgc-rank-compact {
@@ -885,7 +1327,7 @@ select {
 .rgc-period-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .rgc-period-card {
@@ -895,22 +1337,21 @@ select {
 
 .rgc-period-meta {
   display: grid;
-  gap: 5px;
+  gap: 3px;
   border: 1px solid #dce4ee;
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 6px;
+  padding: 6px;
   background: #ffffff;
-  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.05);
 }
 
 .rgc-period-meta b,
 .rgc-period-meta small {
-  min-height: 23px;
+  min-height: 18px;
   display: inline-flex;
   align-items: center;
-  border-radius: 6px;
-  padding: 0 8px;
-  font-size: 12px;
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 10px;
   font-weight: 850;
 }
 
@@ -1525,7 +1966,15 @@ select {
   }
 
   .rgc-period-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .rgc-release-year-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .rgc-release-top-grid {
+    grid-template-columns: repeat(7, minmax(112px, 1fr));
   }
 
   .rgc-rank-compact-period {
@@ -1543,15 +1992,22 @@ select {
   }
 
   .rgc-form-grid,
-  .rgc-filter-grid {
+  .rgc-filter-grid,
+  .rgc-list-filter-grid {
     grid-template-columns: repeat(4, minmax(120px, 1fr));
   }
 
-  .rgc-generic-toolbar {
+  .rgc-generic-toolbar,
+  .rgc-list-toolbar {
     grid-template-columns: minmax(180px, 0.6fr) minmax(360px, 1.3fr);
   }
 
-  .rgc-generic-actions {
+  .rgc-release-bucket-page .rgc-list-toolbar {
+    grid-template-columns: minmax(180px, 0.5fr) minmax(420px, 1.4fr);
+  }
+
+  .rgc-generic-actions,
+  .rgc-list-toolbar-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
@@ -1584,7 +2040,8 @@ select {
 
   .rgc-rank-tools.rgc-rank-compact,
   .rgc-rank-compact-period,
-  .rgc-generic-toolbar {
+  .rgc-generic-toolbar,
+  .rgc-list-toolbar {
     grid-template-columns: 1fr;
   }
 
@@ -1597,17 +2054,21 @@ select {
   .rgc-rank-segments,
   .rgc-rank-listbar,
   .rgc-generic-actions,
-  .rgc-generic-listbar {
+  .rgc-generic-listbar,
+  .rgc-list-toolbar-actions,
+  .rgc-list-controlbar {
     justify-content: flex-start;
   }
 
   .rgc-rank-listbar,
-  .rgc-generic-listbar {
+  .rgc-generic-listbar,
+  .rgc-list-controlbar {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .rgc-generic-actions {
+  .rgc-generic-actions,
+  .rgc-list-toolbar-actions {
     grid-column: auto;
   }
 
@@ -1623,10 +2084,24 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .rgc-release-year-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rgc-release-top-grid {
+    grid-template-columns: repeat(2, minmax(112px, 1fr));
+  }
+
+  .rgc-release-agg-hero > .rgc-button {
+    position: static;
+    justify-self: flex-start;
+  }
+
   .rgc-form-grid,
   .rgc-form-grid.compact,
   .rgc-filter-grid,
-  .rgc-generic-fields {
+  .rgc-generic-fields,
+  .rgc-list-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1653,7 +2128,16 @@ select {
   .rgc-form-grid,
   .rgc-form-grid.compact,
   .rgc-filter-grid,
-  .rgc-generic-fields {
+  .rgc-generic-fields,
+  .rgc-list-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rgc-release-year-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rgc-release-top-grid {
     grid-template-columns: 1fr;
   }
 

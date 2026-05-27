@@ -89,6 +89,24 @@ make -f deploy.mk docker-config
 - 默认 Web 端口为 `2040`，默认 API 端口为 `2041`。
 - 若本轮临时启动服务，验证结束后必须执行 `make stop-all` 或等价清理，并确认 `2040`、`2041` 无本轮遗留监听。
 
+## 2026-05-28 两页复查运行记录
+
+- 本轮临时服务：`make -C /Users/gaojinwei/src/my/rudy_gc/v2 run-all`。
+- Web 端口：`2040`。
+- API 端口：`2041`。
+- 复查页面：`/moviecardperiodrank`、`/movie-agg-all/release-bucket-list`。
+- 当前记录状态：截图、API、SQL 和测试已完成；已执行 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 stop-all`，`2040` 与 `2041` 无监听输出。
+
+## 2026-05-28 Aggregation 页面复查运行记录
+
+- 本轮临时服务：`make -C /Users/gaojinwei/src/my/rudy_gc/v2 run-all`。
+- Web 端口：`2040`。
+- API 端口：`2041`。
+- 本次修复页面：`/movie-agg-all/release`。
+- 剩余复查页面：`/w-agg-events`、`/wdir`、`/w-media-agg/birth`、`/w-media-agg/bucket-list`。
+- 回归复核：`/movie-agg-all/release-bucket-list`。
+- 当前记录状态：`/movie-agg-all/release` 已按 legacy 同页下钻、Top tab、API 输出、SQL/性能和截图对比重新验收；已执行 `make -C /Users/gaojinwei/src/my/rudy_gc/v2 stop-all`，`2040` 与 `2041` 无监听输出。
+
 ## 完成度记录
 
 - API 拆分：`in_progress`，已具备 `gc-api` 独立 Go 模块、配置、基础路由和测试入口；真实动作 API 仍需逐项迁移。

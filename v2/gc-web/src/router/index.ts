@@ -21,7 +21,7 @@ const genericChildren: RouteRecordRaw[] = genericListRoutes.map((item) => ({
   name: item.key,
   meta: { title: item.title, pageKey: item.key },
   component: () => import("@/pages/generic/index.vue"),
-}));
+})).filter((item) => item.name !== "records");
 
 const routes: RouteRecordRaw[] = [
   {
@@ -31,6 +31,7 @@ const routes: RouteRecordRaw[] = [
       { path: "", redirect: "/cards" },
       ...cardsChildren,
       ...rankChildren,
+      { path: "records", redirect: "/crawl-records" },
       ...genericChildren,
       {
         path: "movie/:movie",

@@ -1,5 +1,5 @@
 <template>
-  <PageFrame title="Period Rank" eyebrow="Ranking">
+  <PageFrame class="rgc-period-page" title="Period Rank" eyebrow="Ranking">
     <form class="rgc-panel rgc-rank-tools rgc-rank-compact rgc-rank-compact-period" @submit.prevent="apply">
       <div class="rgc-rank-current rgc-period-summary">
         <div class="rgc-period-title">
@@ -67,10 +67,8 @@
           <MovieTile :movie="item.movie" />
           <div class="rgc-period-meta">
             <b :class="`tone-${item.rank_change_class}`">{{ item.rank_change_text }}</b>
-            <small>上期 {{ item.prev_rank_text }}</small>
-            <small>峰值 #{{ item.peak_rank }}</small>
-            <small>最佳日 #{{ item.best_rank }}</small>
-            <small>最差入选 #{{ item.worst_picked_rank }}</small>
+            <small>上期 {{ item.prev_rank_text }} · 峰值 #{{ item.peak_rank }}</small>
+            <small>最佳 #{{ item.best_rank }} · 最差 #{{ item.worst_picked_rank }}</small>
             <small>上榜 {{ item.days_in_rank }} 天 · 取样 {{ item.used_pick_days }} 天</small>
             <small>Score {{ item.score.toFixed(2) }}</small>
           </div>

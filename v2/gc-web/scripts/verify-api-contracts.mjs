@@ -127,7 +127,7 @@ for (const token of ["prev_href", "next_href", "random_href", "latest_href", "ty
     failed.push(`missing rank period behavior token ${token}`);
   }
 }
-for (const token of ["visibleLinks", "rgc-generic-toolbar", "DataTable", "PaginationControl", "sortBy", "pageWindowText"]) {
+for (const token of ["navLinks", "rgc-list-toolbar", "DataTable", "PaginationControl", "sortBy", "pageWindowText"]) {
   if (!files.generic.includes(token)) {
     failed.push(`missing generic list behavior token ${token}`);
   }
@@ -152,7 +152,7 @@ for (const token of [".rgc-rank-tools", ".rgc-rank-card-wrap", ".rgc-period-summ
     failed.push(`rank styling missing ${token}`);
   }
 }
-for (const token of [".rgc-generic-toolbar", ".rgc-generic-fields", ".rgc-generic-statusbar", ".rgc-table-wrap", ".rgc-table th.active"]) {
+for (const token of [".rgc-list-toolbar", ".rgc-list-filter-grid", ".rgc-list-controlbar", ".rgc-table-wrap", ".rgc-table th.active"]) {
   if (!files.css.includes(token)) {
     failed.push(`generic list styling missing ${token}`);
   }
