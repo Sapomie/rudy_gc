@@ -1,0 +1,326 @@
+{{ define "page.d_seed_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/customer/d_seed_list.css" rel="stylesheet">
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">{{ .PageTitle }}</h4>
+                        <p class="text-muted mb-0">{{ .PageNote }}</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenDSeedCreateModal">新增条目</button>
+                </div>
+
+                <div id="dSeedMsg" class="alert d-none mb-3" role="alert"></div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="d-seed-page-summary">
+                        <span class="d-seed-page-summary-label">总数</span>
+                        <span class="d-seed-page-summary-value">{{ .Total }}</span>
+                    </div>
+                    {{ if .Items }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-2 align-items-end" method="get" action="/d-seeds">
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">查询名</label>
+                                <input class="form-control" type="text" name="name" value="{{ .Query.Name }}" placeholder="支持模糊搜索">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">启用状态</label>
+                                <select class="form-select" name="active">
+                                    <option value="" {{ if eq .Query.Active "" }}selected{{ end }}>全部</option>
+                                    <option value="2" {{ if eq .Query.Active "2" }}selected{{ end }}>启用</option>
+                                    <option value="1" {{ if eq .Query.Active "1" }}selected{{ end }}>停用</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">名称类型</label>
+                                <select class="form-select" name="name_type">
+                                    <option value="" {{ if eq .Query.NameType "" }}selected{{ end }}>全部</option>
+                                    <option value="1" {{ if eq .Query.NameType "1" }}selected{{ end }}>Prefix</option>
+                                    <option value="2" {{ if eq .Query.NameType "2" }}selected{{ end }}>Label</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">查询类型</label>
+                                <select class="form-select" name="search_type">
+                                    <option value="" {{ if eq .Query.SearchType "" }}selected{{ end }}>全部</option>
+                                    <option value="1" {{ if eq .Query.SearchType "1" }}selected{{ end }}>偏移量</option>
+                                    <option value="2" {{ if eq .Query.SearchType "2" }}selected{{ end }}>起止页</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-2">
+                                <label class="form-label mb-1">最后状态</label>
+                                <select class="form-select" name="last_status">
+                                    <option value="" {{ if eq .Query.LastStatus "" }}selected{{ end }}>全部</option>
+                                    <option value="0" {{ if eq .Query.LastStatus "0" }}selected{{ end }}>空闲</option>
+                                    <option value="1" {{ if eq .Query.LastStatus "1" }}selected{{ end }}>成功</option>
+                                    <option value="2" {{ if eq .Query.LastStatus "2" }}selected{{ end }}>空页</option>
+                                    <option value="3" {{ if eq .Query.LastStatus "3" }}selected{{ end }}>错误</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-1">
+                                <label class="form-label mb-1">每页</label>
+                                <select class="form-select" name="ps">
+                                    <option value="24" {{ if eq .Query.PageSize 24 }}selected{{ end }}>24</option>
+                                    <option value="50" {{ if eq .Query.PageSize 50 }}selected{{ end }}>50</option>
+                                    <option value="100" {{ if eq .Query.PageSize 100 }}selected{{ end }}>100</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">筛选</button>
+                                <a class="btn btn-outline-secondary" href="/d-seeds">清空</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByName.Active }}active{{ end }}" href="{{ .DSeedSort.ByName.Href }}">
+                                            查询名{{ if .DSeedSort.ByName.Active }}{{ if .DSeedSort.ByName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByActive.Active }}active{{ end }}" href="{{ .DSeedSort.ByActive.Href }}">
+                                            启用状态{{ if .DSeedSort.ByActive.Active }}{{ if .DSeedSort.ByActive.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByNameType.Active }}active{{ end }}" href="{{ .DSeedSort.ByNameType.Href }}">
+                                            名称类型{{ if .DSeedSort.ByNameType.Active }}{{ if .DSeedSort.ByNameType.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.BySearchType.Active }}active{{ end }}" href="{{ .DSeedSort.BySearchType.Href }}">
+                                            查询类型{{ if .DSeedSort.BySearchType.Active }}{{ if .DSeedSort.BySearchType.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByMovieTotal.Active }}active{{ end }}" href="{{ .DSeedSort.ByMovieTotal.Href }}">
+                                            电影总量{{ if .DSeedSort.ByMovieTotal.Active }}{{ if .DSeedSort.ByMovieTotal.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByMovieLatestReleasingMovieName.Active }}active{{ end }}" href="{{ .DSeedSort.ByMovieLatestReleasingMovieName.Href }}">
+                                            最新上映电影{{ if .DSeedSort.ByMovieLatestReleasingMovieName.Active }}{{ if .DSeedSort.ByMovieLatestReleasingMovieName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByMovieLatestReleasingDate.Active }}active{{ end }}" href="{{ .DSeedSort.ByMovieLatestReleasingDate.Href }}">
+                                            最新上映日{{ if .DSeedSort.ByMovieLatestReleasingDate.Active }}{{ if .DSeedSort.ByMovieLatestReleasingDate.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByMovieLastAddedTime.Active }}active{{ end }}" href="{{ .DSeedSort.ByMovieLastAddedTime.Href }}">
+                                            上次新增{{ if .DSeedSort.ByMovieLastAddedTime.Active }}{{ if .DSeedSort.ByMovieLastAddedTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByLastInsertCount.Active }}active{{ end }}" href="{{ .DSeedSort.ByLastInsertCount.Href }}">
+                                            本轮新增{{ if .DSeedSort.ByLastInsertCount.Active }}{{ if .DSeedSort.ByLastInsertCount.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByPageNow.Active }}active{{ end }}" href="{{ .DSeedSort.ByPageNow.Href }}">
+                                            当前页{{ if .DSeedSort.ByPageNow.Active }}{{ if .DSeedSort.ByPageNow.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">断点</th>
+                                    <th class="text-nowrap">
+                                        <a class="d-seed-sort-link {{ if .DSeedSort.ByLastQueryTime.Active }}active{{ end }}" href="{{ .DSeedSort.ByLastQueryTime.Href }}">
+                                            最后抓取{{ if .DSeedSort.ByLastQueryTime.Active }}{{ if .DSeedSort.ByLastQueryTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th class="text-nowrap">操作</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Items }}
+                                    {{ range .Items }}
+                                        <tr>
+                                            <td class="text-nowrap">
+                                                {{ if .CardsHref }}
+                                                    <a class="fw-semibold" href="{{ .CardsHref }}">{{ .Name }}</a>
+                                                {{ else }}
+                                                    {{ .Name }}
+                                                {{ end }}
+                                            </td>
+                                            <td><span class="badge {{ .ActiveClass }}">{{ .ActiveText }}</span></td>
+                                            <td class="text-nowrap">{{ .NameTypeText }}</td>
+                                            <td class="text-nowrap">{{ .SearchTypeText }}</td>
+                                            <td class="text-nowrap">{{ .MovieTotal }}</td>
+                                            <td class="text-nowrap">
+                                                {{ if .MovieLatestReleasingMovieHref }}
+                                                    <a href="{{ .MovieLatestReleasingMovieHref }}">{{ .MovieLatestReleasingMovieName }}</a>
+                                                {{ else }}
+                                                    -
+                                                {{ end }}
+                                            </td>
+                                            <td class="text-nowrap">{{ formatUnixDate .MovieLatestReleasingDate }}</td>
+                                            <td class="text-nowrap">{{ formatUnixMinute .MovieLastAddedTime }}</td>
+                                            <td class="text-nowrap">{{ .LastInsertCount }}</td>
+                                            <td class="text-nowrap">{{ .PageNow }}</td>
+                                            <td class="text-nowrap">{{ .Offset }} / {{ .StartPage }}-{{ .EndPage }}</td>
+                                            <td class="text-nowrap">{{ formatUnixMinute .LastQueryTime }}</td>
+                                            <td class="text-nowrap">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-d-seed-edit"
+                                                        data-item-id="{{ .Id }}"
+                                                        data-name="{{ .Name }}"
+                                                        data-active="{{ .ActiveValue }}"
+                                                        data-search-type="{{ .SearchTypeValue }}"
+                                                        data-name-type="{{ .NameTypeValue }}"
+                                                        data-page-now="{{ .PageNow }}"
+                                                        data-offset="{{ .Offset }}"
+                                                        data-start-page="{{ .StartPage }}"
+                                                        data-end-page="{{ .EndPage }}"
+                                                        data-last-status="{{ .LastStatusValue }}"
+                                                        data-last-error="{{ .LastError }}">
+                                                    编辑
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="13">
+                                            <div class="d-seed-empty-state">当前筛选下没有 d_seed 数据。</div>
+                                        </td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {{ if .Items }}
+                    <div class="d-flex justify-content-end mt-3">
+                        {{ template "pagination" . }}
+                    </div>
+                {{ end }}
+
+                <div class="modal fade" id="dSeedEditModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content">
+                            <form id="dSeedEditForm">
+                                <div class="modal-header">
+                                    <div>
+                                        <h5 class="modal-title" id="dSeedEditModalTitle">新增 d_seed 条目</h5>
+                                        <div class="small text-muted" id="dSeedEditModalMeta"></div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" id="dSeedEditId">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label mb-1" for="dSeedEditName">查询名</label>
+                                            <input class="form-control" id="dSeedEditName" type="text" maxlength="128">
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label mb-1" for="dSeedEditActive">启用状态</label>
+                                            <select class="form-select" id="dSeedEditActive">
+                                                <option value="2">启用</option>
+                                                <option value="1">停用</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label mb-1" for="dSeedEditLastStatus">最后状态</label>
+                                            <select class="form-select" id="dSeedEditLastStatus">
+                                                <option value="0">空闲</option>
+                                                <option value="1">成功</option>
+                                                <option value="2">空页</option>
+                                                <option value="3">错误</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label mb-1" for="dSeedEditNameType">名称类型</label>
+                                            <select class="form-select" id="dSeedEditNameType">
+                                                <option value="1">Prefix</option>
+                                                <option value="2">Label</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label mb-1" for="dSeedEditSearchType">查询类型</label>
+                                            <select class="form-select" id="dSeedEditSearchType">
+                                                <option value="1">偏移量</option>
+                                                <option value="2">起止页</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label mb-1" for="dSeedEditPageNow">当前页</label>
+                                            <input class="form-control" id="dSeedEditPageNow" type="number" min="0" step="1">
+                                        </div>
+                                        <div class="col-12 col-md-3" id="dSeedOffsetFieldWrap">
+                                            <label class="form-label mb-1" for="dSeedEditOffset">偏移量</label>
+                                            <input class="form-control" id="dSeedEditOffset" type="number" min="0" step="1">
+                                        </div>
+                                        <div class="col-12 col-md-3" id="dSeedStartPageFieldWrap">
+                                            <label class="form-label mb-1" for="dSeedEditStartPage">起始页</label>
+                                            <input class="form-control" id="dSeedEditStartPage" type="number" min="0" step="1">
+                                        </div>
+                                        <div class="col-12 col-md-3" id="dSeedEndPageFieldWrap">
+                                            <label class="form-label mb-1" for="dSeedEditEndPage">结束页</label>
+                                            <input class="form-control" id="dSeedEditEndPage" type="number" min="0" step="1">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label mb-1" for="dSeedEditLastError">最后错误</label>
+                                            <textarea class="form-control" id="dSeedEditLastError" rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="alert d-none mt-3 mb-0" id="dSeedEditMsg" role="alert"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn btn-primary" id="dSeedEditSubmit">保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/d_seed_list.js"></script>
+    </body>
+    </html>
+{{ end }}

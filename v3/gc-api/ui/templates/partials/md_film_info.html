@@ -1,0 +1,52 @@
+{{ define "partials.md.film_info" }}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title mb-3">视频信息</h5>
+        <table class="table table-bordered dt-responsive nowrap mb-0" style="width:100%">
+            <thead>
+            <tr class="table-light">
+                <th>Source</th>
+                <th>TorrentHash</th>
+                <th>BirthTime</th>
+                <th>Size</th>
+                <th>Height</th>
+                <th>BitRate</th>
+                <th>时长(分钟)</th>
+                <th>Frame</th>
+                <th>SelfMake</th>
+                <th>Dir</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{ if and .media (ne .movieType.OwnedWMedia 6) }}
+                <tr>
+                    <td>WMedia</td>
+                    <td class="text-monospace">{{ if .media.SourceTorrentHash }}{{ .media.SourceTorrentHash }}{{ else }}<span class="text-muted">-</span>{{ end }}</td>
+                    <td>{{.media.BirthTime}}</td>
+                    <td>
+                        <div class="d-flex flex-column gap-1">
+                            <a href="{{.media.FilePath}}">{{ printf "%.2f" .media.Size }}</a>
+                            <button type="button"
+                                    class="btn btn-sm {{ if .MovieDeleteAlbumMarked }}btn-danger{{ else }}btn-outline-danger{{ end }} js-move-wmedia-removed"
+                                    data-jav="{{ .movieType.JavId }}">
+                                {{ if .MovieDeleteAlbumMarked }}已在待删除{{ else }}加入待删除{{ end }}
+                            </button>
+                        </div>
+                    </td>
+                    <td>{{.media.Height}}</td>
+                    <td>{{ printf "%.0f" .media.BitRate }}</td>
+                    <td>{{ printf "%.2f" .media.DurationMinutes }}</td>
+                    <td>{{.media.Frame}}</td>
+                    <td>{{.media.SelfMake}}</td>
+                    <td>
+                        <a href="#" class="open-in-finder" data-path="{{.media.Directory}}" title="在 Finder 打开">
+                            {{.media.Directory}}
+                        </a>
+                    </td>
+                </tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{ end }}

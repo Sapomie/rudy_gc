@@ -1,0 +1,347 @@
+{{ define "page.w_media_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <style>
+            .sc-sort-link {
+                color: inherit;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .sc-sort-link.active {
+                color: #0d6efd;
+            }
+        </style>
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">Medias</h4>
+                        <p class="text-muted mb-0">按列表查看 w_media(source_type=2) 的基础数据，并复用 MovieType 缓存补充演员与播放信息。</p>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="sc-page-summary">
+                        <span class="sc-page-summary-label">Total Medias</span>
+                        <span class="sc-page-summary-value">{{ .Total }}</span>
+                    </div>
+                    {{ if .Items }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div id="filmMsgArea" class="alert d-none mb-3" role="alert"></div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" method="get" action="/medias">
+                            {{ if gt .Query.PageSize 0 }}<input type="hidden" name="ps" value="{{ .Query.PageSize }}">{{ end }}
+                            {{ if .Query.Sort }}<input type="hidden" name="sort" value="{{ .Query.Sort }}">{{ end }}
+                            {{ if .Query.Order }}<input type="hidden" name="order" value="{{ .Query.Order }}">{{ end }}
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">识别码搜索</label>
+                                <input class="form-control" type="text" name="keyword" placeholder="Movie Name" value="{{ .Query.Keyword }}">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">大小范围(GB)</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" step="0.01" name="size_min" placeholder="Min" value="{{ .Query.SizeMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" step="0.01" name="size_max" placeholder="Max" value="{{ .Query.SizeMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">高度范围</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="height_min" placeholder="Min" value="{{ .Query.HeightMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="height_max" placeholder="Max" value="{{ .Query.HeightMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">时长范围(分钟)</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="duration_min" placeholder="Min" value="{{ .Query.DurationMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="duration_max" placeholder="Max" value="{{ .Query.DurationMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">码率范围</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="bit_rate_min" placeholder="Min" value="{{ .Query.BitRateMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="bit_rate_max" placeholder="Max" value="{{ .Query.BitRateMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">平均帧率范围</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" step="0.01" name="frame_average_min" placeholder="Min" value="{{ .Query.FrameAverageMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" step="0.01" name="frame_average_max" placeholder="Max" value="{{ .Query.FrameAverageMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">SC 次数范围</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="sc_times_min" placeholder="Min" value="{{ .Query.ScTimesMin }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="number" min="0" name="sc_times_max" placeholder="Max" value="{{ .Query.ScTimesMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">自制</label>
+                                <select class="form-select" name="self_make">
+                                    <option value="">全部</option>
+                                    <option value="1" {{ if eq .Query.SelfMake "1" }}selected{{ end }}>否</option>
+                                    <option value="2" {{ if eq .Query.SelfMake "2" }}selected{{ end }}>是</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">遮罩</label>
+                                <select class="form-select" name="has_mask">
+                                    <option value="">全部</option>
+                                    <option value="1" {{ if eq .Query.HasMask "1" }}selected{{ end }}>有码</option>
+                                    <option value="2" {{ if eq .Query.HasMask "2" }}selected{{ end }}>去码</option>
+                                    <option value="3" {{ if eq .Query.HasMask "3" }}selected{{ end }}>无码</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">最后 SC 时间</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="date" name="last_sc_from" value="{{ .Query.LastScFrom }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="date" name="last_sc_to" value="{{ .Query.LastScTo }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">下载时间</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="date" name="birth_from" value="{{ .Query.BirthFrom }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="date" name="birth_to" value="{{ .Query.BirthTo }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label mb-1">发行时间</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input class="form-control" type="date" name="releasing_from" value="{{ .Query.ReleasingFrom }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <input class="form-control" type="date" name="releasing_to" value="{{ .Query.ReleasingTo }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-primary" type="submit">Apply</button>
+                                <a class="btn btn-outline-secondary" href="/medias">Clear</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByMovieName.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByMovieName.Href }}">
+                                            识别码{{ if .FilmSortQuery.ByMovieName.Active }}{{ if .FilmSortQuery.ByMovieName.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>演员</th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.BySize.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.BySize.Href }}">
+                                            大小(GB){{ if .FilmSortQuery.BySize.Active }}{{ if .FilmSortQuery.BySize.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByHeight.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByHeight.Href }}">
+                                            高度{{ if .FilmSortQuery.ByHeight.Active }}{{ if .FilmSortQuery.ByHeight.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByDuration.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByDuration.Href }}">
+                                            时长(分钟){{ if .FilmSortQuery.ByDuration.Active }}{{ if .FilmSortQuery.ByDuration.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByBitRate.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByBitRate.Href }}">
+                                            码率{{ if .FilmSortQuery.ByBitRate.Active }}{{ if .FilmSortQuery.ByBitRate.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByFrameAverage.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByFrameAverage.Href }}">
+                                            平均帧率{{ if .FilmSortQuery.ByFrameAverage.Active }}{{ if .FilmSortQuery.ByFrameAverage.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>播放</th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.BySelfMake.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.BySelfMake.Href }}">
+                                            自制{{ if .FilmSortQuery.BySelfMake.Active }}{{ if .FilmSortQuery.BySelfMake.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByHasMask.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByHasMask.Href }}">
+                                            遮罩{{ if .FilmSortQuery.ByHasMask.Active }}{{ if .FilmSortQuery.ByHasMask.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByScTimes.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByScTimes.Href }}">
+                                            SC次数{{ if .FilmSortQuery.ByScTimes.Active }}{{ if .FilmSortQuery.ByScTimes.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByLastSc.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByLastSc.Href }}">
+                                            最后SC{{ if .FilmSortQuery.ByLastSc.Active }}{{ if .FilmSortQuery.ByLastSc.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByBirthTime.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByBirthTime.Href }}">
+                                            下载时间{{ if .FilmSortQuery.ByBirthTime.Active }}{{ if .FilmSortQuery.ByBirthTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .FilmSortQuery.ByReleasingDate.Active }}active{{ end }}"
+                                           href="{{ .FilmSortQuery.ByReleasingDate.Href }}">
+                                            发行时间{{ if .FilmSortQuery.ByReleasingDate.Active }}{{ if .FilmSortQuery.ByReleasingDate.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>操作</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Items }}
+                                    {{ range .Items }}
+                                        <tr data-film-id="{{ .Id }}">
+                                            <td>
+                                                <a href="{{ .MovieHref }}" class="text-decoration-none" target="_blank" rel="noopener noreferrer">{{ .MovieName }}</a>
+                                            </td>
+                                            <td title="{{ .CastName }}">
+                                                {{ if .Casts }}
+                                                    {{ range $idx, $cast := .Casts }}
+                                                        {{ if gt $idx 0 }} / {{ end }}
+                                                        {{ if $cast.Href }}
+                                                            <a href="{{ $cast.Href }}" class="text-decoration-none" target="_blank" rel="noopener noreferrer">{{ $cast.Name }}</a>
+                                                        {{ else }}
+                                                            <span>{{ $cast.Name }}</span>
+                                                        {{ end }}
+                                                    {{ end }}
+                                                {{ else }}
+                                                    {{ .CastName }}
+                                                {{ end }}
+                                            </td>
+                                            <td>{{ .SizeGB }}</td>
+                                            <td><span data-role="film-height">{{ if gt .Height 0 }}{{ .Height }}{{ else }}-{{ end }}</span></td>
+                                            <td><span data-role="film-duration">{{ if gt .DurationMinutes 0 }}{{ .DurationMinutes }}{{ else }}-{{ end }}</span></td>
+                                            <td><span data-role="film-bitrate">{{ if gt .BitRate 0 }}{{ .BitRate }}{{ else }}-{{ end }}</span></td>
+                                            <td><span data-role="film-frame">{{ .FrameAverage }}</span></td>
+                                            <td>
+                                                {{ if .ShowPlayButton }}
+                                                    <a href="{{ .VideoURL }}" class="btn btn-sm {{ .PlayButtonClass }}">{{ .PlayButtonText }}</a>
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td>{{ .SelfMakeText }}</td>
+                                            <td>{{ .HasMaskText }}</td>
+                                            <td>{{ .ScTimes }}</td>
+                                            <td>{{ formatUnixDate .LastScTime }}</td>
+                                            <td>{{ formatUnixDate .BirthTime }}</td>
+                                            <td>{{ formatUnixDate .ReleasingDate }}</td>
+                                            <td>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-film-probe"
+                                                        data-film-id="{{ .Id }}">
+                                                    scan_meta
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="15" class="text-center text-muted py-4">暂无数据</td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {{ if .Items }}
+                    <div class="d-flex justify-content-end mt-3">
+                        {{ template "pagination" . }}
+                    </div>
+                {{ end }}
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/customer/w_media_list.js"></script>
+    </body>
+    </html>
+{{ end }}

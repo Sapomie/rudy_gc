@@ -1,0 +1,95 @@
+#msgArea {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: none;
+}
+
+.root-list {
+    padding-left: 1rem;
+}
+
+.root-list li {
+    margin-bottom: 0.25rem;
+}
+
+.root-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.root-scope-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.root-scope-item {
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+}
+
+.root-base-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.root-base-item {
+    border-top: 1px dashed #e9ecef;
+    padding-top: 0.75rem;
+}
+
+.root-base-item:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.root-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0;
+}
+
+.root-branch-list {
+    margin-top: 0.75rem;
+    margin-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.branch-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0;
+}
+
+.branch-checkbox-item.is-disabled {
+    opacity: 0.5;
+}
+
+.overview-item .label {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.overview-item .value {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}

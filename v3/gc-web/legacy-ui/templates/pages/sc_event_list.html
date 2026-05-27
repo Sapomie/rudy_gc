@@ -1,0 +1,226 @@
+{{ define "page.sc_event_list" }}
+    <!doctype html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/icons.min.css" rel="stylesheet">
+        <link href="/static/css/app.min.css" rel="stylesheet">
+        <link href="/static/css/custom/a_moviecardlist.css" rel="stylesheet">
+        <link href="/static/css/custom/sc_event.css" rel="stylesheet">
+        <style>
+            #msgArea {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 2000;
+                display: none;
+            }
+
+            .sc-sort-link {
+                color: inherit;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .sc-sort-link.active {
+                color: #0d6efd;
+            }
+        </style>
+    </head>
+
+    <body data-sidebar="dark">
+    {{ template "menu" . }}
+
+    <main class="main-content">
+        <div class="page-content">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h4 class="mb-1">SC Events</h4>
+                        <p class="text-muted mb-0">浏览最近的 SC 事件，并进入详情页查看本次影片清单。</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="btn-group" role="group" aria-label="SC event view switch">
+                            <a href="{{ .ScViewQuery.ListHref }}" class="btn btn-outline-primary {{ if .ScViewQuery.IsList }}active disabled{{ end }}">列表视图</a>
+                            <a href="{{ .ScViewQuery.CardHref }}" class="btn btn-outline-primary {{ if .ScViewQuery.IsCard }}active disabled{{ end }}">卡片视图</a>
+                        </div>
+                        <a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                    <div class="sc-page-summary">
+                        <span class="sc-page-summary-label">Total Events</span>
+                        <span class="sc-page-summary-value">{{ .Total }}</span>
+                    </div>
+                    {{ if .Items }}
+                        <div class="ms-xl-auto">
+                            {{ template "pagination" . }}
+                        </div>
+                    {{ end }}
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByTime.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByTime.Href }}">
+                                            时间{{ if .ScSortQuery.ByTime.Active }}{{ if .ScSortQuery.ByTime.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        总片数
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByMovieCnt.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByMovieCnt.Href }}">
+                                            有 SC{{ if .ScSortQuery.ByMovieCnt.Active }}{{ if .ScSortQuery.ByMovieCnt.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByComeMovie.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByComeMovie.Href }}">
+                                            Come 片{{ if .ScSortQuery.ByComeMovie.Active }}{{ if .ScSortQuery.ByComeMovie.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByCooldown.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByCooldown.Href }}">
+                                            Cooldown{{ if .ScSortQuery.ByCooldown.Active }}{{ if .ScSortQuery.ByCooldown.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByDuration.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByDuration.Href }}">
+                                            时长(分钟){{ if .ScSortQuery.ByDuration.Active }}{{ if .ScSortQuery.ByDuration.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByKind.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByKind.Href }}">
+                                            种类{{ if .ScSortQuery.ByKind.Active }}{{ if .ScSortQuery.ByKind.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByMovieCast.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByMovieCast.Href }}">
+                                            演员{{ if .ScSortQuery.ByMovieCast.Active }}{{ if .ScSortQuery.ByMovieCast.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByVessel.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByVessel.Href }}">
+                                            Vessel{{ if .ScSortQuery.ByVessel.Active }}{{ if .ScSortQuery.ByVessel.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a class="sc-sort-link {{ if .ScSortQuery.ByFg.Active }}active{{ end }}"
+                                           href="{{ .ScSortQuery.ByFg.Href }}">
+                                            FG{{ if .ScSortQuery.ByFg.Active }}{{ if .ScSortQuery.ByFg.Desc }} ↓{{ else }} ↑{{ end }}{{ end }}
+                                        </a>
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{ if .Items }}
+                                    {{ range .Items }}
+                                        <tr class="{{ monthParityClass .Event.ScTime }}">
+                                            <td>
+                                                <a class="sc-event-link"
+                                                   href="/sc-events/{{ .Event.Name }}"
+                                                   title="{{ .Event.Name }}">
+                                                    <span class="sc-event-time">
+                                                        <span class="sc-event-date">{{ formatUnixDate .Event.ScTime }}</span>
+                                                        <span class="sc-event-hour">{{ formatUnixHm .Event.ScTime }}</span>
+                                                    </span>
+                                                </a>
+                                            </td>
+                                            <td>{{ .TotalMovieCount }}</td>
+                                            <td>{{ .ScMovieCount }}</td>
+                                            <td>
+                                                {{ if .Event.ComeMovieName }}
+                                                    <a href="/movie/{{ .Event.ComeMovieName }}">{{ .Event.ComeMovieName }}</a>
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td>
+                                                {{ if gt .Event.Cooldown 0 }}
+                                                    {{ humanDays .Event.Cooldown }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
+                                                {{ if gt .Event.DurationMinutes 0 }}
+                                                    {{ .Event.DurationMinutes }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
+                                                {{ if .Event.Kind }}
+                                                    {{ .Event.Kind }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
+                                                {{ if .Event.MovieCast }}
+                                                    <a href="{{ .MovieCastHref }}">{{ .Event.MovieCast }}</a>
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
+                                                {{ if .Event.Vessel }}
+                                                    {{ .Event.Vessel }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                            <td class="sc-muted">
+                                                {{ if .Event.Fg }}
+                                                    {{ .Event.Fg }}
+                                                {{ else }}
+                                                    <span class="text-muted">-</span>
+                                                {{ end }}
+                                            </td>
+                                        </tr>
+                                    {{ end }}
+                                {{ else }}
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="sc-empty-state">还没有可展示的 SC 事件。</div>
+                                        </td>
+                                    </tr>
+                                {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="msgArea" class="alert alert-success fade show small py-2 px-3"></div>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/metisMenu.min.js"></script>
+    <script src="/static/js/simplebar.min.js"></script>
+    <script src="/static/js/waves.min.js"></script>
+    <script src="/static/js/jquery.sparkline.min.js"></script>
+    <script src="/static/js/app.js"></script>
+    </body>
+    </html>
+{{ end }}

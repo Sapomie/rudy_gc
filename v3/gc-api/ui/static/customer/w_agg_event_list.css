@@ -1,0 +1,64 @@
+.w-agg-event-list-page .w-agg-event-summary {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .65rem;
+    padding: .75rem 1rem;
+    border-radius: .5rem;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+}
+
+.w-agg-event-list-page .w-agg-event-summary-label {
+    color: #6c757d;
+    font-size: .9rem;
+}
+
+.w-agg-event-list-page .w-agg-event-summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.w-agg-event-list-page .w-agg-event-table th {
+    white-space: nowrap;
+}
+
+.w-agg-event-list-page .w-agg-event-sort-link {
+    color: #495057;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.w-agg-event-list-page .w-agg-event-sort-link:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+.w-agg-event-list-page .w-agg-event-sort-link.is-active {
+    color: #0d6efd;
+}
+
+.w-agg-event-list-page .w-agg-event-sort-indicator {
+    margin-left: .25rem;
+    font-size: .8rem;
+}
+
+.w-agg-event-list-page .w-agg-event-key {
+    font-weight: 600;
+    color: #212529;
+}
+
+.w-agg-event-list-page .w-agg-event-empty-state {
+    padding: 1.25rem;
+    text-align: center;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: .5rem;
+}
+
+@media (max-width: 767.98px) {
+    .w-agg-event-list-page .w-agg-event-summary {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

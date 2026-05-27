@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "dev": "node server.mjs",
+    "check": "node --check server.mjs && node --check src/cards.js"
+  },
+  "dependencies": {}
+}

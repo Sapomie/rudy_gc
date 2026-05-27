@@ -1,0 +1,151 @@
+{{ define "page.crawl_record_list" }}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/icons.min.css" rel="stylesheet">
+    <link href="/static/css/app.min.css" rel="stylesheet">
+    <link href="/static/customer/crawl_record_list.css" rel="stylesheet">
+</head>
+
+<body data-sidebar="dark">
+{{ template "menu" . }}
+
+<main class="main-content">
+    <div class="page-content">
+        <div class="container-fluid crawl-record-list-page" id="crawlRecordListPage">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                <div>
+                    <h4 class="mb-1">{{ .PageTitle }}</h4>
+                    <p class="text-muted mb-0">{{ .PageNote }}</p>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+                <div class="crawl-record-summary">
+                    <span class="crawl-record-summary-label">总行数</span>
+                    <span class="crawl-record-summary-value">{{ .Total }}</span>
+                </div>
+                {{ if .Rows }}
+                    <div class="ms-xl-auto">
+                        {{ template "pagination" . }}
+                    </div>
+                {{ end }}
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form class="row g-3 align-items-end" method="get" action="/crawl-records">
+                        <input type="hidden" name="sort" value="{{ .Query.Sort }}">
+                        <input type="hidden" name="order" value="{{ .Query.Order }}">
+                        <input type="hidden" name="type" value="{{ .Query.Type }}" id="crawlRecordTypeInput">
+
+                        <div class="col-12 col-xl-8">
+                            <label class="form-label mb-2">Type</label>
+                            <div class="d-flex flex-wrap gap-2 crawl-record-type-switch">
+                                {{ range .TypeLinks }}
+                                    <a href="{{ .Href }}" class="btn btn-sm {{ if .Active }}btn-primary{{ else }}btn-outline-primary{{ end }}">
+                                        {{ .Label }}
+                                    </a>
+                                {{ end }}
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-2">
+                            <label class="form-label mb-1">每页</label>
+                            <select class="form-select" id="crawlRecordPageSize" name="ps">
+                                <option value="20" {{ if eq .Query.PageSize 20 }}selected{{ end }}>20</option>
+                                <option value="50" {{ if eq .Query.PageSize 50 }}selected{{ end }}>50</option>
+                                <option value="100" {{ if eq .Query.PageSize 100 }}selected{{ end }}>100</option>
+                                <option value="200" {{ if eq .Query.PageSize 200 }}selected{{ end }}>200</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-xl-2 d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">筛选</button>
+                            <a class="btn btn-outline-secondary" href="{{ .ClearHref }}">清空</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 crawl-record-table">
+                            <thead>
+                            <tr>
+                                <th class="text-nowrap">
+                                    <a class="crawl-record-sort-link {{ if .HeaderLinks.StartedTime.Active }}is-active{{ end }}" href="{{ .HeaderLinks.StartedTime.Href }}">
+                                        {{ .HeaderLinks.StartedTime.Label }}{{ if .HeaderLinks.StartedTime.Active }}<span class="crawl-record-sort-indicator">{{ if .HeaderLinks.StartedTime.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="crawl-record-sort-link {{ if .HeaderLinks.Type.Active }}is-active{{ end }}" href="{{ .HeaderLinks.Type.Href }}">
+                                        {{ .HeaderLinks.Type.Label }}{{ if .HeaderLinks.Type.Active }}<span class="crawl-record-sort-indicator">{{ if .HeaderLinks.Type.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="crawl-record-sort-link {{ if .HeaderLinks.DetailNumber.Active }}is-active{{ end }}" href="{{ .HeaderLinks.DetailNumber.Href }}">
+                                        {{ .HeaderLinks.DetailNumber.Label }}{{ if .HeaderLinks.DetailNumber.Active }}<span class="crawl-record-sort-indicator">{{ if .HeaderLinks.DetailNumber.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="crawl-record-sort-link {{ if .HeaderLinks.DurationMin.Active }}is-active{{ end }}" href="{{ .HeaderLinks.DurationMin.Href }}">
+                                        {{ .HeaderLinks.DurationMin.Label }}{{ if .HeaderLinks.DurationMin.Active }}<span class="crawl-record-sort-indicator">{{ if .HeaderLinks.DurationMin.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                                <th class="text-nowrap">
+                                    <a class="crawl-record-sort-link {{ if .HeaderLinks.Name.Active }}is-active{{ end }}" href="{{ .HeaderLinks.Name.Href }}">
+                                        {{ .HeaderLinks.Name.Label }}{{ if .HeaderLinks.Name.Active }}<span class="crawl-record-sort-indicator">{{ if .HeaderLinks.Name.Desc }}↓{{ else }}↑{{ end }}</span>{{ end }}
+                                    </a>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{ if .Rows }}
+                                {{ range .Rows }}
+                                    <tr>
+                                        <td class="text-nowrap">{{ formatUnixMinute .StartedTime }}</td>
+                                        <td class="text-nowrap crawl-record-type">{{ .Type }}</td>
+                                        <td class="text-nowrap">{{ .DetailNumber }}</td>
+                                        <td class="text-nowrap">{{ .DurationMinText }}</td>
+                                        <td class="text-nowrap crawl-record-name">{{ .Name }}</td>
+                                    </tr>
+                                {{ end }}
+                            {{ else }}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="crawl-record-empty-state">
+                                            当前筛选下没有 `e_record` 数据。
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{ if .Rows }}
+                <div class="d-flex justify-content-end mt-3">
+                    {{ template "pagination" . }}
+                </div>
+            {{ end }}
+        </div>
+    </div>
+</main>
+
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/metisMenu.min.js"></script>
+<script src="/static/js/simplebar.min.js"></script>
+<script src="/static/js/waves.min.js"></script>
+<script src="/static/js/jquery.sparkline.min.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/customer/crawl_record_list.js"></script>
+</body>
+</html>
+{{ end }}

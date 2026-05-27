@@ -1,28 +1,26 @@
 没有对比，没到90%不准验收过关！！！
 没有对比，没到90%不准验收过关！！！
-# rudy_gc v2 仓库指南
+# rudy_gc 仓库指南
 
-## 当前维护范围
-- 后续功能开发、修复、验证和文档更新只面向 `v2/`。
-- `legacy/`、根目录旧 `cmd/`、旧 `internal/`、旧 `ui/`、旧 `make/`、`oldmodel/`、`z_text/` 作为历史资料和 legacy 行为基准保留。
-- 历史系统在 v2 页面重建中是功能语义、后端逻辑、参数语义、跳转逻辑、字段完整性、API 输出、截图接近度的强制基准。
-- 无法保证优化正确时，必须按 legacy 行为、legacy 后端语义、legacy 跳转参数和 legacy SQL 口径原样迁移；宁可保持 legacy 逻辑，也不得凭猜测改写。
-- 历史系统的模板、CSS、JS、class、静态资源、布局结构、页面壳、交互代码、Make 目标和实现风格都不得约束 v2。
-- 禁止读取或使用 `z_reference` 作为 v2 前端参考源。
+## v3 维护范围
+- 后续功能开发、修复、验证和文档更新只面向 `v3/`。
+- `v3` 是把 `legacy` 项目拆成前后端分离后的项目。
+- `v3` 只做 `legacy` 拆分迁移，不做重新设计，不做自写业务重构。
 
-## v2 项目结构
-- `v2/gc-api/`：v2 后端 API。
-- `v2/gc-web/`：v2 Vue/Vite/TypeScript 前端。
-- `v2/docs/`：v2 重建计划、进度和验收记录。
-- `v2/deploy/`：v2 部署、容器、代理和运行配置。
-- `v2/tmp/`：v2 验收截图和临时产物。
+## v3 迁移原则
+- `v3` 所有页面的底层后端代码必须和 `legacy` 一模一样。
+- 每个页面必须先读取 `legacy` 对应 router、handler、service、model、SQL、模板和页面点击行为，再迁移到 `v3`。
+- 后端只允许把 `legacy` router 页面入口改成 API 输出；参数解析、默认值、筛选、排序、分页、SQL、数据组装、跳转语义必须保持 `legacy` 原逻辑。
+- 前端只允许把 `legacy` 页面模板和交互拆到独立前端调用 API；页面形态、字段、按钮、tab、链接、下钻参数和可见行为必须保持 `legacy` 原样。
+- 不确定的行为以 `legacy` 代码和 `legacy` 页面真实点击结果为准。
+- 无法确认优化正确时，直接迁移 `legacy` 原逻辑，禁止凭理解改写。
 
-## v2 常用命令
-- 后端测试：`cd v2/gc-api && go test ./...`
-- 前端测试：`cd v2/gc-web && npm run test`
-- 前端构建：`cd v2/gc-web && npm run build`
-- 全量验证：`make -C /Users/gaojinwei/src/my/rudy_gc/v2 verify`
-- 停止 v2 临时服务：`make -C /Users/gaojinwei/src/my/rudy_gc/v2 stop-all`
+## v3 禁止项
+- 禁止重新设计页面。
+- 禁止自写业务逻辑替代 `legacy` 逻辑。
+- 禁止凭猜测优化 SQL、参数、跳转、筛选、排序、分页和页面交互。
+- 禁止改变 `legacy` 的参数名称、参数含义、默认值和链接结构。
+- 禁止把 `legacy` 的 tab、下钻、列表、详情入口、分页和排序改成另一种形态。
 
 ## 协作与执行
 - 使用中文回复。

@@ -1,0 +1,81 @@
+{{ define "page.crawler_tasks" }}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ if .Title }}{{ .Title }} - {{ end }}Rudy-GC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/icons.min.css" rel="stylesheet">
+    <link href="/static/css/app.min.css" rel="stylesheet">
+    <link href="/static/customer/crawler_jobs.css" rel="stylesheet">
+</head>
+
+<body data-sidebar="dark">
+{{ template "menu" . }}
+
+<main class="main-content">
+    <div class="page-content">
+        <div class="container-fluid" id="crawlerTasksPage">
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-flex align-items-center justify-content-between">
+                        <h4 class="mb-0">{{ if .Title }}{{ .Title }}{{ else }}任务列表{{ end }}</h4>
+                        <a href="{{ if .TriggerPageURL }}{{ .TriggerPageURL }}{{ else }}/triggers/dailybest{{ end }}{{ if .JobID }}?job_id={{ .JobID }}{{ end }}" class="btn btn-outline-primary btn-sm">回到任务台</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h4 class="card-title mb-0">任务列表</h4>
+                                <span id="taskCountBadge" class="badge bg-light text-dark">0 个</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-centered table-nowrap mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>任务ID</th>
+                                        <th>任务</th>
+                                        <th>当前状态</th>
+                                        <th>待处理</th>
+                                        <th>已处理</th>
+                                        <th>成功/失败</th>
+                                        <th>开始时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="taskTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">加载中...</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+window.CRAWLER_TASKS_PAGE_DATA = {
+    initialJobId: {{ .JobID }},
+    triggerPageUrl: {{ .TriggerPageURL }}
+};
+</script>
+<script src="/static/customer/crawler_tasks.js"></script>
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/metisMenu.min.js"></script>
+<script src="/static/js/simplebar.min.js"></script>
+<script src="/static/js/waves.min.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
+{{ end }}
