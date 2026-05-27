@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/zeromicro/go-zero/core/stores/cache"
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -14,6 +15,8 @@ type Dep struct {
 	Cache  cache.CacheConf
 	Log    *logrus.Logger
 	Conn   sqlx.SqlConn
+
+	MovieTypeCache MovieTypeCache
 
 	AMovieModel               modelx.AMovieModel
 	AmCastModel               modelx.AmCastModel
@@ -93,6 +96,18 @@ func Build(cfg config.Config) *Dep {
 	dp.TSukebeiTorrentFetchModel = modelx.NewTSukebeiTorrentFetchModel(conn, cfg.Cache)
 	dp.WFolderModel = modelx.NewWFolderModel(conn, cfg.Cache)
 	dp.WMediaModel = modelx.NewWMediaModel(conn, cfg.Cache)
+	if cfg.BizRedis.Host != "" {
+		bizRedis, err := redis.NewRedis(redis.RedisConf{
+			Host: cfg.BizRedis.Host,
+			Pass: cfg.BizRedis.Pass,
+			Type: cfg.BizRedis.Type,
+		})
+		if err != nil {
+			log.Warnf("movie type cache disabled: %v", err)
+		} else {
+			dp.MovieTypeCache = newMovieTypeBizCache(bizRedis, cfg.MovieTypeCache.Prefix, cfg.MovieTypeCache.Version, cfg.MovieTypeCache.TTL)
+		}
+	}
 
 	return dp
 }

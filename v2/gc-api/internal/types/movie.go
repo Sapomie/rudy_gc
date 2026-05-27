@@ -3,6 +3,8 @@ package types
 type MovieDetailResponse struct {
 	Movie         *MovieCard              `json:"movie"`
 	Media         *MovieMedia             `json:"media"`
+	MovieAlbums   []*MovieAlbumOption     `json:"movie_albums"`
+	MarkedDelete  bool                    `json:"marked_delete"`
 	RankInfos     []*MovieRankInfo        `json:"rank_infos"`
 	ScEvents      []*MovieScEvent         `json:"sc_events"`
 	JavbusFetch   *MovieFetchSiteStatus   `json:"javbus_fetch"`
@@ -10,6 +12,12 @@ type MovieDetailResponse struct {
 	SukebeiFetch  *MovieFetchSiteStatus   `json:"sukebei_fetch"`
 	SukebeiRows   []*MovieSukebeiTorrent  `json:"sukebei_rows"`
 	SehuatangRows []*MovieSehuatangMagnet `json:"sehuatang_rows"`
+}
+
+type MovieAlbumOption struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Selected bool   `json:"selected"`
 }
 
 type MovieMedia struct {
@@ -24,8 +32,8 @@ type MovieMedia struct {
 	Height            int64   `json:"height"`
 	BitRate           float64 `json:"bit_rate"`
 	DurationMinutes   float64 `json:"duration_minutes"`
-	Frame             int64   `json:"frame"`
-	SelfMake          int64   `json:"self_make"`
+	Frame             float64 `json:"frame"`
+	SelfMake          string  `json:"self_make"`
 	IsRemoved         int64   `json:"is_removed"`
 }
 
@@ -67,6 +75,8 @@ type MovieJavbusMagnet struct {
 	HasHD          bool   `json:"has_hd"`
 	HasSubtitle    bool   `json:"has_subtitle"`
 	HasMatchedHash bool   `json:"has_matched_hash"`
+	IsInDownload   bool   `json:"is_in_download"`
+	IsInPending    bool   `json:"is_in_pending"`
 }
 
 type MovieSukebeiTorrent struct {
@@ -80,6 +90,8 @@ type MovieSukebeiTorrent struct {
 	Leechers       int64  `json:"leechers"`
 	Completed      int64  `json:"completed"`
 	HasMatchedHash bool   `json:"has_matched_hash"`
+	IsInDownload   bool   `json:"is_in_download"`
+	IsInPending    bool   `json:"is_in_pending"`
 }
 
 type MovieSehuatangMagnet struct {
@@ -89,4 +101,6 @@ type MovieSehuatangMagnet struct {
 	InfoHash       string `json:"info_hash"`
 	PostTime       string `json:"post_time"`
 	HasMatchedHash bool   `json:"has_matched_hash"`
+	IsInDownload   bool   `json:"is_in_download"`
+	IsInPending    bool   `json:"is_in_pending"`
 }

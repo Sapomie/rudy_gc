@@ -29,9 +29,12 @@ type cardBaseRow struct {
 	MovieName            string  `db:"movie_name"`
 	Title                string  `db:"title"`
 	EncodeName           string  `db:"encode_name"`
+	Length               int64   `db:"length"`
 	ReleasingDate        int64   `db:"releasing_date"`
 	DetailUpdateTime     int64   `db:"detail_update_time"`
 	ScoreRaw             int64   `db:"score_raw"`
+	ViewersNumberWant    int64   `db:"viewers_number_want"`
+	ViewersNumberOwned   int64   `db:"viewers_number_owned"`
 	ViewersNumberWatched int64   `db:"viewers_number_watched"`
 	PrefixName           string  `db:"prefix_name"`
 	MakerName            string  `db:"maker_name"`
@@ -62,6 +65,20 @@ type cardBaseRow struct {
 	WMediaSelfMake       int64   `db:"w_media_self_make"`
 }
 
+type movieBaseRow struct {
+	MovieJavID           string `db:"movie_jav_id"`
+	MovieName            string `db:"movie_name"`
+	Title                string `db:"title"`
+	EncodeName           string `db:"encode_name"`
+	Length               int64  `db:"length"`
+	ReleasingDate        int64  `db:"releasing_date"`
+	DetailUpdateTime     int64  `db:"detail_update_time"`
+	ScoreRaw             int64  `db:"score_raw"`
+	ViewersNumberWant    int64  `db:"viewers_number_want"`
+	ViewersNumberOwned   int64  `db:"viewers_number_owned"`
+	ViewersNumberWatched int64  `db:"viewers_number_watched"`
+}
+
 type movieScRow struct {
 	Name          string `db:"name"`
 	ScTime        int64  `db:"sc_time"`
@@ -87,14 +104,7 @@ func NewMovieReadRepo(conn sqlx.SqlConn, cfg config.Config) *MovieReadRepo {
 }
 
 func (r *MovieReadRepo) ListMovieIDs(ctx context.Context, req *types.CardsListRequest) ([]string, int64, error) {
-	plan, ok, err := r.buildCardIDFastPathPlan(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	if ok {
-		return r.queryCardIDPlan(ctx, plan)
-	}
-	return r.listMovieIDsGeneric(ctx, req)
+	return r.listMovieIDsLegacy(ctx, req)
 }
 
 func (r *MovieReadRepo) queryCardIDPlan(ctx context.Context, plan *cardIDQueryPlan) ([]string, int64, error) {
@@ -114,48 +124,7 @@ func (r *MovieReadRepo) queryCardIDPlan(ctx context.Context, plan *cardIDQueryPl
 }
 
 func (r *MovieReadRepo) listMovieIDsGeneric(ctx context.Context, req *types.CardsListRequest) ([]string, int64, error) {
-	builder := r.baseCardQuery(req)
-
-	countSQL, countArgs, err := builder.
-		Column("COUNT(DISTINCT m.jav_id) AS total").
-		ToSql()
-	if err != nil {
-		return nil, 0, err
-	}
-	var total int64
-	if err := r.conn.QueryRowCtx(ctx, &total, countSQL, countArgs...); err != nil {
-		return nil, 0, err
-	}
-	if total == 0 {
-		return nil, 0, nil
-	}
-
-	page := normalizePage(req.Page, 1)
-	pageSize := normalizePageSize(req.PageSize, 18)
-	offset := (page - 1) * pageSize
-
-	listBuilder := r.baseCardQuery(req).
-		Column("m.jav_id AS movie_jav_id").
-		GroupBy("m.jav_id")
-
-	if isRandomView(req.View) {
-		listBuilder = listBuilder.OrderBy("RAND()").Limit(uint64(req.RandomN))
-	} else {
-		listBuilder = listBuilder.OrderBy(cardGroupedOrderClause(req.OrderBy, req.Order)).
-			Offset(uint64(offset)).
-			Limit(uint64(pageSize))
-	}
-
-	listSQL, listArgs, err := listBuilder.ToSql()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	var ids []string
-	if err := r.conn.QueryRowsCtx(ctx, &ids, listSQL, listArgs...); err != nil {
-		return nil, 0, err
-	}
-	return ids, total, nil
+	return r.listMovieIDsLegacy(ctx, req)
 }
 
 func (r *MovieReadRepo) buildCardIDFastPathPlan(req *types.CardsListRequest) (*cardIDQueryPlan, bool, error) {
@@ -302,9 +271,8 @@ func (r *MovieReadRepo) buildWMediaIDPlan(req *types.CardsListRequest) (*cardIDQ
 	}
 	appendMediaDirFilters(&where, "", req)
 
-	countBuilder := applyWhere(squirrel.Select("COUNT(DISTINCT movie_jav_id)").From("w_media"), where)
+	countBuilder := applyWhere(squirrel.Select("COUNT(*)").From("w_media"), where)
 	listBuilder := applyWhere(squirrel.Select("movie_jav_id").From("w_media"), where).
-		GroupBy("movie_jav_id").
 		OrderBy(cardWMediaOrderClause(req.OrderBy, req.Order)).
 		Offset(uint64((normalizePage(req.Page, 1) - 1) * normalizePageSize(req.PageSize, 18))).
 		Limit(uint64(normalizePageSize(req.PageSize, 18)))
@@ -330,9 +298,8 @@ func (r *MovieReadRepo) buildAlbumIDPlan(req *types.CardsListRequest) (*cardIDQu
 
 	from := "c_movie_album_item cai"
 	join := "c_movie_album ca ON ca.id = cai.album_id"
-	countBuilder := applyWhere(squirrel.Select("COUNT(DISTINCT cai.movie_jav_id)").From(from).Join(join), where)
+	countBuilder := applyWhere(squirrel.Select("COUNT(*)").From(from).Join(join), where)
 	listBuilder := applyWhere(squirrel.Select("cai.movie_jav_id").From(from).Join(join), where).
-		GroupBy("cai.movie_jav_id").
 		OrderBy(cardAlbumOrderClause(req.Order)).
 		Offset(uint64((normalizePage(req.Page, 1) - 1) * normalizePageSize(req.PageSize, 18))).
 		Limit(uint64(normalizePageSize(req.PageSize, 18)))
@@ -485,12 +452,12 @@ func hasGScCardFilters(req *types.CardsListRequest) bool {
 
 func cardAMovieOrderClause(orderBy, order string) string {
 	dir := cardOrderDirection(order)
-	tie := "name DESC, jav_id DESC"
+	tie := "name DESC"
 	switch orderBy {
 	case consts.OrderByDetailUpdateTime:
 		return "detail_update_time " + dir + ", " + tie
 	case consts.OrderByCastAgeAsc:
-		return "COALESCE(NULLIF(cast_average_age, 0), 999999) ASC, " + tie
+		return "cast_average_age ASC, " + tie
 	case consts.OrderByCastAgeDesc:
 		return "cast_average_age DESC, " + tie
 	case consts.OrderByViewerWatched:
@@ -502,7 +469,7 @@ func cardAMovieOrderClause(orderBy, order string) string {
 
 func cardMinfoOrderClause(orderBy, order string) string {
 	dir := cardOrderDirection(order)
-	tie := "jav_id DESC"
+	tie := "name DESC"
 	switch orderBy {
 	case consts.OrderByHighestRank:
 		if dir == "ASC" {
@@ -520,15 +487,14 @@ func cardMinfoOrderClause(orderBy, order string) string {
 
 func cardWMediaOrderClause(orderBy, order string) string {
 	dir := cardOrderDirection(order)
-	tie := "MAX(movie_name) DESC, movie_jav_id DESC"
 	if orderBy == consts.OrderByReleasingDate {
-		return "MAX(releasing_date) " + dir + ", " + tie
+		return "releasing_date " + dir + ", movie_name DESC"
 	}
-	return "MAX(birth_time) " + dir + ", " + tie
+	return "birth_time " + dir + ", movie_name DESC"
 }
 
 func cardAlbumOrderClause(order string) string {
-	return "MAX(cai.releasing_date) " + cardOrderDirection(order) + ", MAX(cai.movie_name) DESC, cai.movie_jav_id DESC"
+	return "releasing_date " + cardOrderDirection(order) + ", movie_name DESC, movie_jav_id DESC"
 }
 
 func cardOrderDirection(order string) string {
@@ -576,80 +542,19 @@ func (r *MovieReadRepo) LoadMovieCardsByIDs(ctx context.Context, ids []string) (
 		return []*types.MovieCard{}, nil
 	}
 
-	sqlText := `
-SELECT
-  m.jav_id AS movie_jav_id,
-  m.name AS movie_name,
-  m.title AS title,
-  m.encode_name AS encode_name,
-  m.releasing_date AS releasing_date,
-  m.detail_update_time AS detail_update_time,
-  m.score AS score_raw,
-  m.viewers_number_watched AS viewers_number_watched,
-  COALESCE(px.name, '') AS prefix_name,
-  COALESCE(mk.name, '') AS maker_name,
-  COALESCE(lb.name, '') AS label_name,
-  COALESCE(dr.name, '') AS director_name,
-  COALESCE(mi.chinese, '') AS chinese_title,
-  COALESCE(mu.jacket_img, '') AS jacket_img,
-  COALESCE(mu.jacket_img_local, '') AS jacket_img_local,
-  COALESCE(mi.highest_rank, 0) AS highest_rank,
-  COALESCE(mi.days_in_rank, 0) AS days_in_rank,
-  COALESCE(mi.first_rank_day_number, 0) AS first_rank_day_number,
-  COALESCE(gs.sc_times, 0) AS sc_times,
-  COALESCE(gs.come_times, 0) AS come_times,
-  COALESCE(gs.last_sc_time, 0) AS last_sc_time,
-  CASE
-    WHEN EXISTS (
-      SELECT 1
-      FROM c_movie_album_item cai
-      JOIN c_movie_album ca ON ca.id = cai.album_id
-      WHERE cai.movie_jav_id = m.jav_id AND ca.name = ?
-    ) THEN 2 ELSE 1
-  END AS need_download,
-  COALESCE(wm.id, 0) AS w_media_id,
-  COALESCE(wm.birth_time, 0) AS w_media_birth_time,
-  COALESCE(wm.has_sub, 0) AS w_media_has_sub,
-  COALESCE(wm.is_removed, 0) AS w_media_is_removed,
-  COALESCE(wm.full_dir, '') AS w_media_full_dir,
-  COALESCE(wm.file_name, '') AS w_media_file_name,
-  COALESCE(wm.source_torrent_hash, '') AS w_media_source_hash,
-  COALESCE(wm.size, 0) AS w_media_size,
-  COALESCE(wm.height, 0) AS w_media_height,
-  COALESCE(wm.bit_rate, 0) AS w_media_bit_rate,
-  COALESCE(wm.duration, 0) AS w_media_duration,
-  COALESCE(wm.frame_average, 0) AS w_media_frame_average,
-  COALESCE(wm.self_make, 0) AS w_media_self_make
-FROM a_movie m
-LEFT JOIN bm_minfo mi ON mi.jav_id = m.jav_id
-LEFT JOIN bm_murl mu ON mu.jav_id = m.jav_id
-LEFT JOIN am_prefix px ON px.id = m.prefix_id
-LEFT JOIN am_maker mk ON mk.id = m.maker_id
-LEFT JOIN am_label lb ON lb.id = m.label_id
-LEFT JOIN am_director dr ON dr.id = m.director_id
-LEFT JOIN g_sc_stat gs ON gs.movie_jav_id = m.jav_id
-LEFT JOIN w_media wm ON wm.movie_jav_id = m.jav_id AND wm.source_type = ?
-WHERE m.jav_id IN (?)
-`
-	query := strings.Replace(sqlText, "(?)", "("+buildPlaceholders(len(ids))+")", 1)
-	args := make([]any, 0, len(ids)+2)
-	args = append(args, consts.MovieNeedDownloadAlbumName)
-	args = append(args, consts.WMediaSourceNative)
+	cardMap := make(map[string]*types.MovieCard, len(ids))
 	for _, id := range ids {
-		args = append(args, id)
-	}
-
-	var rows []*cardBaseRow
-	if err := r.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
-		return nil, err
-	}
-
-	cardMap := make(map[string]*types.MovieCard, len(rows))
-	for _, row := range rows {
-		if row == nil {
+		id = strings.TrimSpace(id)
+		if id == "" {
 			continue
 		}
-		cardMap[row.MovieJavID] = r.mapCardBaseRow(row)
+		card, err := r.loadMovieCardByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if card != nil {
+			cardMap[id] = card
+		}
 	}
 	if err := r.attachMovieGenres(ctx, cardMap); err != nil {
 		return nil, err
@@ -667,10 +572,109 @@ WHERE m.jav_id IN (?)
 	return items, nil
 }
 
+func (r *MovieReadRepo) loadMovieCardByID(ctx context.Context, javID string) (*types.MovieCard, error) {
+	row := &cardBaseRow{}
+	var base movieBaseRow
+	if err := r.conn.QueryRowCtx(ctx, &base, `
+SELECT
+  jav_id AS movie_jav_id,
+  name AS movie_name,
+  title AS title,
+  encode_name AS encode_name,
+  length AS length,
+  releasing_date AS releasing_date,
+  detail_update_time AS detail_update_time,
+  score AS score_raw,
+  viewers_number_want AS viewers_number_want,
+  viewers_number_owned AS viewers_number_owned,
+  viewers_number_watched AS viewers_number_watched
+FROM a_movie
+WHERE jav_id = ?
+LIMIT 1`, javID); err != nil {
+		return nil, err
+	}
+	row.MovieJavID = base.MovieJavID
+	row.MovieName = base.MovieName
+	row.Title = base.Title
+	row.EncodeName = base.EncodeName
+	row.Length = base.Length
+	row.ReleasingDate = base.ReleasingDate
+	row.DetailUpdateTime = base.DetailUpdateTime
+	row.ScoreRaw = base.ScoreRaw
+	row.ViewersNumberWant = base.ViewersNumberWant
+	row.ViewersNumberOwned = base.ViewersNumberOwned
+	row.ViewersNumberWatched = base.ViewersNumberWatched
+
+	_ = r.conn.QueryRowCtx(ctx, &row.ChineseTitle, `SELECT chinese FROM bm_minfo WHERE jav_id = ? LIMIT 1`, javID)
+	type minfoRow struct {
+		HighestRank        int64 `db:"highest_rank"`
+		DaysInRank         int64 `db:"days_in_rank"`
+		FirstRankDayNumber int64 `db:"first_rank_day_number"`
+	}
+	var mi minfoRow
+	if err := r.conn.QueryRowCtx(ctx, &mi, `SELECT highest_rank, days_in_rank, first_rank_day_number FROM bm_minfo WHERE jav_id = ? LIMIT 1`, javID); err == nil {
+		row.HighestRank = mi.HighestRank
+		row.DaysInRank = mi.DaysInRank
+		row.FirstRankDayNumber = mi.FirstRankDayNumber
+	}
+	_ = r.conn.QueryRowCtx(ctx, &row.JacketImg, `SELECT jacket_img FROM bm_murl WHERE jav_id = ? LIMIT 1`, javID)
+	_ = r.conn.QueryRowCtx(ctx, &row.JacketImgLocal, `SELECT jacket_img_local FROM bm_murl WHERE jav_id = ? LIMIT 1`, javID)
+	_ = r.conn.QueryRowCtx(ctx, &row.PrefixName, `SELECT px.name FROM am_prefix px JOIN a_movie m ON m.prefix_id = px.id WHERE m.jav_id = ? LIMIT 1`, javID)
+	_ = r.conn.QueryRowCtx(ctx, &row.MakerName, `SELECT mk.name FROM am_maker mk JOIN a_movie m ON m.maker_id = mk.id WHERE m.jav_id = ? LIMIT 1`, javID)
+	_ = r.conn.QueryRowCtx(ctx, &row.LabelName, `SELECT lb.name FROM am_label lb JOIN a_movie m ON m.label_id = lb.id WHERE m.jav_id = ? LIMIT 1`, javID)
+	_ = r.conn.QueryRowCtx(ctx, &row.DirectorName, `SELECT dr.name FROM am_director dr JOIN a_movie m ON m.director_id = dr.id WHERE m.jav_id = ? LIMIT 1`, javID)
+
+	type statRow struct {
+		ScTimes    int64 `db:"sc_times"`
+		ComeTimes  int64 `db:"come_times"`
+		LastScTime int64 `db:"last_sc_time"`
+	}
+	var stat statRow
+	if err := r.conn.QueryRowCtx(ctx, &stat, `SELECT sc_times, come_times, last_sc_time FROM g_sc_stat WHERE movie_jav_id = ? LIMIT 1`, javID); err == nil {
+		row.ScTimes = stat.ScTimes
+		row.ComeTimes = stat.ComeTimes
+		row.LastScTime = stat.LastScTime
+	}
+
+	var needDownload int64
+	if err := r.conn.QueryRowCtx(ctx, &needDownload, `
+SELECT 1
+FROM c_movie_album_item cai
+JOIN c_movie_album ca ON ca.id = cai.album_id
+WHERE ca.name = ? AND cai.movie_jav_id = ?
+LIMIT 1`, consts.MovieNeedDownloadAlbumName, javID); err == nil && needDownload == 1 {
+		row.NeedDownload = consts.MovieNeedDownloadOK
+	} else {
+		row.NeedDownload = consts.MovieNeedDownloadNone
+	}
+
+	type mediaRow struct {
+		ID        int64  `db:"id"`
+		BirthTime int64  `db:"birth_time"`
+		HasSub    int64  `db:"has_sub"`
+		IsRemoved int64  `db:"is_removed"`
+		FullDir   string `db:"full_dir"`
+		FileName  string `db:"file_name"`
+	}
+	var media mediaRow
+	if err := r.conn.QueryRowCtx(ctx, &media, `
+SELECT id, birth_time, has_sub, is_removed, full_dir, file_name
+FROM w_media
+WHERE movie_jav_id = ? AND source_type = ?
+LIMIT 1`, javID, consts.WMediaSourceNative); err == nil {
+		row.WMediaID = media.ID
+		row.WMediaBirthTime = media.BirthTime
+		row.WMediaHasSub = media.HasSub
+		row.WMediaIsRemoved = media.IsRemoved
+		row.WMediaFullDir = media.FullDir
+		row.WMediaFileName = media.FileName
+	}
+	return r.mapCardBaseRow(row), nil
+}
+
 func (r *MovieReadRepo) FindMovieCardByName(ctx context.Context, movieName string) (*types.MovieCard, error) {
-	sqlText := `SELECT jav_id FROM a_movie WHERE name = ? LIMIT 1`
-	var javID string
-	if err := r.conn.QueryRowCtx(ctx, &javID, sqlText, movieName); err != nil {
+	javID, err := r.FindMovieJavIDByName(ctx, movieName)
+	if err != nil {
 		return nil, err
 	}
 	cards, err := r.LoadMovieCardsByIDs(ctx, []string{javID})
@@ -681,6 +685,15 @@ func (r *MovieReadRepo) FindMovieCardByName(ctx context.Context, movieName strin
 		return nil, ErrNotFound
 	}
 	return cards[0], nil
+}
+
+func (r *MovieReadRepo) FindMovieJavIDByName(ctx context.Context, movieName string) (string, error) {
+	sqlText := `SELECT jav_id FROM a_movie WHERE name = ? LIMIT 1`
+	var javID string
+	if err := r.conn.QueryRowCtx(ctx, &javID, sqlText, movieName); err != nil {
+		return "", err
+	}
+	return javID, nil
 }
 
 func (r *MovieReadRepo) FindEarliestRankDayNumber(ctx context.Context) (int64, error) {
@@ -975,192 +988,120 @@ func (r *MovieReadRepo) TSehuatangMagnetRowList(ctx context.Context, movieJavID,
 	return out, nil
 }
 
-func (r *MovieReadRepo) baseCardQuery(req *types.CardsListRequest) squirrel.SelectBuilder {
-	q := squirrel.Select().
-		From("a_movie m").
-		LeftJoin("bm_minfo mi ON mi.jav_id = m.jav_id").
-		LeftJoin(fmt.Sprintf("w_media wm ON wm.movie_jav_id = m.jav_id AND wm.source_type = %d", consts.WMediaSourceNative)).
-		LeftJoin("g_sc_stat gs ON gs.movie_jav_id = m.jav_id").
-		LeftJoin("am_label lb ON lb.id = m.label_id").
-		LeftJoin("am_maker mk ON mk.id = m.maker_id").
-		LeftJoin("am_director dr ON dr.id = m.director_id").
-		LeftJoin("am_prefix px ON px.id = m.prefix_id")
-
-	for _, filter := range r.cardFilters(req) {
-		q = q.Where(filter)
+func (r *MovieReadRepo) LoadMovieAlbums(ctx context.Context, movieJavID string) ([]*types.MovieAlbumOption, error) {
+	type row struct {
+		ID       int64  `db:"id"`
+		Name     string `db:"name"`
+		Selected int64  `db:"selected"`
 	}
-	return q
+	var rows []*row
+	query := `
+SELECT
+  ca.id AS id,
+  ca.name AS name,
+  CASE WHEN cai.id IS NULL THEN 0 ELSE 1 END AS selected
+FROM c_movie_album ca
+LEFT JOIN c_movie_album_item cai ON cai.album_id = ca.id AND cai.movie_jav_id = ?
+ORDER BY ca.id ASC`
+	if err := r.conn.QueryRowsCtx(ctx, &rows, query, movieJavID); err != nil {
+		return nil, err
+	}
+	out := make([]*types.MovieAlbumOption, 0, len(rows))
+	for _, item := range rows {
+		if item == nil {
+			continue
+		}
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			continue
+		}
+		out = append(out, &types.MovieAlbumOption{
+			ID:       item.ID,
+			Name:     name,
+			Selected: item.Selected == 1,
+		})
+	}
+	return out, nil
+}
+
+func (r *MovieReadRepo) IsMovieMarkedDelete(ctx context.Context, movieJavID string) (bool, error) {
+	var exists int64
+	query := `
+SELECT 1
+FROM c_movie_album_item cai
+JOIN c_movie_album ca ON ca.id = cai.album_id
+WHERE ca.name = ? AND cai.movie_jav_id = ?
+LIMIT 1`
+	if err := r.conn.QueryRowCtx(ctx, &exists, query, consts.MovieDeleteAlbumName, movieJavID); err != nil {
+		if err == sqlc.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return exists == 1, nil
+}
+
+func (r *MovieReadRepo) ApplyFetchResourceStatus(ctx context.Context, movieJavID string, javbus []*types.MovieJavbusMagnet, sukebei []*types.MovieSukebeiTorrent, sehuatang []*types.MovieSehuatangMagnet) error {
+	applyMatchedFetchSiteHashes(javbus, sukebei, sehuatang)
+	if len(javbus) == 0 && len(sukebei) == 0 && len(sehuatang) == 0 {
+		return nil
+	}
+
+	type row struct {
+		SourceType  string `db:"source_type"`
+		SourceRowID int64  `db:"source_row_id"`
+		AlbumName   string `db:"album_name"`
+	}
+	var rows []*row
+	query := `
+SELECT i.source_type AS source_type, i.source_row_id AS source_row_id, a.name AS album_name
+FROM tm_album_item i
+JOIN t_album a ON a.id = i.album_id
+WHERE i.movie_jav_id = ? AND a.name IN (?, ?)`
+	if err := r.conn.QueryRowsCtx(ctx, &rows, query, movieJavID, "下载中", "待下载"); err != nil {
+		return err
+	}
+	status := make(map[string]map[string]bool, len(rows))
+	for _, item := range rows {
+		if item == nil {
+			continue
+		}
+		key := fetchResourceKey(item.SourceType, item.SourceRowID)
+		if key == "" {
+			continue
+		}
+		if status[key] == nil {
+			status[key] = map[string]bool{}
+		}
+		status[key][strings.TrimSpace(item.AlbumName)] = true
+	}
+	for _, row := range javbus {
+		if row == nil {
+			continue
+		}
+		fillFetchResourceAlbumStatus(status[fetchResourceKey("javbus_magnet", row.RowID)], &row.IsInDownload, &row.IsInPending)
+	}
+	for _, row := range sukebei {
+		if row == nil {
+			continue
+		}
+		fillFetchResourceAlbumStatus(status[fetchResourceKey("sukebei_torrent", row.RowID)], &row.IsInDownload, &row.IsInPending)
+	}
+	for _, row := range sehuatang {
+		if row == nil {
+			continue
+		}
+		fillFetchResourceAlbumStatus(status[fetchResourceKey("sehuatang_magnet", row.RowID)], &row.IsInDownload, &row.IsInPending)
+	}
+	return nil
+}
+
+func (r *MovieReadRepo) baseCardQuery(req *types.CardsListRequest) squirrel.SelectBuilder {
+	return applyWhere(squirrel.Select().From("a_movie"), r.cardAMovieWhere(req))
 }
 
 func (r *MovieReadRepo) cardFilters(req *types.CardsListRequest) []squirrel.Sqlizer {
-	filters := make([]squirrel.Sqlizer, 0, 24)
-
-	if req.View == "" || req.View == "cards" {
-	} else if req.View == "cardstoday" {
-		filters = append(filters, squirrel.LtOrEq{"m.releasing_date": startOfDay(time.Now())})
-	} else if req.View == "cardshasrank" {
-		filters = append(filters, squirrel.Gt{"mi.days_in_rank": 0})
-	} else if req.View == "cardsmediamowned" {
-		filters = append(filters, squirrel.NotEq{"wm.id": nil})
-		filters = append(filters, squirrel.Eq{"wm.is_removed": 1})
-	} else if req.View == "cardsneeddownload" {
-		filters = append(filters, squirrel.Expr("EXISTS (SELECT 1 FROM c_movie_album_item cai JOIN c_movie_album ca ON ca.id = cai.album_id WHERE cai.movie_jav_id = m.jav_id AND ca.name = ?)", consts.MovieNeedDownloadAlbumName))
-	}
-
-	if req.PrefixName != "" {
-		filters = append(filters, squirrel.Eq{"px.name": req.PrefixName})
-	}
-	if req.MakerName != "" {
-		filters = append(filters, squirrel.Eq{"mk.name": req.MakerName})
-	}
-	if req.LabelName != "" {
-		filters = append(filters, squirrel.Eq{"lb.name": req.LabelName})
-	}
-	if req.LabelJavID != "" {
-		filters = append(filters, squirrel.Eq{"lb.jav_id": req.LabelJavID})
-	}
-	if req.DirectorName != "" {
-		filters = append(filters, squirrel.Eq{"dr.name": req.DirectorName})
-	}
-	if req.Word != "" {
-		filters = append(filters, squirrel.Like{"mi.chinese": "%" + req.Word + "%"})
-	}
-	if req.CastAgeMin != nil {
-		filters = append(filters, squirrel.GtOrEq{"m.cast_average_age": int64(*req.CastAgeMin*10.0 + 0.5)})
-	}
-	if req.CastAgeMax != nil {
-		filters = append(filters, squirrel.LtOrEq{"m.cast_average_age": int64(*req.CastAgeMax*10.0 + 0.5)})
-	}
-	if req.ReleasingDateStart != "" {
-		if ts, ok := parseDate(req.ReleasingDateStart); ok {
-			filters = append(filters, squirrel.GtOrEq{"m.releasing_date": ts})
-		}
-	}
-	if req.ReleasingDateEnd != "" {
-		if ts, ok := parseDate(req.ReleasingDateEnd); ok {
-			filters = append(filters, squirrel.LtOrEq{"m.releasing_date": ts})
-		}
-	}
-	if req.MediaBirthTimeStart != "" {
-		if ts, ok := parseDate(req.MediaBirthTimeStart); ok {
-			filters = append(filters, squirrel.GtOrEq{"wm.birth_time": ts})
-		}
-	}
-	if req.MediaBirthTimeEnd != "" {
-		if ts, ok := parseDate(req.MediaBirthTimeEnd); ok {
-			filters = append(filters, squirrel.LtOrEq{"wm.birth_time": ts})
-		}
-	}
-	if req.StartRankingDateStart != "" {
-		filters = append(filters, squirrel.GtOrEq{"mi.first_rank_day_number": consts.GetRankDayNumber(req.StartRankingDateStart)})
-	}
-	if req.StartRankingDateEnd != "" {
-		filters = append(filters, squirrel.LtOrEq{"mi.first_rank_day_number": consts.GetRankDayNumber(req.StartRankingDateEnd)})
-	}
-	if req.DaysInRankMin != nil {
-		filters = append(filters, squirrel.GtOrEq{"mi.days_in_rank": *req.DaysInRankMin})
-	}
-	if req.ViewWatchedMin != nil {
-		filters = append(filters, squirrel.GtOrEq{"m.viewers_number_watched": *req.ViewWatchedMin})
-	}
-	if req.ViewWatchedMax != nil {
-		filters = append(filters, squirrel.LtOrEq{"m.viewers_number_watched": *req.ViewWatchedMax})
-	}
-	if req.ScoreMin != nil {
-		filters = append(filters, squirrel.GtOrEq{"m.score": int64(*req.ScoreMin*10.0 + 0.5)})
-	}
-	if req.ScoreMax != nil {
-		filters = append(filters, squirrel.LtOrEq{"m.score": int64(*req.ScoreMax*10.0 + 0.5)})
-	}
-	if req.ScTimesMin != nil {
-		filters = append(filters, squirrel.GtOrEq{"gs.sc_times": *req.ScTimesMin})
-	}
-	if req.ScTimesMax != nil {
-		filters = append(filters, squirrel.LtOrEq{"gs.sc_times": *req.ScTimesMax})
-	}
-	if req.ComeTimesMin != nil {
-		filters = append(filters, squirrel.GtOrEq{"gs.come_times": *req.ComeTimesMin})
-	}
-	if req.ComeTimesMax != nil {
-		filters = append(filters, squirrel.LtOrEq{"gs.come_times": *req.ComeTimesMax})
-	}
-	if req.LastScTimeMin != "" {
-		if ts, ok := parseDate(req.LastScTimeMin); ok {
-			filters = append(filters, squirrel.GtOrEq{"gs.last_sc_time": ts})
-		}
-	}
-	if req.LastScTimeMax != "" {
-		if ts, ok := parseDate(req.LastScTimeMax); ok {
-			filters = append(filters, squirrel.LtOrEq{"gs.last_sc_time": ts})
-		}
-	}
-	if req.MediaDir1 != "" {
-		filters = append(filters, squirrel.Expr("CONCAT('/', wm.full_dir, '/') LIKE ?", "%/"+req.MediaDir1+"/%"))
-	}
-	if req.MediaDir2 != "" {
-		filters = append(filters, squirrel.Expr("CONCAT('/', wm.full_dir, '/') LIKE ?", "%/"+req.MediaDir2+"/%"))
-	}
-	if req.MediaDir3 != "" {
-		filters = append(filters, squirrel.Expr("CONCAT('/', wm.full_dir, '/') LIKE ?", "%/"+req.MediaDir3+"/%"))
-	}
-	if req.MediaDir4 != "" {
-		filters = append(filters, squirrel.Expr("CONCAT('/', wm.full_dir, '/') LIKE ?", "%/"+req.MediaDir4+"/%"))
-	}
-
-	switch req.MediaOwned {
-	case consts.OwnedAll:
-		filters = append(filters, squirrel.NotEq{"wm.id": nil})
-	case consts.OwnedAllNotRemoved:
-		filters = append(filters, squirrel.NotEq{"wm.id": nil}, squirrel.Eq{"wm.is_removed": 1})
-	case consts.OwnedHasSubNotRemoved:
-		filters = append(filters, squirrel.NotEq{"wm.id": nil}, squirrel.Eq{"wm.is_removed": 1}, squirrel.Eq{"wm.has_sub": 2})
-	case consts.OwnedNoSubNotRemoved:
-		filters = append(filters, squirrel.NotEq{"wm.id": nil}, squirrel.Eq{"wm.is_removed": 1}, squirrel.Eq{"wm.has_sub": 1})
-	case consts.OwnedRemoved:
-		filters = append(filters, squirrel.NotEq{"wm.id": nil}, squirrel.Eq{"wm.is_removed": 2})
-	case consts.OwnedNotOwned:
-		filters = append(filters, squirrel.Expr("wm.id IS NULL"))
-	}
-
-	if req.NeedDownload == consts.MovieNeedDownloadOK {
-		filters = append(filters, squirrel.Expr("EXISTS (SELECT 1 FROM c_movie_album_item cai JOIN c_movie_album ca ON ca.id = cai.album_id WHERE cai.movie_jav_id = m.jav_id AND ca.name = ?)", consts.MovieNeedDownloadAlbumName))
-	}
-	if req.NeedDownload == consts.MovieNeedDownloadNone {
-		filters = append(filters, squirrel.Expr("NOT EXISTS (SELECT 1 FROM c_movie_album_item cai JOIN c_movie_album ca ON ca.id = cai.album_id WHERE cai.movie_jav_id = m.jav_id AND ca.name = ?)", consts.MovieNeedDownloadAlbumName))
-	}
-
-	if req.AlbumName != "" {
-		filters = append(filters, squirrel.Expr("EXISTS (SELECT 1 FROM c_movie_album_item cai JOIN c_movie_album ca ON ca.id = cai.album_id WHERE cai.movie_jav_id = m.jav_id AND ca.name = ?)", req.AlbumName))
-	}
-
-	if castNames := parseList(req.CastNames); len(castNames) > 0 {
-		filters = append(filters, squirrel.Expr(`
-EXISTS (
-  SELECT 1
-  FROM amr_movie_cast rc
-  JOIN am_cast c ON c.id = rc.cast_id
-  WHERE rc.movie_jav_id = m.jav_id AND c.name = ?
-)`, castNames[0]))
-	}
-	if personIDs := parseInt64List(req.PersonIds); len(personIDs) > 0 {
-		filters = append(filters, squirrel.Expr(`
-EXISTS (
-  SELECT 1
-  FROM amr_movie_cast rc
-  JOIN am_cast c ON c.id = rc.cast_id
-  WHERE rc.movie_jav_id = m.jav_id AND c.person_id = ?
-)`, personIDs[0]))
-	}
-	if genreNames := parseList(req.GenreNames); len(genreNames) > 0 {
-		filters = append(filters, squirrel.Expr(`
-EXISTS (
-  SELECT 1
-  FROM amr_movie_genre rg
-  JOIN am_genre g ON g.id = rg.genre_id
-  WHERE rg.movie_jav_id = m.jav_id AND g.name = ?
-)`, genreNames[0]))
-	}
-	return filters
+	return nil
 }
 
 func (r *MovieReadRepo) attachMovieGenres(ctx context.Context, cardMap map[string]*types.MovieCard) error {
@@ -1173,7 +1114,7 @@ SELECT rg.movie_jav_id AS movie_jav_id, g.name AS genre_name
 FROM amr_movie_genre rg
 JOIN am_genre g ON g.id = rg.genre_id
 WHERE rg.movie_jav_id IN (?)
-ORDER BY g.name ASC`
+ORDER BY rg.genre_id ASC`
 	query = strings.Replace(query, "(?)", "("+buildPlaceholders(len(ids))+")", 1)
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -1273,11 +1214,16 @@ func (r *MovieReadRepo) mapCardBaseRow(row *cardBaseRow) *types.MovieCard {
 		MovieJavID:           row.MovieJavID,
 		MovieHref:            "/movie/" + url.PathEscape(row.MovieName),
 		Title:                title,
+		EncodeName:           row.EncodeName,
 		JacketImg:            firstNonEmpty(buildLocalJacketPath(r.cfg.Fetcher.LocalImageDir, row.JacketImgLocal), row.JacketImg),
 		ComeTimes:            row.ComeTimes,
 		ScTimes:              row.ScTimes,
 		HighestRank:          row.HighestRank,
+		LastScTime:           row.LastScTime,
+		Length:               row.Length,
 		Score:                round1(float64(row.ScoreRaw) / 10.0),
+		ViewersNumberWant:    row.ViewersNumberWant,
+		ViewersNumberOwned:   row.ViewersNumberOwned,
 		ViewersNumberWatched: row.ViewersNumberWatched,
 		Director:             row.DirectorName,
 		DirectorHref:         "/cards?dn=" + url.QueryEscape(row.DirectorName),
@@ -1287,6 +1233,7 @@ func (r *MovieReadRepo) mapCardBaseRow(row *cardBaseRow) *types.MovieCard {
 		SearchUrl:            buildSukebeiSearchURL(row.MovieName),
 		JavUrl:               buildJavURL(r.cfg.Fetcher.JavAddress, row.MovieJavID),
 		ReleasingDate:        formatDate(row.ReleasingDate),
+		UpdateDate:           formatDate(row.DetailUpdateTime),
 		Label:                row.LabelName,
 		LabelHref:            "/cards?ln=" + url.QueryEscape(row.LabelName),
 		Maker:                row.MakerName,
@@ -1315,46 +1262,7 @@ func deriveOwnedWMedia(hasSub, isRemoved int64) int64 {
 }
 
 func cardGroupedOrderClause(orderBy, order string) string {
-	dir := "DESC"
-	if strings.EqualFold(order, "asc") {
-		dir = "ASC"
-	}
-	nameTieBreaker := "MAX(m.name) DESC"
-	switch orderBy {
-	case consts.OrderByCastAgeAsc:
-		if dir == "DESC" {
-			return "MAX(m.cast_average_age) DESC, " + nameTieBreaker
-		}
-		return "COALESCE(MIN(NULLIF(m.cast_average_age, 0)), 999999) ASC, " + nameTieBreaker
-	case consts.OrderByCastAgeDesc:
-		if dir == "ASC" {
-			return "COALESCE(MIN(NULLIF(m.cast_average_age, 0)), 999999) ASC, " + nameTieBreaker
-		}
-		return "MAX(m.cast_average_age) DESC, " + nameTieBreaker
-	case consts.OrderByViewerWatched:
-		return "MAX(m.viewers_number_watched) " + dir + ", " + nameTieBreaker
-	case consts.OrderByRankDate:
-		return "MAX(mi.first_rank_day_number) " + dir + ", " + nameTieBreaker
-	case consts.OrderByHighestRank:
-		if dir == "ASC" {
-			return "COALESCE(MIN(NULLIF(mi.highest_rank, 0)), 999999) ASC, " + nameTieBreaker
-		}
-		return "MAX(COALESCE(mi.highest_rank, 0)) DESC, " + nameTieBreaker
-	case consts.OrderByDaysInRank:
-		return "MAX(mi.days_in_rank) " + dir + ", " + nameTieBreaker
-	case consts.OrderByBirthTime, consts.OrderByMediaBirthTime:
-		return "MAX(wm.birth_time) " + dir + ", " + nameTieBreaker
-	case consts.OrderByScTimes:
-		return "MAX(gs.sc_times) " + dir + ", " + nameTieBreaker
-	case consts.OrderByComeTimes:
-		return "MAX(gs.come_times) " + dir + ", " + nameTieBreaker
-	case consts.OrderByLastScTime:
-		return "MAX(gs.last_sc_time) " + dir + ", " + nameTieBreaker
-	case consts.OrderByDetailUpdateTime:
-		return "MAX(m.detail_update_time) " + dir + ", " + nameTieBreaker
-	default:
-		return "MAX(m.releasing_date) " + dir + ", " + nameTieBreaker
-	}
+	return cardAMovieOrderClause(orderBy, order)
 }
 
 func parseDate(raw string) (int64, bool) {
@@ -1553,6 +1461,83 @@ func mapFetchStatus(movieJavID, movieName string, releaseDate, fetchStatus, tryC
 		LatestPublishTime: formatDate(latestPublishTime),
 		SourceURL:         sourceURL,
 	}
+}
+
+func applyMatchedFetchSiteHashes(javbus []*types.MovieJavbusMagnet, sukebei []*types.MovieSukebeiTorrent, sehuatang []*types.MovieSehuatangMagnet) {
+	javbusHashes := make(map[string]struct{}, len(javbus))
+	sukebeiHashes := make(map[string]struct{}, len(sukebei))
+	sehuatangHashes := make(map[string]struct{}, len(sehuatang))
+	for _, row := range javbus {
+		if row == nil {
+			continue
+		}
+		if hash := normalizeInfoHash(row.InfoHash); hash != "" {
+			javbusHashes[hash] = struct{}{}
+		}
+	}
+	for _, row := range sukebei {
+		if row == nil {
+			continue
+		}
+		if hash := normalizeInfoHash(row.InfoHash); hash != "" {
+			sukebeiHashes[hash] = struct{}{}
+		}
+	}
+	for _, row := range sehuatang {
+		if row == nil {
+			continue
+		}
+		if hash := normalizeInfoHash(row.InfoHash); hash != "" {
+			sehuatangHashes[hash] = struct{}{}
+		}
+	}
+	for _, row := range javbus {
+		if row == nil {
+			continue
+		}
+		hash := normalizeInfoHash(row.InfoHash)
+		_, inSukebei := sukebeiHashes[hash]
+		_, inSehuatang := sehuatangHashes[hash]
+		row.HasMatchedHash = inSukebei || inSehuatang
+	}
+	for _, row := range sukebei {
+		if row == nil {
+			continue
+		}
+		hash := normalizeInfoHash(row.InfoHash)
+		_, inJavbus := javbusHashes[hash]
+		_, inSehuatang := sehuatangHashes[hash]
+		row.HasMatchedHash = inJavbus || inSehuatang
+	}
+	for _, row := range sehuatang {
+		if row == nil {
+			continue
+		}
+		hash := normalizeInfoHash(row.InfoHash)
+		_, inJavbus := javbusHashes[hash]
+		_, inSukebei := sukebeiHashes[hash]
+		row.HasMatchedHash = inJavbus || inSukebei
+	}
+}
+
+func normalizeInfoHash(hash string) string {
+	return strings.ToUpper(strings.TrimSpace(hash))
+}
+
+func fetchResourceKey(sourceType string, rowID int64) string {
+	sourceType = strings.TrimSpace(sourceType)
+	if sourceType == "" || rowID <= 0 {
+		return ""
+	}
+	return sourceType + ":" + strconv.FormatInt(rowID, 10)
+}
+
+func fillFetchResourceAlbumStatus(status map[string]bool, inDownload, inPending *bool) {
+	if status == nil {
+		return
+	}
+	*inDownload = status["下载中"]
+	*inPending = status["待下载"]
 }
 
 func daysAgo(ts int64) string {

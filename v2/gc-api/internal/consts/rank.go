@@ -77,7 +77,7 @@ func GetDateStringByRankDayNumber(dayNumber int64) string {
 	if dayNumber <= 0 {
 		return ""
 	}
-	base := time.Date(2011, 11, 21, 0, 0, 0, 0, time.Local)
+	base := time.Date(2023, 1, 1, 0, 0, 0, 0, time.Local)
 	return base.AddDate(0, 0, int(dayNumber-1)).Format(time.DateOnly)
 }
 
@@ -86,7 +86,7 @@ func GetRankDayNumber(dateString string) int64 {
 	if err != nil {
 		return 0
 	}
-	base := time.Date(2011, 11, 21, 0, 0, 0, 0, time.Local)
+	base := time.Date(2023, 1, 1, 0, 0, 0, 0, time.Local)
 	return int64(parsed.Sub(base).Hours()/24) + 1
 }
 

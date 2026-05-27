@@ -31,7 +31,10 @@ const (
 	MovieNeedDownloadOK   int64 = 2
 )
 
-const MovieNeedDownloadAlbumName = "电影稍后下载"
+const (
+	MovieNeedDownloadAlbumName = "待下载电影"
+	MovieDeleteAlbumName       = "待删除"
+)
 
 const (
 	WMediaSourceNative int64 = 2

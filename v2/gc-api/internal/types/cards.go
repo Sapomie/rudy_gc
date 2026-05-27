@@ -116,11 +116,16 @@ type MovieCard struct {
 	MovieJavID           string     `json:"movie_jav_id"`
 	MovieHref            string     `json:"movie_href"`
 	Title                string     `json:"title"`
+	EncodeName           string     `json:"encode_name"`
 	JacketImg            string     `json:"jacket_img"`
 	ComeTimes            int64      `json:"come_times"`
 	ScTimes              int64      `json:"sc_times"`
 	HighestRank          int64      `json:"highest_rank"`
+	LastScTime           int64      `json:"last_sc_time"`
+	Length               int64      `json:"length"`
 	Score                float64    `json:"score"`
+	ViewersNumberWant    int64      `json:"viewers_number_want"`
+	ViewersNumberOwned   int64      `json:"viewers_number_owned"`
 	ViewersNumberWatched int64      `json:"viewers_number_watched"`
 	OwnedWMedia          int64      `json:"owned_w_media"`
 	VideoUrlWMedia       string     `json:"video_url_w_media"`
@@ -135,6 +140,7 @@ type MovieCard struct {
 	SearchUrl            string     `json:"search_url"`
 	JavUrl               string     `json:"jav_url"`
 	ReleasingDate        string     `json:"releasing_date"`
+	UpdateDate           string     `json:"update_date"`
 	FirstRankingDay      string     `json:"first_ranking_day"`
 	Label                string     `json:"label"`
 	LabelHref            string     `json:"label_href"`

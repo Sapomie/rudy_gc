@@ -27,6 +27,10 @@ func (h *Handler) Detail(c *gin.Context) {
 	}
 	data, err := h.service.Detail(c.Request.Context(), movieName)
 	if err != nil {
+		if moviesvc.IsNotFound(err) {
+			response.Fail(c, http.StatusNotFound, "movie_not_found", "未找到影片")
+			return
+		}
 		response.Fail(c, http.StatusInternalServerError, "movie_detail_failed", err.Error())
 		return
 	}

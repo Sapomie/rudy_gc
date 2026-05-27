@@ -15,7 +15,7 @@ func (s *Service) List(ctx context.Context, req *types.CardsListRequest) (*types
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.repo.LoadMovieCardsByIDs(ctx, ids)
+	items, err := s.loadMovieCards(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,57 @@ func (s *Service) List(ctx context.Context, req *types.CardsListRequest) (*types
 	if req.View == "cardsrandom" {
 		response.RandomRequested = req.RandomN
 	}
+	_ = viewSummary(req)
 	return response, nil
+}
+
+func (s *Service) loadMovieCards(ctx context.Context, ids []string) ([]*types.MovieCard, error) {
+	if len(ids) == 0 {
+		return []*types.MovieCard{}, nil
+	}
+	items := make([]*types.MovieCard, len(ids))
+	missing := make([]string, 0, len(ids))
+	missingPos := make(map[string][]int, len(ids))
+	for i, id := range ids {
+		if s.cache != nil {
+			card, err := s.cache.GetMovieCard(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+			if card != nil {
+				items[i] = card
+				continue
+			}
+		}
+		missing = append(missing, id)
+		missingPos[id] = append(missingPos[id], i)
+	}
+	if len(missing) > 0 {
+		cards, err := s.repo.LoadMovieCardsByIDs(ctx, missing)
+		if err != nil {
+			return nil, err
+		}
+		for _, card := range cards {
+			if card == nil {
+				continue
+			}
+			if s.cache != nil {
+				if err := s.cache.SetMovieCard(ctx, card.MovieJavID, card, movieCardCacheTTL); err != nil {
+					return nil, err
+				}
+			}
+			for _, pos := range missingPos[card.MovieJavID] {
+				items[pos] = card
+			}
+		}
+	}
+	out := make([]*types.MovieCard, 0, len(items))
+	for _, item := range items {
+		if item != nil {
+			out = append(out, item)
+		}
+	}
+	return out, nil
 }
 
 func normalizeRequest(req *types.CardsListRequest) {

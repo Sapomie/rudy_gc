@@ -2,12 +2,16 @@ package movie
 
 import (
 	"context"
+	"time"
 
+	"rudy-gc-api/internal/model/modelx"
 	"rudy-gc-api/internal/types"
 )
 
+const movieCardCacheTTL = 7 * 24 * time.Hour
+
 func (s *Service) Detail(ctx context.Context, movieName string) (*types.MovieDetailResponse, error) {
-	card, err := s.repo.FindMovieCardByName(ctx, movieName)
+	card, err := s.loadMovieCardByName(ctx, movieName)
 	if err != nil {
 		return nil, err
 	}
@@ -44,10 +48,23 @@ func (s *Service) Detail(ctx context.Context, movieName string) (*types.MovieDet
 	if err != nil {
 		return nil, err
 	}
+	albums, err := s.repo.LoadMovieAlbums(ctx, card.MovieJavID)
+	if err != nil {
+		return nil, err
+	}
+	markedDelete, err := s.repo.IsMovieMarkedDelete(ctx, card.MovieJavID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.ApplyFetchResourceStatus(ctx, card.MovieJavID, javbusMagnets, sukebeiRows, sehuatangRows); err != nil {
+		return nil, err
+	}
 
 	return &types.MovieDetailResponse{
 		Movie:         card,
 		Media:         media,
+		MovieAlbums:   albums,
+		MarkedDelete:  markedDelete,
 		RankInfos:     ranks,
 		ScEvents:      scEvents,
 		JavbusFetch:   javbusFetch,
@@ -56,4 +73,34 @@ func (s *Service) Detail(ctx context.Context, movieName string) (*types.MovieDet
 		SukebeiRows:   sukebeiRows,
 		SehuatangRows: sehuatangRows,
 	}, nil
+}
+
+func (s *Service) loadMovieCardByName(ctx context.Context, movieName string) (*types.MovieCard, error) {
+	javID, err := s.repo.FindMovieJavIDByName(ctx, movieName)
+	if err != nil {
+		return nil, err
+	}
+	if s.cache != nil {
+		card, err := s.cache.GetMovieCard(ctx, javID)
+		if err != nil {
+			return nil, err
+		}
+		if card != nil {
+			return card, nil
+		}
+	}
+	cards, err := s.repo.LoadMovieCardsByIDs(ctx, []string{javID})
+	if err != nil {
+		return nil, err
+	}
+	if len(cards) == 0 {
+		return nil, modelx.ErrNotFound
+	}
+	card := cards[0]
+	if s.cache != nil {
+		if err := s.cache.SetMovieCard(ctx, card.MovieJavID, card, movieCardCacheTTL); err != nil {
+			return nil, err
+		}
+	}
+	return card, nil
 }
