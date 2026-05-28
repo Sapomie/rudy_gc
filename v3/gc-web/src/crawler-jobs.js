@@ -5,6 +5,9 @@ const triggerPageAPIs = {
   "/triggers/post-process": "/api/triggers/post-process",
   "/triggers/backfill": "/api/triggers/backfill",
   "/triggers/fetch-site": "/api/triggers/fetch-site",
+  "/triggers/fetch-sehuatang": "/api/triggers/fetch-sehuatang",
+  "/triggers/fetch-site-javbus-filtered": "/api/triggers/fetch-site-javbus-filtered",
+  "/triggers/fetch-site-sukebei-filtered": "/api/triggers/fetch-site-sukebei-filtered",
 };
 
 function escapeHtml(value) {
@@ -302,6 +305,75 @@ function renderStageOverview(data) {
     </div>`;
   }
 
+  if (data.OverviewExtraMode === "sehuatang_progress") {
+    return `<div class="row">
+      <div class="col-md-4 mb-2">
+        <div class="overview-item">
+          <div class="label">抓取进度（总/完成）</div>
+          <div class="value" id="sehuatangProgressText">0 / 0</div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-2">
+        <div class="overview-item">
+          <div class="label">成功/失败</div>
+          <div class="value" id="resultText">0 / 0</div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-2">
+        <div class="overview-item">
+          <div class="label">已运行时长</div>
+          <div class="value" id="elapsedText">00:00</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (data.OverviewExtraMode === "javbus_filtered_queue" || data.OverviewExtraMode === "sukebei_filtered_queue") {
+    const siteLabel = data.OverviewExtraMode === "javbus_filtered_queue" ? "JavBus" : "Sukebei";
+    return `<div class="row">
+      <div class="col-md-3 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">${escapeHtml(siteLabel)} 队列总数</div>
+          <div class="value" id="filteredQueueTotalText">0</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">待入列</div>
+          <div class="value" id="filteredQueuePendingText">0</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">成功</div>
+          <div class="value" id="filteredQueueSuccessText">0</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">失败</div>
+          <div class="value" id="filteredQueueFailedText">0</div>
+        </div>
+      </div>
+      <div class="col-12 mt-2">
+        <div class="queue-panel">
+          <div class="queue-column">
+            <div class="queue-title">待入列 / 处理中</div>
+            <div class="queue-list" id="filteredQueuePendingList">
+              <div class="queue-empty">等待任务启动</div>
+            </div>
+          </div>
+          <div class="queue-column">
+            <div class="queue-title">已完成</div>
+            <div class="queue-list" id="filteredQueueDoneList">
+              <div class="queue-empty">等待任务启动</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
   if (data.OverviewExtraMode === "post_process_stages") {
     return `<div class="row dailybest-stage-row">
       <div class="col-12 mb-2">
@@ -484,7 +556,8 @@ function renderPage(data) {
         <div class="card">
           <div class="card-body">
             <h4 class="card-title mb-3">${escapeHtml(data.TaskPanelTitle || "任务触发与实时进度")}</h4>
-            <form id="crawlerTaskForm">
+            ${data.TaskHelperText ? `<div class="alert alert-info small py-2 px-3 mb-3">${escapeHtml(data.TaskHelperText)}</div>` : ""}
+            <form id="crawlerTaskForm" class="${data.HideTaskForm ? "is-hidden" : ""}">
               <input type="hidden" id="task_type" name="task_type" value="${attr(data.DefaultTaskType || "")}">
               <div class="form-grid">
                 <div class="form-group compact-field grid-span-2">

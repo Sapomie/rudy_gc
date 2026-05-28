@@ -143,14 +143,8 @@ func (h *CrawlerAPI) StreamAll(c *gin.Context) {
 }
 
 func streamCrawlerJobEvents(c *gin.Context, history []loop.JobEvent, eventCh <-chan loop.JobEvent, stopOnDone bool) {
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
-	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("X-Accel-Buffering", "no")
-
-	flusher, ok := c.Writer.(http.Flusher)
+	flusher, ok := prepareCrawlerEventStream(c)
 	if !ok {
-		writeCrawlerError(c, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
 
@@ -188,6 +182,21 @@ func streamCrawlerJobEvents(c *gin.Context, history []loop.JobEvent, eventCh <-c
 			flusher.Flush()
 		}
 	}
+}
+
+func prepareCrawlerEventStream(c *gin.Context) (http.Flusher, bool) {
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	_ = http.NewResponseController(c.Writer).SetWriteDeadline(time.Time{})
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		writeCrawlerError(c, http.StatusInternalServerError, "streaming unsupported")
+		return nil, false
+	}
+	return flusher, true
 }
 
 func writeCrawlerJobEvent(w http.ResponseWriter, flusher http.Flusher, event loop.JobEvent) bool {
@@ -243,14 +252,8 @@ func (h *CrawlerAPI) StreamDetailLoop(c *gin.Context) {
 	history, eventCh, cancel := h.runtime.SubscribeDetailLoop()
 	defer cancel()
 
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
-	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("X-Accel-Buffering", "no")
-
-	flusher, ok := c.Writer.(http.Flusher)
+	flusher, ok := prepareCrawlerEventStream(c)
 	if !ok {
-		writeCrawlerError(c, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
 

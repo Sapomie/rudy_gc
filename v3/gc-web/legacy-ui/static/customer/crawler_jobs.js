@@ -1077,9 +1077,12 @@
                     runtime.closeStream();
                     return;
                 }
-                if (source.readyState === EventSource.CLOSED) {
+                source.close();
+                if (runtime.state.eventSource === source) {
                     runtime.state.eventSource = null;
                     runtime.state.eventStreamKey = '';
+                }
+                if (!runtime.state.reconnectTimer) {
                     runtime.state.reconnectTimer = global.setTimeout(function () {
                         runtime.state.reconnectTimer = null;
                         runtime.connectEventStream();
