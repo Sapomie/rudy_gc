@@ -487,7 +487,14 @@ type OwnedQuery struct {
 }
 
 func buildOwnedFilterInfo(c *gin.Context) *OwnedQuery {
+	return buildOwnedFilterInfoWithDefaults(c, "")
+}
+
+func buildOwnedFilterInfoWithDefaults(c *gin.Context, defaultMediaOwned string) *OwnedQuery {
 	curMediaOwned := c.Query("mowned")
+	if curMediaOwned == "" {
+		curMediaOwned = defaultMediaOwned
+	}
 
 	makeHref := func(mutator func(q mapSetter)) string {
 		q := c.Request.URL.Query()

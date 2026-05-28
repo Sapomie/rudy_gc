@@ -89,18 +89,7 @@ func (s *Service) IngestPrecheck(ctx context.Context) (*IngestNewResult, error) 
 		})
 
 		rootResult, err := s.ingestPrecheckOneRoot(ctx, root)
-		result.Precheck.Total += rootResult.Precheck.Total
-		result.Precheck.Passed += rootResult.Precheck.Passed
-		result.Precheck.Failed += rootResult.Precheck.Failed
-		result.Total += len(rootResult.Items)
-		for _, item := range rootResult.Items {
-			if item.Error == "" {
-				result.Success++
-			} else {
-				result.Failed++
-			}
-		}
-		result.Items = append(result.Items, rootResult.Items...)
+		mergeIngestRootResult(result, rootResult)
 		if err != nil {
 			return result, err
 		}
@@ -142,18 +131,7 @@ func (s *Service) IngestCommit(ctx context.Context) (result *IngestNewResult, er
 		})
 
 		rootResult, err := s.ingestCommitOneRoot(ctx, root, time.Now())
-		result.Precheck.Total += rootResult.Precheck.Total
-		result.Precheck.Passed += rootResult.Precheck.Passed
-		result.Precheck.Failed += rootResult.Precheck.Failed
-		result.Total += len(rootResult.Items)
-		for _, item := range rootResult.Items {
-			if item.Error == "" {
-				result.Success++
-			} else {
-				result.Failed++
-			}
-		}
-		result.Items = append(result.Items, rootResult.Items...)
+		mergeIngestRootResult(result, rootResult)
 		if err != nil {
 			return result, err
 		}
@@ -167,6 +145,27 @@ func (s *Service) IngestCommit(ctx context.Context) (result *IngestNewResult, er
 		FailedCount:  result.Failed,
 	})
 	return result, nil
+}
+
+func mergeIngestRootResult(result *IngestNewResult, rootResult *ingestRootResult) {
+	if result == nil || rootResult == nil {
+		return
+	}
+	result.Precheck.Total += rootResult.Precheck.Total
+	result.Precheck.Passed += rootResult.Precheck.Passed
+	result.Precheck.Failed += rootResult.Precheck.Failed
+	result.Total += len(rootResult.Items)
+	for _, item := range rootResult.Items {
+		if item == nil {
+			continue
+		}
+		if item.Error == "" {
+			result.Success++
+		} else {
+			result.Failed++
+		}
+	}
+	result.Items = append(result.Items, rootResult.Items...)
 }
 
 func buildPrecheckDoneMessage(total, passed, failed int) string {

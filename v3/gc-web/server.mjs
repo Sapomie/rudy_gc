@@ -8,7 +8,7 @@ const webRoot = __dirname;
 const staticRoot = path.join(webRoot, "legacy-ui", "static");
 const textRoot = path.resolve(webRoot, "..", "z_text");
 const apiOrigin = process.env.V3_API_ORIGIN || "http://127.0.0.1:5013";
-const port = Number(process.env.PORT || 3053);
+const port = Number(process.env.PORT || 5012);
 const volumeRoots = [
   "/Volumes/Expansion",
   "/Volumes/Getea",
@@ -24,6 +24,49 @@ const cardsPagePaths = new Set([
   "/cardsrandom",
   "/moviecarddayrank",
   "/moviecardperiodrank"
+]);
+const movieAggPagePaths = new Set([
+  "/movie-agg-all/release",
+  "/movie-agg-all/release-bucket-list",
+  "/w-media-agg/bucket-list",
+  "/w-media-agg/birth",
+  "/triggers/agg",
+  "/wdir"
+]);
+const listPagePaths = new Set([
+  "/medias",
+  "/crawl-records",
+  "/w-agg-events",
+  "/torrent-albums",
+  "/movie-albums",
+  "/d-seeds",
+  "/casts",
+  "/e-items"
+]);
+const scPagePaths = new Set([
+  "/sc-events",
+  "/sc-events-cards",
+  "/sc-pick-smart-media",
+  "/triggers/sc",
+  "/triggers/media",
+  "/triggers/media-rescan",
+  "/triggers/media-rollback",
+  "/triggers/sc-media"
+]);
+const triggerPagePaths = new Set([
+  "/triggers/dailybest",
+  "/triggers/seeds",
+  "/triggers/post-process",
+  "/triggers/backfill",
+  "/triggers/fetch-site",
+  "/triggers/fetch-sehuatang",
+  "/triggers/fetch-site-javbus-filtered",
+  "/triggers/fetch-site-sukebei-filtered"
+]);
+const fetchSiteListPagePaths = new Set([
+  "/fetch-site-javbus-list",
+  "/fetch-site-sukebei-list",
+  "/fetch-site-sehuatang-list"
 ]);
 
 const contentTypes = {
@@ -98,6 +141,47 @@ http.createServer((req, res) => {
   }
   if (cardsPagePaths.has(url.pathname)) {
     sendFile(res, path.join(webRoot, "cards.html"));
+    return;
+  }
+  if (movieAggPagePaths.has(url.pathname)) {
+    sendFile(res, path.join(webRoot, "movie-agg.html"));
+    return;
+  }
+  if (listPagePaths.has(url.pathname)) {
+    sendFile(res, path.join(webRoot, "list.html"));
+    return;
+  }
+  if (url.pathname === "/records") {
+    res.writeHead(302, {"Location": "/crawl-records"});
+    res.end();
+    return;
+  }
+  if (url.pathname === "/cast" || url.pathname.startsWith("/cast/")) {
+    sendFile(res, path.join(webRoot, "cast-detail.html"));
+    return;
+  }
+  if (scPagePaths.has(url.pathname) || url.pathname.startsWith("/sc-events/")) {
+    sendFile(res, path.join(webRoot, "sc.html"));
+    return;
+  }
+  if (triggerPagePaths.has(url.pathname)) {
+    sendFile(res, path.join(webRoot, "triggers.html"));
+    return;
+  }
+  if (fetchSiteListPagePaths.has(url.pathname)) {
+    sendFile(res, path.join(webRoot, "fetch-site-list.html"));
+    return;
+  }
+  if (url.pathname === "/crawler/tasks") {
+    sendFile(res, path.join(webRoot, "crawler-tasks.html"));
+    return;
+  }
+  if (url.pathname === "/crawler/detail-loop") {
+    sendFile(res, path.join(webRoot, "crawler-detail-loop.html"));
+    return;
+  }
+  if (url.pathname.startsWith("/movie/")) {
+    sendFile(res, path.join(webRoot, "movie-detail.html"));
     return;
   }
   if (url.pathname === "/favicon.ico") {

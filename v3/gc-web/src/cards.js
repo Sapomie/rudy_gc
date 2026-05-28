@@ -425,7 +425,7 @@ function renderRankPeriodHeader(data) {
   const renderLinks = (links, activeClass, inactiveClass) => (links || []).map((item) =>
     `<a href="${attr(item.Href || "#")}" class="btn ${item.Active ? `${activeClass} active disabled` : inactiveClass}">${escapeHtml(item.Label)}</a>`
   ).join("");
-  return `<div class="w-100 d-flex flex-column gap-3">
+  return `<div class="w-100">
     <div class="alert alert-success py-2 mb-0">
       <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
         <div class="d-flex flex-column gap-1">
@@ -448,11 +448,14 @@ function renderRankPeriodHeader(data) {
         </div>
       </div>
     </div>
-    <div class="btn-group btn-group-sm" role="group" aria-label="Period navigation">
-      <a href="${attr(data.prevHref || "#")}" class="btn btn-outline-primary ${data.prevDisabled ? "disabled" : ""}" aria-disabled="${data.prevDisabled ? "true" : "false"}">上一期</a>
-      <a href="${attr(data.nextHref || "#")}" class="btn btn-outline-primary ${data.nextDisabled ? "disabled" : ""}" aria-disabled="${data.nextDisabled ? "true" : "false"}">下一期</a>
-      <a href="${attr(data.latestHref || "/moviecardperiodrank")}" class="btn btn-outline-primary">最新</a>
-    </div>
+  </div>`;
+}
+
+function renderRankPeriodNav(data) {
+  return `<div class="btn-group btn-group-sm" role="group" aria-label="Period navigation">
+    <a href="${attr(data.prevHref || "#")}" class="btn btn-outline-primary ${data.prevDisabled ? "disabled" : ""}" aria-disabled="${data.prevDisabled ? "true" : "false"}">上一期</a>
+    <a href="${attr(data.nextHref || "#")}" class="btn btn-outline-primary ${data.nextDisabled ? "disabled" : ""}" aria-disabled="${data.nextDisabled ? "true" : "false"}">下一期</a>
+    <a href="${attr(data.latestHref || "/moviecardperiodrank")}" class="btn btn-outline-primary">最新</a>
   </div>`;
 }
 
@@ -491,7 +494,7 @@ function renderRankPeriodPage(data) {
     return;
   }
   document.getElementById("sort-bar").innerHTML = renderRankPeriodHeader(data);
-  document.getElementById("owned-filter").innerHTML = "";
+  document.getElementById("owned-filter").innerHTML = renderRankPeriodNav(data);
   document.getElementById("pagination-top").innerHTML = renderPagination(data.PageInfo);
   document.getElementById("movie-card-filter").innerHTML = "";
   document.getElementById("movie-grid").innerHTML = (data.cards || []).map(renderPeriodMovieCard).join("");
