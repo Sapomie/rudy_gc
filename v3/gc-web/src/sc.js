@@ -38,11 +38,8 @@ function formatUnixHm(value) {
 
 function humanDays(seconds) {
   const n = Number(seconds || 0);
-  if (!n) return "-";
-  const days = Math.floor(n / 86400);
-  if (days > 0) return `${days}天`;
-  const hours = Math.floor(n / 3600);
-  return `${hours}小时`;
+  if (n <= 0) return "-";
+  return `${(n / 86400).toFixed(2)} 天`;
 }
 
 function humanSize(bytes) {
@@ -56,7 +53,7 @@ function humanSize(bytes) {
 
 function monthParityClass(value) {
   const n = Number(value || 0);
-  if (!n) return "";
+  if (n <= 0) return "sc-month-even";
   const month = new Date(n * 1000).getMonth() + 1;
   return month % 2 === 0 ? "sc-month-even" : "sc-month-odd";
 }
@@ -125,12 +122,13 @@ function renderHeader(data, subtitle = "") {
 }
 
 function renderSummary(data, label) {
+  const items = Array.isArray(data.Items) ? data.Items : [];
   return `<div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
     <div class="sc-page-summary">
       <span class="sc-page-summary-label">${escapeHtml(label)}</span>
       <span class="sc-page-summary-value">${escapeHtml(data.Total ?? 0)}</span>
     </div>
-    <div class="ms-xl-auto">${renderPagination(data.PageInfo || data.pageInfo)}</div>
+    ${items.length ? `<div class="ms-xl-auto">${renderPagination(data.PageInfo || data.pageInfo)}</div>` : ""}
   </div>`;
 }
 
@@ -139,7 +137,7 @@ function linkSort(link, label, button = false) {
   if (button) {
     return `<a href="${attr(link?.Href || "#")}" class="btn btn-sm btn-outline-primary ${link?.Active ? "active disabled" : ""}">${escapeHtml(label + suffix)}</a>`;
   }
-  return `<a class="sort-link ${link?.Active ? "active" : ""}" href="${attr(link?.Href || "#")}">${escapeHtml(label + suffix)}</a>`;
+  return `<a class="sc-sort-link ${link?.Active ? "active" : ""}" href="${attr(link?.Href || "#")}">${escapeHtml(label + suffix)}</a>`;
 }
 
 function linkCell(href, text, fallback = "-") {
@@ -149,12 +147,16 @@ function linkCell(href, text, fallback = "-") {
   return `<a href="${attr(href)}">${escapeHtml(value)}</a>`;
 }
 
+function legacyPathValue(value) {
+  return encodeURI(String(value || ""));
+}
+
 function eventDetailHref(name) {
-  return `/sc-events/${encodeURIComponent(name || "")}`;
+  return `/sc-events/${legacyPathValue(name)}`;
 }
 
 function movieHref(name) {
-  return name ? `/movie/${encodeURIComponent(name)}` : "";
+  return name ? `/movie/${legacyPathValue(name)}` : "";
 }
 
 function formatUnixFull(value) {
@@ -181,19 +183,21 @@ function renderScEventList(data) {
   const sort = data.ScSortQuery || {};
   const rows = (data.Items || []).map((item) => {
     const event = item.Event || {};
+    const cooldown = Number(event.Cooldown || 0);
+    const duration = Number(event.DurationMinutes || 0);
     return `<tr class="${monthParityClass(event.ScTime)}">
-      <td><a class="sc-event-link" href="${attr(eventDetailHref(event.Name))}">
+      <td><a class="sc-event-link" href="${attr(eventDetailHref(event.Name))}" title="${attr(event.Name || "")}">
         <span class="sc-event-time"><span class="sc-event-date">${formatUnix(event.ScTime)}</span> <span class="sc-event-hour">${formatUnixHm(event.ScTime)}</span></span>
       </a></td>
       <td>${escapeHtml(item.TotalMovieCount)}</td>
       <td>${escapeHtml(item.ScMovieCount)}</td>
       <td>${linkCell(movieHref(event.ComeMovieName), event.ComeMovieName)}</td>
-      <td>${event.Cooldown ? humanDays(event.Cooldown) : '<span class="text-muted">-</span>'}</td>
-      <td>${event.DurationMinutes ? escapeHtml(event.DurationMinutes) : '<span class="text-muted">-</span>'}</td>
-      <td>${escapeHtml(event.Kind || "-")}</td>
-      <td>${linkCell(item.MovieCastHref, event.MovieCast)}</td>
-      <td>${escapeHtml(event.Vessel || "-")}</td>
-      <td>${escapeHtml(event.Fg || "-")}</td>
+      <td>${cooldown > 0 ? humanDays(cooldown) : '<span class="text-muted">-</span>'}</td>
+      <td class="sc-muted">${duration > 0 ? escapeHtml(duration) : '<span class="text-muted">-</span>'}</td>
+      <td class="sc-muted">${event.Kind ? escapeHtml(event.Kind) : '<span class="text-muted">-</span>'}</td>
+      <td class="sc-muted">${linkCell(item.MovieCastHref, event.MovieCast)}</td>
+      <td class="sc-muted">${event.Vessel ? escapeHtml(event.Vessel) : '<span class="text-muted">-</span>'}</td>
+      <td class="sc-muted">${event.Fg ? escapeHtml(event.Fg) : '<span class="text-muted">-</span>'}</td>
     </tr>`;
   });
   return `<div class="d-flex align-items-center justify-content-between mb-3">
@@ -204,7 +208,7 @@ function renderScEventList(data) {
       <div class="d-flex flex-wrap gap-2">${renderScViewSwitch(data.ScViewQuery)}<a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a></div>
     </div>
     ${renderSummary(data, "Total Events")}
-    <div class="section-card card">
+    <div class="card">
       <div class="card-body">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">

@@ -79,20 +79,121 @@ const contentTypes = {
   ".jpeg": "image/jpeg",
   ".gif": "image/gif",
   ".svg": "image/svg+xml",
+  ".mp4": "video/mp4",
+  ".m4v": "video/mp4",
+  ".mov": "video/quicktime",
+  ".webm": "video/webm",
+  ".mkv": "video/x-matroska",
+  ".avi": "video/x-msvideo",
+  ".ts": "video/mp2t",
+  ".m2ts": "video/mp2t",
   ".woff": "font/woff",
   ".woff2": "font/woff2"
 };
 
-function sendFile(res, filePath) {
+function contentTypeFor(filePath) {
   const ext = path.extname(filePath).toLowerCase();
+  return contentTypes[ext] || "application/octet-stream";
+}
+
+function sendFile(res, filePath) {
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(err.code === "ENOENT" ? 404 : 500);
       res.end(err.code === "ENOENT" ? "not found" : "server error");
       return;
     }
-    res.writeHead(200, {"Content-Type": contentTypes[ext] || "application/octet-stream"});
+    res.writeHead(200, {"Content-Type": contentTypeFor(filePath)});
     res.end(data);
+  });
+}
+
+function parseRangeHeader(rangeHeader, size) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader || "").trim());
+  if (!match) {
+    return null;
+  }
+  const rawStart = match[1];
+  const rawEnd = match[2];
+  if (rawStart === "" && rawEnd === "") {
+    return null;
+  }
+
+  let start;
+  let end;
+  if (rawStart === "") {
+    const suffixLength = Number.parseInt(rawEnd, 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
+      return null;
+    }
+    start = Math.max(size - suffixLength, 0);
+    end = size - 1;
+  } else {
+    start = Number.parseInt(rawStart, 10);
+    end = rawEnd === "" ? size - 1 : Number.parseInt(rawEnd, 10);
+  }
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || start >= size) {
+    return null;
+  }
+  return {start, end: Math.min(end, size - 1)};
+}
+
+function sendStreamFile(req, res, filePath) {
+  fs.stat(filePath, (err, stat) => {
+    if (err) {
+      res.writeHead(err.code === "ENOENT" ? 404 : 500);
+      res.end(err.code === "ENOENT" ? "not found" : "server error");
+      return;
+    }
+    if (!stat.isFile()) {
+      res.writeHead(404);
+      res.end("not found");
+      return;
+    }
+
+    const size = stat.size;
+    const contentType = contentTypeFor(filePath);
+    const baseHeaders = {
+      "Accept-Ranges": "bytes",
+      "Content-Disposition": "inline",
+      "Content-Type": contentType
+    };
+    const rangeHeader = req.headers.range;
+
+    if (rangeHeader) {
+      const range = parseRangeHeader(rangeHeader, size);
+      if (!range) {
+        res.writeHead(416, {
+          ...baseHeaders,
+          "Content-Range": `bytes */${size}`
+        });
+        res.end();
+        return;
+      }
+
+      res.writeHead(206, {
+        ...baseHeaders,
+        "Content-Length": String(range.end - range.start + 1),
+        "Content-Range": `bytes ${range.start}-${range.end}/${size}`
+      });
+      if (req.method === "HEAD") {
+        res.end();
+        return;
+      }
+      fs.createReadStream(filePath, {start: range.start, end: range.end}).pipe(res);
+      return;
+    }
+
+    res.writeHead(200, {
+      ...baseHeaders,
+      "Content-Length": String(size)
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    fs.createReadStream(filePath).pipe(res);
   });
 }
 
@@ -200,7 +301,7 @@ http.createServer((req, res) => {
       res.end("forbidden");
       return;
     }
-    sendFile(res, filePath);
+    sendStreamFile(req, res, filePath);
     return;
   }
   if (url.pathname.startsWith("/text/")) {

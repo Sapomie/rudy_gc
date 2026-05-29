@@ -57,6 +57,16 @@ function renderOwnedFilter(data) {
   const all = owned.MediaAll || {};
   const yes = owned.MediaOwned || {};
   const no = owned.MediaNotOwned || {};
+  const pageDateEdit = data.PageDateEdit || null;
+  const pageDateButton = pageDateEdit
+    ? `<button class="btn btn-sm btn-outline-primary js-open-page-date-modal"
+            type="button"
+            data-item-key="${attr(pageDateEdit.ItemKey || "")}"
+            data-item-label="${attr(pageDateEdit.Label || "")}"
+            data-item-value="${attr(pageDateEdit.Value || "")}">
+        ${escapeHtml(pageDateEdit.Label || "日期")}：${escapeHtml(pageDateEdit.DisplayValue || "未设置")}
+      </button>`
+    : "";
   return `
     <div class="d-flex flex-wrap align-items-center gap-3">
       <div class="d-flex flex-wrap align-items-center gap-2">
@@ -67,6 +77,7 @@ function renderOwnedFilter(data) {
       </div>
       <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: ${escapeHtml(data.total)}</span>
       <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#movieCardFilterCollapse" aria-expanded="false" aria-controls="movieCardFilterCollapse">筛选</button>
+      ${pageDateButton}
     </div>`;
 }
 
@@ -333,6 +344,189 @@ function renderNumberPair(label, startName, startValue, endName, endValue, expli
   </div>`;
 }
 
+function renderPageDateEditor(pageDateEdit) {
+  if (!pageDateEdit) {
+    return "";
+  }
+  return `<div class="modal fade" id="movieCardPageDateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="movieCardPageDateForm">
+          <div class="modal-header">
+            <h5 class="modal-title" id="movieCardPageDateTitle">修改${escapeHtml(pageDateEdit.Label || "日期")}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="movieCardPageDateKey" value="">
+            <div class="mb-3">
+              <label class="form-label mb-1" for="movieCardPageDateInput">日期</label>
+              <input class="form-control"
+                     id="movieCardPageDateInput"
+                     type="text"
+                     value=""
+                     placeholder="YYYY-MM-DD"
+                     inputmode="numeric"
+                     maxlength="10"
+                     pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+              <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="movieCardPageDateTodayBtn">今天</button>
+              </div>
+            </div>
+            <div class="alert d-none mb-0" id="movieCardPageDateMsg" role="alert"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-primary" id="movieCardPageDateSubmit">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>`;
+}
+
+function normalizeDateInputValue(raw) {
+  const digits = String(raw || "").replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 4) {
+    return digits;
+  }
+  if (digits.length <= 6) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+function isValidDateValue(raw) {
+  return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(raw || "").trim());
+}
+
+function todayDateString() {
+  const now = new Date();
+  const year = String(now.getFullYear());
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function initPageDateEditor() {
+  const openButton = document.querySelector(".js-open-page-date-modal");
+  const modalEl = document.getElementById("movieCardPageDateModal");
+  const form = document.getElementById("movieCardPageDateForm");
+  const titleEl = document.getElementById("movieCardPageDateTitle");
+  const keyEl = document.getElementById("movieCardPageDateKey");
+  const inputEl = document.getElementById("movieCardPageDateInput");
+  const todayBtn = document.getElementById("movieCardPageDateTodayBtn");
+  const msgEl = document.getElementById("movieCardPageDateMsg");
+  const submitBtn = document.getElementById("movieCardPageDateSubmit");
+
+  if (!openButton || !modalEl || !form || !window.bootstrap || !window.bootstrap.Modal) {
+    return;
+  }
+
+  const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  function showMsg(text, ok) {
+    if (!msgEl) {
+      return;
+    }
+    msgEl.textContent = String(text || "");
+    msgEl.className = `alert mb-0 ${ok ? "alert-success" : "alert-danger"}`;
+  }
+
+  function hideMsg() {
+    if (!msgEl) {
+      return;
+    }
+    msgEl.textContent = "";
+    msgEl.className = "alert d-none mb-0";
+  }
+
+  function setSubmitting(submitting) {
+    if (!submitBtn) {
+      return;
+    }
+    submitBtn.disabled = submitting;
+    submitBtn.textContent = submitting ? "保存中..." : "保存";
+  }
+
+  if (inputEl) {
+    inputEl.addEventListener("input", () => {
+      const normalized = normalizeDateInputValue(inputEl.value);
+      if (inputEl.value !== normalized) {
+        inputEl.value = normalized;
+      }
+    });
+  }
+
+  if (todayBtn && inputEl) {
+    todayBtn.addEventListener("click", () => {
+      inputEl.value = todayDateString();
+      hideMsg();
+      inputEl.focus();
+    });
+  }
+
+  openButton.addEventListener("click", () => {
+    const itemKey = String(openButton.getAttribute("data-item-key") || "").trim();
+    const itemLabel = String(openButton.getAttribute("data-item-label") || "").trim() || "日期";
+    const itemValue = String(openButton.getAttribute("data-item-value") || "").trim();
+    if (!itemKey || !inputEl || !keyEl) {
+      return;
+    }
+    if (titleEl) {
+      titleEl.textContent = `修改${itemLabel}`;
+    }
+    keyEl.value = itemKey;
+    inputEl.value = itemValue;
+    hideMsg();
+    modal.show();
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const itemKey = String(keyEl && keyEl.value || "").trim();
+    const itemValue = String(inputEl && inputEl.value || "").trim();
+    if (!itemKey) {
+      showMsg("缺少日期 key", false);
+      return;
+    }
+    if (!itemValue) {
+      showMsg("请选择日期", false);
+      return;
+    }
+    if (!isValidDateValue(itemValue)) {
+      showMsg("日期格式必须为 YYYY-MM-DD", false);
+      return;
+    }
+
+    setSubmitting(true);
+    fetch("/api/w-kv/date", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        item_key: itemKey,
+        item_value: itemValue
+      })
+    }).then(async (response) => {
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || `请求失败(${response.status})`);
+      }
+      return result;
+    }).then((result) => {
+      const savedValue = result && result.item_value ? String(result.item_value).trim() : itemValue;
+      const itemLabel = String(openButton.getAttribute("data-item-label") || "").trim() || "日期";
+      openButton.setAttribute("data-item-value", savedValue);
+      openButton.textContent = `${itemLabel}：${savedValue}`;
+      hideMsg();
+      setSubmitting(false);
+      modal.hide();
+    }).catch((error) => {
+      showMsg(error && error.message ? error.message : "保存失败", false);
+      setSubmitting(false);
+    });
+  });
+}
+
 function initFilterForm() {
   const form = document.getElementById("movieCardFilterForm");
   if (!form) {
@@ -473,7 +667,9 @@ function renderCardsPage(data) {
   document.getElementById("pagination-top").innerHTML = renderPagination(data.PageInfo);
   document.getElementById("movie-card-filter").innerHTML = renderFilter(data);
   document.getElementById("movie-grid").innerHTML = (data.movies || []).map(renderMovieCard).join("");
+  document.getElementById("movie-card-page-date-editor").innerHTML = renderPageDateEditor(data.PageDateEdit);
   initFilterForm();
+  initPageDateEditor();
 }
 
 function renderRankDayPage(data) {
