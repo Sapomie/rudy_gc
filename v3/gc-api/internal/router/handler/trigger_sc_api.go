@@ -253,6 +253,7 @@ type scSmartPickReq struct {
 }
 
 type scPickCopyCast struct {
+	PersonID int64  `json:"person_id"`
 	Name     string `json:"name"`
 	NameShow string `json:"name_show"`
 }
@@ -295,6 +296,7 @@ func buildPickCopyMovies(movies []*types.MovieType, source string) []scPickCopyM
 				continue
 			}
 			casts = append(casts, scPickCopyCast{
+				PersonID: c.PersonId,
 				Name:     c.Name,
 				NameShow: c.NameShow,
 			})

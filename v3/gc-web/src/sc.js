@@ -697,7 +697,7 @@ function renderScPickSmart(data) {
               <div class="row g-3 align-items-end">
                 <div class="col-md-2">
                   <label for="pickCount" class="form-label">抽取数量</label>
-                  <input type="number" min="1" class="form-control" id="pickCount" value="8" required>
+                  <input type="number" min="1" class="form-control" id="pickCount" value="32" required>
                 </div>
                 <div class="col-md-2">
                   <label for="castLastScBlockDays" class="form-label">Cast LastSc 阻断天数</label>
@@ -787,8 +787,8 @@ function renderScPickSmart(data) {
           <div class="d-flex align-items-center flex-wrap gap-2">
             <div class="btn-group btn-group-sm flex-wrap" id="pickedSortBar" role="group" aria-label="抽取结果排序">
               <button type="button" class="btn btn-outline-primary" data-sort-base="picked" data-default-dir="desc">抽取顺序</button>
-              <button type="button" class="btn btn-outline-primary active" data-sort-base="film_birth" data-default-dir="desc">下载时间</button>
-              <button type="button" class="btn btn-outline-primary" data-sort-base="releasing" data-default-dir="desc">上映日期</button>
+              <button type="button" class="btn btn-outline-primary" data-sort-base="film_birth" data-default-dir="desc">下载时间</button>
+              <button type="button" class="btn btn-outline-primary active" data-sort-base="releasing" data-default-dir="desc">上映日期</button>
               <button type="button" class="btn btn-outline-primary" data-sort-base="sc" data-default-dir="desc">SC次数</button>
               <button type="button" class="btn btn-outline-primary" data-sort-base="come" data-default-dir="desc">CO次数</button>
               <button type="button" class="btn btn-outline-primary" data-sort-base="rank" data-default-dir="asc">最高排名</button>
@@ -1707,7 +1707,7 @@ function bindSmartPick() {
   let groupSeq = 0;
   let pickedMoviesCache = [];
   let pickedTotalSizeGb = "";
-  let pickedSortBase = "film_birth";
+  let pickedSortBase = "releasing";
   let pickedSortDir = "desc";
   let copyTimer = null;
   let copyStatusBootstrapped = false;
@@ -1902,6 +1902,10 @@ function bindSmartPick() {
     const castHtml = casts.map((cast) => {
       const cname = cast?.name || "";
       const cnameShow = cast?.name_show || cname;
+      const personID = Number(cast?.person_id || 0);
+      if (personID > 0) {
+        return `<a href="/cast/${attr(personID)}" class="person-tag mr-2" title="${attr(cnameShow)}">${escapeHtml(cnameShow)}</a>`;
+      }
       return `<a href="/cards?cn=${encodeURIComponent(cname)}" class="person-tag mr-2" title="${attr(cnameShow)}">${escapeHtml(cnameShow)}</a>`;
     }).join("");
     const directorHtml = director
@@ -1976,24 +1980,17 @@ function bindSmartPick() {
       clearPickInfo();
       return;
     }
-    const totalSizeGb = info.total_size_gb || "";
     const rows = [
       ["原始候选电影", infoNumber(info, "raw_candidate_movie_count")],
-      ["参与计算 Cast", infoNumber(info, "cast_count")],
-      ["阻断后剩余 Cast", infoNumber(info, "after_block_cast_count")],
-      ["阻断后剩余 Movie", infoNumber(info, "after_block_movie_count")],
-      ["总大小(GB)", totalSizeGb || "-"],
-      ["Cast LastSc 阻断 Cast", infoNumber(info, "cast_last_sc_blocked_cast_count")],
-      ["LastSc Event 阻断 Cast", infoNumber(info, "last_sc_event_blocked_cast_count")],
-      ["Cast LastSc 影响 Movie", infoNumber(info, "cast_last_sc_blocked_movie_count")],
-      ["LastSc Event 影响 Movie", infoNumber(info, "last_sc_event_blocked_movie_count")],
-      ["演员去重跳过 Movie", infoNumber(info, "selected_actor_skipped_movie_count")]
+      ["阻断后剩余电影", infoNumber(info, "after_block_movie_count")],
+      ["参与计算演员", infoNumber(info, "cast_count")],
+      ["阻断后剩余演员", infoNumber(info, "after_block_cast_count")]
     ];
-    pickInfoSummary.textContent = `阻断后 Movie ${infoNumber(info, "after_block_movie_count")} 部`;
-    pickInfoGrid.innerHTML = rows.map((row) => `<div class="col-6 col-md-3 col-xl-2">
-      <div class="border rounded p-2 h-100">
-        <div class="text-muted small">${escapeHtml(row[0])}</div>
-        <div class="fw-semibold">${escapeHtml(row[1])}</div>
+    pickInfoSummary.textContent = `保留 Movie ${infoNumber(info, "after_block_movie_count")} 部 · Cast ${infoNumber(info, "after_block_cast_count")} 位`;
+    pickInfoGrid.innerHTML = rows.map((row) => `<div class="col-6 col-xl-3">
+      <div class="border rounded bg-light p-2 h-100">
+        <div class="text-muted small mb-1">${escapeHtml(row[0])}</div>
+        <div class="fs-5 fw-semibold lh-1">${escapeHtml(row[1])}</div>
       </div>
     </div>`).join("");
     pickInfoCard.style.display = "block";
