@@ -178,7 +178,70 @@ func (r *MovieListRepoSqlx) ListFull(ctx context.Context, req *types.ListMovieFu
 	return out, total, nil
 }
 
+func (r *MovieListRepoSqlx) ListFullIDs(ctx context.Context, req *types.ListMovieFullRequest) ([]string, error) {
+	needAlbum := needAlbum(req)
+
+	albumRows, err := r.resolveAlbums(ctx, req.AlbumName)
+	if err != nil {
+		return nil, err
+	}
+	if needAlbum && len(albumRows) == 0 {
+		return nil, nil
+	}
+	albumIDs := movieAlbumRowsToIDs(albumRows)
+
+	setA, err := r.pickFromAMovie(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	setAlbum, err := r.pickFromAlbum(ctx, req, albumIDs)
+	if err != nil {
+		return nil, err
+	}
+	setM, err := r.pickFromMinfo(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	setF, err := r.pickFromMedia(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	setS, err := r.pickFromGScStat(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if setAlbum == nil && setA == nil && setM == nil && setF == nil && setS == nil {
+		return r.listAllAMovieIDs(ctx, req)
+	}
+	return intersectNonEmpty(setAlbum, setA, setM, setF, setS), nil
+}
+
 /* ---------------- 单表直取：COUNT + ORDER/LIMIT ---------------- */
+
+func (r *MovieListRepoSqlx) listAllAMovieIDs(ctx context.Context, req *types.ListMovieFullRequest) ([]string, error) {
+	w := amovieBaseFilters(req)
+	w = append(w, r.amovieOwnershipGuards(req)...)
+
+	sb := squirrel.Select("jav_id").From(r.am.TableName())
+	if len(w) > 0 {
+		sb = sb.Where(w)
+	}
+
+	sqlStr, args, err := sb.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	if err := r.am.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ids, nil
+}
 
 func (r *MovieListRepoSqlx) listFromAMovieOnly(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.Movie, int64, error) {
 	w := amovieBaseFilters(req)

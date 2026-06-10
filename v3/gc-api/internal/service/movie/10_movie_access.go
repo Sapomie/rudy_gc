@@ -8,7 +8,6 @@ import (
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
-	"sort"
 	"time"
 )
 
@@ -80,82 +79,38 @@ func (s *Service) ListMovieFull(ctx context.Context, r *types.ListMovieFullReque
 }
 
 func (s *Service) ListMovieFullRandom(ctx context.Context, r *types.ListMovieFullRequest, n int64) (*types.ListMovieResponse, error) {
-	probe := *r
-	probe.Page, probe.PageSize = 1, 1
-
-	_, total, err := s.movieListQuery().ListFull(ctx, &probe)
+	candidateIDs, err := s.movieListQuery().ListFullIDs(ctx, r)
 	if err != nil {
 		return nil, err
 	}
+	total := int64(len(candidateIDs))
 	if total == 0 {
 		return &types.ListMovieResponse{List: []*types.MovieType{}, Total: 0, JavIds: []string{}}, nil
 	}
-	if total <= n {
-		target := *r
-		target.Page, target.PageSize = 1, n
-		return s.ListMovieFull(ctx, &target)
+	if n <= 0 || n > total {
+		n = total
 	}
-
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	posSet := make(map[int64]struct{}, n)
-	for int64(len(posSet)) < n {
-		p := rng.Int63n(total) + 1
-		posSet[p] = struct{}{}
+	for i := int64(0); i < n; i++ {
+		j := i + rng.Int63n(total-i)
+		candidateIDs[i], candidateIDs[j] = candidateIDs[j], candidateIDs[i]
 	}
-	positions := make([]int64, 0, n)
-	for p := range posSet {
-		positions = append(positions, p)
-	}
-	sort.Slice(positions, func(i, j int) bool { return positions[i] < positions[j] })
-
-	type seg struct{ start, length int64 }
-	segs := make([]seg, 0, n)
-	start := positions[0]
-	prev := positions[0]
-	for i := 1; i < len(positions); i++ {
-		if positions[i] == prev+1 {
-			prev = positions[i]
-			continue
-		}
-		segs = append(segs, seg{start: start, length: prev - start + 1})
-		start, prev = positions[i], positions[i]
-	}
-	segs = append(segs, seg{start: start, length: prev - start + 1})
-
+	pickedIDs := candidateIDs[:n]
 	allItems := make([]*types.MovieType, 0, n)
-	allIDs := make([]string, 0, n)
-	collected := int64(0)
-	for _, g := range segs {
-		if collected >= n {
-			break
-		}
-		target := *r
-		target.Page = g.start
-		target.PageSize = g.length
-
-		resp, err := s.ListMovieFull(ctx, &target)
+	pickedJavIDs := make([]string, 0, n)
+	for _, javID := range pickedIDs {
+		mt, err := s.GetMovieType(ctx, javID)
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.List) == 0 {
-			continue
-		}
-		for i := 0; i < len(resp.List) && collected < n; i++ {
-			allItems = append(allItems, resp.List[i])
-			allIDs = append(allIDs, resp.JavIds[i])
-			collected++
-		}
+		allItems = append(allItems, mt)
+		pickedJavIDs = append(pickedJavIDs, javID)
 	}
-
-	rng.Shuffle(len(allItems), func(i, j int) {
-		allItems[i], allItems[j] = allItems[j], allItems[i]
-		allIDs[i], allIDs[j] = allIDs[j], allIDs[i]
-	})
 
 	return &types.ListMovieResponse{
 		List:   allItems,
 		Total:  total,
-		JavIds: allIDs,
+		JavIds: pickedJavIDs,
 	}, nil
 }
 

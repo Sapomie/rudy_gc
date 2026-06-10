@@ -503,9 +503,19 @@ func pickSmartMovieFromGroup(
 	now time.Time,
 	rnd *rand.Rand,
 ) (*types.MovieType, error) {
-	eligiblePos := make([]int, 0, len(group.alive))
-	weights := make([]float64, 0, len(group.alive))
-	sum := 0.0
+	type actorMovieChoice struct {
+		pos    int
+		weight float64
+	}
+	type actorBucket struct {
+		actorWeight    float64
+		movieChoices   []actorMovieChoice
+		movieWeightSum float64
+	}
+
+	actorBuckets := make([]actorBucket, 0, len(group.alive))
+	actorBucketIndex := make(map[string]int, len(group.alive))
+	actorWeightSum := 0.0
 
 	for pos, idx := range group.alive {
 		if idx < 0 || idx >= len(group.candidates) {
@@ -519,22 +529,52 @@ func pickSmartMovieFromGroup(
 		if w < 0.0001 {
 			w = 0.0001
 		}
-		eligiblePos = append(eligiblePos, pos)
-		weights = append(weights, w)
-		sum += w
+
+		actorKeys := primaryActorKeys(movie)
+		if len(actorKeys) == 0 {
+			actorKeys = []string{"m:" + movie.JavId}
+		}
+		actorContribution := w / float64(len(actorKeys))
+		for _, actorKey := range actorKeys {
+			bucketIdx, ok := actorBucketIndex[actorKey]
+			if !ok {
+				bucketIdx = len(actorBuckets)
+				actorBucketIndex[actorKey] = bucketIdx
+				actorBuckets = append(actorBuckets, actorBucket{})
+			}
+			actorBuckets[bucketIdx].actorWeight += actorContribution
+			actorBuckets[bucketIdx].movieChoices = append(actorBuckets[bucketIdx].movieChoices, actorMovieChoice{
+				pos:    pos,
+				weight: w,
+			})
+			actorBuckets[bucketIdx].movieWeightSum += w
+			actorWeightSum += actorContribution
+		}
 	}
 
-	if len(eligiblePos) == 0 {
+	if len(actorBuckets) == 0 {
 		return nil, errors.New("group has no eligible movie")
 	}
 
-	r := rnd.Float64() * sum
+	r := rnd.Float64() * actorWeightSum
 	acc := 0.0
-	chosenPos := eligiblePos[len(eligiblePos)-1]
-	for i, pos := range eligiblePos {
-		acc += weights[i]
+	chosenActorIdx := len(actorBuckets) - 1
+	for i := range actorBuckets {
+		acc += actorBuckets[i].actorWeight
 		if r <= acc {
-			chosenPos = pos
+			chosenActorIdx = i
+			break
+		}
+	}
+
+	chosenActor := actorBuckets[chosenActorIdx]
+	r = rnd.Float64() * chosenActor.movieWeightSum
+	acc = 0.0
+	chosenPos := chosenActor.movieChoices[len(chosenActor.movieChoices)-1].pos
+	for _, choice := range chosenActor.movieChoices {
+		acc += choice.weight
+		if r <= acc {
+			chosenPos = choice.pos
 			break
 		}
 	}
