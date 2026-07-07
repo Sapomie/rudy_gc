@@ -56,7 +56,7 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 
 	for _, movieJavID := range movieJavIDs {
 		info, ok := movieAgg[movieJavID]
-		if !ok || info.ScTimes <= 0 {
+		if !ok {
 			continue
 		}
 

@@ -32,6 +32,10 @@ type scEventUpdateReq struct {
 	Remarks         string `json:"remarks"`
 }
 
+type scEventMovieStatusUpdateReq struct {
+	IsSc int64 `json:"isSc"`
+}
+
 func (h *ScEventAPI) Update(c *gin.Context) {
 	name := strings.TrimSpace(c.Param("name"))
 	if name == "" {
@@ -76,6 +80,42 @@ func (h *ScEventAPI) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"ok":      true,
 		"message": "SC Event 信息更新成功",
+		"item":    item,
+	})
+}
+
+func (h *ScEventAPI) UpdateMovieStatus(c *gin.Context) {
+	name := strings.TrimSpace(c.Param("name"))
+	movieJavID := strings.TrimSpace(c.Param("movie_jav_id"))
+	if name == "" || movieJavID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 SC 事件名或影片番号"})
+		return
+	}
+
+	var req scEventMovieStatusUpdateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	item, err := h.scSvc.UpdateScEventMovieStatus(c.Request.Context(), name, movieJavID, req.IsSc)
+	if err != nil {
+		if errors.Is(err, types.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "SC 事件影片不存在"})
+			return
+		}
+		var badReqErr *types.BadRequestError
+		if errors.As(err, &badReqErr) {
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": badReqErr.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"message": "SC Event 影片状态更新成功",
 		"item":    item,
 	})
 }

@@ -21,6 +21,8 @@ type Progress struct {
 	PhaseTotalCount   int
 	PhaseSuccessCount int
 	PhaseFailedCount  int
+	Stats             map[string]int64
+	StatsText         map[string]string
 }
 
 type QueueItem struct {

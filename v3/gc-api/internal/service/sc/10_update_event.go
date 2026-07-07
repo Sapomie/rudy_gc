@@ -114,6 +114,106 @@ func (s *Service) UpdateEventMeta(ctx context.Context, in *types.ScEventEditForm
 	return mapScModelToTypes(row), nil
 }
 
+func (s *Service) UpdateScEventMovieStatus(ctx context.Context, scName, movieJavID string, isSc int64) (*types.GList, error) {
+	scName = strings.TrimSpace(scName)
+	movieJavID = strings.TrimSpace(movieJavID)
+	if scName == "" || movieJavID == "" {
+		return nil, types.ErrNotFound
+	}
+	if isSc != consts.GListIsSc && isSc != consts.GListIsNotSc {
+		return nil, &types.BadRequestError{Message: "影片 SC 状态无效"}
+	}
+
+	eventRow, err := s.deps.ScModel.FindOneByName(ctx, scName)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, types.ErrNotFound
+		}
+		return nil, err
+	}
+	if eventRow == nil {
+		return nil, types.ErrNotFound
+	}
+
+	glRows, err := s.deps.GListModel.ListByScName(ctx, scName)
+	if err != nil {
+		return nil, err
+	}
+
+	var target *moviex.GList
+	for _, row := range glRows {
+		if row == nil {
+			continue
+		}
+		if strings.TrimSpace(row.MovieJavId) == movieJavID {
+			target = row
+			break
+		}
+	}
+	if target == nil {
+		return nil, types.ErrNotFound
+	}
+
+	now := time.Now().Unix()
+	changed := false
+	eventChanged := false
+	affectedMovieJavIDs := map[string]struct{}{movieJavID: {}}
+	if target.IsSc != isSc {
+		target.IsSc = isSc
+		target.UpdatedOn = now
+		changed = true
+	}
+	if isSc == consts.GListIsNotSc && target.IsCome == consts.GListIsCome {
+		target.IsCome = consts.GListIsNotCome
+		target.UpdatedOn = now
+		changed = true
+		eventRow.ComeMovieName = ""
+		eventRow.MovieCast = ""
+		eventRow.UpdatedOn = now
+		eventChanged = true
+	}
+	if changed {
+		if err := s.deps.GListModel.Update(ctx, target); err != nil {
+			return nil, err
+		}
+	}
+
+	scMovieCount := int64(0)
+	for _, row := range glRows {
+		if row == nil {
+			continue
+		}
+		rowIsSc := row.IsSc
+		if row.Id == target.Id {
+			rowIsSc = target.IsSc
+		}
+		if rowIsSc == consts.GListIsSc {
+			scMovieCount++
+		}
+	}
+	if eventRow.MovieNumber != scMovieCount {
+		eventRow.MovieNumber = scMovieCount
+		eventRow.UpdatedOn = now
+		eventChanged = true
+	}
+	if eventChanged {
+		if err := s.deps.ScModel.Update(ctx, eventRow); err != nil {
+			return nil, err
+		}
+	}
+
+	if changed {
+		if err := s.refreshPersonScSnapshotsByScNames(ctx, now, scName); err != nil {
+			return nil, err
+		}
+		if err := s.AddMovieAndCastScInfo(ctx, affectedMovieJavIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	return mapGListModelToTypes(target), nil
+}
+
 func (s *Service) resolveScEventComeMovie(ctx context.Context, glRows []*moviex.GList, comeMovieJavID string) (string, []string, error) {
 	comeMovieJavID = strings.TrimSpace(comeMovieJavID)
 	if comeMovieJavID == "" {

@@ -38,6 +38,8 @@ type JobEvent struct {
 	PhaseSuccessCount int                     `json:"phase_success_count,omitempty"`
 	PhaseFailedCount  int                     `json:"phase_failed_count,omitempty"`
 	PhaseStats        map[string]JobPhaseStat `json:"phase_stats,omitempty"`
+	Stats             map[string]int64        `json:"stats,omitempty"`
+	StatsText         map[string]string       `json:"stats_text,omitempty"`
 	Level             string                  `json:"level,omitempty"`
 	Line              string                  `json:"line,omitempty"`
 	StartedAt         int64                   `json:"started_at"`
@@ -69,6 +71,8 @@ type JobSnapshot struct {
 	DoneItems       []taskctx.QueueItem     `json:"done_items,omitempty"`
 	CurrentPhaseKey string                  `json:"current_phase_key,omitempty"`
 	PhaseStats      map[string]JobPhaseStat `json:"phase_stats,omitempty"`
+	Stats           map[string]int64        `json:"stats,omitempty"`
+	StatsText       map[string]string       `json:"stats_text,omitempty"`
 	At              int64                   `json:"at"`
 }
 
@@ -535,6 +539,28 @@ func cloneManagedPhaseStats(in map[string]JobPhaseStat) map[string]JobPhaseStat 
 	return out
 }
 
+func cloneManagedInt64Map(in map[string]int64) map[string]int64 {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string]int64, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func cloneManagedStringMap(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 func recordManagedJobEvent(job *managedJob, event JobEvent) {
 	if job == nil {
 		return
@@ -633,6 +659,8 @@ func snapshotManagedJob(job *managedJob) JobSnapshot {
 		item.PendingItems = cloneManagedQueueItems(event.PendingItems)
 		item.RunningItems = cloneManagedQueueItems(event.RunningItems)
 		item.DoneItems = cloneManagedQueueItems(event.DoneItems)
+		item.Stats = cloneManagedInt64Map(event.Stats)
+		item.StatsText = cloneManagedStringMap(event.StatsText)
 		item.At = event.At
 		if item.CurrentPhaseKey == "" {
 			item.CurrentPhaseKey = event.CurrentPhaseKey

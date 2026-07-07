@@ -180,6 +180,8 @@ func (l *FetchLoopService) publishTaskProgress(jobID, taskType string, progress 
 		PhaseTotalCount:   progress.PhaseTotalCount,
 		PhaseSuccessCount: progress.PhaseSuccessCount,
 		PhaseFailedCount:  progress.PhaseFailedCount,
+		Stats:             cloneManagedInt64Map(progress.Stats),
+		StatsText:         cloneManagedStringMap(progress.StatsText),
 		At:                time.Now().Unix(),
 	}
 	if snapshot := l.findJob(jobID); snapshot != nil {

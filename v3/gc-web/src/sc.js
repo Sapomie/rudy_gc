@@ -531,6 +531,38 @@ function renderScEventFailedItems(items) {
   </div>`;
 }
 
+function renderScEventMovieStatusControls(item, eventName) {
+  const entry = item.Entry || {};
+  const movieJavId = String(entry.MovieJavId || "").trim();
+  const isSc = Number(entry.IsSc || 0) === GLIST_IS_SC;
+  const isCome = Number(entry.IsCome || 0) === 2;
+  if (!movieJavId || !eventName) {
+    return "";
+  }
+  const apiURL = `/api/sc-events/${encodeURIComponent(eventName)}/movies/${encodeURIComponent(movieJavId)}/status`;
+  return `<li class="list-group-item position-relative" style="z-index:2;">
+    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="badge ${isSc ? "bg-success" : "bg-secondary"}">${isSc ? "有 SC" : "无 SC"}</span>
+        ${isCome ? '<span class="badge bg-danger">Come</span>' : ""}
+      </div>
+      <div class="btn-group btn-group-sm" role="group" aria-label="编辑影片 SC 状态">
+        <button type="button" class="btn ${isSc ? "btn-success" : "btn-outline-success"} js-sc-event-movie-status" data-url="${attr(apiURL)}" data-is-sc="${GLIST_IS_SC}" ${isSc ? "disabled" : ""}>设为有 SC</button>
+        <button type="button" class="btn ${isSc ? "btn-outline-secondary" : "btn-secondary"} js-sc-event-movie-status" data-url="${attr(apiURL)}" data-is-sc="${GLIST_IS_NOT_SC}" ${!isSc ? "disabled" : ""}>设为无 SC</button>
+      </div>
+    </div>
+  </li>`;
+}
+
+function renderScEventMovieCard(item, eventName) {
+  if (!item || !item.MovieType) return "";
+  const statusControls = renderScEventMovieStatusControls(item, eventName);
+  return renderMovieCard(item.MovieType).replace(
+    '<ul class="list-group list-group-flush">',
+    `<ul class="list-group list-group-flush">${statusControls}`
+  );
+}
+
 function renderScEventEmptyState(movieFilter) {
   if (movieFilter === "all") {
     return '<div class="sc-empty-state">本次 SC 还没有电影明细。</div>';
@@ -544,7 +576,7 @@ function renderScEventEmptyState(movieFilter) {
 function renderScEventDetail(data) {
   const event = data.Event || {};
   const items = data.Items || [];
-  const movieCards = items.map((item) => item.MovieType ? renderMovieCard(item.MovieType) : "").join("");
+  const movieCards = items.map((item) => renderScEventMovieCard(item, event.Name || "")).join("");
   const moviesBlock = items.length
     ? `<section aria-label="SC Movies">
         <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" id="movie-grid">${movieCards}</div>
@@ -3185,6 +3217,43 @@ function bindScEventDetail() {
       showInlineMsg(formMsgEl, err.message || "保存失败", false, "mt-3 mb-0");
       setSubmitting(false);
     }
+  });
+
+  document.querySelectorAll(".js-sc-event-movie-status").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const url = String(button.getAttribute("data-url") || "");
+      const isSc = Number(button.getAttribute("data-is-sc") || 0);
+      if (!url || (isSc !== GLIST_IS_SC && isSc !== GLIST_IS_NOT_SC)) {
+        return;
+      }
+      const card = button.closest(".card");
+      const buttons = Array.from(card ? card.querySelectorAll(".js-sc-event-movie-status") : [button]);
+      const previousDisabled = buttons.map((btn) => btn.disabled);
+      buttons.forEach((btn) => {
+        btn.disabled = true;
+      });
+      hideInlineMsg(pageMsgEl, "mb-3");
+
+      try {
+        const data = await fetchJSON(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({isSc})
+        });
+        if (data && data.ok === false) {
+          throw new Error(data.error || "保存失败");
+        }
+        showInlineMsg(pageMsgEl, data.message || "影片状态更新成功", true, "mb-3");
+        window.setTimeout(() => {
+          window.location.reload();
+        }, 250);
+      } catch (err) {
+        showInlineMsg(pageMsgEl, err.message || "影片状态更新失败", false, "mb-3");
+        buttons.forEach((btn, idx) => {
+          btn.disabled = previousDisabled[idx];
+        });
+      }
+    });
   });
 
   rebuildMovieCastOptions(comeMovieEl.value, movieCastEl.getAttribute("data-selected-value") || movieCastEl.value || "");

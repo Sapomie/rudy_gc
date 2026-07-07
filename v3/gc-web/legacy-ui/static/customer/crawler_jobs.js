@@ -4,6 +4,9 @@
     const TASK_FETCH_JAVBUS_FILTERED = 'spider_fetch_javbus_filtered_resources';
     const TASK_FETCH_SUKEBEI_FILTERED = 'spider_fetch_sukebei_filtered_resources';
     const TASK_FETCH_SEHUATANG = 'spider_fetch_sehuatang_magnets';
+    const TASK_FETCH_SEHUATANG_SH = 'spider_fetch_sehuatang_sh_threads';
+    const TASK_FETCH_SEHUATANG_SH_LIST = 'spider_fetch_sehuatang_sh_thread_list';
+    const TASK_FETCH_SEHUATANG_SH_DETAIL = 'spider_fetch_sehuatang_sh_thread_detail';
     const FETCH_SITE_TASK_TYPES = ['spider_fetch_javbus_resources', 'spider_fetch_sukebei_resources'];
     const FETCH_SITE_DEFAULT_NUMBER = 1000000;
     const FETCH_SITE_DEFAULT_DURATION_DAYS = 5;
@@ -25,6 +28,9 @@
         spider_fetch_sukebei_filtered_resources: 'Sukebei 列表筛选抓取',
         spider_fetch_site_both_resources: 'JavBus + Sukebei 同时抓取',
         spider_fetch_sehuatang_magnets: '色花堂磁力抓取',
+        spider_fetch_sehuatang_sh_threads: '色花堂帖子新流程',
+        spider_fetch_sehuatang_sh_thread_list: '色花堂帖子列表抓取',
+        spider_fetch_sehuatang_sh_thread_detail: '色花堂帖子详情补全',
         spider_rebuild_cast_rank: '演员 Rank 回填',
         spider_rebuild_actor_rank: '单演员 Rank',
         sc_rebuild_stats: 'SC 统计回填',
@@ -171,6 +177,7 @@
                 fetchSitePreviewPage: 1,
                 fetchSitePreviewTotalPages: 0,
                 fetchSitePreviewPageSize: 100,
+                shDetailPreviewRows: [],
                 detailLoop: null,
                 eventEntries: [],
                 eventCount: 0,
@@ -219,6 +226,14 @@
         runtime.fetchSiteSukebeiProgressText = document.getElementById('fetchSiteSukebeiProgressText');
         runtime.fetchSiteSukebeiResultText = document.getElementById('fetchSiteSukebeiResultText');
         runtime.sehuatangProgressText = document.getElementById('sehuatangProgressText');
+        runtime.sehuatangPageProgressText = document.getElementById('sehuatangPageProgressText');
+        runtime.sehuatangCurrentPageText = document.getElementById('sehuatangCurrentPageText');
+        runtime.sehuatangSeenText = document.getElementById('sehuatangSeenText');
+        runtime.sehuatangMatchedText = document.getElementById('sehuatangMatchedText');
+        runtime.sehuatangSkippedForumText = document.getElementById('sehuatangSkippedForumText');
+        runtime.sehuatangSkippedExistingText = document.getElementById('sehuatangSkippedExistingText');
+        runtime.sehuatangFetchedText = document.getElementById('sehuatangFetchedText');
+        runtime.sehuatangFailedText = document.getElementById('sehuatangFailedText');
         runtime.filteredQueueTotalText = document.getElementById('filteredQueueTotalText') || document.getElementById('sukebeiFilteredTotalText');
         runtime.filteredQueuePendingText = document.getElementById('filteredQueuePendingText') || document.getElementById('sukebeiFilteredPendingText');
         runtime.filteredQueueSuccessText = document.getElementById('filteredQueueSuccessText') || document.getElementById('sukebeiFilteredSuccessText');
@@ -245,9 +260,17 @@
         runtime.autoFetchSiteFieldWrap = document.getElementById('autoFetchSiteFieldWrap');
         runtime.fetchSehuatangListURLFieldWrap = document.getElementById('fetchSehuatangListURLFieldWrap');
         runtime.fetchSehuatangKeywordFieldWrap = document.getElementById('fetchSehuatangKeywordFieldWrap');
+        runtime.fetchSehuatangStopOnExistingFieldWrap = document.getElementById('fetchSehuatangStopOnExistingFieldWrap');
         runtime.fetchSehuatangStartPageFieldWrap = document.getElementById('fetchSehuatangStartPageFieldWrap');
         runtime.fetchSehuatangEndPageFieldWrap = document.getElementById('fetchSehuatangEndPageFieldWrap');
         runtime.fetchSehuatangPersistModeFieldWrap = document.getElementById('fetchSehuatangPersistModeFieldWrap');
+        runtime.fetchSehuatangSHModeFieldWrap = document.getElementById('fetchSehuatangSHModeFieldWrap');
+        runtime.fetchSehuatangSHForumsFieldWrap = document.getElementById('fetchSehuatangSHForumsFieldWrap');
+        runtime.fetchSehuatangSHDetailStatusFieldWrap = document.getElementById('fetchSehuatangSHDetailStatusFieldWrap');
+        runtime.fetchSehuatangSHDetailTitleFieldWrap = document.getElementById('fetchSehuatangSHDetailTitleFieldWrap');
+        runtime.fetchSehuatangSHPostTimeFromFieldWrap = document.getElementById('fetchSehuatangSHPostTimeFromFieldWrap');
+        runtime.fetchSehuatangSHPostTimeToFieldWrap = document.getElementById('fetchSehuatangSHPostTimeToFieldWrap');
+        runtime.fetchSehuatangSHDetailLimitFieldWrap = document.getElementById('fetchSehuatangSHDetailLimitFieldWrap');
         runtime.fetchSiteFilterPanel = document.getElementById('fetchSiteFilterPanel');
         runtime.toggleFetchSiteFilterBtn = document.getElementById('toggleFetchSiteFilterBtn');
         runtime.fetchSiteFilterWrap = document.getElementById('fetchSiteFilterWrap');
@@ -267,9 +290,23 @@
         runtime.autoFetchSiteInput = document.getElementById('task_auto_fetch_site');
         runtime.fetchSehuatangListURLInput = document.getElementById('task_sehuatang_list_url');
         runtime.fetchSehuatangKeywordInput = document.getElementById('task_sehuatang_keyword');
+        runtime.fetchSehuatangStopOnExistingInput = document.getElementById('task_sehuatang_stop_on_existing');
         runtime.fetchSehuatangStartPageInput = document.getElementById('task_sehuatang_start_page');
         runtime.fetchSehuatangEndPageInput = document.getElementById('task_sehuatang_end_page');
         runtime.fetchSehuatangPersistModeInput = document.getElementById('task_sehuatang_persist_mode');
+        runtime.fetchSehuatangSHModeInput = document.getElementById('task_sehuatang_sh_fetch_mode');
+        runtime.fetchSehuatangSHDetailKeywordInput = document.getElementById('task_sehuatang_sh_detail_keyword');
+        runtime.fetchSehuatangSHPostTimeFromInput = document.getElementById('task_sehuatang_sh_post_time_from');
+        runtime.fetchSehuatangSHPostTimeToInput = document.getElementById('task_sehuatang_sh_post_time_to');
+        runtime.fetchSehuatangSHDetailLimitInput = document.getElementById('task_sehuatang_sh_detail_limit');
+        runtime.previewSHDetailBtn = document.getElementById('previewSHDetailBtn');
+        runtime.shDetailPreviewPanel = document.getElementById('shDetailPreviewPanel');
+        runtime.shDetailPreviewSummary = document.getElementById('shDetailPreviewSummary');
+        runtime.shDetailPreviewMetaText = document.getElementById('shDetailPreviewMetaText');
+        runtime.shDetailPreviewTableBody = document.getElementById('shDetailPreviewTableBody');
+        runtime.selectAllSHDetailPreviewBtn = document.getElementById('selectAllSHDetailPreviewBtn');
+        runtime.clearSHDetailPreviewBtn = document.getElementById('clearSHDetailPreviewBtn');
+        runtime.hideSHDetailPreviewBtn = document.getElementById('hideSHDetailPreviewBtn');
 
         runtime.escapeHtml = function (input) {
             return String(input || '')
@@ -413,6 +450,32 @@
                 return '-';
             }
             return '第 ' + handled + '/' + total + ' 页';
+        };
+
+        runtime.jobStats = function (job) {
+            if (!job || !job.stats || typeof job.stats !== 'object') {
+                return {};
+            }
+            return job.stats;
+        };
+
+        runtime.jobStatsText = function (job) {
+            if (!job || !job.stats_text || typeof job.stats_text !== 'object') {
+                return {};
+            }
+            return job.stats_text;
+        };
+
+        runtime.jobStatNumber = function (job, key) {
+            return Number(runtime.jobStats(job)[key] || 0);
+        };
+
+        runtime.hasJobStat = function (job, key) {
+            return Object.prototype.hasOwnProperty.call(runtime.jobStats(job), key);
+        };
+
+        runtime.jobStatText = function (job, key) {
+            return String(runtime.jobStatsText(job)[key] || '').trim();
         };
 
         runtime.stageOverviewPhaseKeyFromStage = function (stage) {
@@ -635,6 +698,49 @@
             return String(taskType || '').trim() === TASK_FETCH_SEHUATANG;
         };
 
+        runtime.isFetchSehuatangSHTaskType = function (taskType) {
+            return String(taskType || '').trim() === TASK_FETCH_SEHUATANG_SH;
+        };
+
+        runtime.isFetchSehuatangSHListTaskType = function (taskType) {
+            return String(taskType || '').trim() === TASK_FETCH_SEHUATANG_SH_LIST;
+        };
+
+        runtime.isFetchSehuatangSHDetailTaskType = function (taskType) {
+            return String(taskType || '').trim() === TASK_FETCH_SEHUATANG_SH_DETAIL;
+        };
+
+        runtime.checkedSehuatangSHForumIDs = function () {
+            return Array.from(runtime.form.querySelectorAll('input[name="target_forum_ids"]:checked')).map(function (input) {
+                return String(input && input.value || '').trim();
+            }).filter(function (value) {
+                return value !== '';
+            });
+        };
+
+        runtime.checkedSHDetailStatuses = function () {
+            return Array.from(runtime.form.querySelectorAll('input[name="detail_statuses"]:checked')).map(function (input) {
+                return String(input && input.value || '').trim();
+            }).filter(function (value) {
+                return value !== '';
+            });
+        };
+
+        runtime.fetchSehuatangSHMode = function () {
+            return String(runtime.fetchSehuatangSHModeInput && runtime.fetchSehuatangSHModeInput.value || 'search').trim() === 'forum' ? 'forum' : 'search';
+        };
+
+        runtime.syncFetchSehuatangStopMode = function () {
+            if (!runtime.fetchSehuatangStopOnExistingInput || !runtime.fetchSehuatangStartPageInput) {
+                return;
+            }
+            const stopOnExisting = !!runtime.fetchSehuatangStopOnExistingInput.checked;
+            runtime.fetchSehuatangStartPageInput.disabled = stopOnExisting;
+            if (stopOnExisting) {
+                runtime.fetchSehuatangStartPageInput.value = '1';
+            }
+        };
+
         runtime.syncFetchSiteFilterToggleText = function () {
             if (!runtime.toggleFetchSiteFilterBtn) {
                 return;
@@ -646,6 +752,10 @@
             const taskType = String(runtime.taskTypeInput && runtime.taskTypeInput.value || '');
             const isFetchSiteTask = runtime.isFetchSiteTaskType(taskType);
             const isFetchSehuatangTask = runtime.isFetchSehuatangTaskType(taskType);
+            const isFetchSehuatangSHTask = runtime.isFetchSehuatangSHTaskType(taskType);
+            const isFetchSehuatangSHListTask = runtime.isFetchSehuatangSHListTaskType(taskType);
+            const isFetchSehuatangSHDetailTask = runtime.isFetchSehuatangSHDetailTaskType(taskType);
+            const isFetchSehuatangSHSearch = isFetchSehuatangSHTask && runtime.fetchSehuatangSHMode() === 'search';
             runtime.toggleField(runtime.nameFieldWrap, taskType === 'spider_seed_by_name');
             runtime.toggleField(
                 runtime.numberFieldWrap,
@@ -661,13 +771,25 @@
             );
             runtime.toggleField(runtime.autoFetchSiteFieldWrap, runtime.isAutoFetchSiteTaskType(taskType));
             runtime.toggleField(runtime.fetchSehuatangListURLFieldWrap, isFetchSehuatangTask);
-            runtime.toggleField(runtime.fetchSehuatangKeywordFieldWrap, isFetchSehuatangTask);
-            runtime.toggleField(runtime.fetchSehuatangStartPageFieldWrap, isFetchSehuatangTask);
-            runtime.toggleField(runtime.fetchSehuatangEndPageFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangKeywordFieldWrap, isFetchSehuatangTask || isFetchSehuatangSHSearch);
+            runtime.toggleField(runtime.fetchSehuatangStopOnExistingFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangStartPageFieldWrap, isFetchSehuatangTask || isFetchSehuatangSHTask || isFetchSehuatangSHListTask);
+            runtime.toggleField(runtime.fetchSehuatangEndPageFieldWrap, isFetchSehuatangTask || isFetchSehuatangSHTask || isFetchSehuatangSHListTask);
             runtime.toggleField(runtime.fetchSehuatangPersistModeFieldWrap, isFetchSehuatangTask);
+            runtime.toggleField(runtime.fetchSehuatangSHModeFieldWrap, isFetchSehuatangSHTask);
+            runtime.toggleField(runtime.fetchSehuatangSHForumsFieldWrap, isFetchSehuatangSHTask || isFetchSehuatangSHListTask || isFetchSehuatangSHDetailTask);
+            runtime.toggleField(runtime.fetchSehuatangSHDetailStatusFieldWrap, isFetchSehuatangSHDetailTask);
+            runtime.toggleField(runtime.fetchSehuatangSHDetailTitleFieldWrap, isFetchSehuatangSHDetailTask);
+            runtime.toggleField(runtime.fetchSehuatangSHPostTimeFromFieldWrap, isFetchSehuatangSHDetailTask);
+            runtime.toggleField(runtime.fetchSehuatangSHPostTimeToFieldWrap, isFetchSehuatangSHDetailTask);
+            runtime.toggleField(runtime.fetchSehuatangSHDetailLimitFieldWrap, isFetchSehuatangSHDetailTask);
+            runtime.syncFetchSehuatangStopMode();
             if (!isFetchSiteTask) {
                 runtime.state.fetchSiteFilterExpanded = false;
                 runtime.hideFetchSitePreview();
+            }
+            if (!isFetchSehuatangSHDetailTask) {
+                runtime.hideSHDetailPreview();
             }
             runtime.toggleField(runtime.fetchSiteFilterPanel, isFetchSiteTask);
             runtime.toggleField(runtime.fetchSiteFilterWrap, isFetchSiteTask && runtime.state.fetchSiteFilterExpanded);
@@ -743,9 +865,13 @@
                 payload.start_page = String(runtime.fetchSehuatangStartPageInput && runtime.fetchSehuatangStartPageInput.value || '').trim();
                 payload.end_page = String(runtime.fetchSehuatangEndPageInput && runtime.fetchSehuatangEndPageInput.value || '').trim();
                 payload.persist_mode = String(runtime.fetchSehuatangPersistModeInput && runtime.fetchSehuatangPersistModeInput.value || '').trim();
+                payload.stop_on_existing = !!(runtime.fetchSehuatangStopOnExistingInput && runtime.fetchSehuatangStopOnExistingInput.checked);
                 const defaults = runtime.config && runtime.config.fetchSehuatangDefaults ? runtime.config.fetchSehuatangDefaults : {};
                 if (payload.list_url === '') {
                     payload.list_url = String(defaults.listUrl || '').trim();
+                }
+                if (payload.stop_on_existing) {
+                    payload.start_page = '1';
                 }
                 if (payload.start_page === '') {
                     payload.start_page = String(defaults.startPage || '').trim();
@@ -771,6 +897,73 @@
                 payload.end_page = endPageNumber;
                 if (payload.persist_mode !== 'skip_existing' && payload.persist_mode !== 'upsert_all') {
                     payload.persist_mode = 'skip_existing';
+                }
+            }
+            if (runtime.isFetchSehuatangSHTaskType(taskType)) {
+                payload.fetch_mode = runtime.fetchSehuatangSHMode();
+                payload.keyword = String(runtime.fetchSehuatangKeywordInput && runtime.fetchSehuatangKeywordInput.value || '').trim();
+                payload.start_page = String(runtime.fetchSehuatangStartPageInput && runtime.fetchSehuatangStartPageInput.value || '').trim();
+                payload.end_page = String(runtime.fetchSehuatangEndPageInput && runtime.fetchSehuatangEndPageInput.value || '').trim();
+                payload.target_forum_ids = runtime.checkedSehuatangSHForumIDs();
+                const defaults = runtime.config && runtime.config.fetchSehuatangDefaults ? runtime.config.fetchSehuatangDefaults : {};
+                if (payload.start_page === '') {
+                    payload.start_page = String(defaults.startPage || '').trim();
+                }
+                if (payload.end_page === '') {
+                    payload.end_page = String(defaults.endPage || '').trim();
+                }
+                const startPageNumber = Number(payload.start_page);
+                const endPageNumber = Number(payload.end_page);
+                if (!Number.isFinite(startPageNumber) || startPageNumber <= 0) {
+                    throw new Error('请填写合法的起始页');
+                }
+                if (!Number.isFinite(endPageNumber) || endPageNumber <= 0) {
+                    throw new Error('请填写合法的结束页');
+                }
+                if (endPageNumber < startPageNumber) {
+                    throw new Error('结束页不能小于起始页');
+                }
+                if (payload.fetch_mode === 'search' && payload.keyword === '') {
+                    throw new Error('请填写搜索关键词');
+                }
+                if (!payload.target_forum_ids.length) {
+                    throw new Error('请选择目标版块');
+                }
+                payload.start_page = startPageNumber;
+                payload.end_page = endPageNumber;
+            }
+            if (runtime.isFetchSehuatangSHListTaskType(taskType)) {
+                payload.start_page = String(runtime.fetchSehuatangStartPageInput && runtime.fetchSehuatangStartPageInput.value || '').trim();
+                payload.end_page = String(runtime.fetchSehuatangEndPageInput && runtime.fetchSehuatangEndPageInput.value || '').trim();
+                payload.target_forum_ids = runtime.checkedSehuatangSHForumIDs();
+                const defaults = runtime.config && runtime.config.fetchSehuatangDefaults ? runtime.config.fetchSehuatangDefaults : {};
+                if (payload.start_page === '') {
+                    payload.start_page = String(defaults.startPage || '').trim();
+                }
+                if (payload.end_page === '') {
+                    payload.end_page = String(defaults.endPage || '').trim();
+                }
+                const startPageNumber = Number(payload.start_page);
+                const endPageNumber = Number(payload.end_page);
+                if (!Number.isFinite(startPageNumber) || startPageNumber <= 0) {
+                    throw new Error('请填写合法的起始页');
+                }
+                if (!Number.isFinite(endPageNumber) || endPageNumber <= 0) {
+                    throw new Error('请填写合法的结束页');
+                }
+                if (endPageNumber < startPageNumber) {
+                    throw new Error('结束页不能小于起始页');
+                }
+                if (!payload.target_forum_ids.length) {
+                    throw new Error('请选择目标版块');
+                }
+                payload.start_page = startPageNumber;
+                payload.end_page = endPageNumber;
+            }
+            if (runtime.isFetchSehuatangSHDetailTaskType(taskType)) {
+                payload.thread_tids = runtime.checkedSHDetailPreviewThreadTIDs();
+                if (!payload.thread_tids.length) {
+                    throw new Error('请先筛选帖子预览并选择要抓取详情的帖子');
                 }
             }
             if (runtime.isAutoFetchSiteTaskType(taskType)) {
@@ -959,6 +1152,158 @@
             }).catch(function (error) {
                 if (runtime.previewFetchSiteBtn) {
                     runtime.previewFetchSiteBtn.disabled = false;
+                }
+                runtime.showMessage(error.message, false);
+            });
+        };
+
+        runtime.formatSHUnixTime = function (value) {
+            const ts = Number(value || 0);
+            if (!Number.isFinite(ts) || ts <= 0) {
+                return '-';
+            }
+            const date = new Date(ts * 1000);
+            const pad = function (num) {
+                return String(num).padStart(2, '0');
+            };
+            return [
+                date.getFullYear(),
+                pad(date.getMonth() + 1),
+                pad(date.getDate()),
+            ].join('-') + ' ' + [
+                pad(date.getHours()),
+                pad(date.getMinutes()),
+                pad(date.getSeconds()),
+            ].join(':');
+        };
+
+        runtime.currentSHDetailFilterPayload = function () {
+            const payload = {
+                task_type: TASK_FETCH_SEHUATANG_SH_DETAIL,
+                target_forum_ids: runtime.checkedSehuatangSHForumIDs(),
+                detail_statuses: runtime.checkedSHDetailStatuses(),
+                keyword: String(runtime.fetchSehuatangSHDetailKeywordInput && runtime.fetchSehuatangSHDetailKeywordInput.value || '').trim(),
+                post_time_from: String(runtime.fetchSehuatangSHPostTimeFromInput && runtime.fetchSehuatangSHPostTimeFromInput.value || '').trim(),
+                post_time_to: String(runtime.fetchSehuatangSHPostTimeToInput && runtime.fetchSehuatangSHPostTimeToInput.value || '').trim(),
+            };
+            const limitText = String(runtime.fetchSehuatangSHDetailLimitInput && runtime.fetchSehuatangSHDetailLimitInput.value || '').trim();
+            if (limitText !== '') {
+                const limitValue = Number(limitText);
+                if (!Number.isFinite(limitValue) || limitValue <= 0) {
+                    throw new Error('请填写合法的 limit');
+                }
+                payload.limit = Math.floor(limitValue);
+            }
+            if (!payload.target_forum_ids.length) {
+                throw new Error('请选择目标版块');
+            }
+            return payload;
+        };
+
+        runtime.checkedSHDetailPreviewThreadTIDs = function () {
+            if (!runtime.shDetailPreviewTableBody) {
+                return [];
+            }
+            return Array.from(runtime.shDetailPreviewTableBody.querySelectorAll('input[name="sh_detail_thread_tid"]:checked')).map(function (input) {
+                return String(input && input.value || '').trim();
+            }).filter(function (value) {
+                return value !== '';
+            });
+        };
+
+        runtime.updateSHDetailPreviewSelectionText = function () {
+            const total = Array.isArray(runtime.state.shDetailPreviewRows) ? runtime.state.shDetailPreviewRows.length : 0;
+            const selected = runtime.checkedSHDetailPreviewThreadTIDs().length;
+            if (runtime.shDetailPreviewMetaText) {
+                runtime.shDetailPreviewMetaText.textContent = '共 ' + String(total) + ' 条，已选 ' + String(selected) + ' 条';
+            }
+        };
+
+        runtime.hideSHDetailPreview = function () {
+            runtime.state.shDetailPreviewRows = [];
+            if (runtime.shDetailPreviewPanel) {
+                runtime.shDetailPreviewPanel.classList.add('is-hidden');
+            }
+            if (runtime.shDetailPreviewSummary) {
+                runtime.shDetailPreviewSummary.textContent = '当前还没有预览数据';
+            }
+            if (runtime.shDetailPreviewMetaText) {
+                runtime.shDetailPreviewMetaText.textContent = '共 0 条，已选 0 条';
+            }
+            if (runtime.shDetailPreviewTableBody) {
+                runtime.shDetailPreviewTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">等待预览</td></tr>';
+            }
+        };
+
+        runtime.renderSHDetailPreview = function (payload) {
+            const rows = Array.isArray(payload && payload.rows) ? payload.rows : [];
+            const total = Number(payload && payload.total || 0);
+            runtime.state.shDetailPreviewRows = rows;
+            if (runtime.shDetailPreviewPanel) {
+                runtime.shDetailPreviewPanel.classList.remove('is-hidden');
+            }
+            if (runtime.shDetailPreviewSummary) {
+                runtime.shDetailPreviewSummary.textContent = '筛选命中 ' + String(total) + ' 条，当前预览 ' + String(rows.length) + ' 条';
+            }
+            if (!runtime.shDetailPreviewTableBody) {
+                runtime.updateSHDetailPreviewSelectionText();
+                return;
+            }
+            if (!rows.length) {
+                runtime.shDetailPreviewTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">当前筛选没有命中帖子</td></tr>';
+                runtime.updateSHDetailPreviewSelectionText();
+                return;
+            }
+            runtime.shDetailPreviewTableBody.innerHTML = rows.map(function (row, index) {
+                const threadTID = String((row && (row.ThreadTID || row.thread_tid)) || '').trim();
+                const title = runtime.escapeHtml(String((row && (row.ThreadTitle || row.thread_title)) || '').trim() || '-');
+                const forumID = runtime.escapeHtml(String((row && (row.SourceForumID || row.source_forum_id)) || '').trim() || '-');
+                const postTime = runtime.escapeHtml(runtime.formatSHUnixTime(row && (row.PostTime || row.post_time)));
+                const detailStatus = runtime.escapeHtml(String((row && (row.DetailStatus || row.detail_status)) || '').trim() || '-');
+                const authorName = runtime.escapeHtml(String((row && (row.AuthorName || row.author_name)) || '').trim() || '-');
+                const inputID = 'sh_detail_preview_' + String(index);
+                return '' +
+                    '<tr>' +
+                    '<td class="text-nowrap"><input id="' + inputID + '" class="form-check-input sh-detail-preview-check" type="checkbox" name="sh_detail_thread_tid" value="' + runtime.escapeHtml(threadTID) + '" checked></td>' +
+                    '<td class="text-nowrap">' + runtime.escapeHtml(threadTID || '-') + '</td>' +
+                    '<td><label class="mb-0" for="' + inputID + '">' + title + '</label></td>' +
+                    '<td class="text-nowrap">' + forumID + '</td>' +
+                    '<td class="text-nowrap">' + postTime + '</td>' +
+                    '<td class="text-nowrap">' + detailStatus + '</td>' +
+                    '<td class="text-nowrap">' + authorName + '</td>' +
+                    '</tr>';
+            }).join('');
+            Array.from(runtime.shDetailPreviewTableBody.querySelectorAll('input[name="sh_detail_thread_tid"]')).forEach(function (input) {
+                input.addEventListener('change', function () {
+                    runtime.updateSHDetailPreviewSelectionText();
+                });
+            });
+            runtime.updateSHDetailPreviewSelectionText();
+        };
+
+        runtime.previewSHDetail = function () {
+            let payload;
+            try {
+                payload = runtime.currentSHDetailFilterPayload();
+            } catch (error) {
+                runtime.showMessage(error.message, false);
+                return;
+            }
+            if (runtime.previewSHDetailBtn) {
+                runtime.previewSHDetailBtn.disabled = true;
+            }
+            runtime.request(API_BASE + '/sehuatang-sh-thread-detail/preview', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            }).then(function (data) {
+                runtime.renderSHDetailPreview(data || {});
+                if (runtime.previewSHDetailBtn) {
+                    runtime.previewSHDetailBtn.disabled = false;
+                }
+            }).catch(function (error) {
+                if (runtime.previewSHDetailBtn) {
+                    runtime.previewSHDetailBtn.disabled = false;
                 }
                 runtime.showMessage(error.message, false);
             });
@@ -1427,10 +1772,22 @@
                 return;
             }
             if (runtime.overviewExtraMode === 'sehuatang_progress') {
+                const setSehuatangText = function (element, value) {
+                    if (element) {
+                        element.textContent = String(value);
+                    }
+                };
                 if (!job) {
                     const selectedId = runtime.normalizeJobId(runtime.state.selectedJobId);
-                    if (runtime.sehuatangProgressText) runtime.sehuatangProgressText.textContent = '0 / 0';
-                    if (runtime.resultText) runtime.resultText.textContent = '0 / 0';
+                    setSehuatangText(runtime.sehuatangProgressText, '0 / 0');
+                    setSehuatangText(runtime.sehuatangPageProgressText, '0 / 0');
+                    setSehuatangText(runtime.sehuatangCurrentPageText, '-');
+                    setSehuatangText(runtime.sehuatangSeenText, '0');
+                    setSehuatangText(runtime.sehuatangMatchedText, '0');
+                    setSehuatangText(runtime.sehuatangSkippedForumText, '0');
+                    setSehuatangText(runtime.sehuatangSkippedExistingText, '0');
+                    setSehuatangText(runtime.sehuatangFetchedText, '0');
+                    setSehuatangText(runtime.sehuatangFailedText, '0');
                     if (runtime.progressBar) {
                         runtime.progressBar.style.width = '0%';
                         runtime.progressBar.textContent = '0%';
@@ -1445,17 +1802,37 @@
                     return;
                 }
 
-                const handled = Number(job.handled_count || 0);
-                const queued = Number(job.queued_count || 0);
-                const total = handled + queued;
-                if (runtime.sehuatangProgressText) {
-                    runtime.sehuatangProgressText.textContent = String(total) + ' / ' + String(handled);
+                const listPhaseStat = runtime.stageOverviewStageStat(job, 'list');
+                let completedPageCount = runtime.jobStatNumber(job, 'completed_page_count');
+                let totalPageCount = runtime.jobStatNumber(job, 'total_page_count');
+                if (totalPageCount <= 0 && listPhaseStat.total > 0) {
+                    completedPageCount = listPhaseStat.handled;
+                    totalPageCount = listPhaseStat.total;
                 }
-                if (runtime.resultText) {
-                    runtime.resultText.textContent = String(job.success_count || 0) + ' / ' + String(job.failed_count || 0);
+                const seenCount = runtime.jobStatNumber(job, 'seen_count');
+                const matchedCount = runtime.hasJobStat(job, 'matched_count') ? runtime.jobStatNumber(job, 'matched_count') : Number(job.handled_count || 0);
+                const skippedForumCount = runtime.jobStatNumber(job, 'skipped_forum_count');
+                const skippedExistingCount = runtime.jobStatNumber(job, 'skipped_existing_count');
+                const fetchedCount = runtime.hasJobStat(job, 'fetched_count') ? runtime.jobStatNumber(job, 'fetched_count') : Number(job.success_count || 0);
+                const failedCount = runtime.hasJobStat(job, 'failed_count') ? runtime.jobStatNumber(job, 'failed_count') : Number(job.failed_count || 0);
+                let currentPageText = runtime.jobStatText(job, 'current_page_text');
+                if (!currentPageText) {
+                    const currentPage = runtime.jobStatNumber(job, 'current_page');
+                    currentPageText = currentPage > 0 ? '第 ' + String(currentPage) + ' 页' : '-';
                 }
+
+                setSehuatangText(runtime.sehuatangProgressText, String(completedPageCount) + ' / ' + String(totalPageCount));
+                setSehuatangText(runtime.sehuatangPageProgressText, String(completedPageCount) + ' / ' + String(totalPageCount));
+                setSehuatangText(runtime.sehuatangCurrentPageText, currentPageText);
+                setSehuatangText(runtime.sehuatangSeenText, seenCount);
+                setSehuatangText(runtime.sehuatangMatchedText, matchedCount);
+                setSehuatangText(runtime.sehuatangSkippedForumText, skippedForumCount);
+                setSehuatangText(runtime.sehuatangSkippedExistingText, skippedExistingCount);
+                setSehuatangText(runtime.sehuatangFetchedText, fetchedCount);
+                setSehuatangText(runtime.sehuatangFailedText, failedCount);
+
                 if (runtime.progressBar) {
-                    const percent = total > 0 ? Math.max(0, Math.min(100, Math.round(handled * 100 / total))) : 0;
+                    const percent = totalPageCount > 0 ? Math.max(0, Math.min(100, Math.round(completedPageCount * 100 / totalPageCount))) : 0;
                     runtime.progressBar.style.width = percent + '%';
                     runtime.progressBar.textContent = percent + '%';
                     runtime.progressBar.setAttribute('aria-valuenow', String(percent));
@@ -1609,14 +1986,14 @@
             const raw = String((entry && entry.text) || '');
             const parts = raw.split(' | ');
             if (parts.length < 5 || !/^\[[^\]]+\]$/.test(parts[0] || '')) {
-                return runtime.escapeHtml(raw).replace(/\b([A-Za-z0-9]+-\d{2,})\b/g, function (match, code) {
+                return runtime.escapeHtml(raw).replace(/\b([A-Za-z][A-Za-z0-9]*-\d{2,})\b/g, function (match, code) {
                     const href = '/movie/' + encodeURIComponent(code);
                     return '<a href="' + href + '" class="event-link">' + runtime.escapeHtml(code) + '</a>';
                 });
             }
             const subjectId = String(parts[2] || '').trim();
             if (!/^\d+$/.test(subjectId) || String(parts[3] || '').indexOf('new_items=') !== 0) {
-                return runtime.escapeHtml(raw).replace(/\b([A-Za-z0-9]+-\d{2,})\b/g, function (match, code) {
+                return runtime.escapeHtml(raw).replace(/\b([A-Za-z][A-Za-z0-9]*-\d{2,})\b/g, function (match, code) {
                     const href = '/movie/' + encodeURIComponent(code);
                     return '<a href="' + href + '" class="event-link">' + runtime.escapeHtml(code) + '</a>';
                 });
@@ -1700,6 +2077,8 @@
                 done_items: event.done_items !== undefined ? runtime.normalizeQueueItems(event.done_items) : runtime.normalizeQueueItems(current.done_items),
                 current_phase_key: String(runtime.pickValue(event.current_phase_key, current.current_phase_key) || ''),
                 phase_stats: runtime.pickValue(event.phase_stats, current.phase_stats) || null,
+                stats: runtime.pickValue(event.stats, current.stats) || null,
+                stats_text: runtime.pickValue(event.stats_text, current.stats_text) || null,
                 started_at: runtime.pickNumber(event.started_at, current.started_at),
                 at: runtime.pickNumber(event.at, current.at),
                 done: !!event.done,
@@ -1730,6 +2109,8 @@
                 done_items: event.done_items !== undefined ? runtime.normalizeQueueItems(event.done_items) : runtime.normalizeQueueItems(current.done_items),
                 current_phase_key: String(runtime.pickValue(event.current_phase_key, current.current_phase_key) || ''),
                 phase_stats: runtime.pickValue(event.phase_stats, current.phase_stats) || null,
+                stats: runtime.pickValue(event.stats, current.stats) || null,
+                stats_text: runtime.pickValue(event.stats_text, current.stats_text) || null,
                 started_at: runtime.pickNumber(event.started_at, current.started_at),
                 at: runtime.pickNumber(event.at, current.at),
                 done: !!event.done,
@@ -2053,6 +2434,38 @@
                 runtime.previewFetchSite(1, false);
             });
         }
+        if (runtime.previewSHDetailBtn) {
+            runtime.previewSHDetailBtn.addEventListener('click', function () {
+                runtime.previewSHDetail();
+            });
+        }
+        if (runtime.selectAllSHDetailPreviewBtn) {
+            runtime.selectAllSHDetailPreviewBtn.addEventListener('click', function () {
+                if (!runtime.shDetailPreviewTableBody) {
+                    return;
+                }
+                Array.from(runtime.shDetailPreviewTableBody.querySelectorAll('input[name="sh_detail_thread_tid"]')).forEach(function (input) {
+                    input.checked = true;
+                });
+                runtime.updateSHDetailPreviewSelectionText();
+            });
+        }
+        if (runtime.clearSHDetailPreviewBtn) {
+            runtime.clearSHDetailPreviewBtn.addEventListener('click', function () {
+                if (!runtime.shDetailPreviewTableBody) {
+                    return;
+                }
+                Array.from(runtime.shDetailPreviewTableBody.querySelectorAll('input[name="sh_detail_thread_tid"]')).forEach(function (input) {
+                    input.checked = false;
+                });
+                runtime.updateSHDetailPreviewSelectionText();
+            });
+        }
+        if (runtime.hideSHDetailPreviewBtn) {
+            runtime.hideSHDetailPreviewBtn.addEventListener('click', function () {
+                runtime.hideSHDetailPreview();
+            });
+        }
         if (runtime.hideFetchSitePreviewBtn) {
             runtime.hideFetchSitePreviewBtn.addEventListener('click', function () {
                 runtime.hideFetchSitePreview();
@@ -2079,6 +2492,16 @@
                     return;
                 }
                 runtime.state.fetchSiteFilterExpanded = !runtime.state.fetchSiteFilterExpanded;
+                runtime.syncTaskFields();
+            });
+        }
+        if (runtime.fetchSehuatangStopOnExistingInput) {
+            runtime.fetchSehuatangStopOnExistingInput.addEventListener('change', function () {
+                runtime.syncFetchSehuatangStopMode();
+            });
+        }
+        if (runtime.fetchSehuatangSHModeInput) {
+            runtime.fetchSehuatangSHModeInput.addEventListener('change', function () {
                 runtime.syncTaskFields();
             });
         }

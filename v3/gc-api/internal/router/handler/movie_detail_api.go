@@ -141,6 +141,10 @@ type addMovieCastReq struct {
 	Name string `json:"name"`
 }
 
+type updateMovieTorrentHashReq struct {
+	TorrentHash string `json:"torrent_hash"`
+}
+
 type movieAlbumItemReq struct {
 	SourceType  string `json:"source_type"`
 	SourceRowID int64  `json:"source_row_id"`
@@ -155,6 +159,76 @@ type createMovieAlbumReq struct {
 type addMovieToMovieAlbumReq struct {
 	MovieJavID string `json:"movie_jav_id"`
 	AlbumName  string `json:"album_name"`
+}
+
+func (h *MovieDetailAPI) UpdateTorrentHash(c *gin.Context) {
+	javID := strings.TrimSpace(c.Param("movie"))
+	if javID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 movie 参数"})
+		return
+	}
+
+	var req updateMovieTorrentHashReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+	torrentHash := strings.ToUpper(strings.TrimSpace(req.TorrentHash))
+	if torrentHash != "" && !isTorrentHash(torrentHash) {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "TorrentHash 必须是 40 位十六进制字符串"})
+		return
+	}
+
+	mv, err := h.deps.MovieModel.FindOneByJavId(c.Request.Context(), javID)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "影片不存在"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+	if mv == nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "影片不存在"})
+		return
+	}
+
+	mediaRow, err := h.deps.WMediaModel.FindOneByMovieJavId(c.Request.Context(), mv.JavId)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "视频信息不存在"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+	if mediaRow == nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "视频信息不存在"})
+		return
+	}
+
+	mediaRow.SourceTorrentHash = torrentHash
+	mediaRow.UpdatedOn = time.Now().Unix()
+	if err := h.deps.WMediaModel.Update(c.Request.Context(), mediaRow); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	h.movieSvc.InvalidateMovieType(c.Request.Context(), mv.JavId)
+	c.JSON(http.StatusOK, gin.H{"ok": true, "torrent_hash": torrentHash})
+}
+
+func isTorrentHash(value string) bool {
+	if len(value) != 40 {
+		return false
+	}
+	for _, ch := range value {
+		if (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f') {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (h *MovieDetailAPI) AddCast(c *gin.Context) {

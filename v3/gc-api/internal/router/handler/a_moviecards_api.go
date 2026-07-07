@@ -191,6 +191,100 @@ func (h *MovieCardAPI) ListMovieCardFullRandom(c *gin.Context) {
 	})
 }
 
+func (h *MovieCardAPI) ListMovieCardAgg(c *gin.Context) {
+	originalPath := c.Request.URL.Path
+	c.Request.URL.Path = "/cardsagg"
+	defer func() {
+		c.Request.URL.Path = originalPath
+	}()
+
+	req, err := parseMovieCardRequest(c, types.ListMovieFullRequest{OrderBy: consts.OrderByReleasingDate})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数解析错误: " + err.Error()})
+		return
+	}
+
+	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
+	filterView.Action = "/cardsagg"
+	filterView.ClearHref = "/cardsagg"
+
+	if !hasMovieCardAggEffectiveFilter(c) {
+		c.JSON(http.StatusOK, gin.H{
+			"Title":           "MovieCard Agg",
+			"ViewType":        "cards-agg",
+			"total":           0,
+			"Total":           0,
+			"TotalLabel":      "--",
+			"Skipped":         true,
+			"SkipReason":      "no_filter",
+			"Message":         "请选择筛选条件后再执行聚合。",
+			"Limit":           movie.CardsAggMaxMovieCount,
+			"ownedQuery":      buildOwnedFilterInfo(c),
+			"sortQuery":       buildSortQuery(c, req.OrderBy),
+			"CurrentSort":     req.OrderBy,
+			"MovieCardFilter": filterView,
+		})
+		return
+	}
+
+	agg, err := h.movieSvc.BuildMovieCardsAgg(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"Title":           "MovieCard Agg",
+		"ViewType":        "cards-agg",
+		"total":           agg.Total,
+		"Total":           agg.Total,
+		"Skipped":         agg.Skipped,
+		"SkipReason":      agg.SkipReason,
+		"Message":         agg.Message,
+		"Limit":           agg.Limit,
+		"Summary":         agg.Summary,
+		"Groups":          agg.Groups,
+		"Timeline":        agg.Timeline,
+		"Distributions":   agg.Distributions,
+		"TopMovies":       agg.TopMovies,
+		"ownedQuery":      buildOwnedFilterInfo(c),
+		"sortQuery":       buildSortQuery(c, req.OrderBy),
+		"CurrentSort":     req.OrderBy,
+		"MovieCardFilter": filterView,
+	})
+}
+
+func hasMovieCardAggEffectiveFilter(c *gin.Context) bool {
+	q := c.Request.URL.Query()
+	filterKeys := []string{
+		"cn", "pid", "gn", "dn", "pn", "mn", "ln", "lj", "an", "wd",
+		"rs", "re", "mbs", "mbe", "srds", "srde", "lsctmin", "lsctmax",
+		"cay", "cao", "vwmin", "vwmax", "smin", "smax",
+		"drkmin", "nd", "mowned", "scmin", "scmax", "comin", "comax",
+		"md1", "md2", "md3", "md4",
+	}
+	for _, key := range filterKeys {
+		values, ok := q[key]
+		if !ok {
+			continue
+		}
+		for _, raw := range values {
+			value := strings.TrimSpace(raw)
+			if value == "" {
+				continue
+			}
+			if key == "mowned" && value == "1" {
+				continue
+			}
+			if key == "nd" && value == "0" {
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
 func (h *MovieCardAPI) ListMovieCardDayRank(c *gin.Context) {
 	originalPath := c.Request.URL.Path
 	c.Request.URL.Path = "/moviecarddayrank"

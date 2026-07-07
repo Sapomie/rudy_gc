@@ -21,12 +21,23 @@ var (
 	forumSecondsAgoPattern      = regexp.MustCompile(`(?i)(\d+)\s*秒[前前]`)
 	forumYesterdayPattern       = regexp.MustCompile(`(?i)昨天\s*(\d{1,2}):(\d{2})`)
 	forumBeforeYesterdayPattern = regexp.MustCompile(`(?i)前天\s*(\d{1,2}):(\d{2})`)
+	threadTIDQueryPattern       = regexp.MustCompile(`(?i)(?:\?|&)tid=(\d+)`)
+	threadTIDPathPattern        = regexp.MustCompile(`(?i)thread-(\d+)-`)
+	forumIDPathPattern          = regexp.MustCompile(`(?i)forum-(\d+)-`)
+	forumIDQueryPattern         = regexp.MustCompile(`(?i)(?:\?|&)fid=(\d+)`)
+	searchAuthorPattern         = regexp.MustCompile(`作者[:：]\s*([^\s]+)`)
+	searchPostTimePattern       = regexp.MustCompile(`\d{4}[-/]\d{1,2}[-/]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?`)
 )
 
 type topicLink struct {
-	Title      string
-	DetailURL  string
-	ListPostAt string
+	Title         string
+	DetailURL     string
+	ThreadTID     string
+	AuthorName    string
+	ListPostAt    string
+	SourceForumID string
+	SourcePage    int64
+	SourcePageURL string
 }
 
 type parseListTopicsResult struct {
@@ -35,7 +46,18 @@ type parseListTopicsResult struct {
 }
 
 type parsedMagnet struct {
-	InfoHash string
+	MagnetURL string
+	InfoHash  string
+}
+
+type shThreadDetail struct {
+	ThreadTID      string
+	ThreadTitle    string
+	AuthorName     string
+	PostTime       int64
+	RawContentText string
+	MagnetText     string
+	InfoHashText   string
 }
 
 func parseSafeID(body []byte) string {
@@ -90,11 +112,16 @@ func parseListTopics(listHTML []byte, listURL string, keyword string) (*parseLis
 			return
 		}
 		postAt := extractListPostAt(sel)
+		authorName := extractListAuthor(sel)
 		seen[detailURL] = struct{}{}
 		result.Topics = append(result.Topics, &topicLink{
-			Title:      title,
-			DetailURL:  detailURL,
-			ListPostAt: postAt,
+			Title:         title,
+			DetailURL:     detailURL,
+			ThreadTID:     parseThreadTID(detailURL),
+			AuthorName:    authorName,
+			ListPostAt:    postAt,
+			SourceForumID: parseForumID(listURL),
+			SourcePageURL: listURL,
 		})
 	})
 
@@ -141,6 +168,22 @@ func extractListPostAt(anchor *goquery.Selection) string {
 	}
 	text = strings.TrimSpace(byCell.Find("em a").First().Text())
 	return normalizeForumTimeText(text)
+}
+
+func extractListAuthor(anchor *goquery.Selection) string {
+	if anchor == nil {
+		return ""
+	}
+	byCell := anchor.Closest("tbody").Find("td.by").First()
+	if byCell.Length() == 0 {
+		return ""
+	}
+	text := strings.TrimSpace(byCell.Find("cite a").First().Text())
+	if text != "" {
+		return normalizeOneLineText(text)
+	}
+	text = strings.TrimSpace(byCell.Find("cite").First().Text())
+	return normalizeOneLineText(text)
 }
 
 func parseThreadTitle(detailHTML []byte, fallback string) string {
@@ -295,6 +338,24 @@ func normalizeForumTimeText(raw string) string {
 	return strings.TrimSpace(text)
 }
 
+func normalizeOneLineText(raw string) string {
+	return strings.Join(strings.Fields(strings.ReplaceAll(raw, "\u00a0", " ")), " ")
+}
+
+func normalizeContentText(raw string) string {
+	raw = strings.ReplaceAll(raw, "\u00a0", " ")
+	lines := strings.Split(raw, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.Join(strings.Fields(line), " ")
+		if line == "" {
+			continue
+		}
+		out = append(out, line)
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
+}
+
 func parseMagnets(detailHTML []byte) []parsedMagnet {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(detailHTML))
 	if err != nil {
@@ -329,9 +390,239 @@ func parseMagnetsFromText(text string) []parsedMagnet {
 			continue
 		}
 		seen[infoHash] = struct{}{}
-		out = append(out, parsedMagnet{InfoHash: infoHash})
+		out = append(out, parsedMagnet{
+			MagnetURL: magnet,
+			InfoHash:  infoHash,
+		})
 	}
 	return out
+}
+
+func parseSHForumTopics(listHTML []byte, pageURL string, forumID string, pageNo int64) (*parseListTopicsResult, error) {
+	result, err := parseListTopics(listHTML, pageURL, "")
+	if err != nil {
+		return nil, err
+	}
+	for _, topic := range result.Topics {
+		if topic == nil {
+			continue
+		}
+		topic.SourceForumID = strings.TrimSpace(forumID)
+		topic.SourcePage = pageNo
+		topic.SourcePageURL = pageURL
+		if topic.ThreadTID == "" {
+			topic.ThreadTID = parseThreadTID(topic.DetailURL)
+		}
+	}
+	return result, nil
+}
+
+func parseSHSearchTopics(searchHTML []byte, pageURL string, pageNo int64) ([]*topicLink, error) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(searchHTML))
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]struct{}, 64)
+	topics := make([]*topicLink, 0, 64)
+	doc.Find(`a[href*="mod=viewthread"], a[href*="thread-"]`).Each(func(_ int, anchor *goquery.Selection) {
+		href, ok := anchor.Attr("href")
+		if !ok {
+			return
+		}
+		detailURL := resolveURL(pageURL, href)
+		threadTID := parseThreadTID(detailURL)
+		if detailURL == "" || threadTID == "" {
+			return
+		}
+		if _, ok := seen[threadTID]; ok {
+			return
+		}
+		title := normalizeOneLineText(anchor.Text())
+		if title == "" {
+			return
+		}
+
+		root := searchResultRoot(anchor)
+		rootText := normalizeOneLineText(root.Text())
+		sourceForumID := parseSearchTopicForumID(root)
+		if sourceForumID == "" {
+			sourceForumID = parseForumID(rootText)
+		}
+		if sourceForumID == "" {
+			sourceForumID = parseForumIDFromText(rootText)
+		}
+		seen[threadTID] = struct{}{}
+		topics = append(topics, &topicLink{
+			Title:         title,
+			DetailURL:     detailURL,
+			ThreadTID:     threadTID,
+			AuthorName:    parseSearchTopicAuthor(rootText),
+			ListPostAt:    parseSearchTopicPostAt(rootText),
+			SourceForumID: sourceForumID,
+			SourcePage:    pageNo,
+			SourcePageURL: pageURL,
+		})
+	})
+
+	return topics, nil
+}
+
+func searchResultRoot(anchor *goquery.Selection) *goquery.Selection {
+	root := anchor.Parent()
+	for i := 0; i < 5 && root.Length() > 0; i++ {
+		if root.Find(`a[href*="forum-"], a[href*="forum.php?mod=forumdisplay"]`).Length() > 0 {
+			return root
+		}
+		text := root.Text()
+		if strings.Contains(text, "版块") || strings.Contains(text, "作者") {
+			return root
+		}
+		next := root.Parent()
+		if next.Length() == 0 {
+			break
+		}
+		root = next
+	}
+	return anchor.Closest("li, div, tr")
+}
+
+func parseSearchTopicForumID(root *goquery.Selection) string {
+	if root == nil || root.Length() == 0 {
+		return ""
+	}
+	out := ""
+	root.Find(`a[href*="forum-"], a[href*="forum.php?mod=forumdisplay"]`).EachWithBreak(func(_ int, anchor *goquery.Selection) bool {
+		href := strings.TrimSpace(anchor.AttrOr("href", ""))
+		out = parseForumID(href)
+		return out == ""
+	})
+	return out
+}
+
+func parseSearchTopicAuthor(text string) string {
+	matches := searchAuthorPattern.FindStringSubmatch(text)
+	if len(matches) < 2 {
+		return ""
+	}
+	return normalizeOneLineText(matches[1])
+}
+
+func parseSearchTopicPostAt(text string) string {
+	match := searchPostTimePattern.FindString(text)
+	return normalizeForumTimeText(match)
+}
+
+func parseSHThreadDetail(detailHTML []byte, topic *topicLink, now time.Time) (*shThreadDetail, error) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(detailHTML))
+	if err != nil {
+		return nil, err
+	}
+	fallbackTitle := ""
+	fallbackPostAt := ""
+	fallbackAuthor := ""
+	fallbackTID := ""
+	if topic != nil {
+		fallbackTitle = topic.Title
+		fallbackPostAt = topic.ListPostAt
+		fallbackAuthor = topic.AuthorName
+		fallbackTID = topic.ThreadTID
+	}
+
+	firstPost := doc.Find(`div[id^="post_"]`).First()
+	authorName := parseSHDetailAuthor(firstPost)
+	if authorName == "" {
+		authorName = fallbackAuthor
+	}
+
+	content := normalizeContentText(doc.Find(`td[id^="postmessage_"]`).First().Text())
+	if content == "" {
+		content = normalizeContentText(firstPost.Find(`td[id^="postmessage_"]`).First().Text())
+	}
+
+	magnets := parseMagnetsFromText(content)
+	magnetURLs := make([]string, 0, len(magnets))
+	infoHashes := make([]string, 0, len(magnets))
+	for _, magnet := range magnets {
+		if magnet.MagnetURL != "" {
+			magnetURLs = append(magnetURLs, magnet.MagnetURL)
+		}
+		if magnet.InfoHash != "" {
+			infoHashes = append(infoHashes, magnet.InfoHash)
+		}
+	}
+
+	return &shThreadDetail{
+		ThreadTID:      fallbackTID,
+		ThreadTitle:    parseThreadTitle(detailHTML, fallbackTitle),
+		AuthorName:     authorName,
+		PostTime:       parsePostTime(detailHTML, fallbackPostAt, now),
+		RawContentText: content,
+		MagnetText:     strings.Join(magnetURLs, "\n"),
+		InfoHashText:   strings.Join(infoHashes, "\n"),
+	}, nil
+}
+
+func parseSHDetailAuthor(firstPost *goquery.Selection) string {
+	if firstPost == nil || firstPost.Length() == 0 {
+		return ""
+	}
+	selectors := []string{
+		`td.pls .authi a.xw1`,
+		`td.pls .authi a`,
+		`.pls .authi a.xw1`,
+		`.pls .authi a`,
+		`.authi a.xw1`,
+	}
+	for _, selector := range selectors {
+		text := normalizeOneLineText(firstPost.Find(selector).First().Text())
+		if text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func parseThreadTID(raw string) string {
+	text := strings.TrimSpace(raw)
+	if text == "" {
+		return ""
+	}
+	if matches := threadTIDQueryPattern.FindStringSubmatch(text); len(matches) > 1 {
+		return matches[1]
+	}
+	if matches := threadTIDPathPattern.FindStringSubmatch(text); len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
+
+func parseForumID(raw string) string {
+	text := strings.TrimSpace(raw)
+	if text == "" {
+		return ""
+	}
+	if matches := forumIDPathPattern.FindStringSubmatch(text); len(matches) > 1 {
+		return matches[1]
+	}
+	if matches := forumIDQueryPattern.FindStringSubmatch(text); len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
+
+func parseForumIDFromText(raw string) string {
+	text := normalizeOneLineText(raw)
+	if text == "" {
+		return ""
+	}
+	if strings.Contains(text, "亚洲无码原创") {
+		return SHForumAsiaUncensoredOriginal
+	}
+	if strings.Contains(text, "高清中文字幕") {
+		return SHForumHDChineseSubtitle
+	}
+	return ""
 }
 
 func buildListPageURL(baseListURL string, pageNo int64) string {

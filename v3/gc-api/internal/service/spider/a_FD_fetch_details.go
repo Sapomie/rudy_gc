@@ -3,6 +3,7 @@ package spider
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"rudy_gc/internal/consts"
 	"strings"
@@ -36,17 +37,26 @@ func (l *CrawlLogic) handleFetchDetails(ctx context.Context, items []*types.Item
 	log.Infof("有 %d 个详情需要抓取", total)
 	l.reportPhaseProgress(ctx, "detail", "detail_queue_ready", fmt.Sprintf("待抓取详情 %d 条", total), 0, total, 0, 0)
 
+	failed := 0
 	for i, it := range items {
 		if err := l.waitIfPaused(ctx); err != nil {
 			return int64(i), err
 		}
 		if err := l.fetchAndSaveDetail(ctx, it); err != nil {
-			l.reportPhaseProgress(ctx, "detail", "detail_fetch_failed", fmt.Sprintf("抓取失败：%s", it.Name), i+1, total, i, 1)
-			return 0, err
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return int64(i), err
+			}
+			failed++
+			log.Errorf("详情抓取失败，继续下一条: %s | error=%v", it.Name, err)
+			l.reportPhaseProgress(ctx, "detail", "detail_fetch_failed", fmt.Sprintf("抓取失败：%s", it.Name), i+1, total, i+1-failed, failed)
+			if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
+				return int64(i + 1), err
+			}
+			continue
 		}
 		// 7) 进度日志（中文）
 		l.logItemProgress(ctx, i+1, total, it.Name, it.LastQueryDetailTime, start)
-		l.reportPhaseProgress(ctx, "detail", "detail_item_done", fmt.Sprintf("详情完成：%s", it.Name), i+1, total, i+1, 0)
+		l.reportPhaseProgress(ctx, "detail", "detail_item_done", fmt.Sprintf("详情完成：%s", it.Name), i+1, total, i+1-failed, failed)
 		if err := l.sleepWithContext(ctx, getRandomSleepDuration()); err != nil {
 			return int64(i + 1), err
 		}
@@ -119,8 +129,8 @@ func isValidDetail(content string) bool {
 
 // 专用详情重试：
 // - 最大重试 20 次
-// - 前 5 次失败每次 sleep 5 秒
-// - 第 6 次失败开始每次在 5 秒基础上增加 2 秒（7s, 9s, 11s...）
+// - 每次失败固定 sleep 5 秒
+// - 网络错误和页面无效/空白都进入同一套重试
 func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string) (string, error) {
 	const maxRetries = 20
 	var body []byte
@@ -179,7 +189,18 @@ func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string)
 			"页面内容无效/空白 - name: %s, url: %s, attempts: %d",
 			name, url, attempts,
 		)
-		return "", ErrBlankPage
+		err = ErrBlankPage
+		if attempts < maxRetries {
+			sleepDur := detailRetrySleepDuration(attempts)
+			log.Warnf(
+				"页面内容无效/空白，%d秒后重试 - name: %s, attempts: %d, url: %s, error: %v",
+				int(sleepDur/time.Second), name, attempts, url, err,
+			)
+			if sleepErr := l.sleepWithContext(ctx, sleepDur); sleepErr != nil {
+				return "", sleepErr
+			}
+		}
+		continue
 	}
 
 	// 达到最大重试次数
@@ -187,14 +208,11 @@ func (l *CrawlLogic) fetchDetailWithRetry(ctx context.Context, name, url string)
 		"达到最大重试次数，无法获取 URL - name: %s, url: %s, max_retries: %d, last_error: %v",
 		name, url, maxRetries, err,
 	)
-	return "", fmt.Errorf("达到最大重试次数 %d，无法获取 URL %s: %v", maxRetries, url, err)
+	return "", fmt.Errorf("达到最大重试次数 %d，无法获取详情 name=%s url=%s: %w", maxRetries, name, url, err)
 }
 
-func detailRetrySleepDuration(attempts int) time.Duration {
-	if attempts <= 5 {
-		return 5 * time.Second
-	}
-	return time.Duration(5+(attempts-5)*2) * time.Second
+func detailRetrySleepDuration(_ int) time.Duration {
+	return 5 * time.Second
 }
 
 func (l *CrawlLogic) logItemProgress(ctx context.Context, done, total int, name string, lastQuery int64, start time.Time) {

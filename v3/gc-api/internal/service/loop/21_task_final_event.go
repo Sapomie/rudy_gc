@@ -34,6 +34,8 @@ func (l *FetchLoopService) buildManagedTaskFinalEvent(jobID string, taskType str
 	event.PhaseSuccessCount = progress.PhaseSuccessCount
 	event.PhaseFailedCount = progress.PhaseFailedCount
 	event.PhaseStats = cloneManagedPhaseStats(job.phaseStats)
+	event.Stats = cloneManagedInt64Map(progress.Stats)
+	event.StatsText = cloneManagedStringMap(progress.StatsText)
 	event.StartedAt = progress.StartedAt
 	l.jobs.mu.Unlock()
 	return event

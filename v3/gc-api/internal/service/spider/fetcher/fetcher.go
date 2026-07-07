@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -32,6 +33,7 @@ type RequestOptions struct {
 }
 
 type Fetcher struct {
+	mu       sync.RWMutex
 	cfg      Config
 	siteCfgs map[string]Config
 }
@@ -47,6 +49,8 @@ func (f *Fetcher) SetSiteConfig(siteCode string, cfg Config) {
 	if siteCode == "" {
 		return
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.siteCfgs[siteCode] = cfg
 }
 
@@ -63,10 +67,12 @@ func (f *Fetcher) GetBySite(ctx context.Context, siteCode, u string) (*Response,
 }
 
 func (f *Fetcher) GetBySiteWithOptions(ctx context.Context, siteCode, u string, opts RequestOptions) (*Response, error) {
+	f.mu.RLock()
 	cfg, ok := f.siteCfgs[siteCode]
 	if !ok {
 		cfg = f.cfg
 	}
+	f.mu.RUnlock()
 	if shouldUseCurlSiteFetch(siteCode) {
 		return doCurlRequestWithConfig(ctx, cfg, u, opts)
 	}

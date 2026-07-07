@@ -104,6 +104,9 @@ func AutoMigrate(db *gorm.DB) error {
 		new(CMovieAlbumItem),
 		new(JavbusMagnet),
 		new(SehuatangMagnet),
+		new(SehuatangThread),
+		new(SehuatangFetchRun),
+		new(SehuatangFetchItem),
 		new(JavbusMagnetFetch),
 		new(SukebeiTorrent),
 		new(SukebeiTorrentFetch),
@@ -1543,7 +1546,6 @@ func ensureBaiduFanyiFetchSite(db *gorm.DB) error {
 		siteName       = "BaiduFanyi"
 		baseURL        = "https://api.fanyi.baidu.com"
 		defaultUA      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
-		defaultProxy   = "http://127.0.0.1:7897/"
 		timeoutSeconds = int64(60)
 		requestSleepMs = int64(3000)
 		retrySleepMs   = int64(3000)
@@ -1557,12 +1559,7 @@ func ensureBaiduFanyiFetchSite(db *gorm.DB) error {
 		return err
 	}
 	if count > 0 {
-		return db.Model(&FetchSite{}).
-			Where("site_code = ?", siteCode).
-			Updates(map[string]any{
-				"proxy":      defaultProxy,
-				"updated_on": nowUnix,
-			}).Error
+		return nil
 	}
 
 	row := &FetchSite{
@@ -1571,7 +1568,7 @@ func ensureBaiduFanyiFetchSite(db *gorm.DB) error {
 		BaseURL:        baseURL,
 		UserAgent:      defaultUA,
 		Cookie:         "",
-		Proxy:          defaultProxy,
+		Proxy:          "",
 		TimeoutSeconds: timeoutSeconds,
 		RequestSleepMs: requestSleepMs,
 		RetrySleepMs:   retrySleepMs,

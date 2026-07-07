@@ -1,0 +1,14 @@
+.git
+.DS_Store
+.idea
+
+tmp
+**/tmp
+
+gc-web/node_modules
+gc-web/dist
+
+deploy/docker/data
+deploy/docker/backups
+deploy/docker/*.sql
+deploy/docker/*.sql.gz

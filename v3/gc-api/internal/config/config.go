@@ -40,7 +40,6 @@ type Media struct {
 type FetcherConf struct {
 	UserAgent     string
 	Cookie        string
-	Proxy         string
 	Timeout       int // 秒
 	JavAddress    string
 	BusAddress    string

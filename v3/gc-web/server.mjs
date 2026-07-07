@@ -26,6 +26,7 @@ const cardsPagePaths = new Set([
   "/moviecardperiodrank"
 ]);
 const movieAggPagePaths = new Set([
+  "/cardsagg",
   "/movie-agg-all/release",
   "/movie-agg-all/release-bucket-list",
   "/w-media-agg/bucket-list",
@@ -60,13 +61,20 @@ const triggerPagePaths = new Set([
   "/triggers/backfill",
   "/triggers/fetch-site",
   "/triggers/fetch-sehuatang",
+  "/triggers/fetch-sehuatang-sh",
+  "/triggers/fetch-sehuatang-sh-thread-list",
+  "/triggers/fetch-sehuatang-sh-thread-detail",
   "/triggers/fetch-site-javbus-filtered",
   "/triggers/fetch-site-sukebei-filtered"
 ]);
 const fetchSiteListPagePaths = new Set([
   "/fetch-site-javbus-list",
   "/fetch-site-sukebei-list",
-  "/fetch-site-sehuatang-list"
+  "/fetch-site-sehuatang-list",
+  "/fetch-site-sehuatang-sh-list"
+]);
+const fetchSiteConfigPagePaths = new Set([
+  "/fetch-sites"
 ]);
 
 const contentTypes = {
@@ -271,6 +279,14 @@ http.createServer((req, res) => {
   }
   if (fetchSiteListPagePaths.has(url.pathname)) {
     sendFile(res, path.join(webRoot, "fetch-site-list.html"));
+    return;
+  }
+  if (url.pathname.startsWith("/fetch-site-sehuatang-sh-detail/")) {
+    sendFile(res, path.join(webRoot, "sh-sehuatang-detail.html"));
+    return;
+  }
+  if (fetchSiteConfigPagePaths.has(url.pathname)) {
+    sendFile(res, path.join(webRoot, "fetch-sites.html"));
     return;
   }
   if (url.pathname === "/crawler/tasks") {

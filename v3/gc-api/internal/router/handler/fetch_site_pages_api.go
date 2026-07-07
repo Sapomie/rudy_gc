@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
 	"rudy_gc/internal/service/sehuatang"
@@ -79,6 +80,32 @@ type sehuatangMagnetSortQuery struct {
 	ByMovieName    sehuatangMagnetSortLink
 	ByPostTime     sehuatangMagnetSortLink
 	ByPostDate     sehuatangMagnetSortLink
+	ByLastSeenTime sehuatangMagnetSortLink
+	ByCreatedOn    sehuatangMagnetSortLink
+	ByUpdatedOn    sehuatangMagnetSortLink
+}
+
+type shSehuatangThreadPageQuery struct {
+	Page             int64  `form:"p"`
+	PageSize         int64  `form:"ps"`
+	Sort             string `form:"sort"`
+	Order            string `form:"order"`
+	Keyword          string `form:"keyword"`
+	ThreadTID        string `form:"thread_tid"`
+	AuthorName       string `form:"author_name"`
+	InfoHash         string `form:"info_hash"`
+	SourceForumID    string `form:"source_forum_id"`
+	DetailStatus     string `form:"detail_status"`
+	HasMagnet        string `form:"has_magnet"`
+	PostTimeFrom     string `form:"post_time_from"`
+	PostTimeTo       string `form:"post_time_to"`
+	LastSeenTimeFrom string `form:"last_seen_time_from"`
+	LastSeenTimeTo   string `form:"last_seen_time_to"`
+}
+
+type shSehuatangThreadSortQuery struct {
+	ByThreadTID    sehuatangMagnetSortLink
+	ByPostTime     sehuatangMagnetSortLink
 	ByLastSeenTime sehuatangMagnetSortLink
 	ByCreatedOn    sehuatangMagnetSortLink
 	ByUpdatedOn    sehuatangMagnetSortLink
@@ -314,6 +341,139 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangListPageMain(c *gin.Context) {
 	})
 }
 
+func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
+	defer withFrontendPath(c, "/fetch-site-sehuatang-sh-list")()
+
+	var q shSehuatangThreadPageQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		jsonBadRequest(c, "参数解析错误", err)
+		return
+	}
+	if q.Page <= 0 {
+		q.Page = 1
+	}
+	if q.PageSize <= 0 {
+		q.PageSize = 50
+	}
+	q.Sort = normalizeSHSehuatangThreadSortField(q.Sort)
+	q.Order = normalizeSehuatangMagnetSortOrder(q.Order)
+
+	filter := moviex.ShSehuatangThreadListFilter{
+		Keyword:       strings.TrimSpace(q.Keyword),
+		ThreadTID:     strings.TrimSpace(q.ThreadTID),
+		AuthorName:    strings.TrimSpace(q.AuthorName),
+		InfoHash:      strings.TrimSpace(q.InfoHash),
+		SourceForumID: strings.TrimSpace(q.SourceForumID),
+		DetailStatus:  strings.TrimSpace(q.DetailStatus),
+	}
+	if v, ok, err := parseSHHasMagnet(q.HasMagnet); err != nil {
+		jsonBadRequest(c, "磁力筛选参数错误", err)
+		return
+	} else if ok {
+		filter.HasMagnet = v
+		filter.HasMagnetSet = true
+	}
+	if ts, ok, err := parseOptionalDateStart(q.PostTimeFrom); err != nil {
+		jsonBadRequest(c, "发帖时间开始日期错误", err)
+		return
+	} else if ok {
+		filter.PostTimeFrom = ts
+		filter.HasPostTimeFrom = true
+	}
+	if ts, ok, err := parseOptionalDateEnd(q.PostTimeTo); err != nil {
+		jsonBadRequest(c, "发帖时间结束日期错误", err)
+		return
+	} else if ok {
+		filter.PostTimeTo = ts
+		filter.HasPostTimeTo = true
+	}
+	if ts, ok, err := parseOptionalDateStart(q.LastSeenTimeFrom); err != nil {
+		jsonBadRequest(c, "最近抓到开始日期错误", err)
+		return
+	} else if ok {
+		filter.LastSeenTimeFrom = ts
+		filter.HasLastSeenTimeFrom = true
+	}
+	if ts, ok, err := parseOptionalDateEnd(q.LastSeenTimeTo); err != nil {
+		jsonBadRequest(c, "最近抓到结束日期错误", err)
+		return
+	} else if ok {
+		filter.LastSeenTimeTo = ts
+		filter.HasLastSeenTimeTo = true
+	}
+
+	total, err := h.deps.ShSehuatangThreadModel.CountAll(c.Request.Context(), filter)
+	if err != nil {
+		jsonServerError(c, "Sehuatang SH 列表统计失败", err)
+		return
+	}
+	offset := (q.Page - 1) * q.PageSize
+	rows, err := h.deps.ShSehuatangThreadModel.ListPage(c.Request.Context(), offset, q.PageSize, buildSHSehuatangThreadOrderBy(q.Sort, q.Order), filter)
+	if err != nil {
+		jsonServerError(c, "Sehuatang SH 列表加载失败", err)
+		return
+	}
+	runs, err := h.deps.ShSehuatangFetchRunModel.ListRecent(c.Request.Context(), 10)
+	if err != nil {
+		jsonServerError(c, "Sehuatang SH 抓取记录加载失败", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"Title":             "Sehuatang SH 帖子列表",
+		"ViewType":          "fetch-site-sehuatang-sh-list",
+		"PageTitle":         "Sehuatang SH 帖子列表",
+		"PageNote":          "展示 sh_sehuatang_thread 帖子池基础信息、详情状态，并保留最近抓取记录。",
+		"Query":             q,
+		"Rows":              rows,
+		"RecentRuns":        runs,
+		"Total":             total,
+		"PageInfo":          buildFetchSitePageInfo(c, total, q.Page, q.PageSize),
+		"SortQuery":         buildSHSehuatangThreadSortQuery(c, q.Sort, q.Order),
+		"TaskPageURL":       "/triggers/fetch-sehuatang-sh-thread-list",
+		"DetailTaskPageURL": "/triggers/fetch-sehuatang-sh-thread-detail",
+		"TasksPageURL":      "/crawler/tasks",
+		"OldListURL":        "/fetch-site-sehuatang-list",
+	})
+}
+
+func (h *CrawlerPagesAPI) FetchSiteSehuatangSHDetailPageMain(c *gin.Context) {
+	defer withFrontendPath(c, "/fetch-site-sehuatang-sh-detail/"+c.Param("thread_tid"))()
+
+	threadTID := strings.TrimSpace(c.Param("thread_tid"))
+	if threadTID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "thread_tid 不能为空"})
+		return
+	}
+
+	thread, err := h.deps.ShSehuatangThreadModel.FindOneByThreadTID(c.Request.Context(), threadTID)
+	if err != nil {
+		if err == moviex.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "帖子不存在"})
+			return
+		}
+		jsonServerError(c, "Sehuatang SH 帖子详情加载失败", err)
+		return
+	}
+	items, err := h.deps.ShSehuatangFetchItemModel.ListByThreadTID(c.Request.Context(), threadTID, 50)
+	if err != nil {
+		jsonServerError(c, "Sehuatang SH 抓取记录加载失败", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"Title":           "Sehuatang SH 帖子详情",
+		"ViewType":        "fetch-site-sehuatang-sh-detail",
+		"PageTitle":       "Sehuatang SH 帖子详情",
+		"Thread":          thread,
+		"FetchItems":      items,
+		"ListPageURL":     "/fetch-site-sehuatang-sh-list",
+		"TaskPageURL":     "/triggers/fetch-sehuatang-sh-thread-detail",
+		"ListTaskPageURL": "/triggers/fetch-sehuatang-sh-thread-list",
+		"TasksPageURL":    "/crawler/tasks",
+	})
+}
+
 func buildFetchSitePageInfo(c *gin.Context, total int64, page int64, pageSize int64) *PageInfo {
 	return BuildPageInfo(c, total, page, pageSize, 2)
 }
@@ -470,9 +630,48 @@ func buildSehuatangMagnetSortQuery(c *gin.Context, currentField string, currentO
 	}
 }
 
+func buildSHSehuatangThreadSortQuery(c *gin.Context, currentField string, currentOrder string) *shSehuatangThreadSortQuery {
+	makeHref := func(field string) sehuatangMagnetSortLink {
+		q := cloneValues(c)
+		q.Set("p", "1")
+		q.Set("sort", field)
+		if currentField == field && currentOrder == "desc" {
+			q.Set("order", "asc")
+		} else {
+			q.Set("order", "desc")
+		}
+		href := c.Request.URL.Path
+		if enc := q.Encode(); enc != "" {
+			href += "?" + enc
+		}
+		return sehuatangMagnetSortLink{
+			Href:   href,
+			Active: currentField == field,
+			Desc:   currentField == field && currentOrder == "desc",
+		}
+	}
+
+	return &shSehuatangThreadSortQuery{
+		ByThreadTID:    makeHref("thread_tid"),
+		ByPostTime:     makeHref("post_time"),
+		ByLastSeenTime: makeHref("last_seen_time"),
+		ByCreatedOn:    makeHref("created_on"),
+		ByUpdatedOn:    makeHref("updated_on"),
+	}
+}
+
 func normalizeSehuatangMagnetSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
 	case "movie_jav_id", "movie_name", "post_time", "post_date", "last_seen_time", "created_on", "updated_on":
+		return strings.TrimSpace(raw)
+	default:
+		return "post_time"
+	}
+}
+
+func normalizeSHSehuatangThreadSortField(raw string) string {
+	switch strings.TrimSpace(raw) {
+	case "thread_tid", "post_time", "last_seen_time", "created_on", "updated_on":
 		return strings.TrimSpace(raw)
 	default:
 		return "post_time"
@@ -484,6 +683,27 @@ func normalizeSehuatangMagnetSortOrder(raw string) string {
 		return "asc"
 	}
 	return "desc"
+}
+
+func buildSHSehuatangThreadOrderBy(sortField string, sortOrder string) string {
+	field := normalizeSHSehuatangThreadSortField(sortField)
+	order := normalizeSehuatangMagnetSortOrder(sortOrder)
+	return fmt.Sprintf("`%s` %s, `id` DESC", field, strings.ToUpper(order))
+}
+
+func parseSHHasMagnet(raw string) (bool, bool, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return false, false, nil
+	}
+	switch raw {
+	case "1", "true", "yes":
+		return true, true, nil
+	case "0", "false", "no":
+		return false, true, nil
+	default:
+		return false, false, fmt.Errorf("must be 1 or 0")
+	}
 }
 
 func buildSehuatangTagQuickFilters(c *gin.Context, currentTag string) []*sehuatangTagQuickFilter {

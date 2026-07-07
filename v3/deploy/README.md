@@ -1,33 +1,99 @@
 # v3 deploy
 
-`legacy-deploy/` 是从 `legacy/deploy/` 机械复制来的部署来源。
+v3 Docker 部署包含两个业务容器：
 
-v3 部署只允许围绕前后端分离做必要拆分：
+- `gc-api`：Go API 服务，Docker 内监听 `15013`。
+- `gc-web`：Node 页面与静态资源服务，Docker 内监听 `15012`，并代理 `/api/...` 到 `gc-api`。
 
-- 后端从 legacy router 页面入口拆成 API 服务。
-- 前端从 legacy 模板和静态资源拆成独立前端服务。
-- `gc-api` 的 router 只提供 `/api/...`，不提供 HTML 页面、不加载模板、不提供 UI 静态资源。
-- `gc-web` 提供页面、legacy 静态资源、本地媒体文件读取和 API 代理。
-- 运行配置中的数据库、Redis、外部路径和业务凭证必须保持真实有效，不得用空值或占位值交付。
+基础服务使用已有 Docker 容器：
 
-## 本地端口
+- MySQL：`rudy_infra_mysql_local`，宿主机端口 `127.0.0.1:3307`。
+- Cache Redis：`rudy_infra_redis_local`，宿主机端口 `127.0.0.1:6389`。
+- Biz Redis：`rudy_infra_redis_6399_local`，宿主机端口 `127.0.0.1:6399`。
 
-- `gc-api` 默认监听 `:5013`，避免占用 legacy 的 `:5010`。
-- `gc-web` 默认监听 `:5012`，通过 `V3_API_ORIGIN` 代理到 v3 API。
+## 数据库导入链路
 
-## Make 命令
+服务镜像构建完成后，执行宿主机 MySQL 到 Docker MySQL 的导入：
 
-- `make -C /Users/gaojinwei/src/my/rudy_gc/v3 paths`：查看路径和端口。
-- `make -C /Users/gaojinwei/src/my/rudy_gc/v3 run-api`：启动 v3 API。
-- `make -C /Users/gaojinwei/src/my/rudy_gc/v3 run-web`：启动 v3 web。
-- `make -C /Users/gaojinwei/src/my/rudy_gc/v3 run-all`：同时启动 v3 API 和 v3 web。
-- `make -C /Users/gaojinwei/src/my/rudy_gc/v3 stop-all`：停止 v3 API 和 v3 web 端口。
-- `make -C /Users/gaojinwei/src/my/rudy_gc/v3 verify`：执行后端测试和前端检查。
+```text
+宿主机 MySQL 127.0.0.1:3306/rudy_gc
+  -> mysqldump
+  -> Docker MySQL rudy_infra_mysql_local/rudy_gc
+```
 
-子 make 文件也必须支持单独执行：
+导入脚本从 `rudy_infra_mysql_local` 容器里访问宿主机 MySQL：
 
-- `/usr/bin/make -f /Users/gaojinwei/src/my/rudy_gc/v3/make/run.mk -C /Users/gaojinwei/src/my/rudy_gc/v3/make run-all`
-- `/usr/bin/make -f /Users/gaojinwei/src/my/rudy_gc/v3/make/run.mk -C /Users/gaojinwei/src/my/rudy_gc/v3/make stop-all`
-- `/usr/bin/make -f /Users/gaojinwei/src/my/rudy_gc/v3/make/gc-api.mk -C /Users/gaojinwei/src/my/rudy_gc/v3/make test-api`
-- `/usr/bin/make -f /Users/gaojinwei/src/my/rudy_gc/v3/make/gc-web.mk -C /Users/gaojinwei/src/my/rudy_gc/v3/make check-web`
-- `/usr/bin/make -f /Users/gaojinwei/src/my/rudy_gc/v3/make/verify.mk -C /Users/gaojinwei/src/my/rudy_gc/v3/make verify`
+```text
+host.docker.internal:3306/rudy_gc
+```
+
+目标库写入同一个 Docker MySQL 容器内：
+
+```text
+127.0.0.1:3306/rudy_gc
+```
+
+目标数据库已有表时脚本停止，避免覆盖 Docker MySQL 现有数据。
+
+## Docker 命令
+
+Docker 拉取镜像和构建步骤默认使用本机代理：
+
+```text
+http://127.0.0.1:7897/
+```
+
+构建容器内部通过以下地址访问宿主代理：
+
+```text
+http://host.docker.internal:7897/
+```
+
+完整流程：
+
+```bash
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-rebuild
+```
+
+等价拆分流程：
+
+```bash
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-build
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-import-db
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-up
+```
+
+常用维护命令：
+
+```bash
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-ps
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-logs
+make -C /Users/gaojinwei/src/my/rudy_gc/v3 docker-down
+```
+
+## 运行配置
+
+API Docker 配置文件：
+
+```text
+/Users/gaojinwei/src/my/rudy_gc/v3/deploy/docker/config/api.config.yaml
+```
+
+关键连接：
+
+```yaml
+DataSource: root:4521822123@tcp(host.docker.internal:3307)/rudy_gc?charset=utf8mb4&parseTime=true&loc=Local
+
+Cache:
+  - Host: host.docker.internal:6389
+
+BizRedis:
+  Host: host.docker.internal:6399
+```
+
+## 访问入口
+
+```text
+http://127.0.0.1:15012/cards
+http://127.0.0.1:15012/api/health
+```

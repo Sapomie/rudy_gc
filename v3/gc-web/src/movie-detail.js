@@ -223,6 +223,8 @@ function renderFilmInfo(data) {
     return "";
   }
   const marked = !!(data.MovieDeleteAlbumMarked || data.movieDeleteAlbumMarked);
+  const javID = text(movie, "jav_id", "JavId");
+  const torrentHash = text(media, "SourceTorrentHash");
   return `
     <div class="row mt-3">
       <div class="col-12">
@@ -238,7 +240,15 @@ function renderFilmInfo(data) {
               <tbody>
                 <tr>
                   <td>WMedia</td>
-                  <td class="text-monospace">${text(media, "SourceTorrentHash") ? escapeHtml(text(media, "SourceTorrentHash")) : `<span class="text-muted">-</span>`}</td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="text-monospace">${torrentHash ? escapeHtml(torrentHash) : `<span class="text-muted">-</span>`}</span>
+                      <button type="button" class="btn btn-sm btn-outline-secondary js-edit-torrent-hash" data-jav="${attr(javID)}" data-hash="${attr(torrentHash)}" title="修改 TorrentHash">
+                        <i class="mdi mdi-pencil"></i>
+                        <span class="ms-1">修改</span>
+                      </button>
+                    </div>
+                  </td>
                   <td>${escapeHtml(text(media, "BirthTime"))}</td>
                   <td>
                     <div class="d-flex flex-column gap-1">
@@ -495,6 +505,29 @@ function renderMovieAlbumModal(albums) {
 
 function renderModals(data) {
   return `
+    <div class="modal fade" id="updateTorrentHashModal" tabindex="-1" aria-labelledby="updateTorrentHashModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form id="formUpdateTorrentHash">
+            <div class="modal-header">
+              <h5 class="modal-title" id="updateTorrentHashModalLabel">修改 TorrentHash</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="movieTorrentHashInput" class="form-label">TorrentHash</label>
+                <input type="text" class="form-control text-monospace" id="movieTorrentHashInput" placeholder="40 位 info_hash，可留空">
+              </div>
+              <div id="movieTorrentHashMsg" class="small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
     <div class="modal fade" id="moveWMediaRemovedModal" tabindex="-1" aria-labelledby="moveWMediaRemovedModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -837,6 +870,23 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  const editHashButton = event.target.closest(".js-edit-torrent-hash");
+  if (editHashButton) {
+    const modalEl = document.getElementById("updateTorrentHashModal");
+    if (!modalEl) return;
+    modalEl.dataset.jav = String(editHashButton.dataset.jav || "").trim();
+    const input = modalEl.querySelector("#movieTorrentHashInput");
+    const msgEl = modalEl.querySelector("#movieTorrentHashMsg");
+    if (input) input.value = String(editHashButton.dataset.hash || "").trim();
+    if (msgEl) {
+      msgEl.style.display = "none";
+      msgEl.textContent = "";
+      msgEl.className = "small";
+    }
+    modalOf("updateTorrentHashModal")?.show();
+    return;
+  }
+
   const btnDoMove = event.target.closest("#btnMoveWMediaRemovedDo");
   if (btnDoMove) {
     const modalEl = document.getElementById("moveWMediaRemovedModal");
@@ -970,6 +1020,47 @@ document.addEventListener("click", async (event) => {
 });
 
 document.addEventListener("submit", async (event) => {
+  const hashForm = event.target.closest("#formUpdateTorrentHash");
+  if (hashForm) {
+    event.preventDefault();
+
+    const modalEl = document.getElementById("updateTorrentHashModal");
+    const target = readMovieTarget();
+    const javID = String((modalEl && modalEl.dataset.jav) || target.movieJavID || "").trim();
+    const input = hashForm.querySelector("#movieTorrentHashInput");
+    const msg = hashForm.querySelector("#movieTorrentHashMsg");
+    const button = hashForm.querySelector('button[type="submit"]');
+    const torrentHash = input ? String(input.value || "").trim() : "";
+
+    function showHashMsg(value, ok) {
+      if (!msg) return;
+      msg.textContent = value;
+      msg.className = `${ok ? "text-success" : "text-danger"} small`;
+      msg.style.display = "block";
+    }
+
+    if (!javID) {
+      showHashMsg("缺少影片参数", false);
+      return;
+    }
+
+    if (button) button.disabled = true;
+    try {
+      await request(`/api/movie/${encodeURIComponent(javID)}/torrent-hash`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({torrent_hash: torrentHash})
+      });
+      showHashMsg("保存成功，正在刷新...", true);
+      window.setTimeout(() => window.location.reload(), 300);
+    } catch (error) {
+      showHashMsg(error.message || "网络错误，请稍后重试", false);
+    } finally {
+      if (button) button.disabled = false;
+    }
+    return;
+  }
+
   const form = event.target.closest("#formAddMovieCast");
   if (!form) return;
   event.preventDefault();
@@ -1013,18 +1104,30 @@ document.addEventListener("submit", async (event) => {
 });
 
 document.addEventListener("shown.bs.modal", (event) => {
-  const modal = event.target.closest("#addMovieCastModal");
-  if (!modal) return;
-  const input = modal.querySelector("#movieCastName");
-  const msg = modal.querySelector("#movieCastMsg");
+  const castModal = event.target.closest("#addMovieCastModal");
+  if (castModal) {
+    const input = castModal.querySelector("#movieCastName");
+    const msg = castModal.querySelector("#movieCastMsg");
+    if (msg) {
+      msg.style.display = "none";
+      msg.textContent = "";
+    }
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    return;
+  }
+
+  const hashModal = event.target.closest("#updateTorrentHashModal");
+  if (!hashModal) return;
+  const input = hashModal.querySelector("#movieTorrentHashInput");
+  const msg = hashModal.querySelector("#movieTorrentHashMsg");
   if (msg) {
     msg.style.display = "none";
     msg.textContent = "";
   }
-  if (input) {
-    input.value = "";
-    input.focus();
-  }
+  if (input) input.focus();
 });
 
 async function init() {

@@ -6,6 +6,9 @@ const triggerPageAPIs = {
   "/triggers/backfill": "/api/triggers/backfill",
   "/triggers/fetch-site": "/api/triggers/fetch-site",
   "/triggers/fetch-sehuatang": "/api/triggers/fetch-sehuatang",
+  "/triggers/fetch-sehuatang-sh": "/api/triggers/fetch-sehuatang-sh",
+  "/triggers/fetch-sehuatang-sh-thread-list": "/api/triggers/fetch-sehuatang-sh-thread-list",
+  "/triggers/fetch-sehuatang-sh-thread-detail": "/api/triggers/fetch-sehuatang-sh-thread-detail",
   "/triggers/fetch-site-javbus-filtered": "/api/triggers/fetch-site-javbus-filtered",
   "/triggers/fetch-site-sukebei-filtered": "/api/triggers/fetch-site-sukebei-filtered",
 };
@@ -275,6 +278,50 @@ function renderFetchSitePreviewPanel(data) {
   </div>`;
 }
 
+function renderSHThreadDetailPreviewPanel(data) {
+  if (!data.ShowSehuatangSHThreadDetail) {
+    return "";
+  }
+  return `<div class="row">
+    <div class="col-12">
+      <div class="card is-hidden" id="shDetailPreviewPanel">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+              <h4 class="card-title mb-1">帖子预览</h4>
+              <div class="text-muted small" id="shDetailPreviewSummary">当前还没有预览数据</div>
+            </div>
+            <div class="d-flex align-items-center">
+              <span class="badge bg-light text-dark mr-2" id="shDetailPreviewMetaText">共 0 条，已选 0 条</span>
+              <button type="button" class="btn btn-outline-secondary btn-sm mr-2" id="selectAllSHDetailPreviewBtn">全选</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm mr-2" id="clearSHDetailPreviewBtn">取消选择</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="hideSHDetailPreviewBtn">收起</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="text-nowrap">选择</th>
+                  <th class="text-nowrap">TID</th>
+                  <th>标题</th>
+                  <th class="text-nowrap">版块</th>
+                  <th class="text-nowrap">发布时间</th>
+                  <th class="text-nowrap">详情状态</th>
+                  <th class="text-nowrap">作者</th>
+                </tr>
+              </thead>
+              <tbody id="shDetailPreviewTableBody">
+                <tr><td colspan="7" class="text-center text-muted py-4">等待预览</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderStageOverview(data) {
   if (data.OverviewExtraMode === "fetch_site_summary") {
     return `<div class="row">
@@ -309,20 +356,56 @@ function renderStageOverview(data) {
     return `<div class="row">
       <div class="col-md-4 mb-2">
         <div class="overview-item">
-          <div class="label">抓取进度（总/完成）</div>
-          <div class="value" id="sehuatangProgressText">0 / 0</div>
+          <div class="label">页面进度（完成/总）</div>
+          <div class="value" id="sehuatangPageProgressText">0 / 0</div>
         </div>
       </div>
       <div class="col-md-4 mb-2">
         <div class="overview-item">
-          <div class="label">成功/失败</div>
-          <div class="value" id="resultText">0 / 0</div>
+          <div class="label">当前页面</div>
+          <div class="value" id="sehuatangCurrentPageText">-</div>
         </div>
       </div>
       <div class="col-md-4 mb-2">
         <div class="overview-item">
           <div class="label">已运行时长</div>
           <div class="value" id="elapsedText">00:00</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">发现帖子</div>
+          <div class="value" id="sehuatangSeenText">0</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">目标命中</div>
+          <div class="value" id="sehuatangMatchedText">0</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">跳过版块</div>
+          <div class="value" id="sehuatangSkippedForumText">0</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">跳过已存在</div>
+          <div class="value" id="sehuatangSkippedExistingText">0</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">入库</div>
+          <div class="value" id="sehuatangFetchedText">0</div>
+        </div>
+      </div>
+      <div class="col-md-2 col-6 mb-2">
+        <div class="overview-item">
+          <div class="label">失败</div>
+          <div class="value" id="sehuatangFailedText">0</div>
         </div>
       </div>
     </div>`;
@@ -538,6 +621,20 @@ function renderStageOverview(data) {
 }
 
 function renderPage(data) {
+  const fetchSehuatangPersistMode = data.FetchSehuatangPersistMode === "upsert_all" ? "upsert_all" : "skip_existing";
+  const fetchSehuatangSHMode = data.FetchSehuatangSHMode === "forum" ? "forum" : "search";
+  const fetchSehuatangSHForums = Array.isArray(data.FetchSehuatangSHTargetForums)
+    ? data.FetchSehuatangSHTargetForums.map((item) => String(item || "").trim())
+    : ["36", "103"];
+  const shForumChecked = (forumID) => fetchSehuatangSHForums.includes(forumID);
+  const shDetailStatus = ["fetched", "failed"].includes(String(data.FetchSehuatangSHDetailStatus || ""))
+    ? String(data.FetchSehuatangSHDetailStatus)
+    : "pending";
+  const shDetailStatusValues = Array.isArray(data.FetchSehuatangSHDetailStatuses) && data.FetchSehuatangSHDetailStatuses.length
+    ? data.FetchSehuatangSHDetailStatuses.map((item) => String(item || "").trim())
+    : [shDetailStatus];
+  const shDetailStatusChecked = (status) => shDetailStatusValues.includes(status);
+
   return `<div id="crawlerJobsPage">
     <div class="row">
       <div class="col-12">
@@ -618,8 +715,76 @@ function renderPage(data) {
                 </div>
 
                 <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangKeywordFieldWrap">
-                  <label for="task_sehuatang_keyword">标题关键词</label>
-                  <input id="task_sehuatang_keyword" name="keyword" class="form-control" type="text" value="${attr(data.FetchSehuatangKey || "")}" placeholder="可选，留空表示抓取全部普通帖">
+                  <label for="task_sehuatang_keyword">关键词</label>
+                  <input id="task_sehuatang_keyword" name="keyword" class="form-control" type="text" value="${attr(data.FetchSehuatangKey || "")}" placeholder="输入关键词">
+                </div>
+
+                <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangSHModeFieldWrap">
+                  <label for="task_sehuatang_sh_fetch_mode">抓取模式</label>
+                  <select id="task_sehuatang_sh_fetch_mode" name="fetch_mode" class="form-select">
+                    <option value="search" ${fetchSehuatangSHMode === "search" ? "selected" : ""}>搜索结果翻页</option>
+                    <option value="forum" ${fetchSehuatangSHMode === "forum" ? "selected" : ""}>版块列表翻页</option>
+                  </select>
+                </div>
+
+                <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangSHForumsFieldWrap">
+                  <label class="d-block mb-2">目标版块</label>
+                  <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check">
+                      <input id="task_sehuatang_sh_forum_36" name="target_forum_ids" class="form-check-input" type="checkbox" value="36" ${shForumChecked("36") ? "checked" : ""}>
+                      <label class="form-check-label" for="task_sehuatang_sh_forum_36">亚洲无码原创</label>
+                    </div>
+                    <div class="form-check">
+                      <input id="task_sehuatang_sh_forum_103" name="target_forum_ids" class="form-check-input" type="checkbox" value="103" ${shForumChecked("103") ? "checked" : ""}>
+                      <label class="form-check-label" for="task_sehuatang_sh_forum_103">高清中文字幕</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangSHDetailStatusFieldWrap">
+                  <label class="d-block mb-2">详情状态</label>
+                  <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check">
+                      <input id="task_sehuatang_sh_detail_status_pending" name="detail_statuses" class="form-check-input" type="checkbox" value="pending" ${shDetailStatusChecked("pending") ? "checked" : ""}>
+                      <label class="form-check-label" for="task_sehuatang_sh_detail_status_pending">待抓详情</label>
+                    </div>
+                    <div class="form-check">
+                      <input id="task_sehuatang_sh_detail_status_failed" name="detail_statuses" class="form-check-input" type="checkbox" value="failed" ${shDetailStatusChecked("failed") ? "checked" : ""}>
+                      <label class="form-check-label" for="task_sehuatang_sh_detail_status_failed">详情失败</label>
+                    </div>
+                    <div class="form-check">
+                      <input id="task_sehuatang_sh_detail_status_fetched" name="detail_statuses" class="form-check-input" type="checkbox" value="fetched" ${shDetailStatusChecked("fetched") ? "checked" : ""}>
+                      <label class="form-check-label" for="task_sehuatang_sh_detail_status_fetched">已抓详情</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangSHDetailTitleFieldWrap">
+                  <label for="task_sehuatang_sh_detail_keyword">帖子标题筛选</label>
+                  <input id="task_sehuatang_sh_detail_keyword" name="keyword" class="form-control" type="text" placeholder="按标题筛选待抓详情帖子">
+                </div>
+
+                <div class="form-group compact-field is-hidden" id="fetchSehuatangSHPostTimeFromFieldWrap">
+                  <label for="task_sehuatang_sh_post_time_from">发帖时间开始</label>
+                  <input id="task_sehuatang_sh_post_time_from" name="post_time_from" class="form-control" type="text" placeholder="YYYY-MM-DD">
+                </div>
+
+                <div class="form-group compact-field is-hidden" id="fetchSehuatangSHPostTimeToFieldWrap">
+                  <label for="task_sehuatang_sh_post_time_to">发帖时间结束</label>
+                  <input id="task_sehuatang_sh_post_time_to" name="post_time_to" class="form-control" type="text" placeholder="YYYY-MM-DD">
+                </div>
+
+                <div class="form-group compact-field is-hidden" id="fetchSehuatangSHDetailLimitFieldWrap">
+                  <label for="task_sehuatang_sh_detail_limit">预览 limit</label>
+                  <input id="task_sehuatang_sh_detail_limit" name="limit" class="form-control" type="number" min="1" placeholder="留空不限制">
+                </div>
+
+                <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangStopOnExistingFieldWrap">
+                  <label class="d-block mb-2">抓取范围</label>
+                  <div class="form-check">
+                    <input id="task_sehuatang_stop_on_existing" name="stop_on_existing" class="form-check-input" type="checkbox" value="1" ${data.FetchSehuatangStopOnExisting ? "checked" : ""}>
+                    <label class="form-check-label" for="task_sehuatang_stop_on_existing">从第一页开始，抓到已存在帖子停止</label>
+                  </div>
                 </div>
 
                 <div class="form-group compact-field is-hidden" id="fetchSehuatangStartPageFieldWrap">
@@ -635,8 +800,8 @@ function renderPage(data) {
                 <div class="form-group compact-field grid-span-2 is-hidden" id="fetchSehuatangPersistModeFieldWrap">
                   <label for="task_sehuatang_persist_mode">入库模式</label>
                   <select id="task_sehuatang_persist_mode" name="persist_mode" class="form-select">
-                    <option value="upsert_all">upsert 所有帖子</option>
-                    <option value="skip_existing">跳过数据库中已存在的帖子</option>
+                    <option value="upsert_all" ${fetchSehuatangPersistMode === "upsert_all" ? "selected" : ""}>upsert 所有帖子</option>
+                    <option value="skip_existing" ${fetchSehuatangPersistMode === "skip_existing" ? "selected" : ""}>跳过数据库中已存在的帖子</option>
                   </select>
                 </div>
               </div>
@@ -645,7 +810,8 @@ function renderPage(data) {
 
               <div class="d-flex align-items-center flex-wrap action-row">
                 ${data.ShowMovieFilters ? `<button type="button" id="previewFetchSiteBtn" class="btn btn-outline-info mr-2">预览筛选结果</button>` : ""}
-                <button type="submit" id="submitBtn" class="btn btn-primary">开始执行</button>
+                ${data.ShowSehuatangSHThreadDetail ? `<button type="button" id="previewSHDetailBtn" class="btn btn-outline-info mr-2">筛选帖子预览</button>` : ""}
+                <button type="submit" id="submitBtn" class="btn btn-primary">${data.ShowSehuatangSHThreadDetail ? "抓取选中详情" : "开始执行"}</button>
                 <button type="button" id="pauseBtn" class="btn btn-outline-warning ml-2" disabled>暂停</button>
                 <button type="button" id="resumeBtn" class="btn btn-outline-success ml-2" disabled>继续</button>
                 <button type="button" id="stopBtn" class="btn btn-outline-danger ml-2" disabled>停止</button>
@@ -689,6 +855,7 @@ function renderPage(data) {
       </div>
     </div>
     ${renderFetchSitePreviewPanel(data)}
+    ${renderSHThreadDetailPreviewPanel(data)}
   </div>`;
 }
 
@@ -706,7 +873,13 @@ function loadLegacyConsole(data) {
       keyword: data.FetchSehuatangKey || "",
       startPage: data.FetchSehuatangStartPage || 0,
       endPage: data.FetchSehuatangEndPage || 0,
-      persistMode: data.FetchSehuatangPersistMode || "",
+      persistMode: data.FetchSehuatangPersistMode === "upsert_all" ? "upsert_all" : "skip_existing",
+      stopOnExisting: !!data.FetchSehuatangStopOnExisting,
+    },
+    fetchSehuatangSHDefaults: {
+      fetchMode: data.FetchSehuatangSHMode === "forum" ? "forum" : "search",
+      targetForumIDs: Array.isArray(data.FetchSehuatangSHTargetForums) ? data.FetchSehuatangSHTargetForums : ["36", "103"],
+      detailStatus: ["fetched", "failed"].includes(String(data.FetchSehuatangSHDetailStatus || "")) ? String(data.FetchSehuatangSHDetailStatus) : "pending",
     },
     allowedTaskTypes: Array.isArray(data.AllowedTaskTypes) ? data.AllowedTaskTypes : [],
   };

@@ -32,7 +32,7 @@ var (
 		".ts":  {},
 	}
 
-	movieNameRe = regexp.MustCompile(`^([A-Z]+)-?(\d+)$`)
+	movieNameRe = regexp.MustCompile(`^([A-Z]+)-?(\d+[A-Z]*)$`)
 )
 
 type movieInfo struct {

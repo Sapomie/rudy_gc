@@ -17,6 +17,7 @@ import (
 )
 
 type CrawlerPagesAPI struct {
+	deps      *dep.Dep
 	fetchSite *fetchsite.Service
 	sehuatang *sehuatang.Service
 	wkvSvc    *wkv.Service
@@ -41,6 +42,7 @@ type crawlerJobsPageLink struct {
 
 func NewCrawlerPagesAPI(deps *dep.Dep) *CrawlerPagesAPI {
 	return &CrawlerPagesAPI{
+		deps:      deps,
 		fetchSite: fetchsite.NewService(deps),
 		sehuatang: sehuatang.NewService(deps),
 		wkvSvc:    wkv.NewService(deps),
@@ -334,6 +336,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangPage(c *gin.Context) {
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
 			{Href: "/triggers/fetch-site", Label: "FetchSite"},
+			{Href: "/fetch-sites", Label: "FetchSites 配置"},
 			{Href: "/fetch-site-sehuatang-list", Label: "Sehuatang 列表"},
 		},
 		"Labels": crawlerJobsPageLabels{
@@ -341,16 +344,151 @@ func (h *CrawlerPagesAPI) FetchSehuatangPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              false,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        fetchsehuatang.DefaultListURL,
-		"FetchSehuatangKey":         fetchsehuatang.DefaultKeyword,
-		"FetchSehuatangStartPage":   fetchsehuatang.DefaultStartPage,
-		"FetchSehuatangEndPage":     fetchsehuatang.DefaultEndPage,
-		"FetchSehuatangPersistMode": fetchsehuatang.DefaultPersistMode,
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":                 false,
+		"ShowMovieFilters":             false,
+		"ShowFavoriteAlbum":            false,
+		"FetchSehuatangList":           sehuatangListURLFromFetchSiteConfig(h.deps),
+		"FetchSehuatangKey":            fetchsehuatang.DefaultKeyword,
+		"FetchSehuatangStartPage":      fetchsehuatang.DefaultStartPage,
+		"FetchSehuatangEndPage":        fetchsehuatang.DefaultEndPage,
+		"FetchSehuatangPersistMode":    fetchsehuatang.DefaultPersistMode,
+		"FetchSehuatangStopOnExisting": false,
+		"ScRootDir":                    h.scRootDir,
+		"JobID":                        strings.TrimSpace(c.Query("job_id")),
+	})
+}
+
+func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
+	defer withFrontendPath(c, "/triggers/fetch-sehuatang-sh")()
+
+	c.JSON(http.StatusOK, gin.H{
+		"Title":             "色花堂帖子新流程",
+		"ViewType":          "crawler-jobs",
+		"PageTitle":         "色花堂帖子新流程（sh 表）",
+		"QuickNavCurrent":   "fetch_sehuatang_sh",
+		"TaskPanelTitle":    "色花堂帖子新流程",
+		"PageNote":          "抓取搜索结果或指定版块普通帖，详情写入 sh_sehuatang_thread，并记录 sh_sehuatang_fetch_run / sh_sehuatang_fetch_item。",
+		"TaskTableTitle":    "色花堂帖子新流程任务",
+		"EventTitle":        "色花堂帖子新流程事件流",
+		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_selected_job",
+		"DefaultTaskType":   loop.TaskSpiderFetchSehuatangSH,
+		"OverviewExtraMode": "sehuatang_progress",
+		"EmptyStateText":    "等待 色花堂帖子新流程任务触发",
+		"AllowedTaskTypes": []string{
+			loop.TaskSpiderFetchSehuatangSH,
+		},
+		"TaskButtons": []crawlerJobsPageTask{
+			{TaskType: loop.TaskSpiderFetchSehuatangSH, Label: "色花堂帖子新流程"},
+		},
+		"HeaderLinks": []crawlerJobsPageLink{
+			{Href: "/triggers/fetch-sehuatang", Label: "旧磁力抓取"},
+			{Href: "/fetch-sites", Label: "FetchSites 配置"},
+			{Href: "/fetch-site-sehuatang-list", Label: "Sehuatang 列表"},
+		},
+		"Labels": crawlerJobsPageLabels{
+			Extra:   "任务类型",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+		"HideTaskForm":                 false,
+		"ShowMovieFilters":             false,
+		"ShowFavoriteAlbum":            false,
+		"ShowSehuatangSH":              true,
+		"FetchSehuatangSHMode":         fetchsehuatang.SHFetchModeSearch,
+		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumAsiaUncensoredOriginal, fetchsehuatang.SHForumHDChineseSubtitle},
+		"FetchSehuatangList":           "",
+		"FetchSehuatangKey":            "fc2ppv",
+		"FetchSehuatangStartPage":      fetchsehuatang.DefaultStartPage,
+		"FetchSehuatangEndPage":        fetchsehuatang.DefaultEndPage,
+		"FetchSehuatangPersistMode":    "",
+		"FetchSehuatangStopOnExisting": false,
+		"ScRootDir":                    h.scRootDir,
+		"JobID":                        strings.TrimSpace(c.Query("job_id")),
+	})
+}
+
+func (h *CrawlerPagesAPI) FetchSehuatangSHThreadListPage(c *gin.Context) {
+	defer withFrontendPath(c, "/triggers/fetch-sehuatang-sh-thread-list")()
+
+	c.JSON(http.StatusOK, gin.H{
+		"Title":             "色花堂帖子列表抓取",
+		"ViewType":          "crawler-jobs",
+		"PageTitle":         "色花堂帖子列表抓取",
+		"QuickNavCurrent":   "fetch_sehuatang_sh_thread_list",
+		"TaskPanelTitle":    "色花堂帖子列表抓取",
+		"PageNote":          "只翻 forum-36 / forum-103 列表页，只保存帖子基础信息，不请求帖子详情页。",
+		"TaskTableTitle":    "色花堂帖子列表抓取任务",
+		"EventTitle":        "色花堂帖子列表抓取事件流",
+		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_thread_list_selected_job",
+		"DefaultTaskType":   loop.TaskSpiderFetchSehuatangSHList,
+		"OverviewExtraMode": "sehuatang_progress",
+		"EmptyStateText":    "等待 色花堂帖子列表抓取任务触发",
+		"AllowedTaskTypes": []string{
+			loop.TaskSpiderFetchSehuatangSHList,
+		},
+		"TaskButtons": []crawlerJobsPageTask{
+			{TaskType: loop.TaskSpiderFetchSehuatangSHList, Label: "色花堂帖子列表抓取"},
+		},
+		"HeaderLinks": []crawlerJobsPageLink{
+			{Href: "/triggers/fetch-sehuatang-sh-thread-detail", Label: "详情补全"},
+			{Href: "/fetch-site-sehuatang-sh-list", Label: "帖子池"},
+		},
+		"Labels": crawlerJobsPageLabels{
+			Extra:   "任务类型",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+		"HideTaskForm":                 false,
+		"ShowMovieFilters":             false,
+		"ShowFavoriteAlbum":            false,
+		"ShowSehuatangSHThreadList":    true,
+		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumAsiaUncensoredOriginal, fetchsehuatang.SHForumHDChineseSubtitle},
+		"FetchSehuatangStartPage":      fetchsehuatang.DefaultStartPage,
+		"FetchSehuatangEndPage":        fetchsehuatang.DefaultEndPage,
+		"ScRootDir":                    h.scRootDir,
+		"JobID":                        strings.TrimSpace(c.Query("job_id")),
+	})
+}
+
+func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
+	defer withFrontendPath(c, "/triggers/fetch-sehuatang-sh-thread-detail")()
+
+	c.JSON(http.StatusOK, gin.H{
+		"Title":             "色花堂帖子详情补全",
+		"ViewType":          "crawler-jobs",
+		"PageTitle":         "色花堂帖子详情补全",
+		"QuickNavCurrent":   "fetch_sehuatang_sh_thread_detail",
+		"TaskPanelTitle":    "色花堂帖子详情补全",
+		"PageNote":          "先从 sh_sehuatang_thread 筛选并预览帖子，再抓取页面上选中的帖子详情。",
+		"TaskTableTitle":    "色花堂帖子详情补全任务",
+		"EventTitle":        "色花堂帖子详情补全事件流",
+		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_thread_detail_selected_job",
+		"DefaultTaskType":   loop.TaskSpiderFetchSehuatangSHDetail,
+		"OverviewExtraMode": "sehuatang_progress",
+		"EmptyStateText":    "等待 色花堂帖子详情补全任务触发",
+		"AllowedTaskTypes": []string{
+			loop.TaskSpiderFetchSehuatangSHDetail,
+		},
+		"TaskButtons": []crawlerJobsPageTask{
+			{TaskType: loop.TaskSpiderFetchSehuatangSHDetail, Label: "抓取选中详情"},
+		},
+		"HeaderLinks": []crawlerJobsPageLink{
+			{Href: "/triggers/fetch-sehuatang-sh-thread-list", Label: "列表抓取"},
+			{Href: "/fetch-site-sehuatang-sh-list", Label: "帖子池"},
+		},
+		"Labels": crawlerJobsPageLabels{
+			Extra:   "任务类型",
+			Result:  "成功/失败",
+			Elapsed: "已运行时长",
+		},
+		"HideTaskForm":                 false,
+		"ShowMovieFilters":             false,
+		"ShowFavoriteAlbum":            false,
+		"ShowSehuatangSHThreadDetail":  true,
+		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumAsiaUncensoredOriginal, fetchsehuatang.SHForumHDChineseSubtitle},
+		"FetchSehuatangSHDetailStatus": fetchsehuatang.SHDetailStatusPending,
+		"ScRootDir":                    h.scRootDir,
+		"JobID":                        strings.TrimSpace(c.Query("job_id")),
 	})
 }
 

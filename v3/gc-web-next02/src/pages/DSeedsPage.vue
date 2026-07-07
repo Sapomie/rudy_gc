@@ -1,0 +1,472 @@
+<template>
+  <PageShell class="torrent-albums-page-shell d-seeds-page-shell" title="DSeeds" note="" eyebrow="">
+    <div id="page-root" class="container-fluid torrent-albums-page-root d-seeds-page-root">
+      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
+      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+      <div v-else id="dSeedListPage" class="torrent-albums-page d-seeds-page">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h4 class="mb-1">{{ pageTitle }}</h4>
+            <p v-if="pageNote" class="text-muted mb-0">{{ pageNote }}</p>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenDSeedCreateModal" @click="openCreateModal">新增条目</button>
+        </div>
+
+        <div id="dSeedMsg" class="alert mb-3" :class="messageClass" role="alert">
+          {{ messageText }}
+        </div>
+
+        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+          <div class="d-seed-page-summary">
+            <span class="d-seed-page-summary-label">总数</span>
+            <span class="d-seed-page-summary-value">{{ total }}</span>
+          </div>
+          <div v-if="hasRows && pageLinks.length" class="ms-xl-auto">
+            <DSeedPagination :links="pageLinks" />
+          </div>
+        </div>
+
+        <div class="section-card card mb-3">
+          <div class="card-body">
+            <form class="row g-2 align-items-end" id="dSeedFilterForm" method="get" action="/d-seeds">
+              <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
+              <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
+
+              <div class="col-12 col-md-6 col-xl-3">
+                <label class="form-label mb-1">查询名</label>
+                <input class="form-control" type="text" name="name" :value="queryValue('Name')" placeholder="支持模糊搜索">
+              </div>
+              <div class="col-12 col-md-6 col-xl-2">
+                <label class="form-label mb-1">启用状态</label>
+                <select class="form-select" name="active" :value="queryValue('Active')">
+                  <option value="">全部</option>
+                  <option value="2">启用</option>
+                  <option value="1">停用</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-xl-2">
+                <label class="form-label mb-1">名称类型</label>
+                <select class="form-select" name="name_type" :value="queryValue('NameType')">
+                  <option value="">全部</option>
+                  <option value="1">Prefix</option>
+                  <option value="2">Label</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-xl-2">
+                <label class="form-label mb-1">查询类型</label>
+                <select class="form-select" name="search_type" :value="queryValue('SearchType')">
+                  <option value="">全部</option>
+                  <option value="1">偏移量</option>
+                  <option value="2">起止页</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-xl-2">
+                <label class="form-label mb-1">最后状态</label>
+                <select class="form-select" name="last_status" :value="queryValue('LastStatus')">
+                  <option value="">全部</option>
+                  <option value="0">空闲</option>
+                  <option value="1">成功</option>
+                  <option value="2">空页</option>
+                  <option value="3">错误</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-xl-1">
+                <label class="form-label mb-1">每页</label>
+                <select class="form-select" name="ps" :value="String(queryValue('PageSize') || 50)">
+                  <option value="24">24</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">筛选</button>
+                <a class="btn btn-outline-secondary" href="/d-seeds">清空</a>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="section-card card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0 d-seed-table">
+                <thead>
+                  <tr>
+                    <th><SortLink :link="sortLink('ByName')" label="查询名" /></th>
+                    <th><SortLink :link="sortLink('ByActive')" label="启用状态" /></th>
+                    <th><SortLink :link="sortLink('ByNameType')" label="名称类型" /></th>
+                    <th><SortLink :link="sortLink('BySearchType')" label="查询类型" /></th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByMovieTotal')" label="电影总量" /></th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByMovieLatestReleasingMovieName')" label="最新上映电影" /></th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByMovieLatestReleasingDate')" label="最新上映日" /></th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByMovieLastAddedTime')" label="上次新增" /></th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByLastInsertCount')" label="本轮新增" /></th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByPageNow')" label="当前页" /></th>
+                    <th class="text-nowrap">断点</th>
+                    <th class="text-nowrap"><SortLink :link="sortLink('ByLastQueryTime')" label="最后抓取" /></th>
+                    <th class="text-nowrap">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="!hasRows">
+                    <td colspan="13"><div class="d-seed-empty-state">当前筛选下没有 d_seed 数据。</div></td>
+                  </tr>
+                  <tr v-for="row in rows" v-else :key="rowKey(row)">
+                    <td class="text-nowrap">
+                      <a v-if="value(row, 'CardsHref')" class="fw-semibold" :href="value(row, 'CardsHref')">{{ value(row, "Name") }}</a>
+                      <span v-else>{{ value(row, "Name") }}</span>
+                    </td>
+                    <td><span class="badge" :class="value(row, 'ActiveClass')">{{ value(row, "ActiveText") }}</span></td>
+                    <td class="text-nowrap">{{ value(row, "NameTypeText") }}</td>
+                    <td class="text-nowrap">{{ value(row, "SearchTypeText") }}</td>
+                    <td class="text-nowrap">{{ value(row, "MovieTotal") }}</td>
+                    <td class="text-nowrap">
+                      <a v-if="value(row, 'MovieLatestReleasingMovieHref')" :href="value(row, 'MovieLatestReleasingMovieHref')">{{ value(row, "MovieLatestReleasingMovieName") }}</a>
+                      <span v-else>-</span>
+                    </td>
+                    <td class="text-nowrap">{{ formatUnixDate(value(row, "MovieLatestReleasingDate")) }}</td>
+                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "MovieLastAddedTime")) }}</td>
+                    <td class="text-nowrap">{{ value(row, "LastInsertCount") }}</td>
+                    <td class="text-nowrap">{{ value(row, "PageNow") }}</td>
+                    <td class="text-nowrap">{{ value(row, "Offset") }} / {{ value(row, "StartPage") }}-{{ value(row, "EndPage") }}</td>
+                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "LastQueryTime")) }}</td>
+                    <td class="text-nowrap">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary js-d-seed-edit"
+                        :data-item-id="value(row, 'Id')"
+                        :data-name="value(row, 'Name')"
+                        :data-active="value(row, 'ActiveValue')"
+                        :data-search-type="value(row, 'SearchTypeValue')"
+                        :data-name-type="value(row, 'NameTypeValue')"
+                        :data-page-now="value(row, 'PageNow')"
+                        :data-offset="value(row, 'Offset')"
+                        :data-start-page="value(row, 'StartPage')"
+                        :data-end-page="value(row, 'EndPage')"
+                        :data-last-status="value(row, 'LastStatusValue')"
+                        :data-last-error="value(row, 'LastError')"
+                        @click="openEditModal(row)"
+                      >编辑</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="hasRows && pageLinks.length" class="d-flex justify-content-end mt-3">
+          <DSeedPagination :links="pageLinks" />
+        </div>
+
+        <DSeedEditModal
+          :active="activeModal"
+          :model="editModel"
+          :submitting="submitting"
+          @close="closeModal"
+          @update="updateEditModel"
+          @submit="submitDSeed"
+        />
+      </div>
+    </div>
+  </PageShell>
+</template>
+
+<script setup lang="ts">
+import { computed, defineComponent, h, reactive, ref, watch, type PropType } from "vue";
+import { useRoute } from "vue-router";
+import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
+import PageShell from "@/components/PageShell.vue";
+import type { AnyRecord, PageInfo } from "@/types/gc";
+import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
+
+type EditModel = {
+  id: string;
+  name: string;
+  active: string;
+  searchType: string;
+  nameType: string;
+  pageNow: string;
+  offset: string;
+  startPage: string;
+  endPage: string;
+  lastStatus: string;
+  lastError: string;
+};
+
+const emptyModel = (): EditModel => ({
+  id: "",
+  name: "",
+  active: "2",
+  searchType: "1",
+  nameType: "1",
+  pageNow: "0",
+  offset: "0",
+  startPage: "0",
+  endPage: "0",
+  lastStatus: "0",
+  lastError: ""
+});
+
+const route = useRoute();
+const payload = ref<AnyRecord>({});
+const rows = ref<AnyRecord[]>([]);
+const loading = ref(false);
+const error = ref("");
+const messageText = ref("");
+const messageOk = ref(true);
+const activeModal = ref(false);
+const submitting = ref(false);
+const editModel = reactive<EditModel>(emptyModel());
+
+watch(() => route.fullPath, load, { immediate: true });
+
+async function load() {
+  loading.value = true;
+  error.value = "";
+  messageText.value = "";
+  try {
+    const data = asRecord(await getJSON(apiPathForRoute(route)));
+    payload.value = data;
+    rows.value = asArray<AnyRecord>(pick(data, "Items", "items", "Rows", "rows"));
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+const pageTitle = computed(() => text(payload.value, "PageTitle", "Title"));
+const pageNote = computed(() => text(payload.value, "PageNote"));
+const total = computed(() => text(payload.value, "Total", "total") || "0");
+const query = computed(() => asRecord(pick(payload.value, "Query")));
+const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
+const pageLinks = computed(() => asArray<AnyRecord>(pageInfo.value.Links));
+const sortQuery = computed(() => asRecord(pick(payload.value, "DSeedSort")));
+const hasRows = computed(() => rows.value.length > 0);
+const messageClass = computed(() => messageText.value ? (messageOk.value ? "alert-success small py-2 px-3" : "alert-danger small py-2 px-3") : "d-none");
+
+function queryValue(key: string): string {
+  return text(query.value, key);
+}
+
+function value(row: AnyRecord, key: string): string {
+  return text(row, key);
+}
+
+function rowKey(row: AnyRecord): string {
+  return [value(row, "Id"), value(row, "Name")].join(":");
+}
+
+function sortLink(key: string): AnyRecord {
+  return asRecord(sortQuery.value[key]);
+}
+
+function formatUnixDate(input: unknown): string {
+  const n = Number(input || 0);
+  if (!n) return "-";
+  const d = new Date(n * 1000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatUnixMinute(input: unknown): string {
+  const n = Number(input || 0);
+  if (!n) return "-";
+  const d = new Date(n * 1000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function assignModel(next: Partial<EditModel>) {
+  Object.assign(editModel, emptyModel(), next);
+}
+
+function showMessage(message: string, ok = true) {
+  messageText.value = message;
+  messageOk.value = ok;
+}
+
+function openCreateModal() {
+  assignModel({});
+  activeModal.value = true;
+}
+
+function openEditModal(row: AnyRecord) {
+  assignModel({
+    id: value(row, "Id"),
+    name: value(row, "Name"),
+    active: value(row, "ActiveValue"),
+    searchType: value(row, "SearchTypeValue"),
+    nameType: value(row, "NameTypeValue"),
+    pageNow: value(row, "PageNow"),
+    offset: value(row, "Offset"),
+    startPage: value(row, "StartPage"),
+    endPage: value(row, "EndPage"),
+    lastStatus: value(row, "LastStatusValue"),
+    lastError: value(row, "LastError")
+  });
+  activeModal.value = true;
+}
+
+function closeModal() {
+  activeModal.value = false;
+  submitting.value = false;
+}
+
+function updateEditModel(patch: Partial<EditModel>) {
+  Object.assign(editModel, patch);
+}
+
+async function submitDSeed() {
+  const isOffset = String(editModel.searchType || "1") === "1";
+  const body = {
+    name: editModel.name.trim(),
+    active: Number(editModel.active || 0),
+    search_type: Number(editModel.searchType || 0),
+    name_type: Number(editModel.nameType || 0),
+    page_now: Number(editModel.pageNow || 0),
+    offset: isOffset ? Number(editModel.offset || 0) : 0,
+    start_page: isOffset ? 0 : Number(editModel.startPage || 0),
+    end_page: isOffset ? 0 : Number(editModel.endPage || 0),
+    last_status: Number(editModel.lastStatus || 0),
+    last_error: editModel.lastError.trim()
+  };
+  const id = editModel.id.trim();
+  submitting.value = true;
+  try {
+    const data = asRecord(await sendJSON(id ? `/api/d-seeds/${encodeURIComponent(id)}` : "/api/d-seeds", "POST", body));
+    showMessage(text(data, "message") || "保存成功");
+    closeModal();
+    window.setTimeout(() => window.location.reload(), 250);
+  } catch (err) {
+    showMessage(err instanceof Error ? err.message : "保存失败", false);
+  } finally {
+    submitting.value = false;
+  }
+}
+
+const SortLink = defineComponent({
+  props: {
+    link: { type: Object as PropType<AnyRecord>, required: true },
+    label: { type: String, required: true }
+  },
+  setup(props) {
+    return () => {
+      const link = asRecord(props.link);
+      const active = Boolean(link.Active);
+      const desc = Boolean(link.Desc);
+      return h("a", {
+        class: ["d-seed-sort-link", active ? "active" : ""],
+        href: normalizeHref(text(link, "Href") || "#")
+      }, `${props.label}${active ? (desc ? " ↓" : " ↑") : ""}`);
+    };
+  }
+});
+
+const DSeedPagination = defineComponent({
+  props: {
+    links: { type: Array as PropType<AnyRecord[]>, required: true }
+  },
+  setup(props) {
+    return () => h("nav", { "aria-label": "Page navigation" }, [
+      h("ul", { class: "pagination pagination-sm mb-0" }, props.links.map((item, index) => {
+        const row = asRecord(item);
+        const ellipsis = Boolean(row.Ellipsis);
+        const disabled = Boolean(row.Disabled) || ellipsis;
+        const active = Boolean(row.Active);
+        const label = text(row, "Label") || "...";
+        return h("li", {
+          key: `${label}-${index}`,
+          class: ["page-item", active ? "active" : "", disabled ? "disabled" : ""]
+        }, ellipsis
+          ? h("span", { class: "page-link" }, "...")
+          : h("a", {
+            class: "page-link",
+            href: disabled ? undefined : normalizeHref(text(row, "Href") || "#"),
+            tabindex: disabled ? -1 : undefined,
+            "aria-disabled": disabled ? "true" : undefined
+          }, label));
+      }))
+    ]);
+  }
+});
+
+const DSeedEditModal = defineComponent({
+  props: {
+    active: { type: Boolean, required: true },
+    model: { type: Object as PropType<EditModel>, required: true },
+    submitting: { type: Boolean, required: true }
+  },
+  emits: ["close", "update", "submit"],
+  setup(props, { emit }) {
+    const set = (key: keyof EditModel, value: string) => emit("update", { [key]: value });
+    const input = (id: string, key: keyof EditModel, type = "text", attrs: Record<string, string> = {}) => h("input", {
+      class: "form-control",
+      id,
+      type,
+      value: props.model[key],
+      onInput: (event: Event) => set(key, (event.target as HTMLInputElement).value),
+      ...attrs
+    });
+    const select = (id: string, key: keyof EditModel, options: [string, string][]) => h("select", {
+      class: "form-select",
+      id,
+      value: props.model[key],
+      onChange: (event: Event) => set(key, (event.target as HTMLSelectElement).value)
+    }, options.map(([value, label]) => h("option", { value }, label)));
+    return () => h("div", [
+      h("div", {
+        class: ["modal", "fade", props.active ? "show d-block" : ""],
+        id: "dSeedEditModal",
+        tabindex: "-1",
+        "aria-hidden": props.active ? "false" : "true"
+      }, [h("div", { class: "modal-dialog modal-dialog-centered modal-lg" }, [h("div", { class: "modal-content" }, [
+        h("form", {
+          id: "dSeedEditForm",
+          onSubmit: (event: Event) => {
+            event.preventDefault();
+            emit("submit");
+          }
+        }, [
+          h("div", { class: "modal-header" }, [
+            h("div", [
+              h("h5", { class: "modal-title", id: "dSeedEditModalTitle" }, props.model.id ? "编辑 d_seed 条目" : "新增 d_seed 条目"),
+              h("div", { class: "small text-muted", id: "dSeedEditModalMeta" }, props.model.id ? props.model.name : "创建新的查询配置")
+            ]),
+            h("button", { type: "button", class: "btn-close", "aria-label": "Close", onClick: () => emit("close") })
+          ]),
+          h("div", { class: "modal-body" }, [
+            h("input", { type: "hidden", id: "dSeedEditId", value: props.model.id }),
+            h("div", { class: "row g-3" }, [
+              h("div", { class: "col-12 col-md-6" }, [h("label", { class: "form-label mb-1", for: "dSeedEditName" }, "查询名"), input("dSeedEditName", "name", "text", { maxlength: "128" })]),
+              h("div", { class: "col-12 col-md-3" }, [h("label", { class: "form-label mb-1", for: "dSeedEditActive" }, "启用状态"), select("dSeedEditActive", "active", [["2", "启用"], ["1", "停用"]])]),
+              h("div", { class: "col-12 col-md-3" }, [h("label", { class: "form-label mb-1", for: "dSeedEditLastStatus" }, "最后状态"), select("dSeedEditLastStatus", "lastStatus", [["0", "空闲"], ["1", "成功"], ["2", "空页"], ["3", "错误"]])]),
+              h("div", { class: "col-12 col-md-3" }, [h("label", { class: "form-label mb-1", for: "dSeedEditNameType" }, "名称类型"), select("dSeedEditNameType", "nameType", [["1", "Prefix"], ["2", "Label"]])]),
+              h("div", { class: "col-12 col-md-3" }, [h("label", { class: "form-label mb-1", for: "dSeedEditSearchType" }, "查询类型"), select("dSeedEditSearchType", "searchType", [["1", "偏移量"], ["2", "起止页"]])]),
+              h("div", { class: "col-12 col-md-3" }, [h("label", { class: "form-label mb-1", for: "dSeedEditPageNow" }, "当前页"), input("dSeedEditPageNow", "pageNow", "number", { min: "0", step: "1" })]),
+              h("div", { class: ["col-12 col-md-3", props.model.searchType === "1" ? "" : "d-none"], id: "dSeedOffsetFieldWrap" }, [h("label", { class: "form-label mb-1", for: "dSeedEditOffset" }, "偏移量"), input("dSeedEditOffset", "offset", "number", { min: "0", step: "1" })]),
+              h("div", { class: ["col-12 col-md-3", props.model.searchType === "1" ? "d-none" : ""], id: "dSeedStartPageFieldWrap" }, [h("label", { class: "form-label mb-1", for: "dSeedEditStartPage" }, "起始页"), input("dSeedEditStartPage", "startPage", "number", { min: "0", step: "1" })]),
+              h("div", { class: ["col-12 col-md-3", props.model.searchType === "1" ? "d-none" : ""], id: "dSeedEndPageFieldWrap" }, [h("label", { class: "form-label mb-1", for: "dSeedEditEndPage" }, "结束页"), input("dSeedEditEndPage", "endPage", "number", { min: "0", step: "1" })]),
+              h("div", { class: "col-12" }, [
+                h("label", { class: "form-label mb-1", for: "dSeedEditLastError" }, "最后错误"),
+                h("textarea", {
+                  class: "form-control",
+                  id: "dSeedEditLastError",
+                  rows: "3",
+                  value: props.model.lastError,
+                  onInput: (event: Event) => set("lastError", (event.target as HTMLTextAreaElement).value)
+                })
+              ])
+            ]),
+            h("div", { class: "alert d-none mt-3 mb-0", id: "dSeedEditMsg", role: "alert" })
+          ]),
+          h("div", { class: "modal-footer" }, [
+            h("button", { type: "button", class: "btn btn-light", onClick: () => emit("close") }, "取消"),
+            h("button", { type: "submit", class: "btn btn-primary", id: "dSeedEditSubmit", disabled: props.submitting }, props.submitting ? "保存中..." : "保存")
+          ])
+        ])
+      ])])]),
+      props.active ? h("div", { class: "modal-backdrop fade show", onClick: () => emit("close") }) : null
+    ]);
+  }
+});
+</script>

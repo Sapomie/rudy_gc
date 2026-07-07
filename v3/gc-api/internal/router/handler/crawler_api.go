@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,16 +12,19 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/dep"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/loop"
 )
 
 type CrawlerAPI struct {
 	runtime *loop.FetchLoopService
+	deps    *dep.Dep
 }
 
 func NewCrawlerAPI(deps *dep.Dep) *CrawlerAPI {
 	return &CrawlerAPI{
 		runtime: newCrawlerRuntime(deps),
+		deps:    deps,
 	}
 }
 
@@ -36,6 +40,12 @@ func (h *CrawlerAPI) Start(c *gin.Context) {
 		writeCrawlerError(c, http.StatusBadRequest, "invalid request")
 		return
 	}
+	if strings.TrimSpace(req.TaskType) == loop.TaskSpiderFetchSehuatang {
+		if err := h.prepareFetchSehuatangTaskRequest(c.Request.Context(), &req); err != nil {
+			writeCrawlerError(c, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 
 	jobID, err := h.runtime.StartTask(req)
 	if err != nil {
@@ -43,6 +53,18 @@ func (h *CrawlerAPI) Start(c *gin.Context) {
 		return
 	}
 	writeCrawlerJobStarted(c, jobID, strings.TrimSpace(req.TaskType))
+}
+
+func (h *CrawlerAPI) prepareFetchSehuatangTaskRequest(ctx context.Context, req *loop.StartTaskRequest) error {
+	if req == nil {
+		return nil
+	}
+	req.ListURL = strings.TrimSpace(req.ListURL)
+	if req.ListURL == "" {
+		req.ListURL = sehuatangListURLFromFetchSiteConfig(h.deps)
+		return nil
+	}
+	return syncSehuatangFetchSiteBaseURL(ctx, h.deps, req.ListURL)
 }
 
 func (h *CrawlerAPI) PreviewFetchSite(c *gin.Context) {
@@ -58,6 +80,84 @@ func (h *CrawlerAPI) PreviewFetchSite(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func (h *CrawlerAPI) PreviewSehuatangSHThreadDetails(c *gin.Context) {
+	var req loop.StartTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeCrawlerError(c, http.StatusBadRequest, "invalid request")
+		return
+	}
+	detailStatuses := normalizeSHDetailStatuses(req.DetailStatuses)
+	if len(detailStatuses) == 0 {
+		detailStatus := strings.TrimSpace(req.DetailStatus)
+		if detailStatus == "" {
+			detailStatus = strings.TrimSpace(req.Status)
+		}
+		if detailStatus != "" {
+			detailStatuses = []string{detailStatus}
+		}
+	}
+	if req.Limit < 0 {
+		writeCrawlerError(c, http.StatusBadRequest, "limit 必须大于等于 0")
+		return
+	}
+	filter := moviex.ShSehuatangThreadListFilter{
+		Keyword:        strings.TrimSpace(req.Keyword),
+		SourceForumIDs: req.TargetForumIDs,
+		DetailStatuses: detailStatuses,
+	}
+	if len(filter.SourceForumIDs) == 0 {
+		writeCrawlerError(c, http.StatusBadRequest, "请选择目标版块")
+		return
+	}
+	if ts, ok, err := parseOptionalDateStart(req.PostTimeFrom); err != nil {
+		writeCrawlerError(c, http.StatusBadRequest, fmt.Sprintf("发帖时间开始日期错误: %v", err))
+		return
+	} else if ok {
+		filter.PostTimeFrom = ts
+		filter.HasPostTimeFrom = true
+	}
+	if ts, ok, err := parseOptionalDateEnd(req.PostTimeTo); err != nil {
+		writeCrawlerError(c, http.StatusBadRequest, fmt.Sprintf("发帖时间结束日期错误: %v", err))
+		return
+	} else if ok {
+		filter.PostTimeTo = ts
+		filter.HasPostTimeTo = true
+	}
+
+	total, err := h.deps.ShSehuatangThreadModel.CountAll(c.Request.Context(), filter)
+	if err != nil {
+		writeCrawlerError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	rows, err := h.deps.ShSehuatangThreadModel.ListPage(c.Request.Context(), 0, req.Limit, "`post_time` DESC, `id` DESC", filter)
+	if err != nil {
+		writeCrawlerError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"total": total,
+		"limit": req.Limit,
+		"rows":  rows,
+	})
+}
+
+func normalizeSHDetailStatuses(values []string) []string {
+	out := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func (h *CrawlerAPI) ListJobs(c *gin.Context) {

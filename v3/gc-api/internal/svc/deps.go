@@ -6,6 +6,7 @@ import (
 	"context"
 	"rudy_gc/internal/contracts"
 	"rudy_gc/pkg/mylog"
+	"sync"
 	"time"
 
 	"rudy_gc/internal/model/modelx/moviex"
@@ -67,6 +68,9 @@ type Deps struct {
 	MovieAlbumItemModel         moviex.CMovieAlbumItemModel
 	JavbusMagnetModel           moviex.TJavbusMagnetModel
 	SehuatangMagnetModel        moviex.TSehuatangMagnetModel
+	ShSehuatangThreadModel      moviex.ShSehuatangThreadModel
+	ShSehuatangFetchRunModel    moviex.ShSehuatangFetchRunModel
+	ShSehuatangFetchItemModel   moviex.ShSehuatangFetchItemModel
 	JavbusMagnetFetchModel      moviex.TJavbusMagnetFetchModel
 	SukebeiTorrentModel         moviex.TSukebeiTorrentModel
 	SukebeiTorrentFetchModel    moviex.TSukebeiTorrentFetchModel
@@ -78,9 +82,10 @@ type Deps struct {
 
 	MovieTypeCache MovieTypeCache
 
-	Fetcher    *fetcher.Fetcher
-	FetchSites map[string]FetchSiteConfig
-	DetailJobs chan string
+	Fetcher      *fetcher.Fetcher
+	FetchSites   map[string]FetchSiteConfig
+	fetchSitesMu sync.RWMutex
+	DetailJobs   chan string
 }
 
 func NewDeps(cfg config.Config) (*Deps, error) {
@@ -90,34 +95,37 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	mylog.EnsureTaskHook(logger)
 
 	var (
-		movieModel               = moviex.NewAMovieModel(conn, c)
-		minfoModel               = moviex.NewBmMinfoModel(conn, c)
-		murlModel                = moviex.NewBmMurlModel(conn, c)
-		itemModel                = moviex.NewEItemModel(conn, c)
-		deletedMovieModel        = moviex.NewEDeletedMovieModel(conn, c)
-		rankModel                = moviex.NewCRankModel(conn, c)
-		personModel              = moviex.NewCPersonModel(conn, c)
-		gScStatModel             = moviex.NewGScStatModel(conn, c)
-		cafoModel                = moviex.NewCCafoModel(conn, c)
-		glistModel               = moviex.NewGListModel(conn, c)
-		scModel                  = moviex.NewGScModel(conn, c)
-		recordModel              = moviex.NewERecordModel(conn, c)
-		albumModel               = moviex.NewTAlbumModel(conn, c)
-		albumItemModel           = moviex.NewTmAlbumItemModel(conn, c)
-		movieAlbumModel          = moviex.NewCMovieAlbumModel(conn, c)
-		movieAlbumItemModel      = moviex.NewCMovieAlbumItemModel(conn, c)
-		javbusMagnetModel        = moviex.NewTJavbusMagnetModel(conn, c)
-		sehuatangMagnetModel     = moviex.NewTSehuatangMagnetModel(conn, c)
-		javbusMagnetFetchModel   = moviex.NewTJavbusMagnetFetchModel(conn, c)
-		sukebeiTorrentModel      = moviex.NewTSukebeiTorrentModel(conn, c)
-		sukebeiTorrentFetchModel = moviex.NewTSukebeiTorrentFetchModel(conn, c)
-		rankPeriodModel          = moviex.NewCRankPeriodModel(conn, c)
-		rankPeriodItemModel      = moviex.NewCRankPeriodItemModel(conn, c)
-		seedModel                = spiderx.NewDSeedModel(conn)
-		invModel                 = spiderx.NewDInventoryModel(conn)
-		detailModel              = spiderx.NewDDetailModel(conn)
-		bestModel                = spiderx.NewDBestinvModel(conn)
-		fetchSiteModel           = moviex.NewTFetchSiteModel(conn, c)
+		movieModel                = moviex.NewAMovieModel(conn, c)
+		minfoModel                = moviex.NewBmMinfoModel(conn, c)
+		murlModel                 = moviex.NewBmMurlModel(conn, c)
+		itemModel                 = moviex.NewEItemModel(conn, c)
+		deletedMovieModel         = moviex.NewEDeletedMovieModel(conn, c)
+		rankModel                 = moviex.NewCRankModel(conn, c)
+		personModel               = moviex.NewCPersonModel(conn, c)
+		gScStatModel              = moviex.NewGScStatModel(conn, c)
+		cafoModel                 = moviex.NewCCafoModel(conn, c)
+		glistModel                = moviex.NewGListModel(conn, c)
+		scModel                   = moviex.NewGScModel(conn, c)
+		recordModel               = moviex.NewERecordModel(conn, c)
+		albumModel                = moviex.NewTAlbumModel(conn, c)
+		albumItemModel            = moviex.NewTmAlbumItemModel(conn, c)
+		movieAlbumModel           = moviex.NewCMovieAlbumModel(conn, c)
+		movieAlbumItemModel       = moviex.NewCMovieAlbumItemModel(conn, c)
+		javbusMagnetModel         = moviex.NewTJavbusMagnetModel(conn, c)
+		sehuatangMagnetModel      = moviex.NewTSehuatangMagnetModel(conn, c)
+		shSehuatangThreadModel    = moviex.NewShSehuatangThreadModel(conn)
+		shSehuatangFetchRunModel  = moviex.NewShSehuatangFetchRunModel(conn)
+		shSehuatangFetchItemModel = moviex.NewShSehuatangFetchItemModel(conn)
+		javbusMagnetFetchModel    = moviex.NewTJavbusMagnetFetchModel(conn, c)
+		sukebeiTorrentModel       = moviex.NewTSukebeiTorrentModel(conn, c)
+		sukebeiTorrentFetchModel  = moviex.NewTSukebeiTorrentFetchModel(conn, c)
+		rankPeriodModel           = moviex.NewCRankPeriodModel(conn, c)
+		rankPeriodItemModel       = moviex.NewCRankPeriodItemModel(conn, c)
+		seedModel                 = spiderx.NewDSeedModel(conn)
+		invModel                  = spiderx.NewDInventoryModel(conn)
+		detailModel               = spiderx.NewDDetailModel(conn)
+		bestModel                 = spiderx.NewDBestinvModel(conn)
+		fetchSiteModel            = moviex.NewTFetchSiteModel(conn, c)
 
 		// 新增的 8 个 model
 		labelModel    = moviex.NewAmLabelModel(conn, c)
@@ -156,7 +164,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 	f := fetcher.NewFetcher(fetcher.Config{
 		UserAgent: cfg.Fetcher.UserAgent,
 		Cookie:    cfg.Fetcher.Cookie,
-		Proxy:     cfg.Fetcher.Proxy,
 		Timeout:   time.Duration(cfg.Fetcher.Timeout) * time.Second,
 	})
 	fetchSites := loadFetchSiteConfigs(context.Background(), cfg, fetchSiteModel, logger)
@@ -213,6 +220,9 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		MovieAlbumItemModel:         movieAlbumItemModel,
 		JavbusMagnetModel:           javbusMagnetModel,
 		SehuatangMagnetModel:        sehuatangMagnetModel,
+		ShSehuatangThreadModel:      shSehuatangThreadModel,
+		ShSehuatangFetchRunModel:    shSehuatangFetchRunModel,
+		ShSehuatangFetchItemModel:   shSehuatangFetchItemModel,
 		JavbusMagnetFetchModel:      javbusMagnetFetchModel,
 		SukebeiTorrentModel:         sukebeiTorrentModel,
 		SukebeiTorrentFetchModel:    sukebeiTorrentFetchModel,

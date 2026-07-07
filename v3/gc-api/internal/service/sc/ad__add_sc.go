@@ -257,10 +257,6 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 		preview.MovieCount++
 	}
 
-	if preview.MovieCount == 0 {
-		return nil, "", fmt.Errorf("no movies found in sc dir %s", dir)
-	}
-
 	return preview, imageFilePath, nil
 }
 

@@ -33,3 +33,7 @@ v2/make/local.secrets.mk
 v2/deploy/data
 v2/deploy/conf
 v2/deploy/*.config.yaml
+
+v3/gc-web-next*/node_modules
+v3/gc-web-next*/dist
+v3/gc-web-next*/node_modules/.tmp

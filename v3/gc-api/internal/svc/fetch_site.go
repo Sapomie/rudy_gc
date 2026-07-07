@@ -7,6 +7,7 @@ import (
 
 	"rudy_gc/internal/config"
 	"rudy_gc/internal/model/modelx/moviex"
+	"rudy_gc/internal/service/spider/fetcher"
 
 	"github.com/sirupsen/logrus"
 )
@@ -51,7 +52,7 @@ func defaultFetchSiteConfigs(cfg config.Config) map[string]FetchSiteConfig {
 			BaseURL:       normalizeFetchSiteBaseURL("https://" + strings.TrimSpace(cfg.Fetcher.BusAddress)),
 			UserAgent:     cfg.Fetcher.UserAgent,
 			Cookie:        cfg.Fetcher.Cookie,
-			Proxy:         cfg.Fetcher.Proxy,
+			Proxy:         "",
 			Timeout:       timeout,
 			RequestSleep:  legacyFetchSiteRequestSleep,
 			RetrySleep:    legacyFetchSiteRetrySleep,
@@ -64,7 +65,7 @@ func defaultFetchSiteConfigs(cfg config.Config) map[string]FetchSiteConfig {
 			BaseURL:       normalizeFetchSiteBaseURL("https://sukebei.nyaa.si"),
 			UserAgent:     cfg.Fetcher.UserAgent,
 			Cookie:        "",
-			Proxy:         cfg.Fetcher.Proxy,
+			Proxy:         "",
 			Timeout:       timeout,
 			RequestSleep:  legacyFetchSiteRequestSleep,
 			RetrySleep:    legacyFetchSiteRetrySleep,
@@ -160,12 +161,60 @@ func normalizeFetchSiteBaseURL(raw string) string {
 	return strings.TrimRight(strings.TrimSpace(raw), "/")
 }
 
+func NormalizeFetchSiteBaseURL(raw string) string {
+	return normalizeFetchSiteBaseURL(raw)
+}
+
+func FetchSiteConfigFromRow(row *moviex.TFetchSite) FetchSiteConfig {
+	return mapFetchSiteRow(row)
+}
+
 func (d *Deps) GetFetchSiteConfig(siteCode string) (FetchSiteConfig, bool) {
 	if d == nil || d.FetchSites == nil {
 		return FetchSiteConfig{}, false
 	}
+	d.fetchSitesMu.RLock()
+	defer d.fetchSitesMu.RUnlock()
 	cfg, ok := d.FetchSites[siteCode]
 	return cfg, ok
+}
+
+func (d *Deps) ListFetchSiteConfigs() []FetchSiteConfig {
+	if d == nil || d.FetchSites == nil {
+		return nil
+	}
+	d.fetchSitesMu.RLock()
+	defer d.fetchSitesMu.RUnlock()
+	out := make([]FetchSiteConfig, 0, len(d.FetchSites))
+	for _, cfg := range d.FetchSites {
+		out = append(out, cfg)
+	}
+	return out
+}
+
+func (d *Deps) SetFetchSiteConfig(cfg FetchSiteConfig) {
+	if d == nil {
+		return
+	}
+	cfg.SiteCode = strings.TrimSpace(cfg.SiteCode)
+	if cfg.SiteCode == "" {
+		return
+	}
+	cfg.BaseURL = normalizeFetchSiteBaseURL(cfg.BaseURL)
+	d.fetchSitesMu.Lock()
+	if d.FetchSites == nil {
+		d.FetchSites = make(map[string]FetchSiteConfig)
+	}
+	d.FetchSites[cfg.SiteCode] = cfg
+	d.fetchSitesMu.Unlock()
+	if d.Fetcher != nil {
+		d.Fetcher.SetSiteConfig(cfg.SiteCode, fetcher.Config{
+			UserAgent: cfg.UserAgent,
+			Cookie:    cfg.Cookie,
+			Proxy:     cfg.Proxy,
+			Timeout:   cfg.Timeout,
+		})
+	}
 }
 
 func (d *Deps) GetFetchSiteBaseURL(siteCode string) string {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"rudy_gc/internal/service/fetchsite"
@@ -12,6 +14,23 @@ import (
 )
 
 func (s *Service) fetchWithRetry(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string, cookie string) ([]byte, error) {
+	resp, err := s.fetchWithRetryResult(ctx, cfg, state, targetURL, cookie)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
+type fetchHTTPResult struct {
+	Body     []byte
+	FinalURL string
+}
+
+func (s *Service) fetchWithRetryResult(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string, cookie string) (*fetchHTTPResult, error) {
+	return s.fetchWithRetryResultWithOptions(ctx, cfg, state, targetURL, cookie, false)
+}
+
+func (s *Service) fetchWithRetryResultWithOptions(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string, cookie string, useProxy bool) (*fetchHTTPResult, error) {
 	var lastErr error
 
 	for attempts := int64(1); attempts <= cfg.MaxRetryTimes; attempts++ {
@@ -23,14 +42,14 @@ func (s *Service) fetchWithRetry(ctx context.Context, cfg fetchsite.SiteConfig, 
 		}
 
 		reportInfoLog(ctx, fmt.Sprintf("请求 %s 第 %d/%d 次", targetURL, attempts, cfg.MaxRetryTimes))
-		body, status, err := doDirectRequest(ctx, cfg, targetURL, cookie)
+		resp, status, err := doDirectRequest(ctx, cfg, targetURL, cookie, useProxy)
 		if err == nil {
 			switch status {
 			case http.StatusOK:
-				if len(body) == 0 {
+				if resp == nil || len(resp.Body) == 0 {
 					err = fmt.Errorf("empty response body")
 				} else {
-					return body, nil
+					return resp, nil
 				}
 			default:
 				err = fmt.Errorf("unexpected status: %d", status)
@@ -63,7 +82,7 @@ func sleepBeforeRemoteRequest(ctx context.Context, cfg fetchsite.SiteConfig, sta
 	return nil
 }
 
-func doDirectRequest(ctx context.Context, cfg fetchsite.SiteConfig, targetURL string, cookie string) ([]byte, int, error) {
+func doDirectRequest(ctx context.Context, cfg fetchsite.SiteConfig, targetURL string, cookie string, useProxy bool) (*fetchHTTPResult, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
 	if err != nil {
 		return nil, 0, err
@@ -78,11 +97,20 @@ func doDirectRequest(ctx context.Context, cfg fetchsite.SiteConfig, targetURL st
 		req.Header.Set("Cookie", cookie)
 	}
 
+	transport := &http.Transport{
+		Proxy: nil,
+	}
+	if useProxy && strings.TrimSpace(cfg.Proxy) != "" {
+		proxyURL, parseErr := url.Parse(strings.TrimSpace(cfg.Proxy))
+		if parseErr != nil {
+			return nil, 0, parseErr
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+
 	client := &http.Client{
-		Timeout: cfg.Timeout,
-		Transport: &http.Transport{
-			Proxy: nil, // 明确禁用代理
-		},
+		Timeout:   cfg.Timeout,
+		Transport: transport,
 	}
 
 	resp, err := client.Do(req)
@@ -95,7 +123,14 @@ func doDirectRequest(ctx context.Context, cfg fetchsite.SiteConfig, targetURL st
 	if err != nil {
 		return nil, resp.StatusCode, err
 	}
-	return body, resp.StatusCode, nil
+	finalURL := ""
+	if resp.Request != nil && resp.Request.URL != nil {
+		finalURL = resp.Request.URL.String()
+	}
+	return &fetchHTTPResult{
+		Body:     body,
+		FinalURL: finalURL,
+	}, resp.StatusCode, nil
 }
 
 func sleepWithContext(ctx context.Context, d time.Duration) error {

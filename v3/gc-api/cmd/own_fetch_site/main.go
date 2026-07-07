@@ -51,7 +51,6 @@ func main() {
 	if movieRow, findErr := d.MovieModel.FindOneByJavId(ctx, strings.TrimSpace(*movieJavID)); findErr == nil {
 		releaseDate = movieRow.ReleasingDate
 	}
-	fmt.Printf("config.fetcher.proxy=%s\n", c.Fetcher.Proxy)
 	if row, err := d.FetchSiteModel.FindOneBySiteCode(ctx, fetchsite.FetchSiteCodeJavbus); err == nil {
 		fmt.Printf("db.javbus.proxy=%s\n", row.Proxy)
 	} else {

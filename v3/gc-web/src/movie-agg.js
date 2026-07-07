@@ -1,4 +1,5 @@
 const apiPathByPage = new Map([
+  ["/cardsagg", "/api/cardsagg"],
   ["/movie-agg-all/release", "/api/movie-agg-all/release"],
   ["/movie-agg-all/release-bucket-list", "/api/movie-agg-all/release-bucket-list"],
   ["/w-media-agg/bucket-list", "/api/w-media-agg/bucket-list"],
@@ -90,12 +91,314 @@ function renderOwnedFilter(data) {
   const all = owned.MediaAll || {};
   const yes = owned.MediaOwned || {};
   const no = owned.MediaNotOwned || {};
+  const total = data.TotalLabel ?? data.total ?? data.Total ?? 0;
   return `
     <span class="btn btn-sm btn-outline-dark disabled">WMedia</span>
     <a href="${attr(all.Href || "#")}" class="${linkClass(all.Active, "btn btn-sm btn-primary waves-effect waves-light")}">MAll</a>
     <a href="${attr(yes.Href || "#")}" class="${linkClass(yes.Active, "btn btn-sm btn-success waves-effect waves-light")}">MOwned</a>
     <a href="${attr(no.Href || "#")}" class="${linkClass(no.Active, "btn btn-sm btn-secondary waves-effect waves-light")}">MNotOwned</a>
-    <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: ${escapeHtml(data.total ?? data.Total ?? 0)}</span>`;
+    <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: ${escapeHtml(total)}</span>`;
+}
+
+function cardsAggList(obj, key) {
+  return obj && (obj[key] || obj[key.charAt(0).toLowerCase() + key.slice(1)]) || [];
+}
+
+function renderCardsAggFilter(data) {
+  const filter = data.MovieCardFilter || {};
+  const explicit = filter.Explicit || {};
+  const input = (name, label, value, placeholder = "", type = "text", extra = "") => `
+    <div class="col-12 col-md-6 col-xl-2">
+      <label class="form-label mb-1">${escapeHtml(label)}</label>
+      <input class="form-control" type="${attr(type)}" name="${attr(name)}" value="${attr(value || "")}" placeholder="${attr(placeholder)}" data-explicit="${explicit[name] ? "1" : "0"}" ${extra}>
+    </div>`;
+  return `
+    <div id="movieCardFilterCollapse" class="collapse">
+      <div class="card mb-3"><div class="card-body">
+        <form id="cardsAggFilterForm" class="row g-2 align-items-end" method="get" action="${attr(filter.Action || "/cardsagg")}">
+          ${filter.PageSize ? `<input type="hidden" name="ps" value="${attr(filter.PageSize)}" data-explicit="${explicit.ps ? "1" : "0"}">` : ""}
+          ${filter.OrderBy ? `<input type="hidden" name="od" value="${attr(filter.OrderBy)}" data-explicit="${explicit.od ? "1" : "0"}">` : ""}
+          ${filter.PersonIds ? `<input type="hidden" name="pid" value="${attr(filter.PersonIds)}" data-explicit="${explicit.pid ? "1" : "0"}">` : ""}
+          ${input("cn", "演员", filter.CastNames, "演员名，支持多值")}
+          ${input("gn", "类型", filter.GenreNames, "类型名，支持多值")}
+          ${input("dn", "导演", filter.DirectorName, "导演名")}
+          ${input("pn", "前缀", filter.PrefixName, "前缀")}
+          ${input("mn", "片商", filter.MakerName, "片商")}
+          ${input("ln", "标签", filter.LabelName, "标签")}
+          ${input("lj", "标签 JavID", filter.LabelJavID, "JavLib 标签 ID")}
+          ${input("an", "相册名", filter.AlbumName, "相册名，支持多值")}
+          ${input("wd", "关键词", filter.Word, "中文关键词")}
+          ${renderCardsAggSelect("mowned", "w_media 库存", filter.MediaOwned, explicit.mowned, [
+            ["", "全部"], ["1", "全部电影"], ["2", "有 w_media 记录（含移除）"], ["3", "已拥有未移除"],
+            ["4", "有字幕未移除"], ["5", "无字幕未移除"], ["6", "已移除"], ["7", "无 w_media 记录"]
+          ])}
+          ${renderCardsAggSelect("nd", "下载状态", filter.NeedDownload, explicit.nd, [["", "全部"], ["1", "无需下载"], ["2", "需要下载"]])}
+          ${input("drkmin", "在榜天数", filter.DaysInRankMin, "最小值", "number")}
+          ${filter.HideDirs ? "" : `
+            ${input("md1", "Media 目录 1", filter.MediaDir1, "目录名")}
+            ${input("md2", "Media 目录 2", filter.MediaDir2, "目录名")}
+            ${input("md3", "Media 目录 3", filter.MediaDir3, "目录名")}
+            ${input("md4", "Media 目录 4", filter.MediaDir4, "目录名")}
+          `}
+          ${renderCardsAggDatePair("上映日期", "rs", filter.ReleasingDateStart, "re", filter.ReleasingDateEnd, explicit)}
+          ${renderCardsAggDatePair("Media 下载时间", "mbs", filter.MediaBirthTimeStart, "mbe", filter.MediaBirthTimeEnd, explicit)}
+          ${renderCardsAggDatePair("上榜日期", "srds", filter.StartRankingDateStart, "srde", filter.StartRankingDateEnd, explicit)}
+          ${renderCardsAggDatePair("最后 SC 时间", "lsctmin", filter.LastScTimeMin, "lsctmax", filter.LastScTimeMax, explicit)}
+          ${renderCardsAggNumberPair("演员年龄", "cay", filter.CastAgeMin, "cao", filter.CastAgeMax, explicit, "0.1")}
+          ${renderCardsAggNumberPair("观看人数", "vwmin", filter.ViewWatchedMin, "vwmax", filter.ViewWatchedMax, explicit)}
+          ${renderCardsAggNumberPair("评分", "smin", filter.ScoreMin, "smax", filter.ScoreMax, explicit, "0.1")}
+          ${renderCardsAggNumberPair("SC 次数", "scmin", filter.ScTimesMin, "scmax", filter.ScTimesMax, explicit)}
+          ${renderCardsAggNumberPair("Come 次数", "comin", filter.ComeTimesMin, "comax", filter.ComeTimesMax, explicit)}
+          <div class="col-12 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">筛选</button>
+            <a class="btn btn-outline-secondary" href="${attr(filter.ClearHref || "/cardsagg")}">清空</a>
+          </div>
+        </form>
+      </div></div>
+    </div>`;
+}
+
+function renderCardsAggSelect(name, label, value, explicit, options) {
+  const opts = options.map(([optionValue, optionLabel]) =>
+    `<option value="${attr(optionValue)}" ${String(value || "") === optionValue ? "selected" : ""}>${escapeHtml(optionLabel)}</option>`
+  ).join("");
+  return `<div class="col-12 col-md-6 col-xl-2">
+    <label class="form-label mb-1">${escapeHtml(label)}</label>
+    <select class="form-select" name="${attr(name)}" data-explicit="${explicit ? "1" : "0"}">${opts}</select>
+  </div>`;
+}
+
+function renderCardsAggDatePair(label, startName, startValue, endName, endValue, explicit) {
+  return `<div class="col-12 col-xl-4">
+    <label class="form-label mb-1">${escapeHtml(label)}</label>
+    <div class="row g-2">
+      <div class="col-6"><input class="form-control" type="text" name="${attr(startName)}" value="${attr(startValue || "")}" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" data-explicit="${explicit[startName] ? "1" : "0"}"></div>
+      <div class="col-6"><input class="form-control" type="text" name="${attr(endName)}" value="${attr(endValue || "")}" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" data-explicit="${explicit[endName] ? "1" : "0"}"></div>
+    </div>
+  </div>`;
+}
+
+function renderCardsAggNumberPair(label, startName, startValue, endName, endValue, explicit, step = "") {
+  const stepAttr = step ? `step="${attr(step)}"` : "";
+  return `<div class="col-12 col-xl-4">
+    <label class="form-label mb-1">${escapeHtml(label)}</label>
+    <div class="row g-2">
+      <div class="col-6"><input class="form-control" type="number" ${stepAttr} name="${attr(startName)}" value="${attr(startValue || "")}" placeholder="最小值" data-explicit="${explicit[startName] ? "1" : "0"}"></div>
+      <div class="col-6"><input class="form-control" type="number" ${stepAttr} name="${attr(endName)}" value="${attr(endValue || "")}" placeholder="最大值" data-explicit="${explicit[endName] ? "1" : "0"}"></div>
+    </div>
+  </div>`;
+}
+
+function renderCardsAggItemTable(title, items) {
+  const rows = (items || []).map((item) => {
+    const label = item.Href
+      ? `<a href="${attr(item.Href)}">${escapeHtml(item.Label)}</a>`
+      : escapeHtml(item.Label);
+    return `<tr>
+      <td class="text-nowrap">${label}</td>
+      <td class="text-end">${escapeHtml(item.Count)}</td>
+      <td class="text-end">${escapeHtml(item.Percent ?? "")}%</td>
+    </tr>`;
+  }).join("");
+  return `<section class="section-card">
+    <h4 class="section-title">${escapeHtml(title)}</h4>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead><tr><th>名称</th><th class="text-end">数量</th><th class="text-end">占比</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="3" class="text-muted">暂无数据</td></tr>`}</tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+function renderCardsAggCastTable(title, items) {
+  const rows = (items || []).map((item) => {
+    const label = item.Href
+      ? `<a href="${attr(item.Href)}">${escapeHtml(item.Label)}</a>`
+      : escapeHtml(item.Label);
+    return `<tr>
+      <td class="text-nowrap">${label}</td>
+      <td class="text-end">${escapeHtml(item.Count)}</td>
+      <td class="text-end">${escapeHtml(item.Percent ?? "")}%</td>
+      <td class="text-end">${escapeHtml(item.ScCount ?? 0)}</td>
+      <td class="text-end">${escapeHtml(item.NoScCount ?? 0)}</td>
+      <td class="text-end">${escapeHtml(item.MOwnedCount ?? 0)}</td>
+      <td class="text-end">${escapeHtml(item.MRemovedCount ?? 0)}</td>
+      <td class="text-end">${escapeHtml(item.MNotOwnedCount ?? 0)}</td>
+    </tr>`;
+  }).join("");
+  return `<section class="section-card">
+    <h4 class="section-title">${escapeHtml(title)}</h4>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead><tr>
+          <th>名称</th>
+          <th class="text-end">总数</th>
+          <th class="text-end">占比</th>
+          <th class="text-end">有 SC</th>
+          <th class="text-end">无 SC</th>
+          <th class="text-end">MOwned</th>
+          <th class="text-end">MRemoved</th>
+          <th class="text-end">MNotOwned</th>
+        </tr></thead>
+        <tbody>${rows || `<tr><td colspan="8" class="text-muted">暂无数据</td></tr>`}</tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+function renderCardsAggTopMovieTable(title, items) {
+  const rows = (items || []).map((item) => `<tr>
+    <td class="text-nowrap"><a href="${attr(item.Href || `/movie/${encodeURIComponent(item.Name || "")}`)}">${escapeHtml(item.Name || item.JavID)}</a></td>
+    <td>${escapeHtml(item.Title || "")}</td>
+    <td class="text-end text-nowrap">${escapeHtml(item.ValueLabel ?? item.Value ?? "")}</td>
+    <td class="text-nowrap">${escapeHtml(item.Date || "")}</td>
+  </tr>`).join("");
+  return `<section class="section-card">
+    <h4 class="section-title">${escapeHtml(title)}</h4>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead><tr><th>番号</th><th>标题</th><th class="text-end">值</th><th>日期</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="text-muted">暂无数据</td></tr>`}</tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+function renderCardsAggSummary(summary) {
+  return `<div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3">
+    <div class="col">${renderCardsAggItemTable("WMedia", cardsAggList(summary, "Owned"))}</div>
+    <div class="col">${renderCardsAggItemTable("SC", cardsAggList(summary, "Sc"))}</div>
+    <div class="col">${renderCardsAggItemTable("Come", cardsAggList(summary, "Come"))}</div>
+    <div class="col">${renderCardsAggItemTable("榜单", cardsAggList(summary, "Rank"))}</div>
+  </div>`;
+}
+
+function renderCardsAggSkipped(data) {
+  const message = data.Message || data.message || "当前条件已跳过聚合。";
+  const total = data.Total ?? data.total;
+  const limit = data.Limit ?? data.limit;
+  const meta = data.SkipReason === "too_many_movies" && Number(total || 0) > 0
+    ? `<div class="text-muted small mt-2">当前命中 ${escapeHtml(total)} 部，上限 ${escapeHtml(limit || "")} 部。</div>`
+    : "";
+  return `<section class="section-card">
+    <div class="alert alert-info mb-0">
+      <div class="fw-semibold">${escapeHtml(message)}</div>
+      ${meta}
+    </div>
+  </section>`;
+}
+
+function renderCardsAgg(data) {
+  const summary = data.Summary || {};
+  const groups = data.Groups || {};
+  const timeline = data.Timeline || {};
+  const distributions = data.Distributions || {};
+  const topMovies = data.TopMovies || {};
+  const cardsHref = `/cards${window.location.search || ""}`;
+  return `<div class="position-sticky pb-2 pt-2 mb-3 border-bottom" style="top:0; z-index:1030; background:rgba(255,255,255,.9); backdrop-filter: blur(6px);">
+    <div class="container-fluid px-0">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
+        <div><h3 class="mb-0">MovieCard Agg</h3></div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <a href="${attr(cardsHref)}" class="btn btn-sm btn-outline-primary">Cards</a>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#movieCardFilterCollapse">筛选</button>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-2">${renderOwnedFilter(data)}</div>
+    </div>
+  </div>
+  ${renderCardsAggFilter(data)}
+  ${data.Skipped || data.skipped ? renderCardsAggSkipped(data) : `
+  <section class="mb-3">${renderCardsAggSummary(summary)}</section>
+  <section class="mb-3">${renderCardsAggCastTable("演员", cardsAggList(groups, "Casts"))}</section>
+  <div class="row row-cols-1 row-cols-xl-2 g-3">
+    <div class="col">${renderCardsAggItemTable("导演", cardsAggList(groups, "Directors"))}</div>
+    <div class="col">${renderCardsAggItemTable("前缀", cardsAggList(groups, "Prefixes"))}</div>
+    <div class="col">${renderCardsAggItemTable("片商", cardsAggList(groups, "Makers"))}</div>
+    <div class="col">${renderCardsAggItemTable("标签", cardsAggList(groups, "Labels"))}</div>
+  </div>
+  <div class="row row-cols-1 row-cols-xl-2 g-3 mt-1">
+    <div class="col">${renderCardsAggItemTable("上映年份", cardsAggList(timeline, "ReleaseYears"))}</div>
+    <div class="col">${renderCardsAggItemTable("上映年月", cardsAggList(timeline, "ReleaseMonths"))}</div>
+    <div class="col">${renderCardsAggItemTable("Media 下载年份", cardsAggList(timeline, "MediaBirthYears"))}</div>
+    <div class="col">${renderCardsAggItemTable("Media 下载年月", cardsAggList(timeline, "MediaBirthMonths"))}</div>
+    <div class="col">${renderCardsAggItemTable("最后 SC 年月", cardsAggList(timeline, "LastScMonths"))}</div>
+  </div>
+  <div class="row row-cols-1 row-cols-xl-2 g-3 mt-1">
+    <div class="col">${renderCardsAggItemTable("评分分布", cardsAggList(distributions, "Scores"))}</div>
+    <div class="col">${renderCardsAggItemTable("观看人数分布", cardsAggList(distributions, "Viewers"))}</div>
+    <div class="col">${renderCardsAggItemTable("片长分布", cardsAggList(distributions, "Lengths"))}</div>
+    <div class="col">${renderCardsAggItemTable("SC 次数分布", cardsAggList(distributions, "ScTimes"))}</div>
+    <div class="col">${renderCardsAggItemTable("Come 次数分布", cardsAggList(distributions, "ComeTimes"))}</div>
+    <div class="col">${renderCardsAggItemTable("最高排名分布", cardsAggList(distributions, "HighestRanks"))}</div>
+  </div>
+  <div class="row row-cols-1 row-cols-xl-2 g-3 mt-1">
+    <div class="col">${renderCardsAggTopMovieTable("SC 次数", cardsAggList(topMovies, "ScTimes"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("Come 次数", cardsAggList(topMovies, "ComeTimes"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("观看人数", cardsAggList(topMovies, "Viewers"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("评分", cardsAggList(topMovies, "Scores"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("最高排名", cardsAggList(topMovies, "HighestRanks"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("最近上映", cardsAggList(topMovies, "RecentRelease"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("最近 Media 下载", cardsAggList(topMovies, "RecentMedia"))}</div>
+    <div class="col">${renderCardsAggTopMovieTable("最近 SC", cardsAggList(topMovies, "RecentSc"))}</div>
+  </div>`}`;
+}
+
+function initCardsAggFilterForm() {
+  const form = document.getElementById("cardsAggFilterForm");
+  if (!form) {
+    return;
+  }
+  Array.from(form.elements).forEach((element) => {
+    if (!shouldSkipCardsAggElement(element)) {
+      element.dataset.initialValue = normalizeCardsAggValue(element);
+    }
+  });
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    Array.from(form.elements).forEach((element) => {
+      if (shouldSkipCardsAggElement(element)) {
+        return;
+      }
+      const name = element.name;
+      const value = normalizeCardsAggValue(element);
+      const type = String(element.type || "").toLowerCase();
+      const explicit = element.dataset.explicit === "1";
+      const initialValue = element.dataset.initialValue || "";
+      if ((type === "checkbox" || type === "radio") && !element.checked) {
+        return;
+      }
+      if (type === "hidden") {
+        if (explicit && value !== "") {
+          params.set(name, value);
+        }
+        return;
+      }
+      if (value === "") {
+        return;
+      }
+      if (explicit || value !== initialValue) {
+        params.set(name, value);
+      }
+    });
+    const action = form.getAttribute("action") || window.location.pathname;
+    const query = params.toString();
+    window.location.assign(query ? `${action}?${query}` : action);
+  });
+}
+
+function normalizeCardsAggValue(element) {
+  return String(element && element.value || "").trim();
+}
+
+function shouldSkipCardsAggElement(element) {
+  if (!element || !element.name || element.disabled) {
+    return true;
+  }
+  const type = String(element.type || "").toLowerCase();
+  return type === "submit" || type === "button" || type === "reset" || type === "fieldset";
 }
 
 function renderPlayRow(movie) {
@@ -696,7 +999,10 @@ function renderPage(data) {
   }
   document.title = `${data.Title || "MovieAgg"} - Rudy-GC`;
   const root = document.getElementById("page-root");
-  if (data.ViewType === "movie-agg-release") root.innerHTML = renderMovieAggRelease(data);
+  if (data.ViewType === "cards-agg") {
+    root.innerHTML = renderCardsAgg(data);
+    initCardsAggFilterForm();
+  } else if (data.ViewType === "movie-agg-release") root.innerHTML = renderMovieAggRelease(data);
   else if (data.ViewType === "movie-release-bucket-list") root.innerHTML = renderReleaseBucketList(data);
   else if (data.ViewType === "w-media-agg-birth") root.innerHTML = renderWMediaAggBirth(data);
   else if (data.ViewType === "w-media-bucket-list") root.innerHTML = renderWMediaBucketList(data);

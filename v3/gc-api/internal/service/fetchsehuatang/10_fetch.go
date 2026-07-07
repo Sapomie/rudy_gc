@@ -54,6 +54,7 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 		Keyword:          req.Keyword,
 		StartPage:        req.StartPage,
 		EndPage:          req.EndPage,
+		StopOnExisting:   req.StopOnExisting,
 		HandledPageCount: 0,
 		SkippedTopCount:  0,
 		MatchedCount:     0,
@@ -67,6 +68,7 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 	}
 	topics := make([]*topicLink, 0, 64)
 	seenTopics := make(map[string]struct{}, 128)
+	stopListFetch := false
 
 	for pageNo := req.StartPage; pageNo <= req.EndPage; pageNo++ {
 		pageIndex := pageNo - req.StartPage + 1
@@ -106,6 +108,35 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 			if _, ok := seenTopics[topic.DetailURL]; ok {
 				continue
 			}
+			if req.StopOnExisting {
+				exists, existsErr := s.deps.SehuatangMagnetModel.ExistsByThreadURL(ctx, topic.DetailURL)
+				if existsErr != nil {
+					return nil, fmt.Errorf("帖子存在性检查失败: %s | %w", topic.DetailURL, existsErr)
+				}
+				if exists {
+					result.StoppedOnExisting = true
+					result.StopExistingPage = pageNo
+					result.StopExistingTitle = topic.Title
+					result.StopExistingURL = topic.DetailURL
+					stopListFetch = true
+					reportInfoLog(ctx, fmt.Sprintf("命中已存在帖子，停止继续翻页: %s | page=%d | %s", topic.Title, pageNo, topic.DetailURL))
+					taskctx.ReportProgress(ctx, taskctx.Progress{
+						Stage:             "fetch_sehuatang_list_stop_existing",
+						Message:           fmt.Sprintf("命中已存在帖子，停止继续翻页: %s | page=%d", topic.Title, pageNo),
+						HandledCount:      0,
+						SuccessCount:      0,
+						FailedCount:       0,
+						QueuedCount:       len(topics),
+						CurrentPhaseKey:   "list",
+						PhaseKey:          "list",
+						PhaseHandledCount: int(result.HandledPageCount),
+						PhaseTotalCount:   int(totalPageCount),
+						PhaseSuccessCount: int(result.HandledPageCount),
+						PhaseFailedCount:  0,
+					})
+					break
+				}
+			}
 			seenTopics[topic.DetailURL] = struct{}{}
 			topics = append(topics, topic)
 			addedCount++
@@ -129,11 +160,18 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 			PhaseSuccessCount: int(result.HandledPageCount),
 			PhaseFailedCount:  0,
 		})
+		if stopListFetch {
+			break
+		}
 	}
 
+	listDoneMessage := fmt.Sprintf("列表抓取完成，页码=%d-%d，共 %d 页，模式=%s，跳过置顶=%d，命中 %d 条帖子", result.StartPage, result.EndPage, result.HandledPageCount, req.PersistMode, result.SkippedTopCount, len(topics))
+	if result.StoppedOnExisting {
+		listDoneMessage = fmt.Sprintf("列表抓取完成，页码=%d-%d，共 %d 页，模式=%s，跳过置顶=%d，命中 %d 条新帖子，重合停止页=%d", result.StartPage, result.EndPage, result.HandledPageCount, req.PersistMode, result.SkippedTopCount, len(topics), result.StopExistingPage)
+	}
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:             "fetch_sehuatang_list_done",
-		Message:           fmt.Sprintf("列表抓取完成，页码=%d-%d，共 %d 页，模式=%s，跳过置顶=%d，命中 %d 条帖子", result.StartPage, result.EndPage, result.HandledPageCount, req.PersistMode, result.SkippedTopCount, len(topics)),
+		Message:           listDoneMessage,
 		HandledCount:      0,
 		SuccessCount:      0,
 		FailedCount:       0,
@@ -346,7 +384,7 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 		})
 	}
 
-	reportInfoLog(ctx, fmt.Sprintf("色花堂抓取结束: pages=%d-%d, handled_pages=%d, mode=%s, skipped_top=%d, skipped_existing=%d, matched=%d, success=%d, failed=%d, insert=%d, update=%d, persist_failed=%d", result.StartPage, result.EndPage, result.HandledPageCount, req.PersistMode, result.SkippedTopCount, result.SkippedExisting, result.MatchedCount, result.SuccessCount, result.FailedCount, result.InsertedCount, result.UpdatedCount, result.PersistFailCount))
+	reportInfoLog(ctx, fmt.Sprintf("色花堂抓取结束: pages=%d-%d, handled_pages=%d, mode=%s, stop_on_existing=%t, stopped_on_existing=%t, stop_existing_page=%d, skipped_top=%d, skipped_existing=%d, matched=%d, success=%d, failed=%d, insert=%d, update=%d, persist_failed=%d", result.StartPage, result.EndPage, result.HandledPageCount, req.PersistMode, result.StopOnExisting, result.StoppedOnExisting, result.StopExistingPage, result.SkippedTopCount, result.SkippedExisting, result.MatchedCount, result.SuccessCount, result.FailedCount, result.InsertedCount, result.UpdatedCount, result.PersistFailCount))
 	return result, nil
 }
 
@@ -364,16 +402,36 @@ func combineCookie(baseCookie, safeID string) string {
 }
 
 func (s *Service) fetchWithSafe(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string) ([]byte, error) {
-	body, err := s.fetchWithRetry(ctx, cfg, state, targetURL, cfg.Cookie)
+	resp, err := s.fetchWithSafeResult(ctx, cfg, state, targetURL)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
+func (s *Service) fetchWithSafeResult(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string) (*fetchHTTPResult, error) {
+	return s.fetchWithSafeResultWithOptions(ctx, cfg, state, targetURL, false)
+}
+
+func (s *Service) fetchWithSafeWithOptions(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string, useProxy bool) ([]byte, error) {
+	resp, err := s.fetchWithSafeResultWithOptions(ctx, cfg, state, targetURL, useProxy)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
+func (s *Service) fetchWithSafeResultWithOptions(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string, useProxy bool) (*fetchHTTPResult, error) {
+	resp, err := s.fetchWithRetryResultWithOptions(ctx, cfg, state, targetURL, cfg.Cookie, useProxy)
 	if err != nil {
 		return nil, err
 	}
 
-	safeID := parseSafeID(body)
+	safeID := parseSafeID(resp.Body)
 	if safeID == "" {
-		return body, nil
+		return resp, nil
 	}
 
 	safeCookie := combineCookie(cfg.Cookie, safeID)
-	return s.fetchWithRetry(ctx, cfg, state, targetURL, safeCookie)
+	return s.fetchWithRetryResultWithOptions(ctx, cfg, state, targetURL, safeCookie, useProxy)
 }

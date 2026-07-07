@@ -18,6 +18,7 @@
                         <li><a href="/moviecardperiodrank">PeriodRank</a></li>
                         <li><a href="/cardsneeddownload">NeedDownload</a></li>
                         <li><a href="/cardsrandom">Random</a></li>
+                        <li><a href="/cardsagg">Agg</a></li>
                     </ul>
                 </li>
 
@@ -84,9 +85,22 @@
                     <ul class="sub-menu" aria-expanded="false">
                         <li><a href="/triggers/fetch-site">FetchSite</a></li>
                         <li><a href="/triggers/fetch-sehuatang">FetchSehuatang</a></li>
+                        <li><a href="/fetch-sites">FetchSitesConfig</a></li>
                         <li><a href="/fetch-site-javbus-list">JavbusList</a></li>
                         <li><a href="/fetch-site-sukebei-list">SukebeiList</a></li>
                         <li><a href="/fetch-site-sehuatang-list">SehuatangList</a></li>
+                    </ul>
+                </li>
+
+                <li>
+                    <a href="javascript: void(0);" class="has-arrow waves-effect">
+                        <i class="mdi mdi-database-search-outline"></i><span>色花堂SH</span>
+                    </a>
+                    <ul class="sub-menu" aria-expanded="false">
+                        <li><a href="/triggers/fetch-sehuatang-sh">SH一体抓取</a></li>
+                        <li><a href="/triggers/fetch-sehuatang-sh-thread-list">SH列表建池</a></li>
+                        <li><a href="/triggers/fetch-sehuatang-sh-thread-detail">SH详情补全</a></li>
+                        <li><a href="/fetch-site-sehuatang-sh-list">SH帖子池</a></li>
                     </ul>
                 </li>
 
