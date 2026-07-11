@@ -1,34 +1,28 @@
 <template>
-  <PageShell class="movie-agg-page-shell sc-events-page-shell media-ingest-page-shell media-rollback-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root media-ingest-page-root media-rollback-page-root">
+  <PageShell class="media-ingest-page-shell media-rollback-page-shell" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid media-ingest-page-root media-rollback-page-root next02-sc-pink-theme">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div id="msgArea" class="alert fade show small py-2 px-3" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
-          {{ message }}
-        </div>
-
         <div id="mediaRollbackPage" class="next02-media-rewrite next02-rollback-rewrite">
-          <div class="row mb-3">
+          <div class="row g-0">
             <div class="col-12">
-              <div class="next02-media-hero">
+              <section class="next02-media-hero next02-sc-movie-top-shell" aria-labelledby="mediaRollbackTitle">
                 <div class="next02-media-hero-main">
                   <div class="next02-media-eyebrow">Media Rollback</div>
-                <h4 class="mb-1">{{ pageTitle }}</h4>
-                <p class="text-muted mb-0">{{ pageNote }}</p>
-                  <div class="next02-media-kpi-strip">
-                    <span v-for="item in heroStats" :key="item.label">
-                      <strong>{{ item.value }}</strong>
-                      <em>{{ item.label }}</em>
-                    </span>
-                  </div>
-              </div>
-                <div class="next02-media-hero-actions">
-                <a href="/triggers/media" class="btn btn-outline-primary btn-sm">返回入库页</a>
-                <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
+                  <h4 id="mediaRollbackTitle">{{ pageTitle }}</h4>
+                  <p>{{ pageNote }}</p>
                 </div>
-              </div>
+                <div class="next02-media-hero-actions">
+                  <a href="/triggers/media" class="btn btn-outline-primary btn-sm">返回入库页</a>
+                  <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
+                </div>
+              </section>
             </div>
+          </div>
+
+          <div id="msgArea" class="alert fade show small" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
+            {{ message }}
           </div>
 
           <div class="row next02-media-grid">
@@ -40,7 +34,7 @@
                       <div class="next02-media-eyebrow">Rollback</div>
                       <h5 class="card-title mb-0">操作</h5>
                     </div>
-                    <span class="next02-media-live">Ready</span>
+                    <span class="next02-media-live" :class="{ 'is-running': actionLoading }">{{ actionLoading ? "执行中" : "就绪" }}</span>
                   </div>
                   <div class="next02-media-action-stack next02-rollback-action-stack">
                     <button type="button" id="btnRollback" class="btn btn-primary" :disabled="actionLoading" @click="runRollback">开始回滚名称</button>
@@ -109,6 +103,7 @@ import { asArray, asRecord, formatValue, num, pick, text } from "@/utils/format"
 type ResultColumn = {
   label: string;
   key: string;
+  width: string;
   cls?: string;
 };
 
@@ -147,20 +142,14 @@ const title = computed(() => text(payload.value, "Title") || "媒体回滚");
 const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value);
 const pageNote = computed(() => text(payload.value, "PageNote"));
 const rootDirs = computed(() => asArray<string>(pick(payload.value, "RootDirs")));
-const heroStats = computed(() => [
-  { label: "Root", value: rootDirs.value.length },
-  { label: "总数", value: num(result.value, "total") },
-  { label: "成功", value: num(result.value, "success") },
-  { label: "失败", value: num(result.value, "failed") }
-]);
 const tables = computed<ResultTableDef[]>(() => [
   {
     id: "tblRollbackSuccess",
     title: "回滚成功 Movie",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "源文件", key: "source_path", cls: "mono" },
-      { label: "目标文件", key: "target_path", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "源文件", key: "source_path", width: "42%", cls: "mono" },
+      { label: "目标文件", key: "target_path", width: "42%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "rollback_success"))
   },
@@ -168,10 +157,10 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblRollbackFail",
     title: "回滚失败 Movie",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "源文件", key: "source_path", cls: "mono" },
-      { label: "失败原因", key: "error" },
-      { label: "失败文件位置", key: "failed_path", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "14%" },
+      { label: "源文件", key: "source_path", width: "30%", cls: "mono" },
+      { label: "失败原因", key: "error", width: "26%" },
+      { label: "失败文件位置", key: "failed_path", width: "30%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "rollback_fail"))
   },
@@ -179,8 +168,8 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblRollbackPreview",
     title: "回滚后预览（成功项）",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "回滚后路径", key: "target_path", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "20%" },
+      { label: "回滚后路径", key: "target_path", width: "80%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "rollback_preview"))
   }
@@ -222,12 +211,16 @@ const ResultTable = defineComponent({
           h("span", { class: "next02-media-count-pill" }, `${props.table.rows.length} 行`)
         ]),
         h("div", { class: "table-responsive" }, [
-          h("table", { class: "table table-sm table-hover", id: props.table.id }, [
+          h("table", { class: "table table-hover align-middle mb-0 next02-media-table", id: props.table.id }, [
+            h("colgroup", props.table.columns.map((column) => h("col", { style: { width: column.width } }))),
             h("thead", [
               h("tr", props.table.columns.map((column) => h("th", column.label)))
             ]),
             h("tbody", props.table.rows.length
-              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => h("td", { class: column.cls || "" }, cellValue(row, column)))))
+              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => {
+                  const value = cellValue(row, column);
+                  return h("td", { class: column.cls || "", title: value }, value);
+                })))
               : [h("tr", [h("td", { colspan: props.table.columns.length, class: "text-center text-muted" }, "暂无数据")])])
           ])
         ])

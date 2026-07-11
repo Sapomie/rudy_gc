@@ -87,12 +87,13 @@ func (s *Service) BuildMovieAlbumItemsPage(ctx context.Context, query MovieAlbum
 			continue
 		}
 		items = append(items, &MovieAlbumItemRow{
-			ID:         row.Id,
-			AlbumID:    row.AlbumId,
-			MovieJavID: strings.TrimSpace(row.MovieJavId),
-			MovieName:  strings.TrimSpace(row.MovieName),
-			SortNo:     row.SortNo,
-			CreatedOn:  row.CreatedOn,
+			ID:            row.Id,
+			AlbumID:       row.AlbumId,
+			MovieJavID:    strings.TrimSpace(row.MovieJavId),
+			MovieName:     strings.TrimSpace(row.MovieName),
+			ReleasingDate: row.ReleasingDate,
+			SortNo:        row.SortNo,
+			CreatedOn:     row.CreatedOn,
 		})
 	}
 	result.Items = items

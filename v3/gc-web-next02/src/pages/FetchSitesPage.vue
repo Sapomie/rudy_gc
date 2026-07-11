@@ -1,33 +1,50 @@
 <template>
-  <PageShell class="fetch-sites-page-shell" title="FetchSites 配置" eyebrow="">
-    <div id="fetch-sites-root" class="fetch-sites-page-root next02-fetch-sites-rewrite">
-      <LoadingState v-if="loading" />
-      <ErrorPanel v-else-if="error" :message="error" />
+  <PageShell class="movie-agg-page-shell sc-events-page-shell fetch-sites-page-shell" title="FetchSites 配置" eyebrow="">
+    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root fetch-sites-page-root next02-sc-pink-theme next02-sc-events-rewrite next02-fetch-sites-rewrite">
+      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
+      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div class="row">
-          <div class="col-12">
-            <div class="page-title-box next02-fetch-sites-hero d-flex align-items-center justify-content-between">
-              <div class="next02-fetch-sites-hero-main">
-                <h4 class="mb-0">FetchSites 配置</h4>
-                <div class="text-muted small mt-1">维护 t_fetch_site 的抓取站点配置；保存后当前 API 进程立即使用新配置。</div>
-                <div class="next02-fetch-sites-summary" aria-label="fetch site summary">
-                  <span><strong>{{ items.length }}</strong>配置</span>
-                  <span><strong>{{ enabledCount }}</strong>启用</span>
-                  <span><strong>{{ persistedCount }}</strong>已入库</span>
-                </div>
-              </div>
-              <div class="next02-fetch-sites-actions">
-                <a class="btn btn-sm btn-outline-primary" href="/triggers/fetch-sehuatang">FetchSehuatang</a>
+        <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell">
+          <div class="next02-sc-hero-copy">
+            <span class="next02-sc-eyebrow">FETCH SITES / CONFIG</span>
+            <h4>FetchSites 配置</h4>
+            <p>维护抓取站点配置，保存后当前 API 进程立即使用新配置。</p>
+          </div>
+          <div class="next02-sc-hero-actions">
+            <div class="btn-group" role="group" aria-label="FetchSites 视图">
+              <span class="btn active" aria-current="page">配置列表</span>
+            </div>
+            <a class="btn btn-outline-secondary" href="/triggers/fetch-sehuatang">FetchSehuatang</a>
+          </div>
+        </section>
+
+        <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
+          <div class="card-body">
+            <div class="next02-sc-panel-head next02-fetch-sites-toolbar">
+              <div class="next02-fetch-sites-toolbar-title">抓取站点配置</div>
+              <div v-if="items.length" class="next02-sc-hero-metrics sc-event-list-metrics" aria-label="FetchSites 配置摘要">
+                <span><strong>{{ items.length }}</strong> Sites</span>
+                <span><strong>{{ enabledCount }}</strong> Enabled</span>
+                <span><strong>{{ persistedCount }}</strong> Persisted</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="card shadow-sm">
-          <div class="card-body">
             <div class="table-responsive">
-              <table class="table table-bordered table-hover fetch-sites-table mb-0">
-                <thead class="table-light">
+              <table class="table table-hover align-middle mb-0 sc-events-table fetch-sites-table">
+                <colgroup>
+                  <col class="fetch-sites-col-code">
+                  <col class="fetch-sites-col-name">
+                  <col class="fetch-sites-col-url">
+                  <col class="fetch-sites-col-agent">
+                  <col class="fetch-sites-col-proxy">
+                  <col class="fetch-sites-col-number">
+                  <col class="fetch-sites-col-number">
+                  <col class="fetch-sites-col-number">
+                  <col class="fetch-sites-col-retry">
+                  <col class="fetch-sites-col-status">
+                  <col class="fetch-sites-col-source">
+                  <col class="fetch-sites-col-action">
+                </colgroup>
+                <thead>
                   <tr>
                     <th>SiteCode</th>
                     <th>SiteName</th>
@@ -44,26 +61,24 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="!items.length">
-                    <td colspan="12" class="text-center text-muted py-4">暂无数据</td>
-                  </tr>
-                  <tr v-for="item in items" v-else :key="siteCode(item)">
-                    <td class="mono">{{ siteCode(item) }}</td>
-                    <td>{{ text(item, "site_name") }}</td>
-                    <td class="wide mono">{{ text(item, "base_url") }}</td>
-                    <td class="wide">{{ text(item, "user_agent") || "-" }}</td>
-                    <td class="wide mono">{{ text(item, "proxy") || "-" }}</td>
+                  <tr v-for="item in items" :key="siteCode(item)" class="next02-sc-event-row">
+                    <td class="mono" :title="siteCode(item)">{{ siteCode(item) }}</td>
+                    <td :title="text(item, 'site_name')">{{ text(item, "site_name") || "-" }}</td>
+                    <td class="mono" :title="text(item, 'base_url')">{{ text(item, "base_url") || "-" }}</td>
+                    <td :title="text(item, 'user_agent')">{{ text(item, "user_agent") || "-" }}</td>
+                    <td class="mono" :title="text(item, 'proxy')">{{ text(item, "proxy") || "-" }}</td>
                     <td>{{ text(item, "timeout_seconds") }}</td>
                     <td>{{ text(item, "request_sleep_ms") }}</td>
                     <td>{{ text(item, "retry_sleep_ms") }}</td>
                     <td>{{ text(item, "max_retry_times") }}</td>
-                    <td><span class="badge" :class="statusClass(item)">{{ statusText(item) }}</span></td>
+                    <td><span :class="statusClass(item)">{{ statusText(item) }}</span></td>
                     <td>{{ pick(item, "persisted") ? "已入库" : "默认值" }}</td>
-                    <td class="text-nowrap">
-                      <button type="button" class="btn btn-sm btn-outline-primary js-edit-fetch-site" :data-site-code="siteCode(item)" @click="openEdit(item)">
-                        <span class="ms-1">编辑</span>
-                      </button>
+                    <td>
+                      <button type="button" class="sc-event-link js-edit-fetch-site" :data-site-code="siteCode(item)" @click="openEdit(item)">编辑</button>
                     </td>
+                  </tr>
+                  <tr v-if="!items.length">
+                    <td colspan="12"><div class="sc-empty-state">还没有可展示的抓取站点配置。</div></td>
                   </tr>
                 </tbody>
               </table>
@@ -71,13 +86,16 @@
           </div>
         </div>
 
-        <div class="modal fade" id="fetchSiteEditModal" tabindex="-1" aria-hidden="true" :class="{ show: modalOpen }">
+        <div class="modal fade" id="fetchSiteEditModal" tabindex="-1" :aria-hidden="modalOpen ? undefined : 'true'" :aria-modal="modalOpen ? 'true' : undefined" :class="{ show: modalOpen }" role="dialog" @click.self="modalOpen = false">
           <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
               <form id="fetchSiteEditForm" @submit.prevent="save">
                 <div class="modal-header">
-                  <h5 class="modal-title">编辑 FetchSite</h5>
-                  <button type="button" class="btn-close" aria-label="Close" @click="modalOpen = false"></button>
+                  <div>
+                    <span class="next02-fetch-sites-modal-eyebrow">FETCH SITE CONFIG</span>
+                    <h5 class="modal-title">编辑 {{ text(edit, "site_name") || "FetchSite" }}</h5>
+                  </div>
+                  <button type="button" class="next02-fetch-sites-modal-close" aria-label="关闭" @click="modalOpen = false">×</button>
                 </div>
                 <div class="modal-body">
                   <input type="hidden" id="edit_site_code" :value="text(edit, 'site_code')">
@@ -149,8 +167,6 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
-import ErrorPanel from "@/components/ErrorPanel.vue";
-import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, pick, text } from "@/utils/format";
@@ -192,7 +208,7 @@ function statusText(item: AnyRecord): string {
 }
 
 function statusClass(item: AnyRecord): string {
-  return Number(pick(item, "status") || 0) === 1 ? "bg-success" : "bg-secondary";
+  return Number(pick(item, "status") || 0) === 1 ? "fetch-sites-status-enabled" : "sc-muted";
 }
 
 function openEdit(item: AnyRecord) {

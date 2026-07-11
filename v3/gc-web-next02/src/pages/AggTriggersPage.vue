@@ -1,25 +1,19 @@
 <template>
-  <PageShell class="movie-agg-page-shell agg-triggers-page-shell" :title="title" :note="pageNote" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root agg-triggers-page-root next02-agg-trigger-rewrite">
+  <PageShell class="agg-triggers-page-shell" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid agg-triggers-page-root next02-sc-pink-theme next02-agg-trigger-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <section class="next02-movieagg-hero next02-agg-trigger-hero">
-          <div class="next02-movieagg-hero-copy">
+        <section class="next02-agg-trigger-hero next02-sc-movie-top-shell" aria-labelledby="aggTriggerTitle">
+          <div class="next02-agg-trigger-hero-main">
             <div class="next02-rewrite-eyebrow">Agg Triggers / Backfill Console</div>
-            <h2>{{ pageTitle }}</h2>
+            <h4 id="aggTriggerTitle">{{ pageTitle }}</h4>
             <p>{{ pageNote || "执行 WMedia 与上映日聚合回填，刷新聚合桶和 Top 数据。" }}</p>
-            <div class="next02-movieagg-hero-links">
-              <a href="/w-media-agg/birth">WMedia 聚合页</a>
-              <a href="/movie-agg-all/release">上映日聚合页</a>
-              <a href="/movie-agg-all/release-bucket-list">上映桶表</a>
-            </div>
           </div>
-          <div class="next02-rewrite-kpis">
-            <div v-for="item in heroStats" :key="item.label" class="next02-rewrite-kpi">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </div>
+          <div class="next02-agg-trigger-hero-actions">
+            <a href="/w-media-agg/birth" class="btn btn-outline-primary btn-sm">WMedia 聚合页</a>
+            <a href="/movie-agg-all/release" class="btn btn-outline-secondary btn-sm">上映日聚合页</a>
+            <a href="/movie-agg-all/release-bucket-list" class="btn btn-outline-secondary btn-sm">上映桶表</a>
           </div>
         </section>
 
@@ -34,40 +28,30 @@
         <div v-else id="msgArea" class="alert fade small py-2 px-3 agg-trigger-msg-hidden"></div>
 
         <div id="aggTriggersPage">
-          <div class="row mb-3 next02-agg-trigger-head">
-            <div class="col-12 d-flex align-items-center justify-content-between">
-              <div>
-                <h4 class="mb-1">{{ pageTitle }}</h4>
-                <p class="text-muted mb-0">{{ pageNote }}</p>
-              </div>
-              <div class="d-flex gap-2">
-                <a href="/w-media-agg/birth" class="btn btn-outline-primary btn-sm">WMedia 聚合页</a>
-                <a href="/movie-agg-all/release" class="btn btn-outline-secondary btn-sm">上映日聚合页</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="row g-3">
-            <div v-for="card in cards" :key="card.prefix" class="col-xl-6">
+          <div class="next02-agg-trigger-grid">
+            <div v-for="card in cards" :key="card.prefix" class="next02-agg-job-column">
               <div class="card h-100 next02-rewrite-card next02-agg-job-card">
                 <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-                    <h5 class="card-title mb-0">{{ card.title }}</h5>
+                  <div class="next02-agg-panel-head">
+                    <div>
+                      <div class="next02-agg-panel-eyebrow">Backfill Task</div>
+                      <h5 class="card-title mb-0">{{ card.title }}</h5>
+                    </div>
                     <button type="button" :id="card.buttonId" class="btn btn-outline-primary btn-sm" :disabled="running" @click="runBackfill(card)">
                       执行回填
                     </button>
                   </div>
-                  <div class="text-muted small mb-3">{{ card.note }}</div>
-                  <div class="row g-2">
-                    <div v-for="metric in card.metrics" :key="metric.key" class="col-6">
+                  <div class="next02-agg-card-note">{{ card.note }}</div>
+                  <div class="next02-agg-metric-grid">
+                    <div v-for="metric in card.metrics" :key="metric.key">
                       <div class="overview-item">
                         <div class="label">{{ metric.label }}</div>
                         <div class="value" :id="`${card.prefix}${metric.key}`">{{ metricValue(card.prefix, metric.key) }}</div>
                       </div>
                     </div>
                   </div>
-                  <div class="mt-3">
-                    <div class="text-muted small">状态</div>
+                  <div class="next02-agg-status-block">
+                    <div class="next02-agg-status-label">状态</div>
                     <div :id="`${card.prefix}BackfillStatusText`" class="fw-semibold">{{ statusFor(card.prefix) }}</div>
                   </div>
                 </div>
@@ -197,14 +181,6 @@ async function load() {
 const title = computed(() => text(payload.value, "Title") || "聚合回填");
 const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value);
 const pageNote = computed(() => text(payload.value, "PageNote"));
-const completedCardCount = computed(() => cards.filter((card) => Object.keys(results[card.prefix]).length > 0).length);
-const heroStats = computed(() => [
-  { label: "任务数", value: String(cards.length) },
-  { label: "运行中", value: running.value ? "1" : "0" },
-  { label: "已完成", value: String(completedCardCount.value) },
-  { label: "状态", value: message.value ? (messageOk.value ? "成功" : "失败") : "待执行" }
-]);
-
 function metricValue(prefix: BackfillCard["prefix"], key: string): string {
   const value = num(results[prefix], metricMap[key] || key);
   return key === "ElapsedMs" ? `${value} ms` : String(value);

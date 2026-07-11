@@ -9,31 +9,6 @@
       <LoadingState v-if="loading" />
       <ErrorPanel v-else-if="error" :message="error" />
       <template v-else>
-        <section class="next02-movieagg-hero" aria-label="MovieAgg 页面导航与摘要">
-          <div class="next02-movieagg-hero-main">
-            <div class="next02-movieagg-context">
-              <span class="next02-rewrite-eyebrow">{{ viewLabel }}</span>
-              <strong>{{ rangeLabel }}</strong>
-            </div>
-            <div class="next02-movieagg-hero-links">
-              <a
-                v-for="item in heroLinks"
-                :key="item.href"
-                :href="item.href"
-                :class="{ active: item.active }"
-                target="_blank"
-                rel="noopener noreferrer"
-              >{{ item.label }}</a>
-            </div>
-          </div>
-          <div class="next02-rewrite-kpis">
-            <div v-for="item in heroStats" :key="item.label" class="next02-rewrite-kpi">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </div>
-          </div>
-        </section>
-
         <template v-if="isReleaseView">
           <section class="section-card movie-agg-release-section next02-rewrite-card next02-movieagg-section next02-movieagg-timeline">
             <div class="next02-movieagg-timeline-toolbar">
@@ -111,10 +86,10 @@
                 <BucketRows v-if="bucketsM.length" v-show="wMediaBucketTabActive('months')" :items="bucketsM" grid-class="bucket-grid-month" />
               </template>
               <template v-else-if="hasWMediaBuckets">
-                <BucketRows title="年份" :items="bucketsY" grid-class="bucket-grid-default" />
-                <BucketRows title="季度" :items="bucketsQ" grid-class="bucket-grid-quarter" />
-                <BucketRows title="月份" :items="bucketsM" grid-class="bucket-grid-month" />
-                <BucketRows title="日期" :items="bucketsD" grid-class="bucket-grid-month" />
+                <BucketRows v-if="bucketsY.length" title="年份" :items="bucketsY" grid-class="bucket-grid-default" />
+                <BucketRows v-if="bucketsQ.length" title="季度" :items="bucketsQ" grid-class="bucket-grid-quarter" />
+                <BucketRows v-if="bucketsM.length" title="月份" :items="bucketsM" grid-class="bucket-grid-month" />
+                <BucketRows v-if="bucketsD.length" title="日期" :items="bucketsD" grid-class="bucket-grid-month" />
               </template>
               <div v-else class="movie-empty next02-movieagg-empty">
                 当前范围暂无可展示的时间桶。<a href="/triggers/agg" class="alert-link" target="_blank" rel="noopener noreferrer">如为新建统计表，请先到聚合回填页执行 WMedia 时间聚合回填。</a>
@@ -268,7 +243,6 @@ const aggModeLabel = computed(() => text(payload.value, "AggModeLabel"));
 const note = computed(() => [aggModeLabel.value, text(payload.value, "RangeStart"), text(payload.value, "RangeEnd")].filter(Boolean).join(" · ") || "按时间桶、Top 维度和媒体状态查看聚合结果。");
 const isReleaseView = computed(() => text(payload.value, "ViewType") === "movie-agg-release" || route.path === "/movie-agg-all/release");
 const isWMediaBirth = computed(() => text(payload.value, "ViewType") === "w-media-agg-birth" || route.path === "/w-media-agg/birth");
-const viewLabel = computed(() => isReleaseView.value ? "Release Timeline" : (isWMediaBirth.value ? "WMedia Birth" : "Timeline"));
 const movieAggVariantClass = computed(() => isReleaseView.value ? "is-release-view" : (isWMediaBirth.value ? "is-wmedia-birth-view" : "is-generic-view"));
 const breadcrumbs = computed(() => asArray<AnyRecord>(pick(payload.value, "Breadcrumbs")));
 const modeSwitches = computed(() => asArray<AnyRecord>(pick(payload.value, "ModeSwitches")));
@@ -294,28 +268,6 @@ const topGroups = computed<TopGroup[]>(() => [
   { label: "Label", type: "label", items: asArray<AnyRecord>(pick(payload.value, "TopLabelsAll", "TopLabels")) },
   { label: "Prefix", type: "prefix", items: asArray<AnyRecord>(pick(payload.value, "TopPrefixesAll", "TopPrefixes")) }
 ].filter((group) => group.items.length > 0));
-const bucketTotal = computed(() => {
-  if (isReleaseView.value) return hasYearTabs.value ? bucketsQAll.value.length + bucketsMAll.value.length : bucketsAll.value.length;
-  if (isWMediaBirth.value) return bucketsY.value.length + bucketsQ.value.length + bucketsM.value.length + bucketsD.value.length;
-  return fallbackBucketSections.value.reduce((sum, section) => sum + section.items.length, 0);
-});
-const topItemTotal = computed(() => topGroups.value.reduce((sum, group) => sum + group.items.length, 0));
-const rangeLabel = computed(() => {
-  const start = text(payload.value, "RangeStart");
-  const end = text(payload.value, "RangeEnd");
-  return [start, end].filter(Boolean).join(" 至 ") || "全量范围";
-});
-const heroStats = computed(() => [
-  { label: "时间桶", value: String(bucketTotal.value) },
-  { label: "Top 项", value: String(topItemTotal.value) }
-]);
-const heroLinks = computed(() => [
-  { label: "上映聚合", href: "/movie-agg-all/release", active: route.path === "/movie-agg-all/release" },
-  { label: "上映桶表", href: "/movie-agg-all/release-bucket-list", active: route.path === "/movie-agg-all/release-bucket-list" },
-  { label: "WMedia 聚合", href: "/w-media-agg/birth", active: route.path === "/w-media-agg/birth" },
-  { label: "WMedia 桶表", href: "/w-media-agg/bucket-list", active: route.path === "/w-media-agg/bucket-list" },
-  { label: "回填入口", href: "/triggers/agg", active: route.path === "/triggers/agg" }
-]);
 
 watch(topGroups, (groups) => {
   if (!groups.length) {
@@ -478,8 +430,7 @@ const BucketRows = defineComponent({
     return () => h("section", { ...attrs, class: ["bucket-section", attrs.class] }, [
       props.title ? h("div", { class: "bucket-section-title" }, props.title) : null,
       h("div", {
-        class: ["next02-movieagg-bucket-strip", props.gridClass],
-        style: { gridTemplateColumns: `repeat(${props.items.length}, minmax(0, 1fr))` }
+        class: ["next02-movieagg-bucket-strip", props.gridClass]
       }, props.items.map((item) => {
         const mediaBucket = pick(item, "Count") !== undefined;
         return h("a", { href: bucketHref(item), class: "next02-movieagg-bucket-item", key: bucketHref(item) }, [

@@ -1,38 +1,52 @@
 <template>
   <PageShell class="crawler-tasks-page-shell" :title="title" eyebrow="">
-    <div id="crawlerTasksPage" class="crawler-tasks-page-root next02-crawler-tasks-rewrite">
+    <div id="crawlerTasksPage" class="container-fluid crawler-tasks-page-root next02-sc-pink-theme next02-crawler-tasks-rewrite">
       <LoadingState v-if="loading" />
       <ErrorPanel v-else-if="error" :message="error" />
       <template v-else>
-        <div class="row">
+        <div class="row g-0">
           <div class="col-12">
-            <div class="page-title-box next02-crawler-tasks-hero d-flex align-items-center justify-content-between">
-              <div>
+            <section class="page-title-box next02-crawler-tasks-hero next02-sc-movie-top-shell" aria-labelledby="crawlerTasksTitle">
+              <div class="next02-crawler-tasks-hero-main">
                 <div class="next02-crawler-tasks-kicker">Crawler Jobs</div>
-                <h4 class="mb-0">{{ title }}</h4>
-                <div class="next02-crawler-tasks-note">查看抓取任务状态、计数和回到任务入口。</div>
+                <h4 id="crawlerTasksTitle">{{ title }}</h4>
+                <div class="next02-crawler-tasks-note">查看抓取任务状态、计数和任务入口。</div>
               </div>
-              <div class="next02-crawler-tasks-metrics" aria-label="crawler jobs summary">
-                <span v-for="item in taskMetrics" :key="item.label" class="next02-crawler-tasks-metric">
-                  <strong>{{ item.value }}</strong>
-                  <span>{{ item.label }}</span>
-                </span>
+              <div class="next02-crawler-tasks-hero-actions">
+                <a :href="backHref" class="btn btn-outline-primary btn-sm">回到任务台</a>
               </div>
-              <a :href="backHref" class="btn btn-outline-primary btn-sm">回到任务台</a>
-            </div>
+            </section>
           </div>
         </div>
 
-        <div class="row">
+        <div class="row g-0">
           <div class="col-12">
-            <div class="card next02-crawler-tasks-panel">
+            <div class="card next02-crawler-tasks-panel next02-sc-movie-table-card">
               <div class="card-body">
-                <div class="next02-crawler-tasks-panel-head mb-3">
-                  <h4 class="card-title mb-0">任务列表</h4>
-                  <span id="taskCountBadge" class="badge bg-light text-dark">{{ rows.length }} 个</span>
+                <div class="next02-crawler-tasks-panel-head">
+                  <div class="next02-crawler-tasks-panel-title">
+                    <h4 class="card-title mb-0">任务列表</h4>
+                    <span id="taskCountBadge" class="badge bg-light text-dark">{{ rows.length }} 个</span>
+                  </div>
+                  <div class="next02-crawler-tasks-metrics" aria-label="抓取任务统计">
+                    <span v-for="item in taskMetrics" :key="item.label" class="next02-crawler-tasks-metric">
+                      <span>{{ item.label }}</span>
+                      <strong>{{ item.value }}</strong>
+                    </span>
+                  </div>
                 </div>
                 <div class="table-responsive">
-                  <table class="table table-centered table-nowrap mb-0">
+                  <table class="table table-hover align-middle mb-0 next02-crawler-tasks-table">
+                    <colgroup>
+                      <col style="width: 17%">
+                      <col style="width: 17%">
+                      <col style="width: 18%">
+                      <col style="width: 7%">
+                      <col style="width: 7%">
+                      <col style="width: 10%">
+                      <col style="width: 16%">
+                      <col style="width: 8%">
+                    </colgroup>
                     <thead>
                       <tr>
                         <th>任务ID</th>
@@ -50,14 +64,14 @@
                         <td colspan="8" class="next02-crawler-tasks-empty">暂无任务</td>
                       </tr>
                       <tr v-for="row in rows" v-else :key="jobID(row)">
-                        <td class="text-nowrap">{{ jobID(row) }}</td>
-                        <td>{{ taskLabel(row) }}</td>
-                        <td><span class="badge fetch-site-badge" :class="statusClass(row)">{{ statusText(row) }}</span></td>
-                        <td>{{ text(row, "queued_count", "QueuedCount") || 0 }}</td>
-                        <td>{{ text(row, "handled_count", "HandledCount") || 0 }}</td>
-                        <td>{{ text(row, "success_count", "SuccessCount") || 0 }} / {{ text(row, "failed_count", "FailedCount") || 0 }}</td>
-                        <td class="text-nowrap">{{ startedAtText(row) }}</td>
-                        <td class="text-nowrap"><a class="btn btn-sm btn-primary" data-job-action="back-to-task" :href="taskHref(row)">回到任务</a></td>
+                        <td class="next02-task-id" :title="jobID(row)">{{ jobID(row) }}</td>
+                        <td :title="taskLabel(row)">{{ taskLabel(row) }}</td>
+                        <td :title="statusText(row)"><span class="badge fetch-site-badge" :class="statusClass(row)">{{ statusText(row) }}</span></td>
+                        <td class="next02-task-number">{{ text(row, "queued_count", "QueuedCount") || 0 }}</td>
+                        <td class="next02-task-number">{{ text(row, "handled_count", "HandledCount") || 0 }}</td>
+                        <td class="next02-task-number">{{ text(row, "success_count", "SuccessCount") || 0 }} / {{ text(row, "failed_count", "FailedCount") || 0 }}</td>
+                        <td class="next02-task-time">{{ startedAtText(row) }}</td>
+                        <td><a class="next02-task-link" data-job-action="back-to-task" :href="taskHref(row)">回到任务</a></td>
                       </tr>
                     </tbody>
                   </table>

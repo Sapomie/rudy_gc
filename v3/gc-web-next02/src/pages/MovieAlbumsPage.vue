@@ -121,6 +121,7 @@
                 <colgroup>
                   <col class="movie-album-col-select">
                   <col class="movie-album-col-movie">
+                  <col class="movie-album-col-releasing">
                   <col class="movie-album-col-created">
                   <col class="movie-album-col-actions">
                 </colgroup>
@@ -138,13 +139,14 @@
                       >
                     </th>
                     <th><SortLink :link="sortLink('ByMovieName')" label="影片" /></th>
+                    <th>上映日期</th>
                     <th><SortLink :link="sortLink('ByCreated')" label="加入时间" /></th>
                     <th class="text-nowrap">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="!hasRows">
-                    <td colspan="4"><div class="sc-empty-state">当前筛选下没有电影相册数据。</div></td>
+                    <td colspan="5"><div class="sc-empty-state">当前筛选下没有电影相册数据。</div></td>
                   </tr>
                   <tr v-for="row in rows" v-else :key="rowKey(row)" :data-item-id="value(row, 'ID')">
                     <td class="text-center">
@@ -160,6 +162,7 @@
                     <td class="text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
                       <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
                     </td>
+                    <td class="text-nowrap">{{ formatUnixDate(value(row, "ReleasingDate")) }}</td>
                     <td class="text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
                     <td class="text-nowrap">
                       <button
@@ -282,6 +285,13 @@ function formatUnixMinute(input: unknown): string {
   if (!n) return "-";
   const d = new Date(n * 1000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatUnixDate(input: unknown): string {
+  const n = Number(input || 0);
+  if (!n) return "-";
+  const d = new Date(n * 1000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function rowID(row: AnyRecord): number {

@@ -23,6 +23,6 @@ v3 是 legacy 项目的前后端分离拆分迁移。
 
 - 后端：`make run-api`
 - 前端：`make run-web`
-- 前后端一起：`make run-all`
+- API 与两个前端一起：`make run-all`（同时启动 legacy `gc-web` 和 `gc-web-next02`）
 - 验证：`make verify`
-- 停止端口：`make stop-all`
+- 停止端口：`make stop-all`（同时停止 API、legacy `gc-web` 和 `gc-web-next02`）

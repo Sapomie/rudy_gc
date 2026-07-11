@@ -1,29 +1,24 @@
 <template>
-  <PageShell class="movie-agg-page-shell sc-events-page-shell sc-triggers-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root sc-triggers-page-root next02-sc-trigger-rewrite">
+  <PageShell class="sc-triggers-page-shell" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid sc-triggers-page-root next02-sc-pink-theme next02-sc-trigger-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div id="msgArea" class="alert fade show small py-2 px-3" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
-          {{ message }}
-        </div>
-
-        <section class="next02-sc-hero next02-sc-trigger-hero">
+        <section class="next02-sc-hero next02-sc-trigger-hero next02-sc-movie-top-shell" aria-labelledby="scTriggerTitle">
           <div class="next02-sc-hero-copy">
             <span class="next02-sc-eyebrow">SC / IMPORT CONSOLE</span>
-            <h4>SC Preview &amp; Submit</h4>
+            <h4 id="scTriggerTitle">SC Preview &amp; Submit</h4>
             <p>扫描 SC 根目录，核对事件和影片状态，再提交后台任务。</p>
-            <div class="next02-sc-hero-metrics" aria-label="SC 导入摘要">
-              <span><strong>{{ previewMovieCount }}</strong> Movies</span>
-              <span><strong>{{ selectedScMovies.length }}</strong> Selected</span>
-              <span><strong>{{ previewVisible ? 'Ready' : 'Idle' }}</strong> State</span>
-            </div>
           </div>
           <div class="next02-sc-hero-actions">
             <a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a>
             <a href="/crawler/tasks" class="btn btn-outline-primary">查看任务列表</a>
           </div>
         </section>
+
+        <div id="msgArea" class="alert fade show small" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
+          {{ message }}
+        </div>
 
         <div class="card next02-sc-panel next02-sc-scan-panel">
           <div class="card-body">

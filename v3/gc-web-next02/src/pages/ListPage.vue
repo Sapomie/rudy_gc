@@ -1,7 +1,7 @@
 <template>
   <PageShell
     class="fetch-site-list-page-shell"
-    :class="{ 'sc-events-page-shell': viewType === 'fetch-site-sehuatang-list' }"
+    :class="{ 'sc-events-page-shell': viewType === 'fetch-site-javbus-list' || viewType === 'fetch-site-sukebei-list' || viewType === 'fetch-site-sehuatang-list' || viewType === 'fetch-site-sehuatang-sh-list' }"
     :title="title"
     eyebrow=""
   >
@@ -53,22 +53,25 @@ const title = computed(() => text(payload.value.PageTitle || payload.value.Title
 const viewType = computed(() => text(payload.value.ViewType));
 const listRewriteClass = computed(() => {
   if (viewType.value === "fetch-site-javbus-list") {
-    return "next02-fetch-site-javbus-list-rewrite";
+    return "next02-fetch-site-javbus-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
   }
   if (viewType.value === "fetch-site-sukebei-list") {
-    return "next02-fetch-site-sukebei-list-rewrite";
+    return "next02-fetch-site-sukebei-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
   }
   if (viewType.value === "fetch-site-sehuatang-list") {
     return "next02-fetch-site-sehuatang-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
+  }
+  if (viewType.value === "fetch-site-sehuatang-sh-list") {
+    return "next02-fetch-site-sehuatang-sh-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
   }
   return "";
 });
 const pageHTML = computed(() => {
   if (viewType.value === "fetch-site-javbus-list") {
-    return renderFetchSitePage(payload.value, "javbus");
+    return renderJavbusPage(payload.value);
   }
   if (viewType.value === "fetch-site-sukebei-list") {
-    return renderFetchSitePage(payload.value, "sukebei");
+    return renderSukebeiPage(payload.value);
   }
   if (viewType.value === "fetch-site-sehuatang-list") {
     return renderSehuatangPage(payload.value);
@@ -206,91 +209,255 @@ function triggerSortOptions(query: AnyRecord): string {
   }).join("");
 }
 
-function renderOwnedFilter(data: AnyRecord): string {
+function renderJavbusOwnedFilter(data: AnyRecord): string {
   const owned = asRecord(pick(data, "ownedQuery"));
-  const total = valueOf(pick(data, "total"), pick(data, "Total") || 0);
-  const link = (item: unknown, label: string, className: string) => {
+  const link = (item: unknown, label: string) => {
     const current = asRecord(item);
-    return `<a href="${attr(readText(current, "Href") || "#")}"
-      class="btn btn-sm ${className} waves-effect waves-light ${pick(current, "Active") ? "active disabled" : ""}"
-      aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
+    return `<a href="${attr(readText(current, "Href") || "#")}" class="btn btn-sm ${pick(current, "Active") ? "btn-primary active disabled" : "btn-outline-primary"}" aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
   };
-  return `<div class="d-flex flex-wrap align-items-center gap-3">
-    <div class="d-flex flex-wrap align-items-center gap-2">
-      <span class="btn btn-sm btn-outline-dark disabled">WMedia</span>
-      ${link(pick(owned, "MediaAll"), "MAll", "btn-primary")}
-      ${link(pick(owned, "MediaOwned"), "MOwned", "btn-success")}
-      ${link(pick(owned, "MediaNotOwned"), "MNotOwned", "btn-secondary")}
-    </div>
-    <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: ${escapeHtml(total)}</span>
+  return `<div class="album-quick-filter-group" aria-label="WMedia 筛选">
+    ${link(pick(owned, "MediaAll"), "MAll")}
+    ${link(pick(owned, "MediaOwned"), "MOwned")}
+    ${link(pick(owned, "MediaNotOwned"), "MNotOwned")}
   </div>`;
 }
 
-function renderFetchSiteFilterForm(data: AnyRecord, site: "javbus" | "sukebei"): string {
+function renderJavbusFilterForm(data: AnyRecord): string {
   const q = asRecord(pick(data, "Query"));
-  const action = site === "javbus" ? "/fetch-site-javbus-list" : "/fetch-site-sukebei-list";
-  const formID = site === "javbus" ? "fetchSiteJavbusFilterForm" : "fetchSiteSukebeiFilterForm";
-  const siteLabel = site === "javbus" ? "JavBus" : "Sukebei";
-  const triggerClass = site === "javbus" ? "js-trigger-filtered-fetch-site" : "js-trigger-filtered-sukebei";
-  return `<div class="card mb-3">
-    <div class="card-body">
-      <form class="row g-3 align-items-end" method="get" action="${attr(action)}" id="${attr(formID)}" ${site === "javbus" ? `data-fetch-site-filter-form="1"` : ""}>
-        <input type="hidden" name="ps" value="${attr(pick(q, "PageSize") || "")}">
-        ${pick(q, "Sort") ? `<input type="hidden" name="sort" value="${attr(pick(q, "Sort"))}">` : ""}
-        ${pick(q, "Order") ? `<input type="hidden" name="order" value="${attr(pick(q, "Order"))}">` : ""}
-        ${pick(q, "MediaOwned") ? `<input type="hidden" name="mowned" value="${attr(pick(q, "MediaOwned"))}">` : ""}
-        <div class="col-12">
-          <div class="fetch-site-filter-grid fetch-site-filter-grid-5 fetch-site-sukebei-filter-top">
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">${escapeHtml(siteLabel)} 影片编号 / JavID</label>
-              <input class="form-control" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="movie_name 或 movie_jav_id">
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">${escapeHtml(siteLabel)} 状态</label>
-              ${renderFetchSiteStatusGroup(data, site)}
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">最后抓取开始</label>
-              <input class="form-control" type="text" name="last_fetch_from" value="${attr(pick(q, "LastFetchFrom") || "")}">
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">最后抓取结束</label>
-              <input class="form-control" type="text" name="last_fetch_to" value="${attr(pick(q, "LastFetchTo") || "")}">
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">触发抓取顺序</label>
-              <select class="form-select" name="trigger_sort_key">${triggerSortOptions(q)}</select>
-            </div>
-          </div>
-        </div>
-        <div class="col-12">
-          <div class="fetch-site-filter-grid fetch-site-filter-grid-6">
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">发行时间开始</label>
-              <input class="form-control" type="text" name="release_date_from" value="${attr(pick(q, "ReleaseDateFrom") || "")}">
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">发行时间结束</label>
-              <input class="form-control" type="text" name="release_date_to" value="${attr(pick(q, "ReleaseDateTo") || "")}">
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">WMedia 下载时间开始</label>
-              <input class="form-control" type="text" name="media_birth_from" value="${attr(pick(q, "MediaBirthFrom") || "")}">
-            </div>
-            <div class="fetch-site-filter-item">
-              <label class="form-label mb-1">WMedia 下载时间结束</label>
-              <input class="form-control" type="text" name="media_birth_to" value="${attr(pick(q, "MediaBirthTo") || "")}">
-            </div>
-          </div>
-        </div>
-        <div class="col-12 d-flex gap-2">
-          <button class="btn btn-primary" type="submit">筛选</button>
-          <a class="btn btn-outline-secondary" href="${attr(action)}">清空</a>
-          <button class="btn btn-outline-danger ${attr(triggerClass)}" type="button">触发筛选结果抓取</button>
-        </div>
-      </form>
-      <div class="mt-3">${renderOwnedFilter(data)}</div>
+  return `<form class="sc-event-filter-form sehuatang-filter-form fetch-pool-filter-form" method="get" action="/fetch-site-javbus-list" id="fetchSiteJavbusFilterForm" data-fetch-site-filter-form="1">
+    <input type="hidden" name="ps" value="${attr(pick(q, "PageSize") || "")}">
+    ${pick(q, "Sort") ? `<input type="hidden" name="sort" value="${attr(pick(q, "Sort"))}">` : ""}
+    ${pick(q, "Order") ? `<input type="hidden" name="order" value="${attr(pick(q, "Order"))}">` : ""}
+    ${pick(q, "MediaOwned") ? `<input type="hidden" name="mowned" value="${attr(pick(q, "MediaOwned"))}">` : ""}
+    <div class="sehuatang-filter-cluster sehuatang-filter-query" aria-label="检索条件">
+      <label class="sc-event-filter-field sehuatang-filter-field is-keyword" for="javbusKeywordInput">
+        <span>影片编号 / JavID</span>
+        <input class="form-control" id="javbusKeywordInput" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="movie_name 或 movie_jav_id">
+      </label>
+      <div class="sc-event-filter-field sehuatang-filter-field is-fetch-pool-status">
+        <span>JavBus 状态</span>
+        <div class="album-quick-filter-group fetch-site-status-group">${renderFetchSiteStatusGroup(data, "javbus")}</div>
+      </div>
+      <label class="sc-event-filter-field sehuatang-filter-field is-fetch-pool-sort" for="javbusTriggerSortSelect">
+        <span>触发抓取顺序</span>
+        <select class="form-select" id="javbusTriggerSortSelect" name="trigger_sort_key">${triggerSortOptions(q)}</select>
+      </label>
     </div>
+    <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="最后抓取日期范围">
+      <span class="sehuatang-filter-cluster-label">最后抓取</span>
+      <label class="sc-event-filter-field sehuatang-filter-field is-date" for="javbusLastFetchFromInput"><span>开始</span><input class="form-control" id="javbusLastFetchFromInput" type="text" name="last_fetch_from" value="${attr(pick(q, "LastFetchFrom") || "")}"></label>
+      <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
+      <label class="sc-event-filter-field sehuatang-filter-field is-date" for="javbusLastFetchToInput"><span>结束</span><input class="form-control" id="javbusLastFetchToInput" type="text" name="last_fetch_to" value="${attr(pick(q, "LastFetchTo") || "")}"></label>
+    </div>
+    <div class="sehuatang-filter-cluster sehuatang-filter-quick-actions" aria-label="快捷筛选与操作">
+      <div class="sc-event-filter-field sehuatang-filter-field is-quick-tag">
+        <span>WMedia</span>
+        ${renderJavbusOwnedFilter(data)}
+      </div>
+      <div class="sehuatang-filter-actions">
+        <button class="sc-event-filter-submit" type="submit">筛选</button>
+        <a class="sc-event-filter-clear" href="/fetch-site-javbus-list">清空</a>
+      </div>
+    </div>
+    <div class="fetch-pool-filter-secondary">
+      <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="发行日期范围">
+        <span class="sehuatang-filter-cluster-label">发行时间</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="javbusReleaseFromInput"><span>开始</span><input class="form-control" id="javbusReleaseFromInput" type="text" name="release_date_from" value="${attr(pick(q, "ReleaseDateFrom") || "")}"></label>
+        <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="javbusReleaseToInput"><span>结束</span><input class="form-control" id="javbusReleaseToInput" type="text" name="release_date_to" value="${attr(pick(q, "ReleaseDateTo") || "")}"></label>
+      </div>
+      <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="WMedia 下载日期范围">
+        <span class="sehuatang-filter-cluster-label">WMedia 下载</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="javbusMediaBirthFromInput"><span>开始</span><input class="form-control" id="javbusMediaBirthFromInput" type="text" name="media_birth_from" value="${attr(pick(q, "MediaBirthFrom") || "")}"></label>
+        <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="javbusMediaBirthToInput"><span>结束</span><input class="form-control" id="javbusMediaBirthToInput" type="text" name="media_birth_to" value="${attr(pick(q, "MediaBirthTo") || "")}"></label>
+      </div>
+    </div>
+  </form>`;
+}
+
+function renderJavbusTime(value: unknown): string {
+  const current = text(value);
+  if (current === "-") {
+    return "-";
+  }
+  const [date, time = ""] = current.split(" ", 2);
+  return `<span class="sc-event-time"><span class="sc-event-date">${escapeHtml(date)}</span>${time ? `<span class="sc-event-hour">${escapeHtml(time)}</span>` : ""}</span>`;
+}
+
+function javbusDayKey(row: AnyRecord): string {
+  const current = readText(row, "LastFetchText");
+  return current === "-" ? "" : current.slice(0, 10);
+}
+
+function javbusDayClass(rows: AnyRecord[], index: number): string {
+  const day = javbusDayKey(rows[index]);
+  if (!day) {
+    return "sehuatang-day-neutral";
+  }
+  let groupIndex = 0;
+  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
+    const currentDay = javbusDayKey(rows[rowIndex]);
+    const previousDay = javbusDayKey(rows[rowIndex - 1]);
+    if (currentDay && previousDay && currentDay !== previousDay) {
+      groupIndex += 1;
+    }
+  }
+  return `sehuatang-day-group-${(groupIndex % 2) + 1}`;
+}
+
+function isJavbusDayStart(rows: AnyRecord[], index: number): boolean {
+  if (index <= 0) {
+    return false;
+  }
+  const currentDay = javbusDayKey(rows[index]);
+  const previousDay = javbusDayKey(rows[index - 1]);
+  return Boolean(currentDay && previousDay && currentDay !== previousDay);
+}
+
+function renderJavbusRow(row: AnyRecord, index: number, rows: AnyRecord[]): string {
+  const movieName = readText(row, "MovieName");
+  const lastFetchText = readText(row, "LastFetchText");
+  const dayStartClass = isJavbusDayStart(rows, index) ? " sehuatang-day-start" : "";
+  const errorHTML = readText(row, "LastError")
+    ? `<details class="fetch-site-error-details"><summary>有错误</summary><div>${escapeHtml(readText(row, "LastError"))}</div></details>`
+    : `<span class="javbus-no-error">无错误</span>`;
+  return `<tr class="next02-sc-event-row ${javbusDayClass(rows, index)}${dayStartClass}" data-movie-jav-id="${attr(readText(row, "MovieJavID"))}" data-movie-name="${attr(movieName)}" data-fetch-day="${attr(javbusDayKey(row))}">
+    <td class="sc-content-cell"><a class="sc-event-link" href="/movie/${attr(encodeURIComponent(movieName))}" title="${attr(movieName)}">${escapeHtml(movieName)}</a></td>
+    <td title="${attr(readText(row, "ReleaseDateText"))}">${renderJavbusTime(readText(row, "ReleaseDateText"))}</td>
+    <td><div class="fetch-site-album-inline"><span class="btn btn-sm btn-outline-secondary disabled">${escapeHtml(readText(row, "FetchStatusText"))}</span></div></td>
+    <td class="sc-number">${escapeHtml(valueOf(pick(row, "TryCount"), 0))}</td>
+    <td title="${attr(lastFetchText)}">${renderJavbusTime(lastFetchText)}</td>
+    <td class="sc-number sc-primary-value">${escapeHtml(valueOf(pick(row, "TorrentHashCount"), 0))}</td>
+    <td title="${attr(readText(row, "LatestPublishText"))}">${renderJavbusTime(readText(row, "LatestPublishText"))}</td>
+    <td class="fetch-pool-wmedia-cell"><div class="fetch-site-album-inline">${renderWMediaCell(row)}</div></td>
+    <td class="fetch-site-error-cell">${errorHTML}</td>
+    <td><div class="fetch-site-album-inline"><button type="button" class="btn btn-sm btn-outline-secondary js-trigger-javbus">触发 JavBus</button></div></td>
+  </tr>`;
+}
+
+function renderJavbusTable(data: AnyRecord): string {
+  const rows = asArray<AnyRecord>(pick(data, "Rows"));
+  const sort = asRecord(pick(data, "SortQuery"));
+  return `<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 sc-events-table sehuatang-magnet-table fetch-pool-task-table">
+      <colgroup>
+        <col class="fetch-pool-col-movie"><col class="fetch-pool-col-release"><col class="fetch-pool-col-status"><col class="fetch-pool-col-retry"><col class="fetch-pool-col-last-fetch">
+        <col class="fetch-pool-col-hash"><col class="fetch-pool-col-latest"><col class="fetch-pool-col-wmedia"><col class="fetch-pool-col-error"><col class="fetch-pool-col-action">
+      </colgroup>
+      <thead><tr>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByMovieName"), "影片")}</th>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByReleaseDate"), "发行时间")}</th>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByFetchStatus"), "状态")}</th>
+        <th>重试</th>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLastFetchTime"), "最后抓取")}</th>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByHashCount"), "Hash 数")}</th>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLatestPublish"), "最新日期")}</th>
+        <th class="sc-sortable-head">${sortLabel(pick(sort, "ByMediaBirthTime"), "WMedia 下载时间")}</th>
+        <th>错误</th>
+        <th>操作</th>
+      </tr></thead>
+      <tbody>${rows.length ? rows.map((row, index) => renderJavbusRow(row, index, rows)).join("") : `<tr><td colspan="10"><div class="sc-empty-state">当前筛选下没有 JavBus 抓取任务。</div></td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderJavbusPage(data: AnyRecord): string {
+  const rows = asArray<AnyRecord>(pick(data, "Rows"));
+  return `<div id="javbusListPage" class="sehuatang-list-content javbus-list-content" data-task-page-url="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-site")}" data-filtered-task-type="${attr(pick(data, "FilteredJavbusTaskType") || "")}" data-filter-form-id="fetchSiteJavbusFilterForm">
+    <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell">
+      <div class="next02-sc-hero-copy">
+        <span class="next02-sc-eyebrow">JAVBUS / FETCH POOL</span>
+        <h4>${escapeHtml(pick(data, "PageTitle") || "JavBus 抓取列表")}</h4>
+        <p>${escapeHtml(pick(data, "PageNote") || "")}</p>
+      </div>
+      <div class="next02-sc-hero-actions">
+        <div class="btn-group" role="group" aria-label="JavBus 页面操作">
+          <a class="btn btn-outline-secondary" href="${attr(pick(data, "PeerPageURL") || "#")}">Sukebei 列表</a>
+          <button class="btn btn-outline-secondary js-trigger-filtered-fetch-site" type="button">触发筛选抓取</button>
+          <a class="btn btn-outline-secondary" href="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-site")}">抓取任务页</a>
+          <a class="btn btn-outline-secondary" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}">任务列表</a>
+        </div>
+      </div>
+    </section>
+    <div id="fetchSiteListMsg" class="alert d-none mb-3" role="alert"></div>
+    <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
+      <div class="card-body">
+        <div class="next02-sc-panel-head">
+          ${renderJavbusFilterForm(data)}
+          ${rows.length ? `<div class="next02-sc-hero-metrics sc-event-list-metrics" aria-label="JavBus 抓取摘要"><span><strong>${escapeHtml(valueOf(pick(data, "Total"), 0))}</strong> Records</span><span><strong>${escapeHtml(rows.length)}</strong> Current Page</span></div>` : ""}
+          ${rows.length ? `<div class="next02-sc-movie-pager">${pageLinks(pick(data, "PageInfo"), "JavBus")}</div>` : ""}
+        </div>
+        ${renderJavbusTable(data)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderSukebeiFilterForm(data: AnyRecord): string {
+  const q = asRecord(pick(data, "Query"));
+  return `<form class="sc-event-filter-form sehuatang-filter-form fetch-pool-filter-form" method="get" action="/fetch-site-sukebei-list" id="fetchSiteSukebeiFilterForm" data-fetch-site-filter-form="1">
+    <input type="hidden" name="ps" value="${attr(pick(q, "PageSize") || "")}">
+    ${pick(q, "Sort") ? `<input type="hidden" name="sort" value="${attr(pick(q, "Sort"))}">` : ""}
+    ${pick(q, "Order") ? `<input type="hidden" name="order" value="${attr(pick(q, "Order"))}">` : ""}
+    ${pick(q, "MediaOwned") ? `<input type="hidden" name="mowned" value="${attr(pick(q, "MediaOwned"))}">` : ""}
+    <div class="sehuatang-filter-cluster sehuatang-filter-query" aria-label="检索条件">
+      <label class="sc-event-filter-field sehuatang-filter-field is-keyword" for="sukebeiKeywordInput">
+        <span>影片编号 / JavID</span>
+        <input class="form-control" id="sukebeiKeywordInput" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="movie_name 或 movie_jav_id">
+      </label>
+      <div class="sc-event-filter-field sehuatang-filter-field is-fetch-pool-status">
+        <span>Sukebei 状态</span>
+        <div class="album-quick-filter-group fetch-site-status-group">${renderFetchSiteStatusGroup(data, "sukebei")}</div>
+      </div>
+      <label class="sc-event-filter-field sehuatang-filter-field is-fetch-pool-sort" for="sukebeiTriggerSortSelect">
+        <span>触发抓取顺序</span>
+        <select class="form-select" id="sukebeiTriggerSortSelect" name="trigger_sort_key">${triggerSortOptions(q)}</select>
+      </label>
+    </div>
+    <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="最后抓取日期范围">
+      <span class="sehuatang-filter-cluster-label">最后抓取</span>
+      <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sukebeiLastFetchFromInput"><span>开始</span><input class="form-control" id="sukebeiLastFetchFromInput" type="text" name="last_fetch_from" value="${attr(pick(q, "LastFetchFrom") || "")}"></label>
+      <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
+      <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sukebeiLastFetchToInput"><span>结束</span><input class="form-control" id="sukebeiLastFetchToInput" type="text" name="last_fetch_to" value="${attr(pick(q, "LastFetchTo") || "")}"></label>
+    </div>
+    <div class="sehuatang-filter-cluster sehuatang-filter-quick-actions" aria-label="快捷筛选与操作">
+      <div class="sc-event-filter-field sehuatang-filter-field is-quick-tag">
+        <span>WMedia</span>
+        ${renderSukebeiOwnedFilter(data)}
+      </div>
+      <div class="sehuatang-filter-actions">
+        <button class="sc-event-filter-submit" type="submit">筛选</button>
+        <a class="sc-event-filter-clear" href="/fetch-site-sukebei-list">清空</a>
+      </div>
+    </div>
+    <div class="fetch-pool-filter-secondary">
+      <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="发行日期范围">
+        <span class="sehuatang-filter-cluster-label">发行时间</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sukebeiReleaseFromInput"><span>开始</span><input class="form-control" id="sukebeiReleaseFromInput" type="text" name="release_date_from" value="${attr(pick(q, "ReleaseDateFrom") || "")}"></label>
+        <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sukebeiReleaseToInput"><span>结束</span><input class="form-control" id="sukebeiReleaseToInput" type="text" name="release_date_to" value="${attr(pick(q, "ReleaseDateTo") || "")}"></label>
+      </div>
+      <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="WMedia 下载日期范围">
+        <span class="sehuatang-filter-cluster-label">WMedia 下载</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sukebeiMediaBirthFromInput"><span>开始</span><input class="form-control" id="sukebeiMediaBirthFromInput" type="text" name="media_birth_from" value="${attr(pick(q, "MediaBirthFrom") || "")}"></label>
+        <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
+        <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sukebeiMediaBirthToInput"><span>结束</span><input class="form-control" id="sukebeiMediaBirthToInput" type="text" name="media_birth_to" value="${attr(pick(q, "MediaBirthTo") || "")}"></label>
+      </div>
+    </div>
+  </form>`;
+}
+
+function renderSukebeiOwnedFilter(data: AnyRecord): string {
+  const owned = asRecord(pick(data, "ownedQuery"));
+  const link = (item: unknown, label: string) => {
+    const current = asRecord(item);
+    return `<a href="${attr(readText(current, "Href") || "#")}" class="btn btn-sm ${pick(current, "Active") ? "btn-primary active disabled" : "btn-outline-primary"}" aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
+  };
+  return `<div class="album-quick-filter-group" aria-label="WMedia 筛选">
+    ${link(pick(owned, "MediaAll"), "MAll")}
+    ${link(pick(owned, "MediaOwned"), "MOwned")}
+    ${link(pick(owned, "MediaNotOwned"), "MNotOwned")}
   </div>`;
 }
 
@@ -309,96 +476,127 @@ function renderWMediaCell(row: AnyRecord): string {
   return `-${birth}`;
 }
 
-function renderFetchSiteRow(row: AnyRecord, site: "javbus" | "sukebei"): string {
-  const triggerClass = site === "javbus" ? "js-trigger-javbus" : "js-trigger-sukebei";
-  const triggerLabel = site === "javbus" ? "触发 JavBus" : "触发 Sukebei";
-  const triggerButtonClass = site === "javbus" ? "btn-outline-primary" : "btn-outline-danger";
+function renderSukebeiTime(value: unknown): string {
+  const current = text(value);
+  if (current === "-") {
+    return "-";
+  }
+  const [date, time = ""] = current.split(" ", 2);
+  return `<span class="sc-event-time"><span class="sc-event-date">${escapeHtml(date)}</span>${time ? `<span class="sc-event-hour">${escapeHtml(time)}</span>` : ""}</span>`;
+}
+
+function sukebeiDayKey(row: AnyRecord): string {
+  const current = readText(row, "LastFetchText");
+  return current === "-" ? "" : current.slice(0, 10);
+}
+
+function sukebeiDayClass(rows: AnyRecord[], index: number): string {
+  const day = sukebeiDayKey(rows[index]);
+  if (!day) {
+    return "sehuatang-day-neutral";
+  }
+  let groupIndex = 0;
+  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
+    const currentDay = sukebeiDayKey(rows[rowIndex]);
+    const previousDay = sukebeiDayKey(rows[rowIndex - 1]);
+    if (currentDay && previousDay && currentDay !== previousDay) {
+      groupIndex += 1;
+    }
+  }
+  return `sehuatang-day-group-${(groupIndex % 2) + 1}`;
+}
+
+function isSukebeiDayStart(rows: AnyRecord[], index: number): boolean {
+  if (index <= 0) {
+    return false;
+  }
+  const currentDay = sukebeiDayKey(rows[index]);
+  const previousDay = sukebeiDayKey(rows[index - 1]);
+  return Boolean(currentDay && previousDay && currentDay !== previousDay);
+}
+
+function renderSukebeiRow(row: AnyRecord, index: number, rows: AnyRecord[]): string {
   const movieName = readText(row, "MovieName");
+  const lastFetchText = readText(row, "LastFetchText");
+  const dayStartClass = isSukebeiDayStart(rows, index) ? " sehuatang-day-start" : "";
   const errorHTML = readText(row, "LastError")
-    ? `<details class="fetch-site-error-details"><summary>有错误</summary><div class="mt-2">${escapeHtml(readText(row, "LastError"))}</div></details>`
-    : `<span class="text-muted">无错误</span>`;
-  return `<tr data-movie-jav-id="${attr(readText(row, "MovieJavID"))}" data-movie-name="${attr(movieName)}">
-    <td class="text-nowrap"><div class="fw-semibold"><a href="/movie/${attr(encodeURIComponent(movieName))}">${escapeHtml(movieName)}</a></div></td>
-    <td class="text-nowrap">${escapeHtml(readText(row, "ReleaseDateText"))}</td>
-    <td><span class="badge fetch-site-badge">${escapeHtml(readText(row, "FetchStatusText"))}</span></td>
-    <td>${escapeHtml(valueOf(pick(row, "TryCount"), 0))}</td>
-    <td class="text-nowrap">${escapeHtml(readText(row, "LastFetchText"))}</td>
-    <td>${escapeHtml(valueOf(pick(row, "TorrentHashCount"), 0))}</td>
-    <td class="text-nowrap">${escapeHtml(readText(row, "LatestPublishText"))}</td>
-    <td class="text-nowrap">${renderWMediaCell(row)}</td>
+    ? `<details class="fetch-site-error-details"><summary>有错误</summary><div>${escapeHtml(readText(row, "LastError"))}</div></details>`
+    : `<span class="sukebei-no-error">无错误</span>`;
+  return `<tr class="next02-sc-event-row ${sukebeiDayClass(rows, index)}${dayStartClass}" data-movie-jav-id="${attr(readText(row, "MovieJavID"))}" data-movie-name="${attr(movieName)}" data-fetch-day="${attr(sukebeiDayKey(row))}">
+    <td class="sc-content-cell"><a class="sc-event-link" href="/movie/${attr(encodeURIComponent(movieName))}" title="${attr(movieName)}">${escapeHtml(movieName)}</a></td>
+    <td title="${attr(readText(row, "ReleaseDateText"))}">${renderSukebeiTime(readText(row, "ReleaseDateText"))}</td>
+    <td><div class="fetch-site-album-inline"><span class="btn btn-sm btn-outline-secondary disabled">${escapeHtml(readText(row, "FetchStatusText"))}</span></div></td>
+    <td class="sc-number">${escapeHtml(valueOf(pick(row, "TryCount"), 0))}</td>
+    <td title="${attr(lastFetchText)}">${renderSukebeiTime(lastFetchText)}</td>
+    <td class="sc-number sc-primary-value">${escapeHtml(valueOf(pick(row, "TorrentHashCount"), 0))}</td>
+    <td title="${attr(readText(row, "LatestPublishText"))}">${renderSukebeiTime(readText(row, "LatestPublishText"))}</td>
+    <td class="fetch-pool-wmedia-cell"><div class="fetch-site-album-inline">${renderWMediaCell(row)}</div></td>
     <td class="fetch-site-error-cell">${errorHTML}</td>
-    <td class="text-nowrap"><button type="button" class="btn btn-sm ${triggerButtonClass} ${triggerClass}">${escapeHtml(triggerLabel)}</button></td>
+    <td><div class="fetch-site-album-inline"><button type="button" class="btn btn-sm btn-outline-secondary js-trigger-sukebei">触发 Sukebei</button></div></td>
   </tr>`;
 }
 
-function renderFetchSiteTable(data: AnyRecord, site: "javbus" | "sukebei"): string {
+function renderSukebeiTable(data: AnyRecord): string {
   const rows = asArray<AnyRecord>(pick(data, "Rows"));
   const sort = asRecord(pick(data, "SortQuery"));
-  const siteLabel = site === "javbus" ? "JavBus" : "Sukebei";
-  return `<div class="card">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+  return `<div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 sc-events-table sehuatang-magnet-table fetch-pool-task-table">
+          <colgroup>
+            <col class="fetch-pool-col-movie"><col class="fetch-pool-col-release"><col class="fetch-pool-col-status"><col class="fetch-pool-col-retry"><col class="fetch-pool-col-last-fetch">
+            <col class="fetch-pool-col-hash"><col class="fetch-pool-col-latest"><col class="fetch-pool-col-wmedia"><col class="fetch-pool-col-error"><col class="fetch-pool-col-action">
+          </colgroup>
           <thead>
             <tr>
-              <th>${sortLabel(pick(sort, "ByMovieName"), "影片")}</th>
-              <th>${sortLabel(pick(sort, "ByReleaseDate"), "发行时间")}</th>
-              <th>${sortLabel(pick(sort, "ByFetchStatus"), "状态")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByMovieName"), "影片")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByReleaseDate"), "发行时间")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByFetchStatus"), "状态")}</th>
               <th>重试</th>
-              <th>${sortLabel(pick(sort, "ByLastFetchTime"), "最后抓取")}</th>
-              <th>${sortLabel(pick(sort, "ByHashCount"), "Hash 数")}</th>
-              <th>${sortLabel(pick(sort, "ByLatestPublish"), "最新日期")}</th>
-              <th>${sortLabel(pick(sort, "ByMediaBirthTime"), "WMedia 下载时间")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLastFetchTime"), "最后抓取")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByHashCount"), "Hash 数")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLatestPublish"), "最新日期")}</th>
+              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByMediaBirthTime"), "WMedia 下载时间")}</th>
               <th>错误</th>
-              <th class="text-nowrap">操作</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
             ${rows.length
-              ? rows.map((row) => renderFetchSiteRow(row, site)).join("")
-              : `<tr><td colspan="11"><div class="fetch-site-empty-state">当前筛选下没有 ${escapeHtml(siteLabel)} 抓取任务。</div></td></tr>`}
+              ? rows.map((row, index) => renderSukebeiRow(row, index, rows)).join("")
+              : `<tr><td colspan="10"><div class="sc-empty-state">当前筛选下没有 Sukebei 抓取任务。</div></td></tr>`}
           </tbody>
         </table>
-      </div>
-    </div>
-  </div>`;
+      </div>`;
 }
 
-function renderFetchSitePage(data: AnyRecord, site: "javbus" | "sukebei"): string {
-  const siteLabel = site === "javbus" ? "JavBus" : "Sukebei";
-  const peerLabel = site === "javbus" ? "Sukebei" : "JavBus";
-  const ownURL = site === "javbus" ? "/fetch-site-javbus-list" : "/fetch-site-sukebei-list";
-  const formID = site === "javbus" ? "fetchSiteJavbusFilterForm" : "fetchSiteSukebeiFilterForm";
-  const filteredTaskType = site === "javbus" ? pick(data, "FilteredJavbusTaskType") : pick(data, "FilteredSukebeiTaskType");
-  const filteredAttr = site === "javbus"
-    ? `data-filtered-task-type="${attr(filteredTaskType || "")}" data-filter-form-id="${attr(formID)}"`
-    : `data-filtered-sukebei-task-type="${attr(filteredTaskType || "")}"`;
+function renderSukebeiPage(data: AnyRecord): string {
   const rows = asArray<AnyRecord>(pick(data, "Rows"));
-  return `<div id="fetchSiteListPage" data-task-page-url="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-site")}" ${filteredAttr}>
-    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-      <div>
-        <h4 class="mb-1">${escapeHtml(pick(data, "PageTitle") || `${siteLabel} 抓取列表`)}</h4>
-        <p class="text-muted mb-0">${escapeHtml(pick(data, "PageNote") || "")}</p>
+  return `<div id="sukebeiListPage" class="sehuatang-list-content sukebei-list-content" data-task-page-url="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-site")}" data-filtered-sukebei-task-type="${attr(pick(data, "FilteredSukebeiTaskType") || "")}" data-filter-form-id="fetchSiteSukebeiFilterForm">
+    <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell">
+      <div class="next02-sc-hero-copy">
+        <span class="next02-sc-eyebrow">SUKEBEI / TORRENT POOL</span>
+        <h4>${escapeHtml(pick(data, "PageTitle") || "Sukebei 抓取列表")}</h4>
+        <p>${escapeHtml(pick(data, "PageNote") || "")}</p>
       </div>
-      <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-outline-primary btn-sm" href="${attr(ownURL)}">${escapeHtml(siteLabel)} 列表</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "PeerPageURL") || "#")}">${escapeHtml(peerLabel)} 列表</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "#")}">抓取任务页</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}">任务列表</a>
+      <div class="next02-sc-hero-actions">
+        <div class="btn-group" role="group" aria-label="Sukebei 页面操作">
+          <a class="btn btn-outline-secondary" href="${attr(pick(data, "PeerPageURL") || "#")}">JavBus 列表</a>
+          <button class="btn btn-outline-secondary js-trigger-filtered-sukebei" type="button">触发筛选抓取</button>
+          <a class="btn btn-outline-secondary" href="${attr(pick(data, "TaskPageURL") || "#")}">抓取任务页</a>
+          <a class="btn btn-outline-secondary" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}">任务列表</a>
+        </div>
       </div>
-    </div>
+    </section>
     <div id="fetchSiteListMsg" class="alert d-none mb-3" role="alert"></div>
-    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-      <div class="d-flex flex-wrap gap-3">
-        <div class="fetch-site-summary-card"><span class="fetch-site-summary-label">${escapeHtml(siteLabel)} 总任务数</span><span class="fetch-site-summary-value">${escapeHtml(valueOf(pick(data, "Total"), 0))}</span></div>
-        <div class="fetch-site-summary-card"><span class="fetch-site-summary-label">成功数目</span><span class="fetch-site-summary-value">${escapeHtml(valueOf(pick(data, "SuccessCount"), 0))}</span></div>
-        <div class="fetch-site-summary-card"><span class="fetch-site-summary-label">待抓取数目</span><span class="fetch-site-summary-value">${escapeHtml(valueOf(pick(data, "PendingCount"), 0))}</span></div>
-        <div class="fetch-site-summary-card"><span class="fetch-site-summary-label">失败数目</span><span class="fetch-site-summary-value">${escapeHtml(valueOf(pick(data, "FailedCount"), 0))}</span></div>
+    <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
+      <div class="card-body">
+        <div class="next02-sc-panel-head">
+          ${renderSukebeiFilterForm(data)}
+          ${rows.length ? `<div class="next02-sc-hero-metrics sc-event-list-metrics" aria-label="Sukebei 抓取摘要"><span><strong>${escapeHtml(valueOf(pick(data, "Total"), 0))}</strong> Records</span><span><strong>${escapeHtml(rows.length)}</strong> Current Page</span></div>` : ""}
+          ${rows.length ? `<div class="next02-sc-movie-pager">${pageLinks(pick(data, "PageInfo"), "Sukebei")}</div>` : ""}
+        </div>
+        ${renderSukebeiTable(data)}
       </div>
-      ${rows.length ? pageLinks(pick(data, "PageInfo"), siteLabel) : ""}
     </div>
-    ${renderFetchSiteFilterForm(data, site)}
-    ${renderFetchSiteTable(data, site)}
   </div>`;
 }
 
@@ -477,27 +675,34 @@ function sehuatangTimeParts(value: unknown): { date: string; time: string } {
   return { date, time };
 }
 
-function sehuatangMonthKey(row: AnyRecord): string {
+function sehuatangDayKey(row: AnyRecord): string {
   const date = formatUnix(pick(row, "PostTime"), "date");
-  return date === "-" ? "" : date.slice(0, 7);
+  return date === "-" ? "" : date;
 }
 
-function sehuatangMonthClass(row: AnyRecord): string {
-  const month = sehuatangMonthKey(row);
-  if (!month) {
-    return "sc-running-month-neutral";
+function sehuatangDayClass(rows: AnyRecord[], index: number): string {
+  const day = sehuatangDayKey(rows[index]);
+  if (!day) {
+    return "sehuatang-day-neutral";
   }
-  const monthNumber = Number(month.slice(5, 7));
-  return `sc-running-month-${(monthNumber % 3) + 1}`;
+  let groupIndex = 0;
+  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
+    const currentDay = sehuatangDayKey(rows[rowIndex]);
+    const previousDay = sehuatangDayKey(rows[rowIndex - 1]);
+    if (currentDay && previousDay && currentDay !== previousDay) {
+      groupIndex += 1;
+    }
+  }
+  return `sehuatang-day-group-${(groupIndex % 2) + 1}`;
 }
 
-function isSehuatangMonthStart(rows: AnyRecord[], index: number): boolean {
+function isSehuatangDayStart(rows: AnyRecord[], index: number): boolean {
   if (index <= 0) {
     return false;
   }
-  const currentMonth = sehuatangMonthKey(rows[index]);
-  const previousMonth = sehuatangMonthKey(rows[index - 1]);
-  return Boolean(currentMonth && previousMonth && currentMonth !== previousMonth);
+  const currentDay = sehuatangDayKey(rows[index]);
+  const previousDay = sehuatangDayKey(rows[index - 1]);
+  return Boolean(currentDay && previousDay && currentDay !== previousDay);
 }
 
 function renderSehuatangTime(value: unknown): string {
@@ -512,13 +717,13 @@ function renderSehuatangRow(row: AnyRecord, index: number, rows: AnyRecord[]): s
     : `<span class="fetch-site-title-ellipsis" title="${attr(threadTitle)}">${escapeHtml(threadTitle)}</span>`;
   const movieName = readText(row, "MovieName");
   const movieHTML = movieName ? `<a class="sehuatang-movie-link" href="/movie/${attr(encodeURIComponent(movieName))}" target="_blank" rel="noopener noreferrer" title="${attr(movieName)}">${escapeHtml(movieName)}</a>` : "-";
-  const monthStartClass = isSehuatangMonthStart(rows, index) ? " sc-running-month-start" : "";
-  return `<tr class="js-sehuatang-row next02-sc-event-row ${sehuatangMonthClass(row)}${monthStartClass}"
+  const dayStartClass = isSehuatangDayStart(rows, index) ? " sehuatang-day-start" : "";
+  return `<tr class="js-sehuatang-row next02-sc-event-row ${sehuatangDayClass(rows, index)}${dayStartClass}"
     data-movie-route-key="${attr(readText(row, "MovieRouteKey"))}"
     data-movie-jav-id="${attr(readText(row, "MovieJavID"))}"
     data-movie-name="${attr(movieName)}"
     data-post-day="${attr(formatUnix(pick(row, "PostTime"), "date"))}">
-    <td>${renderSehuatangTime(pick(row, "PostTime"))}</td>
+    <td title="${attr(formatUnix(pick(row, "PostTime")))}">${renderSehuatangTime(pick(row, "PostTime"))}</td>
     <td class="sc-content-cell">${titleHTML}</td>
     <td class="sc-content-cell">${movieHTML}</td>
     <td class="sehuatang-album-cell">
@@ -647,36 +852,43 @@ function renderOptions(current: unknown, options: [string, string][]): string {
 
 function renderSHFilterForm(data: AnyRecord): string {
   const q = asRecord(pick(data, "Query"));
-  return `<div class="card mb-3 next02-sh-filter-panel">
-    <div class="card-body">
-      <div class="next02-sh-panel-head">
-        <div>
-          <div class="next02-sh-eyebrow">Filter</div>
-          <h5 class="card-title mb-0">筛选帖子池</h5>
-        </div>
-      </div>
-      <form class="row g-3 align-items-end" method="get" action="/fetch-site-sehuatang-sh-list">
+  return `<form class="next02-sh-filter-form" id="sehuatangSHFilterForm" method="get" action="/fetch-site-sehuatang-sh-list">
         <input type="hidden" name="ps" value="${attr(pick(q, "PageSize") || "")}">
         ${pick(q, "Sort") ? `<input type="hidden" name="sort" value="${attr(pick(q, "Sort"))}">` : ""}
         ${pick(q, "Order") ? `<input type="hidden" name="order" value="${attr(pick(q, "Order"))}">` : ""}
-        <div class="col-12 col-md-6 col-xl-3"><label class="form-label mb-1">关键词</label><input class="form-control" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="标题 / 正文 / thread_tid"></div>
-        <div class="col-12 col-md-6 col-xl-2"><label class="form-label mb-1">thread_tid</label><input class="form-control" type="text" name="thread_tid" value="${attr(pick(q, "ThreadTID") || "")}"></div>
-        <div class="col-12 col-md-6 col-xl-2"><label class="form-label mb-1">作者</label><input class="form-control" type="text" name="author_name" value="${attr(pick(q, "AuthorName") || "")}"></div>
-        <div class="col-12 col-md-6 col-xl-3"><label class="form-label mb-1">info_hash</label><input class="form-control" type="text" name="info_hash" value="${attr(pick(q, "InfoHash") || "")}"></div>
-        <div class="col-12 col-md-6 col-xl-2"><label class="form-label mb-1">来源版块</label><select class="form-select" name="source_forum_id">${renderOptions(pick(q, "SourceForumID"), [["", "全部"], ["36", "亚洲无码原创"], ["103", "高清中文字幕"]])}</select></div>
-        <div class="col-12 col-md-6 col-xl-2"><label class="form-label mb-1">详情状态</label><select class="form-select" name="detail_status">${renderOptions(pick(q, "DetailStatus"), [["", "全部"], ["pending", "待抓详情"], ["failed", "详情失败"], ["fetched", "已抓详情"]])}</select></div>
-        <div class="col-12 col-md-6 col-xl-2"><label class="form-label mb-1">magnet</label><select class="form-select" name="has_magnet">${renderOptions(pick(q, "HasMagnet"), [["", "全部"], ["1", "有 magnet"], ["0", "无 magnet"]])}</select></div>
-        <div class="col-12 col-md-6 col-xl-3"><label class="form-label mb-1">发帖时间开始</label><input class="form-control" type="text" name="post_time_from" value="${attr(pick(q, "PostTimeFrom") || "")}" placeholder="YYYY-MM-DD"></div>
-        <div class="col-12 col-md-6 col-xl-3"><label class="form-label mb-1">发帖时间结束</label><input class="form-control" type="text" name="post_time_to" value="${attr(pick(q, "PostTimeTo") || "")}" placeholder="YYYY-MM-DD"></div>
-        <div class="col-12 col-md-6 col-xl-3"><label class="form-label mb-1">最近抓到开始</label><input class="form-control" type="text" name="last_seen_time_from" value="${attr(pick(q, "LastSeenTimeFrom") || "")}" placeholder="YYYY-MM-DD"></div>
-        <div class="col-12 col-md-6 col-xl-3"><label class="form-label mb-1">最近抓到结束</label><input class="form-control" type="text" name="last_seen_time_to" value="${attr(pick(q, "LastSeenTimeTo") || "")}" placeholder="YYYY-MM-DD"></div>
-        <div class="col-12 d-flex gap-2 next02-sh-filter-actions"><button class="btn btn-primary" type="submit">筛选</button><a class="btn btn-outline-secondary" href="/fetch-site-sehuatang-sh-list">清空</a></div>
+        <div class="next02-sh-filter-cluster next02-sh-filter-query" aria-label="检索条件">
+          <label class="next02-sh-filter-field" for="sehuatangSHKeywordInput"><span>关键词</span><input class="form-control" id="sehuatangSHKeywordInput" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="标题 / 正文 / thread_tid"></label>
+          <label class="next02-sh-filter-field" for="sehuatangSHThreadTIDInput"><span>thread_tid</span><input class="form-control" id="sehuatangSHThreadTIDInput" type="text" name="thread_tid" value="${attr(pick(q, "ThreadTID") || "")}"></label>
+          <label class="next02-sh-filter-field" for="sehuatangSHAuthorInput"><span>作者</span><input class="form-control" id="sehuatangSHAuthorInput" type="text" name="author_name" value="${attr(pick(q, "AuthorName") || "")}"></label>
+          <label class="next02-sh-filter-field" for="sehuatangSHHashInput"><span>info_hash</span><input class="form-control" id="sehuatangSHHashInput" type="text" name="info_hash" value="${attr(pick(q, "InfoHash") || "")}"></label>
+        </div>
+        <div class="next02-sh-filter-secondary">
+          <div class="next02-sh-filter-cluster next02-sh-filter-options" aria-label="帖子状态">
+            <label class="next02-sh-filter-field" for="sehuatangSHForumSelect"><span>来源版块</span><select class="form-select" id="sehuatangSHForumSelect" name="source_forum_id">${renderOptions(pick(q, "SourceForumID"), [["", "全部"], ["36", "亚洲无码原创"], ["103", "高清中文字幕"]])}</select></label>
+            <label class="next02-sh-filter-field" for="sehuatangSHStatusSelect"><span>详情状态</span><select class="form-select" id="sehuatangSHStatusSelect" name="detail_status">${renderOptions(pick(q, "DetailStatus"), [["", "全部"], ["pending", "待抓详情"], ["failed", "详情失败"], ["fetched", "已抓详情"]])}</select></label>
+            <label class="next02-sh-filter-field" for="sehuatangSHMagnetSelect"><span>magnet</span><select class="form-select" id="sehuatangSHMagnetSelect" name="has_magnet">${renderOptions(pick(q, "HasMagnet"), [["", "全部"], ["1", "有 magnet"], ["0", "无 magnet"]])}</select></label>
+          </div>
+          <div class="next02-sh-filter-cluster next02-sh-filter-dates" aria-label="发帖日期范围">
+            <span class="next02-sh-filter-cluster-label">发帖日期</span>
+            <label class="next02-sh-filter-field" for="sehuatangSHPostFromInput"><span>开始</span><input class="form-control" id="sehuatangSHPostFromInput" type="text" name="post_time_from" value="${attr(pick(q, "PostTimeFrom") || "")}" placeholder="YYYY-MM-DD"></label>
+            <span class="next02-sh-filter-range-separator" aria-hidden="true">—</span>
+            <label class="next02-sh-filter-field" for="sehuatangSHPostToInput"><span>结束</span><input class="form-control" id="sehuatangSHPostToInput" type="text" name="post_time_to" value="${attr(pick(q, "PostTimeTo") || "")}" placeholder="YYYY-MM-DD"></label>
+          </div>
+          <div class="next02-sh-filter-cluster next02-sh-filter-dates" aria-label="最近抓到日期范围">
+            <span class="next02-sh-filter-cluster-label">最近抓到</span>
+            <label class="next02-sh-filter-field" for="sehuatangSHSeenFromInput"><span>开始</span><input class="form-control" id="sehuatangSHSeenFromInput" type="text" name="last_seen_time_from" value="${attr(pick(q, "LastSeenTimeFrom") || "")}" placeholder="YYYY-MM-DD"></label>
+            <span class="next02-sh-filter-range-separator" aria-hidden="true">—</span>
+            <label class="next02-sh-filter-field" for="sehuatangSHSeenToInput"><span>结束</span><input class="form-control" id="sehuatangSHSeenToInput" type="text" name="last_seen_time_to" value="${attr(pick(q, "LastSeenTimeTo") || "")}" placeholder="YYYY-MM-DD"></label>
+          </div>
+        </div>
       </form>
-    </div>
-  </div>`;
+      <div class="next02-sh-filter-actions">
+        <button class="sc-event-filter-submit" type="submit" form="sehuatangSHFilterForm">筛选</button>
+        <a class="sc-event-filter-clear" href="/fetch-site-sehuatang-sh-list">清空</a>
+      </div>`;
 }
 
-function renderSHThreadRow(row: AnyRecord, index: number): string {
+function renderSHThreadRow(row: AnyRecord, index: number, rows: AnyRecord[]): string {
   const title = readText(row, "ThreadTitle");
   const titleHTML = readText(row, "ThreadURL")
     ? `<a class="fetch-site-title-ellipsis" href="${attr(readText(row, "ThreadURL"))}" target="_blank" rel="noopener noreferrer" title="${attr(title)}">${escapeHtml(title)}</a>`
@@ -684,23 +896,22 @@ function renderSHThreadRow(row: AnyRecord, index: number): string {
   const magnetCount = lineCount(pick(row, "MagnetText"));
   const hashCount = lineCount(pick(row, "InfoHashText"));
   const status = readText(row, "DetailStatus");
-  return `<tr>
-    <td class="text-nowrap">${escapeHtml(readText(row, "ThreadTID"))}</td>
-    <td>${titleHTML}</td>
-    <td class="text-nowrap">${escapeHtml(readText(row, "AuthorName"))}</td>
-    <td class="text-nowrap">${escapeHtml(formatUnix(pick(row, "PostTime")))}</td>
-    <td class="text-nowrap"><span class="next02-sh-forum-pill">${escapeHtml(readText(row, "SourceForumID"))}</span></td>
-    <td class="text-nowrap"><span class="next02-sh-status-pill" data-status="${attr(status)}">${escapeHtml(status)}</span></td>
-    <td class="text-nowrap"><span class="next02-sh-count-pill">${escapeHtml(magnetCount)}</span></td>
-    <td class="text-nowrap"><span class="next02-sh-count-pill">${escapeHtml(hashCount)}</span></td>
-    <td class="text-nowrap">${escapeHtml(formatUnix(pick(row, "LastSeenTime")))}</td>
-    <td class="text-nowrap">${escapeHtml(formatUnix(pick(row, "CreatedOn")))}</td>
-    <td class="text-nowrap">${escapeHtml(formatUnix(pick(row, "UpdatedOn")))}</td>
-    <td class="text-nowrap"><div class="btn-group btn-group-sm" role="group">
+  const dayStartClass = isSehuatangDayStart(rows, index) ? " sehuatang-day-start" : "";
+  return `<tr class="next02-sc-event-row ${sehuatangDayClass(rows, index)}${dayStartClass}" data-post-day="${attr(formatUnix(pick(row, "PostTime"), "date"))}">
+    <td class="next02-sh-number-cell" title="${attr(readText(row, "ThreadTID"))}">${escapeHtml(readText(row, "ThreadTID"))}</td>
+    <td class="sc-content-cell">${titleHTML}</td>
+    <td class="sc-content-cell" title="${attr(readText(row, "AuthorName"))}">${escapeHtml(readText(row, "AuthorName"))}</td>
+    <td>${renderSehuatangTime(pick(row, "PostTime"))}</td>
+    <td><span class="next02-sh-forum-pill">${escapeHtml(readText(row, "SourceForumID"))}</span></td>
+    <td><span class="next02-sh-status-pill" data-status="${attr(status)}">${escapeHtml(status)}</span></td>
+    <td><span class="next02-sh-count-pill">${escapeHtml(magnetCount)}</span></td>
+    <td><span class="next02-sh-count-pill">${escapeHtml(hashCount)}</span></td>
+    <td title="${attr(formatUnix(pick(row, "LastSeenTime")))}">${renderSehuatangTime(pick(row, "LastSeenTime"))}</td>
+    <td class="next02-sh-actions-cell"><div class="btn-group btn-group-sm" role="group" aria-label="帖子操作">
       <button type="button" class="btn btn-outline-primary js-sh-view" data-index="${attr(index)}">内容</button>
-      <a class="btn btn-outline-primary" href="/fetch-site-sehuatang-sh-detail/${attr(encodeURIComponent(readText(row, "ThreadTID")))}">详情</a>
-      <button type="button" class="btn btn-outline-secondary js-sh-copy" data-index="${attr(index)}" data-field="MagnetText" ${magnetCount ? "" : "disabled"}>magnet</button>
-      <button type="button" class="btn btn-outline-secondary js-sh-copy" data-index="${attr(index)}" data-field="InfoHashText" ${hashCount ? "" : "disabled"}>hash</button>
+      <a class="btn btn-outline-primary" href="/fetch-site-sehuatang-sh-detail/${attr(encodeURIComponent(readText(row, "ThreadTID")))}" target="_blank" rel="noopener noreferrer">详情</a>
+      <button type="button" class="btn btn-outline-secondary js-sh-copy" data-index="${attr(index)}" data-field="MagnetText" title="复制 magnet" ${magnetCount ? "" : "disabled"}>M</button>
+      <button type="button" class="btn btn-outline-secondary js-sh-copy" data-index="${attr(index)}" data-field="InfoHashText" title="复制 info_hash" ${hashCount ? "" : "disabled"}>H</button>
     </div></td>
   </tr>`;
 }
@@ -708,51 +919,49 @@ function renderSHThreadRow(row: AnyRecord, index: number): string {
 function renderSHThreadTable(data: AnyRecord): string {
   const rows = asArray<AnyRecord>(pick(data, "Rows"));
   const sort = asRecord(pick(data, "SortQuery"));
-  return `<div class="card mb-3 next02-sh-table-panel">
-    <div class="card-body">
-      <div class="next02-sh-panel-head">
-        <div>
-          <div class="next02-sh-eyebrow">Thread Pool</div>
-          <h5 class="card-title mb-0">帖子数据</h5>
-        </div>
-        <div class="next02-sh-table-meta">${escapeHtml(rows.length)} 行当前页</div>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+  return `<div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 sc-events-table next02-sh-thread-table">
+          <colgroup>
+            <col class="next02-sh-col-tid"><col class="next02-sh-col-title"><col class="next02-sh-col-author"><col class="next02-sh-col-post">
+            <col class="next02-sh-col-forum"><col class="next02-sh-col-status"><col class="next02-sh-col-magnet"><col class="next02-sh-col-hash">
+            <col class="next02-sh-col-seen"><col class="next02-sh-col-actions">
+          </colgroup>
           <thead><tr>
-            <th>${sortLabel(pick(sort, "ByThreadTID"), "thread_tid")}</th>
+            <th class="sc-sortable-head">${sortLabel(pick(sort, "ByThreadTID"), "thread_tid")}</th>
             <th>帖子标题</th>
             <th>作者</th>
-            <th>${sortLabel(pick(sort, "ByPostTime"), "发布时间")}</th>
+            <th class="sc-sortable-head">${sortLabel(pick(sort, "ByPostTime"), "发布时间")}</th>
             <th>版块</th>
             <th>详情状态</th>
             <th>magnet</th>
             <th>hash</th>
-            <th>${sortLabel(pick(sort, "ByLastSeenTime"), "最近抓到")}</th>
-            <th>${sortLabel(pick(sort, "ByCreatedOn"), "入库时间")}</th>
-            <th>${sortLabel(pick(sort, "ByUpdatedOn"), "更新时间")}</th>
-            <th class="text-nowrap">操作</th>
+            <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLastSeenTime"), "最近抓到")}</th>
+            <th>操作</th>
           </tr></thead>
-          <tbody>${rows.length ? rows.map(renderSHThreadRow).join("") : `<tr><td colspan="12"><div class="fetch-site-empty-state">当前筛选下没有 Sehuatang SH 帖子数据。</div></td></tr>`}</tbody>
+          <tbody>${rows.length ? rows.map((row, index) => renderSHThreadRow(row, index, rows)).join("") : `<tr><td colspan="10"><div class="fetch-site-empty-state">当前筛选下没有 Sehuatang SH 帖子数据。</div></td></tr>`}</tbody>
         </table>
-      </div>
-    </div>
-  </div>`;
+      </div>`;
 }
 
 function renderSHRuns(data: AnyRecord): string {
   const runs = asArray<AnyRecord>(pick(data, "RecentRuns"));
-  return `<div class="card next02-sh-runs-panel">
+  return `<div class="card next02-sc-panel next02-sh-runs-panel">
     <div class="card-body">
-      <div class="next02-sh-panel-head">
+      <div class="next02-sh-runs-head">
         <div>
-          <div class="next02-sh-eyebrow">Runs</div>
+          <div class="next02-sh-section-kicker">RUNS / RECENT</div>
           <h5 class="card-title mb-0">最近抓取记录</h5>
         </div>
         <div class="next02-sh-table-meta">${escapeHtml(runs.length)} 条</div>
       </div>
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 next02-sh-runs-table">
+          <colgroup>
+            <col class="next02-sh-run-id"><col class="next02-sh-run-mode"><col class="next02-sh-run-keyword"><col class="next02-sh-run-forum">
+            <col class="next02-sh-run-status"><col class="next02-sh-run-count"><col class="next02-sh-run-count"><col class="next02-sh-run-count">
+            <col class="next02-sh-run-count"><col class="next02-sh-run-count"><col class="next02-sh-run-count"><col class="next02-sh-run-time">
+            <col class="next02-sh-run-time"><col class="next02-sh-run-error">
+          </colgroup>
           <thead><tr><th>run_id</th><th>模式</th><th>关键词</th><th>版块</th><th>状态</th><th>发现</th><th>命中</th><th>跳过版块</th><th>跳过已存在</th><th>入库</th><th>失败</th><th>开始</th><th>结束</th><th>错误</th></tr></thead>
           <tbody>${runs.length ? runs.map((run) => `<tr>
             <td>${escapeHtml(pick(run, "Id") || "")}</td>
@@ -766,8 +975,8 @@ function renderSHRuns(data: AnyRecord): string {
             <td>${escapeHtml(valueOf(pick(run, "SkippedExistingCount"), 0))}</td>
             <td>${escapeHtml(valueOf(pick(run, "FetchedCount"), 0))}</td>
             <td>${escapeHtml(valueOf(pick(run, "FailedCount"), 0))}</td>
-            <td class="text-nowrap">${escapeHtml(formatUnix(pick(run, "StartedOn")))}</td>
-            <td class="text-nowrap">${escapeHtml(formatUnix(pick(run, "FinishedOn")))}</td>
+            <td title="${attr(formatUnix(pick(run, "StartedOn")))}">${renderSehuatangTime(pick(run, "StartedOn"))}</td>
+            <td title="${attr(formatUnix(pick(run, "FinishedOn")))}">${renderSehuatangTime(pick(run, "FinishedOn"))}</td>
             <td>${readText(run, "LastError") ? `<details><summary>错误</summary><div class="mt-2">${escapeHtml(readText(run, "LastError"))}</div></details>` : "-"}</td>
           </tr>`).join("") : `<tr><td colspan="14"><div class="fetch-site-empty-state">暂无抓取记录。</div></td></tr>`}</tbody>
         </table>
@@ -791,33 +1000,31 @@ function renderSHPage(data: AnyRecord): string {
   const magnetTotal = rows.reduce((sum, row) => sum + lineCount(pick(row, "MagnetText")), 0);
   const hashTotal = rows.reduce((sum, row) => sum + lineCount(pick(row, "InfoHashText")), 0);
   return `<div id="sehuatangSHListPage" class="next02-sh-list-rewrite">
-    <div class="next02-sh-list-hero">
-      <div class="next02-sh-list-hero-main">
-        <div class="next02-sh-eyebrow">Sehuatang SH Pool</div>
-        <h4 class="mb-1">${escapeHtml(pick(data, "PageTitle") || "Sehuatang SH 帖子列表")}</h4>
-        <p class="text-muted mb-0">${escapeHtml(pick(data, "PageNote") || "")}</p>
-        <div class="next02-sh-kpi-strip">
-          <span><strong>${escapeHtml(total)}</strong><em>总数</em></span>
-          <span><strong>${escapeHtml(rows.length)}</strong><em>当前页</em></span>
-          <span><strong>${escapeHtml(magnetTotal)}</strong><em>magnet</em></span>
-          <span><strong>${escapeHtml(hashTotal)}</strong><em>hash</em></span>
-        </div>
+    <section class="next02-sc-hero next02-sc-events-hero next02-sh-list-hero next02-sc-movie-top-shell">
+      <div class="next02-sc-hero-copy">
+        <span class="next02-sc-eyebrow">SEHUATANG / SH THREAD POOL</span>
+        <h4>${escapeHtml(pick(data, "PageTitle") || "Sehuatang SH 帖子列表")}</h4>
+        <p>${escapeHtml(pick(data, "PageNote") || "")}</p>
       </div>
-      <div class="next02-sh-list-actions">
+      <div class="next02-sc-hero-actions next02-sh-list-actions">
         <a class="btn btn-outline-primary btn-sm" href="/fetch-site-sehuatang-sh-list">SehuatangSH 列表</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "OldListURL") || "/fetch-site-sehuatang-list")}">旧磁力列表</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-list")}">列表抓取</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "DetailTaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-detail")}">详情补全</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}">任务列表</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "OldListURL") || "/fetch-site-sehuatang-list")}" target="_blank" rel="noopener noreferrer">旧磁力列表</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-list")}" target="_blank" rel="noopener noreferrer">列表抓取</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "DetailTaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-detail")}" target="_blank" rel="noopener noreferrer">详情补全</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}" target="_blank" rel="noopener noreferrer">任务列表</a>
+      </div>
+    </section>
+    <div id="sehuatangSHListMsg" class="alert d-none mb-3" role="alert"></div>
+    <div class="card next02-sc-panel next02-sc-events-panel next02-sh-list-panel next02-sc-movie-table-card">
+      <div class="card-body">
+        <div class="next02-sc-panel-head next02-sh-list-control">
+          ${renderSHFilterForm(data)}
+          ${rows.length ? `<div class="next02-sc-hero-metrics next02-sh-list-metrics" aria-label="Sehuatang SH 摘要"><span><strong>${escapeHtml(total)}</strong> Records</span><span><strong>${escapeHtml(rows.length)}</strong> Current Page</span><span><strong>${escapeHtml(magnetTotal)}</strong> Magnet</span><span><strong>${escapeHtml(hashTotal)}</strong> Hash</span></div>` : ""}
+          ${rows.length ? `<div class="next02-sc-movie-pager">${pageLinks(pick(data, "PageInfo"), "SehuatangSH")}</div>` : ""}
+        </div>
+        ${renderSHThreadTable(data)}
       </div>
     </div>
-    <div id="sehuatangSHListMsg" class="alert d-none mb-3" role="alert"></div>
-    <div class="next02-sh-list-toolbar">
-      <div class="fetch-site-summary-card"><span class="fetch-site-summary-label">SH 帖子总数</span><span class="fetch-site-summary-value">${escapeHtml(total)}</span></div>
-      ${rows.length ? pageLinks(pick(data, "PageInfo"), "SehuatangSH") : ""}
-    </div>
-    ${renderSHFilterForm(data)}
-    ${renderSHThreadTable(data)}
     ${renderSHRuns(data)}
   </div>
   ${renderSHDetailModal()}`;
@@ -975,7 +1182,7 @@ async function startSiteTask(taskType: string, movieJavID: string, movieName: st
 }
 
 function buildFilteredTaskPayload(button: Element): Record<string, unknown> {
-  const page = document.getElementById("fetchSiteListPage");
+  const page = document.getElementById("javbusListPage") || document.getElementById("sukebeiListPage") || document.getElementById("fetchSiteListPage");
   const taskType = String(page?.getAttribute("data-filtered-task-type") || page?.getAttribute("data-filtered-sukebei-task-type") || "").trim();
   if (!taskType) {
     throw new Error("缺少筛选任务类型，无法触发");
@@ -1030,7 +1237,7 @@ async function startFilteredTask(button: Element) {
   try {
     const data = asRecord(await sendJSON("/api/crawler/jobs/start", "POST", body));
     const jobID = readText(data, "job_id", "JobID");
-    const page = document.getElementById("fetchSiteListPage");
+    const page = document.getElementById("javbusListPage") || document.getElementById("sukebeiListPage") || document.getElementById("fetchSiteListPage");
     const taskPageURL = String(page?.getAttribute("data-task-page-url") || "/triggers/fetch-site").trim();
     if (jobID) {
       window.location.href = `${taskPageURL}?job_id=${encodeURIComponent(jobID)}`;

@@ -17,12 +17,13 @@ var (
 )
 
 type MovieAlbumItemRow struct {
-	ID         int64
-	AlbumID    int64
-	MovieJavID string
-	MovieName  string
-	SortNo     int64
-	CreatedOn  int64
+	ID            int64
+	AlbumID       int64
+	MovieJavID    string
+	MovieName     string
+	ReleasingDate int64
+	SortNo        int64
+	CreatedOn     int64
 }
 
 type RemoveDownloadedMovieAlbumItemsResult struct {

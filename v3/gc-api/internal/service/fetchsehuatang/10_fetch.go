@@ -410,7 +410,7 @@ func (s *Service) fetchWithSafe(ctx context.Context, cfg fetchsite.SiteConfig, s
 }
 
 func (s *Service) fetchWithSafeResult(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string) (*fetchHTTPResult, error) {
-	return s.fetchWithSafeResultWithOptions(ctx, cfg, state, targetURL, false)
+	return s.fetchWithSafeResultWithOptions(ctx, cfg, state, targetURL, true)
 }
 
 func (s *Service) fetchWithSafeWithOptions(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, targetURL string, useProxy bool) ([]byte, error) {

@@ -1,98 +1,111 @@
 <template>
-  <PageShell class="records-page-shell" title="Records" note="" eyebrow="">
-    <div id="page-root" class="container-fluid records-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
-      <div v-else id="crawlRecordListPage" class="crawl-record-list-page next02-records-rewrite">
-        <div class="next02-records-hero">
-          <div class="next02-records-hero-main">
-            <div class="next02-records-kicker">Crawl Trace</div>
-            <h4 class="mb-1">{{ pageTitle || "CrawlRecords" }}</h4>
-            <p class="text-muted mb-0">{{ pageNote || "抓取记录、耗时和类型筛选追踪。" }}</p>
+  <PageShell class="records-page-shell sc-events-page-shell" title="Records" note="" eyebrow="">
+    <LoadingState v-if="loading" />
+    <ErrorPanel v-else-if="error" :message="error" />
+    <div v-else id="page-root" class="records-page-root next02-sc-pink-theme next02-sc-events-rewrite">
+      <div id="crawlRecordListPage" class="crawl-record-list-page next02-records-rewrite">
+        <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell">
+          <div class="next02-sc-hero-copy">
+            <span class="next02-sc-eyebrow">CRAWL / RECORD POOL</span>
+            <h4>{{ pageTitle || "CrawlRecords" }}</h4>
+            <p>{{ pageNote || "抓取记录、耗时和类型筛选追踪。" }}</p>
           </div>
-        </div>
+        </section>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3 next02-records-toolbar">
-          <div class="crawl-record-summary">
-            <span class="crawl-record-summary-label">总行数</span>
-            <span class="crawl-record-summary-value">{{ total }}</span>
-          </div>
-          <div v-if="hasRows && pageLinks.length" class="ms-xl-auto">
-            <RecordsPagination :links="pageLinks" />
-          </div>
-        </div>
-
-        <div class="card mb-3">
+        <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="card-body">
-            <form class="row g-3 align-items-end" method="get" action="/crawl-records">
-              <input type="hidden" name="sort" :value="queryValue('Sort')">
-              <input type="hidden" name="order" :value="queryValue('Order')">
-              <input id="crawlRecordTypeInput" type="hidden" name="type" :value="queryValue('Type')">
+            <div class="next02-sc-panel-head">
+              <form class="sc-event-filter-form crawl-record-filter-form" method="get" action="/crawl-records">
+                <input type="hidden" name="sort" :value="queryValue('Sort')">
+                <input type="hidden" name="order" :value="queryValue('Order')">
+                <input id="crawlRecordTypeInput" type="hidden" name="type" :value="queryValue('Type')">
 
-              <div class="col-12 col-xl-8">
-                <label class="form-label mb-2">Type</label>
-                <div class="d-flex flex-wrap gap-2 crawl-record-type-switch">
-                  <a
-                    v-for="item in typeLinks"
-                    :key="linkLabel(item)"
-                    :href="linkHref(item)"
-                    class="btn btn-sm"
-                    :class="linkActive(item) ? 'btn-primary' : 'btn-outline-primary'"
-                  >
-                    {{ linkLabel(item) }}
-                  </a>
+                <div class="crawl-record-filter-cluster crawl-record-filter-types" aria-label="记录类型">
+                  <span class="crawl-record-filter-cluster-label">Type</span>
+                  <div class="crawl-record-type-switch">
+                    <a
+                      v-for="item in typeLinks"
+                      :key="linkLabel(item)"
+                      :href="linkHref(item)"
+                      class="btn btn-sm"
+                      :class="linkActive(item) ? 'btn-primary' : 'btn-outline-primary'"
+                    >
+                      {{ linkLabel(item) }}
+                    </a>
+                  </div>
                 </div>
+
+                <div class="crawl-record-filter-cluster crawl-record-filter-options">
+                  <label class="sc-event-filter-field crawl-record-page-size-field" for="crawlRecordPageSize">
+                    <span>每页</span>
+                    <select id="crawlRecordPageSize" class="form-select" name="ps">
+                      <option v-for="size in pageSizeOptions" :key="size" :value="size" :selected="Number(queryValue('PageSize')) === size">
+                        {{ size }}
+                      </option>
+                    </select>
+                  </label>
+
+                  <div class="crawl-record-filter-actions">
+                    <button class="sc-event-filter-submit" type="submit">筛选</button>
+                    <a class="sc-event-filter-clear" :href="clearHref">清空</a>
+                  </div>
+                </div>
+              </form>
+
+              <div v-if="hasRows" class="next02-sc-hero-metrics sc-event-list-metrics" aria-label="抓取记录摘要">
+                <span><strong>{{ total }}</strong> Records</span>
+                <span><strong>{{ rows.length }}</strong> Current Page</span>
               </div>
 
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">每页</label>
-                <select id="crawlRecordPageSize" class="form-select" name="ps">
-                  <option v-for="size in pageSizeOptions" :key="size" :value="size" :selected="Number(queryValue('PageSize')) === size">
-                    {{ size }}
-                  </option>
-                </select>
+              <div v-if="hasRows && pageLinks.length" class="next02-sc-movie-pager">
+                <RecordsPagination :links="pageLinks" />
               </div>
+            </div>
 
-              <div class="col-12 col-xl-2 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">筛选</button>
-                <a class="btn btn-outline-secondary" :href="clearHref">清空</a>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-body">
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0 crawl-record-table">
+              <table class="table table-hover align-middle mb-0 sc-events-table crawl-record-table">
+                <colgroup>
+                  <col class="crawl-record-col-started">
+                  <col class="crawl-record-col-type">
+                  <col class="crawl-record-col-detail">
+                  <col class="crawl-record-col-duration">
+                  <col class="crawl-record-col-name">
+                </colgroup>
                 <thead>
                   <tr>
-                    <th class="text-nowrap"><SortLink :link="headerLink('StartedTime')" label="StartedTime" /></th>
-                    <th class="text-nowrap"><SortLink :link="headerLink('Type')" label="Type" /></th>
-                    <th class="text-nowrap"><SortLink :link="headerLink('DetailNumber')" label="DetailNumber" /></th>
-                    <th class="text-nowrap"><SortLink :link="headerLink('DurationMin')" label="Duration(min)" /></th>
-                    <th class="text-nowrap"><SortLink :link="headerLink('Name')" label="Name" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="headerLink('StartedTime')" label="StartedTime" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="headerLink('Type')" label="Type" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="headerLink('DetailNumber')" label="DetailNumber" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="headerLink('DurationMin')" label="Duration(min)" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="headerLink('Name')" label="Name" /></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="!hasRows">
-                    <td colspan="5"><div class="crawl-record-empty-state">当前筛选下没有 `e_record` 数据。</div></td>
+                    <td colspan="5"><div class="sc-empty-state crawl-record-empty-state">当前筛选下没有 `e_record` 数据。</div></td>
                   </tr>
-                  <tr v-for="row in rows" v-else :key="rowKey(row)">
-                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "StartedTime")) }}</td>
-                    <td class="text-nowrap crawl-record-type">{{ value(row, "Type") }}</td>
-                    <td class="text-nowrap">{{ value(row, "DetailNumber") }}</td>
-                    <td class="text-nowrap">{{ value(row, "DurationMinText") }}</td>
-                    <td class="text-nowrap crawl-record-name">{{ value(row, "Name") }}</td>
+                  <tr
+                    v-for="(row, index) in rows"
+                    v-else
+                    :key="rowKey(row, index)"
+                    class="next02-sc-event-row"
+                    :class="[recordDayClass(index), { 'crawl-record-day-start': isRecordDayStart(index) }]"
+                  >
+                    <td :title="formatUnixMinute(value(row, 'StartedTime'))">
+                      <span class="sc-event-time">
+                        <span class="sc-event-date">{{ recordTimeParts(value(row, "StartedTime")).date }}</span>
+                        <small v-if="recordTimeParts(value(row, 'StartedTime')).time" class="sc-event-hour">{{ recordTimeParts(value(row, "StartedTime")).time }}</small>
+                      </span>
+                    </td>
+                    <td class="sc-content-cell"><span class="crawl-record-type" :title="value(row, 'Type')">{{ value(row, "Type") }}</span></td>
+                    <td class="sc-number sc-primary-value">{{ value(row, "DetailNumber") }}</td>
+                    <td class="sc-number">{{ value(row, "DurationMinText") }}</td>
+                    <td class="sc-content-cell"><span class="crawl-record-name" :title="value(row, 'Name')">{{ value(row, "Name") }}</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-
-        <div v-if="hasRows && pageLinks.length" class="d-flex justify-content-end mt-3">
-          <RecordsPagination :links="pageLinks" />
         </div>
       </div>
     </div>
@@ -103,6 +116,8 @@
 import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
+import ErrorPanel from "@/components/ErrorPanel.vue";
+import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
@@ -151,8 +166,8 @@ function value(row: AnyRecord, key: string): string {
   return text(row, key);
 }
 
-function rowKey(row: AnyRecord): string {
-  return [value(row, "StartedTime"), value(row, "Type"), value(row, "Name")].join(":");
+function rowKey(row: AnyRecord, index: number): string {
+  return [value(row, "StartedTime"), value(row, "Type"), value(row, "Name"), index].join(":");
 }
 
 function linkLabel(item: AnyRecord): string {
@@ -174,6 +189,44 @@ function formatUnixMinute(input: unknown): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function recordTimeParts(input: unknown): { date: string; time: string } {
+  const formatted = formatUnixMinute(input);
+  if (formatted === "-") {
+    return { date: "-", time: "" };
+  }
+  const [date, time = ""] = formatted.split(" ", 2);
+  return { date, time };
+}
+
+function recordDayKey(row: AnyRecord): string {
+  return recordTimeParts(value(row, "StartedTime")).date;
+}
+
+function recordDayClass(index: number): string {
+  const day = recordDayKey(rows.value[index]);
+  if (day === "-") {
+    return "crawl-record-day-neutral";
+  }
+  let groupIndex = 0;
+  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
+    const currentDay = recordDayKey(rows.value[rowIndex]);
+    const previousDay = recordDayKey(rows.value[rowIndex - 1]);
+    if (currentDay !== "-" && previousDay !== "-" && currentDay !== previousDay) {
+      groupIndex += 1;
+    }
+  }
+  return `crawl-record-day-group-${(groupIndex % 2) + 1}`;
+}
+
+function isRecordDayStart(index: number): boolean {
+  if (index <= 0) {
+    return false;
+  }
+  const currentDay = recordDayKey(rows.value[index]);
+  const previousDay = recordDayKey(rows.value[index - 1]);
+  return currentDay !== "-" && previousDay !== "-" && currentDay !== previousDay;
+}
+
 const SortLink = defineComponent({
   props: {
     link: { type: Object, required: true },
@@ -185,7 +238,7 @@ const SortLink = defineComponent({
       const active = Boolean(link.Active);
       const desc = Boolean(link.Desc);
       return h("a", {
-        class: ["crawl-record-sort-link", active ? "is-active" : ""],
+        class: ["crawl-record-sort-link", "sc-sort-link", active ? "active" : ""],
         href: normalizeHref(text(link, "Href") || "#")
       }, [
         props.label,

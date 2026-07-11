@@ -1,24 +1,15 @@
 <template>
-  <PageShell class="movie-agg-page-shell sc-events-page-shell media-ingest-page-shell sc-media-move-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root media-ingest-page-root sc-media-move-page-root next02-sc-media-rewrite">
+  <PageShell class="sc-media-move-page-shell" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid sc-media-move-page-root next02-sc-pink-theme next02-sc-media-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div id="msgArea" class="alert fade show small py-2 px-3" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
-          {{ message }}
-        </div>
-
         <div id="scMediaMovePage">
-          <section class="next02-sc-hero next02-sc-media-hero">
+          <section class="next02-sc-hero next02-sc-media-hero next02-sc-movie-top-shell" aria-labelledby="scMediaMoveTitle">
             <div class="next02-sc-hero-copy">
               <span class="next02-sc-eyebrow">SC / MEDIA PIPELINE</span>
-              <h4>{{ pageTitle }}</h4>
+              <h4 id="scMediaMoveTitle">{{ pageTitle }}</h4>
               <p>{{ pageNote }}</p>
-              <div class="next02-sc-hero-metrics" aria-label="SC Media 执行摘要">
-                <span><strong>{{ num(state, "total") }}</strong> Total</span>
-                <span><strong>{{ num(state, "movable") }}</strong> Movable</span>
-                <span><strong>{{ num(state, "failed") }}</strong> Failed</span>
-              </div>
             </div>
             <div class="next02-sc-hero-actions">
               <a :href="navHref" class="btn btn-outline-primary btn-sm">{{ navLabel }}</a>
@@ -26,8 +17,12 @@
             </div>
           </section>
 
-          <div class="row">
-            <div class="col-lg-4">
+          <div id="msgArea" class="alert fade show small" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
+            {{ message }}
+          </div>
+
+          <div class="row next02-sc-media-workspace">
+            <div class="col-lg-4 next02-sc-media-control-col">
               <div class="card next02-sc-panel next02-sc-scope-panel">
                 <div class="card-body">
                   <div class="next02-sc-panel-head">
@@ -107,7 +102,7 @@
               </div>
             </div>
 
-            <div class="col-lg-8">
+            <div class="col-lg-8 next02-sc-media-result-col">
               <ResultTable v-for="table in tables" :key="table.id" :table="table" />
             </div>
           </div>
@@ -125,7 +120,7 @@ import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, formatValue, num, pick, text } from "@/utils/format";
 
-type ResultColumn = { label: string; key: string; cls?: string };
+type ResultColumn = { label: string; key: string; width: string; cls?: string };
 type ResultTableDef = { id: string; title: string; columns: ResultColumn[]; rows: AnyRecord[] };
 
 const route = useRoute();
@@ -180,10 +175,11 @@ const tables = computed<ResultTableDef[]>(() => [
 ]);
 
 function table(id: string, title: string, labels: string[], keys: string[], rowKey: string): ResultTableDef {
+  const widths = ["18%", "18%", "32%", "32%"];
   return {
     id,
     title,
-    columns: labels.map((label, index) => ({ label, key: keys[index], cls: keys[index].includes("path") ? "mono" : "" })),
+    columns: labels.map((label, index) => ({ label, key: keys[index], width: widths[index], cls: keys[index].includes("path") ? "mono" : "" })),
     rows: asArray<AnyRecord>(pick(state.value, rowKey))
   };
 }
@@ -264,10 +260,14 @@ const ResultTable = defineComponent({
           h("span", { class: "next02-sc-result-count" }, `${props.table.rows.length} 项`)
         ]),
         h("div", { class: "table-responsive" }, [
-          h("table", { class: "table table-sm table-hover", id: props.table.id }, [
+          h("table", { class: "table table-hover align-middle mb-0 next02-sc-media-table", id: props.table.id }, [
+            h("colgroup", props.table.columns.map((column) => h("col", { style: { width: column.width } }))),
             h("thead", [h("tr", props.table.columns.map((column) => h("th", column.label)))]),
             h("tbody", props.table.rows.length
-              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => h("td", { class: column.cls || "" }, cellValue(row, column)))))
+              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => {
+                  const value = cellValue(row, column);
+                  return h("td", { class: column.cls || "", title: value }, value);
+                })))
               : [h("tr", [h("td", { colspan: props.table.columns.length, class: "text-center text-muted" }, "暂无数据")])])
           ])
         ])

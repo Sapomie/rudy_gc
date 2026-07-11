@@ -1,34 +1,28 @@
 <template>
-  <PageShell class="movie-agg-page-shell sc-events-page-shell media-ingest-page-shell media-rescan-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root media-ingest-page-root media-rescan-page-root">
+  <PageShell class="media-ingest-page-shell media-rescan-page-shell" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid media-ingest-page-root media-rescan-page-root next02-sc-pink-theme">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div id="msgArea" class="alert fade show small py-2 px-3" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
-          {{ message }}
-        </div>
-
         <div id="mediaRescanPage" class="next02-media-rewrite next02-rescan-rewrite">
-          <div class="row mb-3">
+          <div class="row g-0">
             <div class="col-12">
-              <div class="next02-media-hero">
+              <section class="next02-media-hero next02-sc-movie-top-shell" aria-labelledby="mediaRescanTitle">
                 <div class="next02-media-hero-main">
                   <div class="next02-media-eyebrow">Media Rescan</div>
-                <h4 class="mb-1">{{ pageTitle }}</h4>
-                <p class="text-muted mb-0">{{ pageNote }}</p>
-                  <div class="next02-media-kpi-strip">
-                    <span v-for="item in heroStats" :key="item.label">
-                      <strong>{{ item.value }}</strong>
-                      <em>{{ item.label }}</em>
-                    </span>
-                  </div>
-              </div>
-                <div class="next02-media-hero-actions">
-                <a href="/triggers/media" class="btn btn-outline-primary btn-sm">媒体入库</a>
-                <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                  <h4 id="mediaRescanTitle">{{ pageTitle }}</h4>
+                  <p>{{ pageNote }}</p>
                 </div>
-              </div>
+                <div class="next02-media-hero-actions">
+                  <a href="/triggers/media" class="btn btn-outline-primary btn-sm">媒体入库</a>
+                  <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                </div>
+              </section>
             </div>
+          </div>
+
+          <div id="msgArea" class="alert fade show small" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
+            {{ message }}
           </div>
 
           <div class="row next02-media-grid">
@@ -40,7 +34,7 @@
                       <div class="next02-media-eyebrow">Selection</div>
                       <h5 class="card-title mb-0">操作</h5>
                     </div>
-                    <span class="next02-media-live">Ready</span>
+                    <span class="next02-media-live" :class="{ 'is-running': actionLoading }">{{ actionLoading ? "执行中" : "就绪" }}</span>
                   </div>
                   <div class="next02-media-action-stack next02-rescan-action-stack">
                     <button type="button" id="btnSelectAll" class="btn btn-outline-secondary" :disabled="actionLoading" @click="selectAll">全选</button>
@@ -176,6 +170,7 @@ import { asArray, asRecord, formatValue, num, pick, text } from "@/utils/format"
 type ResultColumn = {
   label: string;
   key: string;
+  width: string;
   cls?: string;
 };
 
@@ -228,21 +223,15 @@ const summaryItems = computed(() => [
   { id: "sumSkippedRoots", label: "跳过范围", value: listValue("skipped_targets").length, className: "text-muted" },
   { id: "sumErrors", label: "错误", value: num(result.value, "errors"), className: "text-danger" }
 ]);
-const heroStats = computed(() => [
-  { label: "Root", value: rootOptions.value.length },
-  { label: "选中范围", value: selectedScopes.value.length },
-  { label: "二级目录", value: selectedBranches.value.length },
-  { label: "扫描文件", value: num(result.value, "total_files") }
-]);
 const tables = computed<ResultTableDef[]>(() => [
   {
     id: "tblMoved",
     title: "位置变更",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "匹配方式", key: "match_by" },
-      { label: "旧路径", key: "previous_path", cls: "mono" },
-      { label: "新路径", key: "path", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "匹配方式", key: "match_by", width: "16%" },
+      { label: "旧路径", key: "previous_path", width: "34%", cls: "mono" },
+      { label: "新路径", key: "path", width: "34%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "moved_items"))
   },
@@ -250,10 +239,10 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblRestored",
     title: "恢复记录",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "匹配方式", key: "match_by" },
-      { label: "旧路径", key: "previous_path", cls: "mono" },
-      { label: "当前路径", key: "path", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "匹配方式", key: "match_by", width: "16%" },
+      { label: "旧路径", key: "previous_path", width: "34%", cls: "mono" },
+      { label: "当前路径", key: "path", width: "34%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "restored_items"))
   },
@@ -261,9 +250,9 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblRemoved",
     title: "标记删除",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "原 root", key: "root_dir", cls: "mono" },
-      { label: "原路径", key: "path", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "原 root", key: "root_dir", width: "26%", cls: "mono" },
+      { label: "原路径", key: "path", width: "58%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "removed_items"))
   },
@@ -271,9 +260,9 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblUnmatched",
     title: "未匹配文件",
     columns: [
-      { label: "文件名", key: "file_name" },
-      { label: "root", key: "root_dir", cls: "mono" },
-      { label: "路径", key: "path", cls: "mono" }
+      { label: "文件名", key: "file_name", width: "20%" },
+      { label: "root", key: "root_dir", width: "26%", cls: "mono" },
+      { label: "路径", key: "path", width: "54%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "unmatched_items"))
   },
@@ -281,9 +270,9 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblErrors",
     title: "错误",
     columns: [
-      { label: "文件/影片", key: "movie_name" },
-      { label: "路径", key: "path", cls: "mono" },
-      { label: "错误", key: "error" }
+      { label: "文件/影片", key: "movie_name", width: "18%" },
+      { label: "路径", key: "path", width: "42%", cls: "mono" },
+      { label: "错误", key: "error", width: "40%" }
     ],
     rows: asArray<AnyRecord>(pick(result.value, "error_items"))
   }
@@ -440,12 +429,16 @@ const ResultTable = defineComponent({
           h("span", { class: "next02-media-count-pill" }, `${props.table.rows.length} 行`)
         ]),
         h("div", { class: "table-responsive" }, [
-          h("table", { class: "table table-sm table-hover", id: props.table.id }, [
+          h("table", { class: "table table-hover align-middle mb-0 next02-media-table", id: props.table.id }, [
+            h("colgroup", props.table.columns.map((column) => h("col", { style: { width: column.width } }))),
             h("thead", [
               h("tr", props.table.columns.map((column) => h("th", column.label)))
             ]),
             h("tbody", props.table.rows.length
-              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => h("td", { class: column.cls || "" }, cellValue(row, column)))))
+              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => {
+                  const value = cellValue(row, column);
+                  return h("td", { class: column.cls || "", title: value }, value);
+                })))
               : [h("tr", [h("td", { colspan: props.table.columns.length, class: "text-center text-muted" }, "暂无数据")])])
           ])
         ])

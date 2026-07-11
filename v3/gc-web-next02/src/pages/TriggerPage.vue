@@ -531,7 +531,9 @@ const shDetailPreviewLoading = ref(false);
 const shDetailPreviewRows = ref<AnyRecord[]>([]);
 const shDetailPreviewTotal = ref(0);
 const selectedSHDetailThreadIDs = ref<string[]>([]);
+const jobEventHistorySize = 300;
 const rawJobEvents = ref<AnyRecord[]>([]);
+const rawJobEventKeys = new Set<string>();
 const showRawEvents = ref(false);
 const nowTick = ref(Date.now());
 const fetchSiteBothJobIDs = ref<string[]>([]);
@@ -1399,6 +1401,7 @@ function ensureElapsedTimer() {
 
 function clearJobEvents() {
   rawJobEvents.value = [];
+  rawJobEventKeys.clear();
   lastEventID = 0;
 }
 
@@ -1410,10 +1413,16 @@ function appendJobEvent(event: AnyRecord) {
     return;
   }
   const key = eventKey(event);
-  if (rawJobEvents.value.some((item) => eventKey(item) === key)) {
+  if (rawJobEventKeys.has(key)) {
     return;
   }
-  rawJobEvents.value = [event, ...rawJobEvents.value];
+  rawJobEventKeys.add(key);
+  const nextEvents = [event, ...rawJobEvents.value];
+  if (nextEvents.length > jobEventHistorySize) {
+    const removedEvents = nextEvents.splice(jobEventHistorySize);
+    removedEvents.forEach((item) => rawJobEventKeys.delete(eventKey(item)));
+  }
+  rawJobEvents.value = nextEvents;
 }
 
 function mergeJobEvent(event: AnyRecord) {
@@ -1468,7 +1477,9 @@ async function loadJobEvents(id: string, reportError: boolean): Promise<boolean>
     const events = asArray<AnyRecord>(pick(data, "events", "Events"));
     const visible = events.filter((event) => text(event, "job_id", "JobID") === id && isVisibleTaskType(text(event, "task_type", "TaskType")));
     lastEventID = events.reduce((max, event) => Math.max(max, Number(pick(event, "id", "ID") || 0)), 0);
-    rawJobEvents.value = [...visible].reverse();
+    rawJobEvents.value = [...visible].reverse().slice(0, jobEventHistorySize);
+    rawJobEventKeys.clear();
+    rawJobEvents.value.forEach((event) => rawJobEventKeys.add(eventKey(event)));
     visible.forEach(mergeJobEvent);
     return true;
   } catch (err) {

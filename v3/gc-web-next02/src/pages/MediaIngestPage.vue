@@ -1,35 +1,29 @@
 <template>
-  <PageShell class="movie-agg-page-shell sc-events-page-shell media-ingest-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root media-ingest-page-root">
+  <PageShell class="media-ingest-page-shell" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid media-ingest-page-root next02-sc-pink-theme">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div id="msgArea" class="alert fade show small py-2 px-3" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
-          {{ message }}
-        </div>
-
         <div id="mediaIngestPage" class="next02-media-rewrite">
-          <div class="row mb-3">
+          <div class="row g-0">
             <div class="col-12">
-              <div class="next02-media-hero">
+              <section class="next02-media-hero next02-sc-movie-top-shell" aria-labelledby="mediaIngestTitle">
                 <div class="next02-media-hero-main">
                   <div class="next02-media-eyebrow">Media Intake</div>
-                <h4 class="mb-1">{{ pageTitle }}</h4>
-                <p class="text-muted mb-0">{{ pageNote }}</p>
-                  <div class="next02-media-kpi-strip">
-                    <span v-for="item in heroStats" :key="item.label">
-                      <strong>{{ item.value }}</strong>
-                      <em>{{ item.label }}</em>
-                    </span>
-                  </div>
-              </div>
-                <div class="next02-media-hero-actions">
-                <a href="/torrent-albums?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
-                <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
-                <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                  <h4 id="mediaIngestTitle">{{ pageTitle }}</h4>
+                  <p>{{ pageNote }}</p>
                 </div>
-              </div>
+                <div class="next02-media-hero-actions">
+                  <a href="/torrent-albums?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
+                  <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
+                  <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                </div>
+              </section>
             </div>
+          </div>
+
+          <div id="msgArea" class="alert fade show small" :class="messageOk ? 'alert-success' : 'alert-danger'" :style="{ display: message ? 'block' : 'none' }">
+            {{ message }}
           </div>
 
           <div class="row next02-media-grid">
@@ -41,7 +35,7 @@
                       <div class="next02-media-eyebrow">Pipeline</div>
                       <h5 class="card-title mb-0">操作</h5>
                     </div>
-                    <span class="next02-media-live">Ready</span>
+                    <span class="next02-media-live" :class="{ 'is-running': actionLoading }">{{ actionLoading ? "执行中" : "就绪" }}</span>
                   </div>
                   <div class="next02-media-action-stack">
                     <button type="button" id="btnPrecheck" class="btn btn-primary" :disabled="actionLoading" @click="runPrecheck">第一段：预处理</button>
@@ -103,13 +97,14 @@
                     <span class="next02-media-count-pill">{{ favoriteRows.length }} 条</span>
                   </div>
                   <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 next02-media-table next02-media-favorite-table">
+                      <colgroup><col style="width: 50%"><col style="width: 25%"><col style="width: 25%"></colgroup>
                       <thead><tr><th>影片</th><th>来源</th><th>大小</th></tr></thead>
                       <tbody>
                         <tr v-for="(row, index) in favoriteRows" :key="favoriteKey(row, index)">
-                          <td class="text-nowrap">{{ favoriteLabel(row) }}</td>
-                          <td class="text-nowrap">{{ text(row, "SourceLabel", "source_label") }}</td>
-                          <td class="text-nowrap">{{ text(row, "Size", "size") || "-" }}</td>
+                          <td :title="favoriteLabel(row)">{{ favoriteLabel(row) }}</td>
+                          <td :title="text(row, 'SourceLabel', 'source_label')">{{ text(row, "SourceLabel", "source_label") }}</td>
+                          <td :title="text(row, 'Size', 'size') || '-'">{{ text(row, "Size", "size") || "-" }}</td>
                         </tr>
                         <tr v-if="!favoriteRows.length"><td colspan="3" class="text-center text-muted">暂无下载中数据</td></tr>
                       </tbody>
@@ -140,6 +135,7 @@ import { asArray, asRecord, formatValue, num, pick, text } from "@/utils/format"
 type ResultColumn = {
   label: string;
   key: string;
+  width: string;
   cls?: string;
 };
 
@@ -199,24 +195,17 @@ const summary = computed(() => ({
   failed: commitPhase.value ? num(plan.value, "failed") : num(precheckSummary.value, "failed"),
   passLabel: commitPhase.value ? "成功" : "通过"
 }));
-const heroStats = computed(() => [
-  { label: "Root", value: rootDirs.value.length },
-  { label: "下载中", value: favoriteRows.value.length },
-  { label: summary.value.passLabel, value: summary.value.success },
-  { label: "失败", value: summary.value.failed }
-]);
-
 const tables = computed<ResultTableDef[]>(() => [
   {
     id: "tblPrecheckPass",
     title: "预处理通过 Movie",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "源文件", key: "source_path", cls: "mono" },
-      { label: "目标名", key: "target_file_name", cls: "mono" },
-      { label: "目标目录", key: "target_dir", cls: "mono" },
-      { label: "Alias", key: "alias", cls: "mono" },
-      { label: "Hash", key: "source_torrent_hash", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "14%" },
+      { label: "源文件", key: "source_path", width: "26%", cls: "mono" },
+      { label: "目标名", key: "target_file_name", width: "18%", cls: "mono" },
+      { label: "目标目录", key: "target_dir", width: "18%", cls: "mono" },
+      { label: "Alias", key: "alias", width: "10%", cls: "mono" },
+      { label: "Hash", key: "source_torrent_hash", width: "14%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(plan.value, "precheck_pass"))
   },
@@ -224,9 +213,9 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblPrecheckFail",
     title: "预处理失败 Movie",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "源文件", key: "source_path", cls: "mono" },
-      { label: "失败原因", key: "error" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "源文件", key: "source_path", width: "42%", cls: "mono" },
+      { label: "失败原因", key: "error", width: "42%" }
     ],
     rows: asArray<AnyRecord>(pick(plan.value, "precheck_fail"))
   },
@@ -234,11 +223,11 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblPrecheckPreview",
     title: "插入前预览（通过项）",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "目标目录", key: "target_dir", cls: "mono" },
-      { label: "目标名", key: "target_file_name", cls: "mono" },
-      { label: "Alias", key: "alias", cls: "mono" },
-      { label: "大小", key: "size" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "目标目录", key: "target_dir", width: "26%", cls: "mono" },
+      { label: "目标名", key: "target_file_name", width: "26%", cls: "mono" },
+      { label: "Alias", key: "alias", width: "16%", cls: "mono" },
+      { label: "大小", key: "size", width: "16%" }
     ],
     rows: asArray<AnyRecord>(pick(plan.value, "precheck_preview"))
   },
@@ -246,10 +235,10 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblCommitSuccess",
     title: "插入成功 Movie",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "目标路径", key: "target_path", cls: "mono" },
-      { label: "Alias", key: "alias", cls: "mono" },
-      { label: "Hash", key: "source_torrent_hash", cls: "mono" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "目标路径", key: "target_path", width: "40%", cls: "mono" },
+      { label: "Alias", key: "alias", width: "18%", cls: "mono" },
+      { label: "Hash", key: "source_torrent_hash", width: "26%", cls: "mono" }
     ],
     rows: asArray<AnyRecord>(pick(plan.value, "commit_success"))
   },
@@ -257,9 +246,9 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblCommitFail",
     title: "插入失败 Movie",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "源文件", key: "source_path", cls: "mono" },
-      { label: "失败原因", key: "error" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "源文件", key: "source_path", width: "42%", cls: "mono" },
+      { label: "失败原因", key: "error", width: "42%" }
     ],
     rows: asArray<AnyRecord>(pick(plan.value, "commit_fail"))
   },
@@ -267,10 +256,10 @@ const tables = computed<ResultTableDef[]>(() => [
     id: "tblCommitPreview",
     title: "插入后预览（成功项）",
     columns: [
-      { label: "影片", key: "movie_name" },
-      { label: "目标路径", key: "target_path", cls: "mono" },
-      { label: "Alias", key: "alias", cls: "mono" },
-      { label: "大小", key: "size" }
+      { label: "影片", key: "movie_name", width: "16%" },
+      { label: "目标路径", key: "target_path", width: "46%", cls: "mono" },
+      { label: "Alias", key: "alias", width: "18%", cls: "mono" },
+      { label: "大小", key: "size", width: "20%" }
     ],
     rows: asArray<AnyRecord>(pick(plan.value, "commit_preview"))
   }
@@ -336,12 +325,16 @@ const ResultTable = defineComponent({
           h("span", { class: "next02-media-count-pill" }, `${props.table.rows.length} 行`)
         ]),
         h("div", { class: "table-responsive" }, [
-          h("table", { class: "table table-sm table-hover", id: props.table.id }, [
+          h("table", { class: "table table-hover align-middle mb-0 next02-media-table", id: props.table.id }, [
+            h("colgroup", props.table.columns.map((column) => h("col", { style: { width: column.width } }))),
             h("thead", [
               h("tr", props.table.columns.map((column) => h("th", column.label)))
             ]),
             h("tbody", props.table.rows.length
-              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => h("td", { class: column.cls || "" }, cellValue(row, column)))))
+              ? props.table.rows.map((row) => h("tr", props.table.columns.map((column) => {
+                  const value = cellValue(row, column);
+                  return h("td", { class: column.cls || "", title: value }, value);
+                })))
               : [h("tr", [h("td", { colspan: props.table.columns.length, class: "text-center text-muted" }, "暂无数据")])])
           ])
         ])
