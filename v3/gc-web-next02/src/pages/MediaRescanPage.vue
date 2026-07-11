@@ -8,39 +8,60 @@
           {{ message }}
         </div>
 
-        <div id="mediaRescanPage">
+        <div id="mediaRescanPage" class="next02-media-rewrite next02-rescan-rewrite">
           <div class="row mb-3">
-            <div class="col-12 d-flex align-items-center justify-content-between">
-              <div>
+            <div class="col-12">
+              <div class="next02-media-hero">
+                <div class="next02-media-hero-main">
+                  <div class="next02-media-eyebrow">Media Rescan</div>
                 <h4 class="mb-1">{{ pageTitle }}</h4>
                 <p class="text-muted mb-0">{{ pageNote }}</p>
+                  <div class="next02-media-kpi-strip">
+                    <span v-for="item in heroStats" :key="item.label">
+                      <strong>{{ item.value }}</strong>
+                      <em>{{ item.label }}</em>
+                    </span>
+                  </div>
               </div>
-              <div class="d-flex gap-2">
+                <div class="next02-media-hero-actions">
                 <a href="/triggers/media" class="btn btn-outline-primary btn-sm">媒体入库</a>
                 <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="row">
-            <div class="col-lg-4">
-              <div class="card">
+          <div class="row next02-media-grid">
+            <div class="col-lg-4 next02-media-control-col">
+              <div class="card next02-media-action-card next02-rescan-action-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">操作</h5>
-                  <div class="d-grid gap-2">
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Selection</div>
+                      <h5 class="card-title mb-0">操作</h5>
+                    </div>
+                    <span class="next02-media-live">Ready</span>
+                  </div>
+                  <div class="next02-media-action-stack next02-rescan-action-stack">
                     <button type="button" id="btnSelectAll" class="btn btn-outline-secondary" :disabled="actionLoading" @click="selectAll">全选</button>
                     <button type="button" id="btnClearAll" class="btn btn-outline-secondary" :disabled="actionLoading" @click="clearAll">清空</button>
                     <button type="button" id="btnRescan" class="btn btn-primary" :disabled="actionLoading" @click="runRescan">开始重扫</button>
                   </div>
-                  <div class="mt-3 small text-muted">
+                  <div class="next02-media-help">
                     只会对本次勾选且当前存在的扫描范围做删除判断；基目录已选但未选二级目录时，表示扫描整个所选基目录。
                   </div>
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-root-card next02-rescan-scope-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">扫描目录</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Roots</div>
+                      <h5 class="card-title mb-0">扫描目录</h5>
+                    </div>
+                    <span class="next02-media-count-pill">{{ selectedScopes.length }} 个范围</span>
+                  </div>
                   <div class="root-scope-list">
                     <div v-if="!rootOptions.length" class="text-muted">未配置 media.rootDirs</div>
                     <div v-for="option in rootOptions" :key="rootOf(option)" class="root-scope-item" :data-root="rootOf(option)">
@@ -93,9 +114,14 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-overview-card next02-rescan-overview-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">运行概览</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Overview</div>
+                      <h5 class="card-title mb-0">运行概览</h5>
+                    </div>
+                  </div>
                   <div class="row g-2">
                     <div v-for="item in summaryItems" :key="item.id" class="col-6">
                       <div class="overview-item">
@@ -111,9 +137,14 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-root-card next02-rescan-list-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">本次目录结果</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Scope Result</div>
+                      <h5 class="card-title mb-0">本次目录结果</h5>
+                    </div>
+                  </div>
                   <ResultList id="selectedRootList" title="已选择 root" :items="listValue('selected_roots')" />
                   <ResultList id="scannedRootList" title="实际扫描 root" :items="listValue('scanned_roots')" />
                   <ResultList id="skippedRootList" title="已跳过 root" :items="listValue('skipped_roots')" />
@@ -124,7 +155,7 @@
               </div>
             </div>
 
-            <div class="col-lg-8">
+            <div class="col-lg-8 next02-media-result-col">
               <ResultTable v-for="table in tables" :key="table.id" :table="table" />
             </div>
           </div>
@@ -196,6 +227,12 @@ const summaryItems = computed(() => [
   { id: "sumUnmatched", label: "未匹配", value: num(result.value, "unmatched"), className: "text-secondary" },
   { id: "sumSkippedRoots", label: "跳过范围", value: listValue("skipped_targets").length, className: "text-muted" },
   { id: "sumErrors", label: "错误", value: num(result.value, "errors"), className: "text-danger" }
+]);
+const heroStats = computed(() => [
+  { label: "Root", value: rootOptions.value.length },
+  { label: "选中范围", value: selectedScopes.value.length },
+  { label: "二级目录", value: selectedBranches.value.length },
+  { label: "扫描文件", value: num(result.value, "total_files") }
 ]);
 const tables = computed<ResultTableDef[]>(() => [
   {
@@ -378,8 +415,8 @@ const ResultList = defineComponent({
     items: { type: Array as PropType<string[]>, required: true }
   },
   setup(props) {
-    return () => h("div", { class: "mb-2" }, [
-      h("div", { class: "text-muted small" }, props.title),
+    return () => h("div", { class: "next02-rescan-result-list" }, [
+      h("div", { class: "next02-rescan-result-title" }, props.title),
       h("ul", { class: "root-list mb-0", id: props.id }, props.items.length
         ? props.items.map((item) => h("li", [h("code", item)]))
         : [h("li", { class: "text-muted" }, "暂无数据")])
@@ -393,9 +430,15 @@ const ResultTable = defineComponent({
     table: { type: Object as PropType<ResultTableDef>, required: true }
   },
   setup(props) {
-    return () => h("div", { class: "card" }, [
+    return () => h("div", { class: "card next02-media-result-card next02-rescan-result-card" }, [
       h("div", { class: "card-body" }, [
-        h("h5", { class: "card-title" }, props.table.title),
+        h("div", { class: "next02-media-panel-head" }, [
+          h("div", [
+            h("div", { class: "next02-media-eyebrow" }, "Result"),
+            h("h5", { class: "card-title mb-0" }, props.table.title)
+          ]),
+          h("span", { class: "next02-media-count-pill" }, `${props.table.rows.length} 行`)
+        ]),
         h("div", { class: "table-responsive" }, [
           h("table", { class: "table table-sm table-hover", id: props.table.id }, [
             h("thead", [

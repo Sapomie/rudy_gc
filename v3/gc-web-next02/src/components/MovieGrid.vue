@@ -1,5 +1,5 @@
 <template>
-  <div class="movie-grid-v2">
+  <div class="movie-grid-v2 next02-pink-movie-grid">
     <div v-for="(item, index) in cards" :key="cardKey(item, index)" class="col movie-grid-col-v2">
       <MovieCard :movie="movieOf(item)" :rank="rankOf(item)" :card="item" :mode="mode" />
     </div>

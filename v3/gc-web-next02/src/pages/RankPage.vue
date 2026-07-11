@@ -1,96 +1,61 @@
 <template>
-  <PageShell class="rank-page-shell cards-page-shell" :class="rankShellClass" :title="title" :note="rankNote" eyebrow="MovieCard Rank">
+  <PageShell class="rank-page-shell cards-page-shell next02-pink-cards-page next02-pink-cards-page-shell" :class="rankShellClass" :title="title" :note="rankNote" eyebrow="MovieCard Rank">
     <LoadingState v-if="loading" />
     <ErrorPanel v-else-if="error" :message="error" />
     <template v-else>
-      <div v-if="!message" class="sticky-toolbar rank-sticky-toolbar">
-        <div class="rank-sort-bar">
-          <div v-if="isDayRank" class="rank-day-header">
-            <div class="alert alert-success py-2 mb-0">
-              <div class="rank-alert-stack">
-                <div class="rank-alert-row">
-                  <strong class="font-size-14">Rank Date</strong>
-                  <span class="font-18 fw-semibold">{{ rankDate }}</span>
-                </div>
-                <div class="rank-alert-row">
-                  <strong class="font-size-14">Total</strong>
-                  <span class="font-18 fw-semibold">{{ total }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="rank-day-actions">
-              <div class="btn-group btn-group-sm" role="group" aria-label="Rank day navigation">
-                <a :href="dayPrevHref" class="btn btn-outline-primary" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">前一天</a>
-                <a :href="dayNextHref" class="btn btn-outline-primary" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">后一天</a>
-                <a :href="dayRandHref" class="btn btn-outline-primary">随机</a>
-              </div>
-              <form class="rank-date-form" method="get" action="/moviecarddayrank">
-                <input
-                  class="form-control form-control-sm"
-                  type="text"
-                  name="date"
-                  :value="rankDate"
-                  placeholder="YYYY-MM-DD"
-                  maxlength="10"
-                  pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
-                  inputmode="numeric"
-                >
-                <button class="btn btn-sm btn-outline-primary" type="submit">Go</button>
-              </form>
-            </div>
-          </div>
+      <div v-if="!message" class="sticky-toolbar cards-toolbar rank-sticky-toolbar next02-pink-cards-toolbar">
+        <div class="cards-toolbar-sort rank-toolbar-sort">
+          <template v-if="isDayRank">
+            <span class="soft-badge rank-meta-badge">Rank Date</span>
+            <span class="total-pill rank-date-pill">{{ rankDate || "-" }}</span>
+            <form class="rank-date-form" method="get" action="/moviecarddayrank">
+              <input
+                class="rank-date-input"
+                type="text"
+                name="date"
+                :value="rankDate"
+                placeholder="YYYY-MM-DD"
+                maxlength="10"
+                pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                inputmode="numeric"
+              >
+              <button class="button-secondary rank-toolbar-action" type="submit">Go</button>
+            </form>
+          </template>
 
-          <div v-else class="rank-period-header">
-            <div class="alert alert-success py-2 mb-0">
-              <div class="rank-period-alert">
-                <div class="rank-period-meta">
-                  <div class="rank-period-title-row">
-                    <strong class="font-size-14">{{ periodTypeLabel }}</strong>
-                    <span class="font-18 fw-semibold">{{ periodKey }}</span>
-                    <span class="badge bg-light text-dark border">{{ categoryLabel }}</span>
-                  </div>
-                  <div class="small text-muted">
-                    {{ rangeStart }} ~ {{ rangeEnd }} | Total {{ total }}
-                  </div>
-                </div>
-                <div class="rank-period-switches">
-                  <div class="btn-group btn-group-sm" role="group" aria-label="Period type switch">
-                    <a
-                      v-for="item in typeLinks"
-                      :key="item.label"
-                      :href="item.href || '#'"
-                      class="btn"
-                      :class="item.active ? 'btn-primary active disabled' : 'btn-outline-primary'"
-                    >
-                      {{ item.label }}
-                    </a>
-                  </div>
-                  <div class="btn-group btn-group-sm" role="group" aria-label="Period category switch">
-                    <a
-                      v-for="item in categoryLinks"
-                      :key="item.label"
-                      :href="item.href || '#'"
-                      class="btn"
-                      :class="item.active ? 'btn-secondary active disabled' : 'btn-outline-secondary'"
-                    >
-                      {{ item.label }}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <template v-else>
+            <span class="soft-badge rank-meta-badge">{{ periodTypeLabel }}</span>
+            <span class="total-pill rank-period-key">{{ periodKey || "-" }}</span>
+            <span class="soft-badge rank-category-badge">{{ categoryLabel || "-" }}</span>
+            <LinkStrip :items="typeLinks" />
+            <LinkStrip :items="categoryLinks" />
+          </template>
         </div>
 
-        <div class="toolbar-line rank-toolbar-line">
-          <div class="owned-line">
-            <div v-if="isPeriodRank" class="btn-group btn-group-sm" role="group" aria-label="Period navigation">
-              <a :href="prevHref || '#'" class="btn btn-outline-primary" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">上一期</a>
-              <a :href="nextHref || '#'" class="btn btn-outline-primary" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">下一期</a>
-              <a :href="latestHref || '/moviecardperiodrank'" class="btn btn-outline-primary">最新</a>
+        <div class="toolbar-line cards-toolbar-bottom rank-toolbar-line">
+          <div class="owned-line cards-toolbar-filters rank-toolbar-filters">
+            <template v-if="isDayRank">
+              <a :href="dayPrevHref" class="button-secondary rank-toolbar-action" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">前一天</a>
+              <a :href="dayNextHref" class="button-secondary rank-toolbar-action" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">后一天</a>
+              <a :href="dayRandHref" class="button-secondary rank-toolbar-action">随机</a>
+            </template>
+
+            <template v-else>
+              <span class="soft-badge rank-range-badge">{{ rangeStart || "-" }} ~ {{ rangeEnd || "-" }}</span>
+              <a :href="prevHref || '#'" class="button-secondary rank-toolbar-action" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">上一期</a>
+              <a :href="nextHref || '#'" class="button-secondary rank-toolbar-action" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">下一期</a>
+              <a :href="latestHref || '/moviecardperiodrank'" class="button-secondary rank-toolbar-action">最新</a>
+            </template>
+          </div>
+          <div class="next02-pink-cards-toolbar-status">
+            <div class="next02-pink-cards-metrics" aria-label="排名页面摘要">
+              <span><strong>{{ total }}</strong> Total</span>
+              <span><strong>{{ cards.length }}</strong> Current Page</span>
+            </div>
+            <div class="cards-toolbar-pagination next02-pink-cards-pagination">
+              <PaginationBar :page-info="pageInfo" />
             </div>
           </div>
-          <PaginationBar :page-info="pageInfo" />
         </div>
       </div>
 
@@ -105,6 +70,7 @@ import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
 import ErrorPanel from "@/components/ErrorPanel.vue";
+import LinkStrip from "@/components/LinkStrip.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";

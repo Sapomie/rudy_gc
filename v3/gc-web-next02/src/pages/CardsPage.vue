@@ -1,32 +1,42 @@
 <template>
-  <PageShell :class="['cards-page-shell', pageClass]" :title="title" :note="summaryText" eyebrow="MovieCard">
+  <PageShell :class="['cards-page-shell', 'next02-pink-cards-page', 'next02-pink-cards-page-shell', pageClass]" :title="title" :note="summaryText" eyebrow="MovieCard">
     <LoadingState v-if="loading" />
     <ErrorPanel v-else-if="error" :message="error" />
     <template v-else>
-      <div class="sticky-toolbar">
-        <LinkStrip :items="sortLinks" />
-        <div class="toolbar-line">
-          <div class="owned-line">
-            <span class="soft-badge disabled">WMedia</span>
+      <div class="sticky-toolbar cards-toolbar next02-pink-cards-toolbar" aria-label="Cards 控制栏">
+        <div class="cards-toolbar-sort">
+          <LinkStrip :items="sortLinks" />
+        </div>
+        <div class="toolbar-line cards-toolbar-bottom">
+          <div class="owned-line cards-toolbar-filters">
             <LinkStrip :items="ownedLinks" />
-            <span class="total-pill">Total: {{ total }}</span>
-            <button class="button-secondary" type="button" @click="filterOpen = !filterOpen">
+            <button class="button-secondary cards-filter-button" :class="{ active: filterOpen }" type="button" :aria-pressed="filterOpen" @click="filterOpen = !filterOpen">
               筛选
             </button>
             <button
               v-if="hasPageDateEdit"
-              class="button-secondary page-date-button"
+              class="button-secondary page-date-button cards-date-button"
               type="button"
               @click="openPageDateModal"
             >
               {{ pageDateLabel }}：{{ pageDateDisplay || "未设置" }}
             </button>
           </div>
-          <PaginationBar :page-info="pageInfo" />
+          <div class="next02-pink-cards-toolbar-status">
+            <div class="next02-pink-cards-metrics" aria-label="Cards 页面摘要">
+              <span><strong>{{ total }}</strong> Total</span>
+              <span><strong>{{ movies.length }}</strong> Current Page</span>
+            </div>
+            <div class="cards-toolbar-pagination next02-pink-cards-pagination">
+              <PaginationBar :page-info="pageInfo" />
+            </div>
+          </div>
         </div>
       </div>
 
-      <MovieCardFilterForm v-show="filterOpen" :filter="filter" />
+      <div v-show="filterOpen" class="next02-pink-cards-filter">
+        <MovieCardFilterForm :filter="filter" />
+      </div>
 
       <MovieGrid :cards="movies" />
 
@@ -113,7 +123,6 @@ const sortLabel: Record<string, string> = {
   ByDaysInRank: "在榜天数",
   ByHighestRank: "最高排名",
   ByBirthTime: "下载时间",
-  ByMediaBirthTime: "Media下载时间",
   ByLastScTime: "最后sc",
   ByScTimes: "sc次数",
   ByComeTimes: "co次数"
@@ -137,7 +146,15 @@ async function load() {
   }
 }
 
-const title = computed(() => text(payload.value, "Title") || String(route.meta.title || "MovieCard"));
+const cardsPageTitles: Record<string, string> = {
+  "/cards": "Cards",
+  "/cardstoday": "Cards Today",
+  "/cardsmediamowned": "Cards MediaOwned",
+  "/cardshasrank": "Cards HasRank",
+  "/cardsneeddownload": "Cards NeedDownload",
+  "/cardsrandom": "Cards Random",
+};
+const title = computed(() => cardsPageTitles[route.path] || text(payload.value, "Title") || String(route.meta.title || "MovieCard"));
 const pageClass = computed(() => `cards-route-${route.path.replace(/^\/+/, "").replaceAll("/", "-") || "home"}`);
 const total = computed(() => text(payload.value, "total", "Total") || "0");
 const movies = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "Movies")));
@@ -168,9 +185,9 @@ const sortLinks = computed(() => {
 const ownedLinks = computed(() => {
   const query = asRecord(pick(payload.value, "ownedQuery", "OwnedQuery"));
   const labels: Record<string, string> = {
-    MediaAll: "MAll",
-    MediaOwned: "MOwned",
-    MediaNotOwned: "MNotOwned"
+    MediaAll: "All",
+    MediaOwned: "Owned",
+    MediaNotOwned: "NotOwned"
   };
   return Object.entries(labels).map(([key, label]) => {
     const item = asRecord(query[key]);

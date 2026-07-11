@@ -1,17 +1,22 @@
 <template>
   <PageShell class="fetch-sites-page-shell" title="FetchSites 配置" eyebrow="">
-    <div id="fetch-sites-root" class="fetch-sites-page-root">
+    <div id="fetch-sites-root" class="fetch-sites-page-root next02-fetch-sites-rewrite">
       <LoadingState v-if="loading" />
       <ErrorPanel v-else-if="error" :message="error" />
       <template v-else>
         <div class="row">
           <div class="col-12">
-            <div class="page-title-box d-flex align-items-center justify-content-between">
-              <div>
+            <div class="page-title-box next02-fetch-sites-hero d-flex align-items-center justify-content-between">
+              <div class="next02-fetch-sites-hero-main">
                 <h4 class="mb-0">FetchSites 配置</h4>
                 <div class="text-muted small mt-1">维护 t_fetch_site 的抓取站点配置；保存后当前 API 进程立即使用新配置。</div>
+                <div class="next02-fetch-sites-summary" aria-label="fetch site summary">
+                  <span><strong>{{ items.length }}</strong>配置</span>
+                  <span><strong>{{ enabledCount }}</strong>启用</span>
+                  <span><strong>{{ persistedCount }}</strong>已入库</span>
+                </div>
               </div>
-              <div>
+              <div class="next02-fetch-sites-actions">
                 <a class="btn btn-sm btn-outline-primary" href="/triggers/fetch-sehuatang">FetchSehuatang</a>
               </div>
             </div>
@@ -175,6 +180,8 @@ async function load() {
 
 const items = computed(() => asArray<AnyRecord>(pick(payload.value, "items", "Items")));
 const messageClass = computed(() => messageOk.value ? "text-success" : "text-danger");
+const enabledCount = computed(() => items.value.filter((item) => Number(pick(item, "status") || 0) === 1).length);
+const persistedCount = computed(() => items.value.filter((item) => Boolean(pick(item, "persisted"))).length);
 
 function siteCode(item: AnyRecord): string {
   return text(item, "site_code");

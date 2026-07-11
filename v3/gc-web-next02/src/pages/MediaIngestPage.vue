@@ -8,32 +8,47 @@
           {{ message }}
         </div>
 
-        <div id="mediaIngestPage">
+        <div id="mediaIngestPage" class="next02-media-rewrite">
           <div class="row mb-3">
-            <div class="col-12 d-flex align-items-center justify-content-between">
-              <div>
+            <div class="col-12">
+              <div class="next02-media-hero">
+                <div class="next02-media-hero-main">
+                  <div class="next02-media-eyebrow">Media Intake</div>
                 <h4 class="mb-1">{{ pageTitle }}</h4>
                 <p class="text-muted mb-0">{{ pageNote }}</p>
+                  <div class="next02-media-kpi-strip">
+                    <span v-for="item in heroStats" :key="item.label">
+                      <strong>{{ item.value }}</strong>
+                      <em>{{ item.label }}</em>
+                    </span>
+                  </div>
               </div>
-              <div class="d-flex gap-2">
+                <div class="next02-media-hero-actions">
                 <a href="/torrent-albums?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
                 <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
                 <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="row">
-            <div class="col-lg-4">
-              <div class="card">
+          <div class="row next02-media-grid">
+            <div class="col-lg-4 next02-media-control-col">
+              <div class="card next02-media-action-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">操作</h5>
-                  <div class="d-grid gap-2">
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Pipeline</div>
+                      <h5 class="card-title mb-0">操作</h5>
+                    </div>
+                    <span class="next02-media-live">Ready</span>
+                  </div>
+                  <div class="next02-media-action-stack">
                     <button type="button" id="btnPrecheck" class="btn btn-primary" :disabled="actionLoading" @click="runPrecheck">第一段：预处理</button>
                     <button type="button" id="btnCommit" class="btn btn-success" :disabled="actionLoading || !canCommit" :data-can-commit="canCommit ? '1' : '0'" @click="runCommit">{{ commitButtonText }}</button>
                     <button type="button" id="btnReturn" class="btn btn-outline-secondary" :class="{ 'd-none': !showReturn }" :disabled="actionLoading" @click="runReturn">返回（清空本次预处理）</button>
                   </div>
-                  <div class="mt-3 small text-muted">
+                  <div class="next02-media-help">
                     <div>部分失败时可选择：</div>
                     <div>1. 仅插入通过项（点第二段）</div>
                     <div>2. 返回后修正再重跑预处理</div>
@@ -41,9 +56,14 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-overview-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">运行概览</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Overview</div>
+                      <h5 class="card-title mb-0">运行概览</h5>
+                    </div>
+                  </div>
                   <div class="row g-2">
                     <div class="col-4"><div class="overview-item"><div class="label">总数</div><div class="value" id="sumTotal">{{ summary.total }}</div></div></div>
                     <div class="col-4"><div class="overview-item"><div class="label" id="sumPassLabel">{{ summary.passLabel }}</div><div class="value text-success" id="sumPass">{{ summary.success }}</div></div></div>
@@ -57,9 +77,15 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-root-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">Root 目录</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Roots</div>
+                      <h5 class="card-title mb-0">Root 目录</h5>
+                    </div>
+                    <span class="next02-media-count-pill">{{ rootDirs.length }} 个</span>
+                  </div>
                   <ul class="mb-0 root-list">
                     <li v-for="dir in rootDirs" :key="dir"><code>{{ dir }}</code></li>
                     <li v-if="!rootDirs.length" class="text-muted">未配置 media.rootDirs</li>
@@ -67,9 +93,15 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-favorite-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">下载中（tm_album_item）</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Albums</div>
+                      <h5 class="card-title mb-0">下载中（tm_album_item）</h5>
+                    </div>
+                    <span class="next02-media-count-pill">{{ favoriteRows.length }} 条</span>
+                  </div>
                   <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle mb-0">
                       <thead><tr><th>影片</th><th>来源</th><th>大小</th></tr></thead>
@@ -87,7 +119,7 @@
               </div>
             </div>
 
-            <div class="col-lg-8">
+            <div class="col-lg-8 next02-media-result-col">
               <ResultTable v-for="table in tables" :key="table.id" :table="table" />
             </div>
           </div>
@@ -154,13 +186,25 @@ const canCommit = computed(() => Boolean(pick(plan.value, "can_commit")));
 const showReturn = computed(() => Boolean(pick(plan.value, "partial_failed")) && Boolean(pick(plan.value, "has_plan")));
 const commitButtonText = computed(() => Boolean(pick(plan.value, "partial_failed")) ? "第二段：仅插入通过项" : "第二段：执行插入");
 const statusText = computed(() => text(plan.value, "message") || "等待操作");
-const generatedAtText = computed(() => commitPhase.value ? "" : (text(plan.value, "generated_at") ? `预处理时间：${text(plan.value, "generated_at")}` : ""));
+const generatedAtText = computed(() => {
+  if (commitPhase.value) {
+    return "";
+  }
+  const generatedAt = text(plan.value, "generated_at");
+  return generatedAt && generatedAt !== "0" ? `预处理时间：${generatedAt}` : "";
+});
 const summary = computed(() => ({
   total: commitPhase.value ? num(plan.value, "total") : num(precheckSummary.value, "total"),
   success: commitPhase.value ? num(plan.value, "success") : num(precheckSummary.value, "passed"),
   failed: commitPhase.value ? num(plan.value, "failed") : num(precheckSummary.value, "failed"),
   passLabel: commitPhase.value ? "成功" : "通过"
 }));
+const heroStats = computed(() => [
+  { label: "Root", value: rootDirs.value.length },
+  { label: "下载中", value: favoriteRows.value.length },
+  { label: summary.value.passLabel, value: summary.value.success },
+  { label: "失败", value: summary.value.failed }
+]);
 
 const tables = computed<ResultTableDef[]>(() => [
   {
@@ -282,9 +326,15 @@ const ResultTable = defineComponent({
     table: { type: Object as PropType<ResultTableDef>, required: true }
   },
   setup(props) {
-    return () => h("div", { class: "card", id: props.table.id.replace("tbl", "").replace(/^./, (char) => `${char.toLowerCase()}`) + "Section" }, [
+    return () => h("div", { class: "card next02-media-result-card", id: props.table.id.replace("tbl", "").replace(/^./, (char) => `${char.toLowerCase()}`) + "Section" }, [
       h("div", { class: "card-body" }, [
-        h("h5", { class: "card-title" }, props.table.title),
+        h("div", { class: "next02-media-panel-head" }, [
+          h("div", [
+            h("div", { class: "next02-media-eyebrow" }, "Result"),
+            h("h5", { class: "card-title mb-0" }, props.table.title)
+          ]),
+          h("span", { class: "next02-media-count-pill" }, `${props.table.rows.length} 行`)
+        ]),
         h("div", { class: "table-responsive" }, [
           h("table", { class: "table table-sm table-hover", id: props.table.id }, [
             h("thead", [

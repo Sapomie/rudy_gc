@@ -5,8 +5,7 @@ V3_RUN_FILE := $(abspath $(lastword $(MAKEFILE_LIST)))
 V3_RUN_MAKE_DIR := $(dir $(V3_RUN_FILE))
 
 include $(V3_RUN_MAKE_DIR)common.mk
-include $(V3_RUN_MAKE_DIR)gc-api.mk
-include $(V3_RUN_MAKE_DIR)gc-web.mk
+include $(V3_RUN_MAKE_DIR)gc-apps.mk
 
 .PHONY: run-help run-all stop-all
 
@@ -14,6 +13,8 @@ run-help:
 	@echo "Run targets:"
 	@echo "  make run-all"
 	@echo "  make stop-all"
+	@echo "  make run-dev"
+	@echo "  make stop-dev"
 	@echo "Run variables:"
 	@echo "  GC_API_DIR=$(GC_API_DIR)"
 	@echo "  GC_WEB_DIR=$(GC_WEB_DIR)"

@@ -1,144 +1,175 @@
 <template>
-  <PageShell class="torrent-albums-page-shell e-items-page-shell" title="EItem 列表" note="" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page e-items-page-root">
+  <PageShell class="e-items-page-shell sc-events-page-shell" title="EItem 列表" note="" eyebrow="">
+    <div id="page-root" class="container-fluid e-items-page-root next02-sc-pink-theme next02-sc-events-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <h4 class="mb-1">EItem 列表</h4>
-            <p class="text-muted mb-0">浏览 e_item 列表，并按字段筛选条目。</p>
+        <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell e-items-hero">
+          <div class="next02-sc-hero-copy">
+            <span class="next02-sc-eyebrow">E ITEMS / STATUS POOL</span>
+            <h4>EItem 列表</h4>
+            <p>浏览 e_item 数据，并按影片标识、业务状态和时间范围筛选条目。</p>
           </div>
-        </div>
+        </section>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div class="sc-page-summary">
-            <span class="sc-page-summary-label">总数</span>
-            <span class="sc-page-summary-value" id="itemTotalCount">{{ total }}</span>
-          </div>
-          <div v-if="hasRows && pageLinks.length" class="ms-xl-auto">
-            <PageLinks :links="pageLinks" />
-          </div>
-        </div>
-
-        <div class="card mb-3">
+        <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card e-items-panel">
           <div class="card-body">
-            <form class="row g-2 align-items-end" method="get" action="/e-items">
-              <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
-              <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
-              <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
+            <div class="next02-sc-panel-head">
+              <form class="sc-event-filter-form e-items-filter-form" method="get" action="/e-items">
+                <input type="hidden" name="p" value="1">
+                <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
+                <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
+                <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">JavLib 编号</label>
-                <input class="form-control" type="text" name="jav_id" :value="queryValue('JavID')" placeholder="JavLib 编号">
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">影片编号</label>
-                <input class="form-control" type="text" name="name" :value="queryValue('Name')" placeholder="影片编号">
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">详情状态</label>
-                <select class="form-select" name="has_detail" :value="queryValue('HasDetail')">
-                  <option value="">全部</option>
-                  <option value="none">无详情</option>
-                  <option value="ok">已有详情</option>
-                </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">封面状态</label>
-                <select class="form-select" name="has_download_cover" :value="queryValue('HasDownloadCover')">
-                  <option value="">全部</option>
-                  <option value="none">无本地封面</option>
-                  <option value="ok">已有本地封面</option>
-                  <option value="wrong">错误封面链接</option>
-                </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">中文字幕</label>
-                <select class="form-select" name="has_chinese" :value="queryValue('HasChinese')">
-                  <option value="">全部</option>
-                  <option value="none">无中文字幕</option>
-                  <option value="ok">有中文字幕</option>
-                  <option value="error">翻译错误</option>
-                  <option value="sensitive">含敏感词</option>
-                </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">详情扫描状态</label>
-                <select class="form-select" name="detail_need_scan" :value="queryValue('DetailNeedScan')">
-                  <option value="">全部</option>
-                  <option value="need">需要扫描</option>
-                  <option value="no_need">无需扫描</option>
-                  <option value="wrong">内容错误</option>
-                </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">详情时间从</label>
-                <input class="form-control" type="date" name="detail_birth_time_from" :value="queryValue('DetailBirthTimeFrom')">
-              </div>
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">详情时间到</label>
-                <input class="form-control" type="date" name="detail_birth_time_to" :value="queryValue('DetailBirthTimeTo')">
-              </div>
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">最后查询时间从</label>
-                <input class="form-control" type="date" name="last_query_detail_time_from" :value="queryValue('LastQueryDetailTimeFrom')">
-              </div>
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">最后查询时间到</label>
-                <input class="form-control" type="date" name="last_query_detail_time_to" :value="queryValue('LastQueryDetailTimeTo')">
-              </div>
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">筛选</button>
-                <a class="btn btn-outline-secondary" href="/e-items">清空</a>
-              </div>
-            </form>
-          </div>
-        </div>
+                <label class="sc-event-filter-field e-items-filter-field is-jav-id">
+                  <span>JavLib 编号</span>
+                  <input type="text" name="jav_id" :value="queryValue('JavID')" placeholder="JavLib 编号">
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field is-name">
+                  <span>影片编号</span>
+                  <input type="text" name="name" :value="queryValue('Name')" placeholder="影片编号">
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field">
+                  <span>详情状态</span>
+                  <select name="has_detail" :value="queryValue('HasDetail')">
+                    <option value="">全部</option>
+                    <option value="none">无详情</option>
+                    <option value="ok">已有详情</option>
+                  </select>
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field is-cover">
+                  <span>封面状态</span>
+                  <select name="has_download_cover" :value="queryValue('HasDownloadCover')">
+                    <option value="">全部</option>
+                    <option value="none">无本地封面</option>
+                    <option value="ok">已有本地封面</option>
+                    <option value="wrong">错误封面链接</option>
+                  </select>
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field is-chinese">
+                  <span>中文字幕</span>
+                  <select name="has_chinese" :value="queryValue('HasChinese')">
+                    <option value="">全部</option>
+                    <option value="none">无中文字幕</option>
+                    <option value="ok">有中文字幕</option>
+                    <option value="error">翻译错误</option>
+                    <option value="sensitive">含敏感词</option>
+                  </select>
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field is-scan">
+                  <span>详情扫描</span>
+                  <select name="detail_need_scan" :value="queryValue('DetailNeedScan')">
+                    <option value="">全部</option>
+                    <option value="need">需要扫描</option>
+                    <option value="no_need">无需扫描</option>
+                    <option value="wrong">内容错误</option>
+                  </select>
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field">
+                  <span>详情从</span>
+                  <input type="date" name="detail_birth_time_from" :value="queryValue('DetailBirthTimeFrom')">
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field">
+                  <span>详情到</span>
+                  <input type="date" name="detail_birth_time_to" :value="queryValue('DetailBirthTimeTo')">
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field">
+                  <span>查询从</span>
+                  <input type="date" name="last_query_detail_time_from" :value="queryValue('LastQueryDetailTimeFrom')">
+                </label>
+                <label class="sc-event-filter-field e-items-filter-field">
+                  <span>查询到</span>
+                  <input type="date" name="last_query_detail_time_to" :value="queryValue('LastQueryDetailTimeTo')">
+                </label>
+                <div class="e-items-filter-actions">
+                  <button class="sc-event-filter-submit" type="submit">筛选</button>
+                  <a class="sc-event-filter-clear" href="/e-items">清空</a>
+                </div>
+              </form>
 
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <div class="small text-muted">已选 <span id="itemBatchSelectedCount">{{ selectedCount }}</span> 项</div>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="btnBatchEditStatus" :disabled="selectedCount === 0" @click="openBatchModal">批量编辑状态</button>
+              <div class="e-items-control-summary">
+                <div v-if="hasRows" class="next02-sc-hero-metrics sc-event-list-metrics" aria-label="EItem 摘要">
+                  <span><strong id="itemTotalCount">{{ total }}</strong> Records</span>
+                  <span><strong id="itemBatchSelectedCount">{{ selectedCount }}</strong> Selected</span>
+                </div>
+                <button type="button" class="e-items-batch-action" id="btnBatchEditStatus" :disabled="selectedCount === 0" @click="openBatchModal">批量编辑状态</button>
+              </div>
+
+              <div v-if="hasRows && pageLinks.length" class="next02-sc-movie-pager">
+                <PageLinks :links="pageLinks" />
+              </div>
             </div>
+
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0 list-table e-items-table">
+              <table class="table table-hover align-middle mb-0 sc-events-table e-items-table">
+                <colgroup>
+                  <col class="e-items-col-select">
+                  <col class="e-items-col-jav-id">
+                  <col class="e-items-col-name">
+                  <col class="e-items-col-detail">
+                  <col class="e-items-col-cover">
+                  <col class="e-items-col-chinese">
+                  <col class="e-items-col-scan">
+                  <col class="e-items-col-detail-time">
+                  <col class="e-items-col-query-time">
+                  <col class="e-items-col-actions">
+                </colgroup>
                 <thead>
                   <tr>
-                    <th class="text-center text-nowrap"><input class="form-check-input js-item-check-all" id="itemCheckAll" type="checkbox" aria-label="全选当前页" :checked="allSelected" :indeterminate="someSelected" @change="toggleAllFromEvent"></th>
-                    <th><SortLink :link="sortLink('ByJavID')" label="JavLib 编号" /></th>
-                    <th><SortLink :link="sortLink('ByName')" label="影片编号" /></th>
-                    <th><SortLink :link="sortLink('ByHasDetail')" label="详情状态" /></th>
-                    <th><SortLink :link="sortLink('ByHasDownloadCover')" label="封面状态" /></th>
-                    <th><SortLink :link="sortLink('ByHasChinese')" label="中文字幕" /></th>
-                    <th><SortLink :link="sortLink('ByDetailNeedScan')" label="详情扫描状态" /></th>
-                    <th><SortLink :link="sortLink('ByDetailBirthTime')" label="详情时间" /></th>
-                    <th><SortLink :link="sortLink('ByLastQueryDetailTime')" label="最后查询时间" /></th>
-                    <th class="text-nowrap">操作</th>
+                    <th class="e-items-select-head"><input class="e-items-check js-item-check-all" id="itemCheckAll" type="checkbox" aria-label="全选当前页" :checked="allSelected" :indeterminate="someSelected" @change="toggleAllFromEvent"></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByJavID')" label="JavLib 编号" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByName')" label="影片编号" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByHasDetail')" label="详情状态" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByHasDownloadCover')" label="封面状态" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByHasChinese')" label="中文字幕" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByDetailNeedScan')" label="详情扫描状态" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByDetailBirthTime')" label="详情时间" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByLastQueryDetailTime')" label="最后查询时间" /></th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody id="itemTableBody">
-                  <tr v-if="!hasRows" class="js-item-empty-row">
+                  <template v-if="hasRows">
+                    <tr
+                      v-for="(row, index) in rows"
+                      :key="rowId(row)"
+                      :data-item-id="rowId(row)"
+                      :class="eItemRowClass(row, index)"
+                    >
+                      <td><input class="e-items-check js-item-check" type="checkbox" :value="rowId(row)" :aria-label="'选择 ' + rowText(row, 'jav_id', 'JavId', 'JavID')" :checked="isSelected(rowId(row))" @change="toggleSelection(rowId(row), $event)"></td>
+                      <td class="sc-content-cell">
+                        <a
+                          v-if="rowText(row, 'jav_url', 'JavUrl', 'JavURL')"
+                          :href="rowText(row, 'jav_url', 'JavUrl', 'JavURL')"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          :title="rowText(row, 'jav_id', 'JavId', 'JavID')"
+                        >{{ rowText(row, "jav_id", "JavId", "JavID") }}</a>
+                        <span v-else :title="rowText(row, 'jav_id', 'JavId', 'JavID')">{{ rowText(row, "jav_id", "JavId", "JavID") }}</span>
+                      </td>
+                      <td class="sc-content-cell">
+                        <a :href="'/movie/' + encodeURIComponent(rowText(row, 'name', 'Name'))" target="_blank" rel="noopener noreferrer" :title="rowText(row, 'name', 'Name')">{{ rowText(row, "name", "Name") }}</a>
+                      </td>
+                      <td><span class="e-items-status-text" :title="rowText(row, 'has_detail_text', 'HasDetailText') || '-'">{{ rowText(row, "has_detail_text", "HasDetailText") || "-" }}</span></td>
+                      <td><span class="e-items-status-text" :title="rowText(row, 'has_download_cover_text', 'HasDownloadCoverText') || '-'">{{ rowText(row, "has_download_cover_text", "HasDownloadCoverText") || "-" }}</span></td>
+                      <td><span class="e-items-status-text" :title="rowText(row, 'has_chinese_text', 'HasChineseText') || '-'">{{ rowText(row, "has_chinese_text", "HasChineseText") || "-" }}</span></td>
+                      <td><span class="e-items-status-text" :title="rowText(row, 'detail_need_scan_text', 'DetailNeedScanText') || '-'">{{ rowText(row, "detail_need_scan_text", "DetailNeedScanText") || "-" }}</span></td>
+                      <td>
+                        <span class="sc-event-time"><span class="sc-event-date">{{ formatUnixDate(rowValue(row, "detail_birth_time", "DetailBirthTime")) }}</span><small v-if="formatUnixHm(rowValue(row, 'detail_birth_time', 'DetailBirthTime'))" class="sc-event-hour">{{ formatUnixHm(rowValue(row, "detail_birth_time", "DetailBirthTime")) }}</small></span>
+                      </td>
+                      <td>
+                        <span class="sc-event-time"><span class="sc-event-date">{{ formatUnixDate(rowValue(row, "last_query_detail_time", "LastQueryDetailTime")) }}</span><small v-if="formatUnixHm(rowValue(row, 'last_query_detail_time', 'LastQueryDetailTime'))" class="sc-event-hour">{{ formatUnixHm(rowValue(row, "last_query_detail_time", "LastQueryDetailTime")) }}</small></span>
+                      </td>
+                      <td>
+                        <div class="e-items-row-actions">
+                          <button type="button" class="e-items-row-action js-item-status-edit" :data-item-id="rowId(row)" @click="openSingleModal(row)">编辑状态</button>
+                          <button type="button" class="e-items-row-action is-danger js-item-delete" :data-item-id="rowId(row)" @click="openDeleteModal(row)">删除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr v-else class="js-item-empty-row">
                     <td colspan="10"><div class="sc-empty-state">当前筛选下没有 e_item 数据。</div></td>
-                  </tr>
-                  <tr v-for="row in rows" v-else :key="rowId(row)" :data-item-id="rowId(row)" :class="{ 'table-active': isSelected(rowId(row)) }">
-                    <td class="text-center"><input class="form-check-input js-item-check" type="checkbox" :value="rowId(row)" :aria-label="`选择 ${rowText(row, 'jav_id', 'JavId', 'JavID')}`" :checked="isSelected(rowId(row))" @change="toggleSelection(rowId(row), $event)"></td>
-                    <td class="text-nowrap">
-                      <a v-if="rowText(row, 'jav_url', 'JavUrl', 'JavURL')" :href="rowText(row, 'jav_url', 'JavUrl', 'JavURL')" target="_blank" rel="noopener noreferrer">{{ rowText(row, "jav_id", "JavId", "JavID") }}</a>
-                      <template v-else>{{ rowText(row, "jav_id", "JavId", "JavID") }}</template>
-                    </td>
-                    <td><a :href="`/movie/${encodeURIComponent(rowText(row, 'name', 'Name'))}`">{{ rowText(row, "name", "Name") }}</a></td>
-                    <td class="js-item-has-detail">{{ rowText(row, "has_detail_text", "HasDetailText") || "-" }}</td>
-                    <td class="js-item-has-download-cover">{{ rowText(row, "has_download_cover_text", "HasDownloadCoverText") || "-" }}</td>
-                    <td class="js-item-has-chinese">{{ rowText(row, "has_chinese_text", "HasChineseText") || "-" }}</td>
-                    <td class="js-item-detail-need-scan">{{ rowText(row, "detail_need_scan_text", "DetailNeedScanText") || "-" }}</td>
-                    <td class="text-nowrap">{{ formatUnixMinute(rowValue(row, "detail_birth_time", "DetailBirthTime")) }}</td>
-                    <td class="text-nowrap">{{ formatUnixMinute(rowValue(row, "last_query_detail_time", "LastQueryDetailTime")) }}</td>
-                    <td class="text-nowrap">
-                      <button type="button" class="btn btn-sm btn-outline-primary js-item-status-edit" :data-item-id="rowId(row)" :data-item-jav-id="rowText(row, 'jav_id', 'JavId', 'JavID')" :data-item-name="rowText(row, 'name', 'Name')" :data-has-detail="rowText(row, 'has_detail_value', 'HasDetailValue')" :data-has-download-cover="rowText(row, 'has_download_cover_value', 'HasDownloadCoverValue')" :data-has-chinese="rowText(row, 'has_chinese_value', 'HasChineseValue')" :data-detail-need-scan="rowText(row, 'detail_need_scan_value', 'DetailNeedScanValue')" @click="openSingleModal(row)">编辑状态</button>
-                      <button type="button" class="btn btn-sm btn-outline-danger js-item-delete ms-1" :data-item-id="rowId(row)" :data-item-jav-id="rowText(row, 'jav_id', 'JavId', 'JavID')" :data-item-name="rowText(row, 'name', 'Name')" @click="openDeleteModal(row)">删除</button>
-                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -175,25 +206,35 @@
           @submit="submitBatchStatus"
           @update-form="updateBatchForm"
         />
-        <div class="modal fade" id="itemDeleteModal" tabindex="-1" aria-labelledby="itemDeleteModalLabel" aria-hidden="true" :class="{ show: deleteModal.show }" :style="{ display: deleteModal.show ? 'block' : 'none' }">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-              <div class="modal-header">
+        <div
+          class="e-items-modal-overlay"
+          id="itemDeleteModal"
+          tabindex="-1"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="itemDeleteModalLabel"
+          :aria-hidden="deleteModal.show ? 'false' : 'true'"
+          :class="{ show: deleteModal.show }"
+        >
+          <div class="e-items-modal-dialog e-items-delete-dialog">
+            <div class="e-items-modal-content">
+              <header class="e-items-modal-header">
                 <div>
-                  <h5 class="modal-title" id="itemDeleteModalLabel">删除电影</h5>
-                  <div id="itemDeleteMeta" class="small text-muted">{{ deleteModal.meta }}</div>
+                  <span class="e-items-modal-eyebrow">E ITEMS / DELETE</span>
+                  <h5 id="itemDeleteModalLabel">删除电影</h5>
+                  <p id="itemDeleteMeta">{{ deleteModal.meta }}</p>
                 </div>
-                <button type="button" class="btn-close" aria-label="Close" @click="closeDeleteModal"></button>
-              </div>
-              <div class="modal-body">
-                <p class="mb-0">会删除这部电影在所有相关表中的数据，并写入删除记录。</p>
-                <div id="itemDeleteMsg" class="alert small py-2 px-3 mt-3 mb-0" :class="deleteModal.message ? (deleteModal.messageOk ? 'alert-success' : 'alert-danger') : 'd-none'">{{ deleteModal.message }}</div>
+                <button type="button" class="e-items-modal-close" aria-label="关闭" @click="closeDeleteModal"><span aria-hidden="true">×</span></button>
+              </header>
+              <div class="e-items-modal-body">
+                <p class="e-items-delete-warning">会删除这部电影在所有相关表中的数据，并写入删除记录。</p>
+                <div id="itemDeleteMsg" class="e-items-modal-message" :class="[deleteModal.message ? (deleteModal.messageOk ? 'is-success' : 'is-error') : 'd-none']">{{ deleteModal.message }}</div>
                 <input type="hidden" id="itemDeleteItemId" :value="deleteModal.itemId">
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-light" @click="closeDeleteModal">取消</button>
-                <button type="button" class="btn btn-danger" id="itemDeleteSubmit" :disabled="deleteModal.submitting" @click="submitDelete">{{ deleteModal.submitting ? "删除中..." : "确认删除" }}</button>
-              </div>
+              <footer class="e-items-modal-footer">
+                <button type="button" class="e-items-modal-cancel" @click="closeDeleteModal">取消</button>
+                <button type="button" class="e-items-modal-submit is-danger" id="itemDeleteSubmit" :disabled="deleteModal.submitting" @click="submitDelete">{{ deleteModal.submitting ? "删除中..." : "确认删除" }}</button>
+              </footer>
             </div>
           </div>
         </div>
@@ -304,16 +345,54 @@ function sortLink(key: string): AnyRecord {
   return asRecord(sortMap.value[key]);
 }
 
-function formatUnixMinute(input: unknown): string {
+function dateParts(input: unknown): { date: string; time: string } {
   const n = Number(input || 0);
-  if (!n) return "-";
+  if (!n) return { date: "-", time: "" };
   const d = new Date(n * 1000);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${mi}` };
+}
+
+function formatUnixDate(input: unknown): string {
+  return dateParts(input).date;
+}
+
+function formatUnixHm(input: unknown): string {
+  return dateParts(input).time;
+}
+
+function eItemGroupTime(row: AnyRecord): unknown {
+  return rowValue(row, "last_query_detail_time", "LastQueryDetailTime")
+    || rowValue(row, "detail_birth_time", "DetailBirthTime");
+}
+
+function eItemMonthKey(row: AnyRecord): string {
+  const date = formatUnixDate(eItemGroupTime(row));
+  return date === "-" ? "" : date.slice(0, 7);
+}
+
+function eItemMonthClass(row: AnyRecord): string {
+  const month = eItemMonthKey(row);
+  if (!month) return "sc-running-month-neutral";
+  const monthNumber = Number(month.slice(5, 7));
+  return `sc-running-month-${(monthNumber % 3) + 1}`;
+}
+
+function eItemRowClass(row: AnyRecord, index: number) {
+  const currentMonth = eItemMonthKey(row);
+  const previousMonth = index > 0 ? eItemMonthKey(rows.value[index - 1]) : "";
+  return [
+    "next02-sc-event-row",
+    eItemMonthClass(row),
+    {
+      "sc-running-month-start": Boolean(index > 0 && currentMonth && previousMonth && currentMonth !== previousMonth),
+      "is-selected": isSelected(rowId(row))
+    }
+  ];
 }
 
 function isSelected(id: string): boolean {
@@ -361,6 +440,7 @@ function openSingleModal(row: AnyRecord) {
 }
 
 function closeSingleModal() {
+  releaseModalFocus();
   singleModal.show = false;
   singleModal.message = "";
   singleModal.submitting = false;
@@ -375,6 +455,7 @@ function openBatchModal() {
 }
 
 function closeBatchModal() {
+  releaseModalFocus();
   batchModal.show = false;
   batchModal.message = "";
   batchModal.submitting = false;
@@ -389,9 +470,17 @@ function openDeleteModal(row: AnyRecord) {
 }
 
 function closeDeleteModal() {
+  releaseModalFocus();
   deleteModal.show = false;
   deleteModal.message = "";
   deleteModal.submitting = false;
+}
+
+function releaseModalFocus() {
+  const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  if (activeElement?.closest(".e-items-modal-overlay")) {
+    activeElement.blur();
+  }
 }
 
 function mergeUpdatedItem(item: unknown) {
@@ -542,11 +631,11 @@ const ItemStatusModal = defineComponent({
   },
   emits: ["close", "submit", "update-form"],
   setup(props, { emit }) {
-    const select = (id: string, label: string, key: keyof StatusForm, options: [string, string][]) => h("div", { class: "col-12 col-md-6" }, [
-      h("label", { for: id, class: "form-label" }, label),
+    const select = (id: string, label: string, key: keyof StatusForm, options: [string, string][]) => h("div", { class: "e-items-status-field" }, [
+      h("label", { for: id }, label),
       h("select", {
         id,
-        class: "form-select",
+        class: "e-items-modal-select",
         name: key,
         value: props.form[key],
         onChange: (event: Event) => {
@@ -554,49 +643,66 @@ const ItemStatusModal = defineComponent({
         }
       }, options.map(([value, textValue]) => h("option", { value }, textValue)))
     ]);
-    return () => h("div", {
-      class: ["modal", "fade", { show: props.show }],
-      id: `${props.idPrefix}${props.batch ? "StatusModal" : "Modal"}`,
-      tabindex: "-1",
-      "aria-hidden": props.show ? "false" : "true",
-      style: { display: props.show ? "block" : "none" }
-    }, [
-      h("div", { class: "modal-dialog modal-dialog-centered" }, [
-        h("div", { class: "modal-content" }, [
-          h("form", {
-            id: `${props.idPrefix}${props.batch ? "StatusForm" : "Form"}`,
-            onSubmit: (event: Event) => {
-              event.preventDefault();
-              emit("submit");
-            }
-          }, [
-            h("div", { class: "modal-header" }, [
-              h("div", {}, [
-                h("h5", { class: "modal-title", id: `${props.idPrefix}${props.batch ? "StatusModalLabel" : "ModalLabel"}` }, props.title),
-                h("div", { class: "small text-muted", id: `${props.idPrefix}${props.batch ? "StatusMeta" : "Meta"}` }, props.meta)
+
+    return () => {
+      const modalId = `${props.idPrefix}${props.batch ? "StatusModal" : "Modal"}`;
+      const labelId = `${modalId}Label`;
+      return h("div", {
+        class: ["e-items-modal-overlay", { show: props.show }],
+        id: modalId,
+        tabindex: "-1",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-labelledby": labelId,
+        "aria-hidden": props.show ? "false" : "true"
+      }, [
+        h("div", { class: "e-items-modal-dialog e-items-status-dialog" }, [
+          h("div", { class: "e-items-modal-content" }, [
+            h("form", {
+              id: `${props.idPrefix}${props.batch ? "StatusForm" : "Form"}`,
+              onSubmit: (event: Event) => {
+                event.preventDefault();
+                emit("submit");
+              }
+            }, [
+              h("header", { class: "e-items-modal-header" }, [
+                h("div", {}, [
+                  h("span", { class: "e-items-modal-eyebrow" }, props.batch ? "E ITEMS / BATCH STATUS" : "E ITEMS / STATUS"),
+                  h("h5", { id: labelId }, props.title),
+                  h("p", { id: `${props.idPrefix}${props.batch ? "StatusMeta" : "Meta"}` }, props.meta)
+                ]),
+                h("button", {
+                  type: "button",
+                  class: "e-items-modal-close",
+                  "aria-label": "关闭",
+                  onClick: () => emit("close")
+                }, [h("span", { "aria-hidden": "true" }, "×")])
               ]),
-              h("button", { type: "button", class: "btn-close", "aria-label": "Close", onClick: () => emit("close") })
-            ]),
-            h("div", { class: "modal-body" }, [
-              h("div", { class: "row g-3" }, [
-                select(`${props.idPrefix}HasDetail`, "详情状态", "hasDetail", props.batch ? [["", "不修改"], ["none", "无详情"], ["ok", "已有详情"]] : [["none", "无详情"], ["ok", "已有详情"]]),
-                select(`${props.idPrefix}HasDownloadCover`, "封面状态", "hasDownloadCover", props.batch ? [["", "不修改"], ["none", "无本地封面"], ["ok", "已有本地封面"], ["wrong", "错误封面链接"]] : [["none", "无本地封面"], ["ok", "已有本地封面"], ["wrong", "错误封面链接"]]),
-                select(`${props.idPrefix}HasChinese`, "中文字幕", "hasChinese", props.batch ? [["", "不修改"], ["none", "无中文字幕"], ["ok", "有中文字幕"], ["error", "翻译错误"], ["sensitive", "含敏感词"]] : [["none", "无中文字幕"], ["ok", "有中文字幕"], ["error", "翻译错误"], ["sensitive", "含敏感词"]]),
-                select(`${props.idPrefix}DetailNeedScan`, "详情扫描状态", "detailNeedScan", props.batch ? [["", "不修改"], ["need", "需要扫描"], ["no_need", "无需扫描"], ["wrong", "内容错误"]] : [["need", "需要扫描"], ["no_need", "无需扫描"], ["wrong", "内容错误"]])
+              h("div", { class: "e-items-modal-body" }, [
+                h("div", { class: "e-items-status-grid" }, [
+                  select(`${props.idPrefix}HasDetail`, "详情状态", "hasDetail", props.batch ? [["", "不修改"], ["none", "无详情"], ["ok", "已有详情"]] : [["none", "无详情"], ["ok", "已有详情"]]),
+                  select(`${props.idPrefix}HasDownloadCover`, "封面状态", "hasDownloadCover", props.batch ? [["", "不修改"], ["none", "无本地封面"], ["ok", "已有本地封面"], ["wrong", "错误封面链接"]] : [["none", "无本地封面"], ["ok", "已有本地封面"], ["wrong", "错误封面链接"]]),
+                  select(`${props.idPrefix}HasChinese`, "中文字幕", "hasChinese", props.batch ? [["", "不修改"], ["none", "无中文字幕"], ["ok", "有中文字幕"], ["error", "翻译错误"], ["sensitive", "含敏感词"]] : [["none", "无中文字幕"], ["ok", "有中文字幕"], ["error", "翻译错误"], ["sensitive", "含敏感词"]]),
+                  select(`${props.idPrefix}DetailNeedScan`, "详情扫描状态", "detailNeedScan", props.batch ? [["", "不修改"], ["need", "需要扫描"], ["no_need", "无需扫描"], ["wrong", "内容错误"]] : [["need", "需要扫描"], ["no_need", "无需扫描"], ["wrong", "内容错误"]])
+                ]),
+                h("div", {
+                  id: `${props.idPrefix}${props.batch ? "StatusMsg" : "Msg"}`,
+                  class: ["e-items-modal-message", props.message ? (props.messageOk ? "is-success" : "is-error") : "d-none"]
+                }, props.message)
               ]),
-              h("div", {
-                id: `${props.idPrefix}${props.batch ? "StatusMsg" : "Msg"}`,
-                class: ["alert small py-2 px-3 mt-3 mb-0", props.message ? (props.messageOk ? "alert-success" : "alert-danger") : "d-none"]
-              }, props.message)
-            ]),
-            h("div", { class: "modal-footer" }, [
-              h("button", { type: "button", class: "btn btn-light", onClick: () => emit("close") }, "取消"),
-              h("button", { type: "submit", class: "btn btn-primary", id: `${props.idPrefix}${props.batch ? "StatusSubmit" : "Submit"}` }, props.submitLabel || props.submittingLabel)
+              h("footer", { class: "e-items-modal-footer" }, [
+                h("button", { type: "button", class: "e-items-modal-cancel", onClick: () => emit("close") }, "取消"),
+                h("button", {
+                  type: "submit",
+                  class: "e-items-modal-submit",
+                  id: `${props.idPrefix}${props.batch ? "StatusSubmit" : "Submit"}`
+                }, props.submitLabel || props.submittingLabel)
+              ])
             ])
           ])
         ])
-      ])
-    ]);
+      ]);
+    };
   }
 });
 </script>

@@ -2,9 +2,7 @@ ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MAKE_DIR := $(ROOT_DIR)/make
 
 include $(MAKE_DIR)/common.mk
-include $(MAKE_DIR)/gc-api.mk
-include $(MAKE_DIR)/gc-web.mk
-include $(MAKE_DIR)/gc-web-next.mk
+include $(MAKE_DIR)/gc-apps.mk
 include $(MAKE_DIR)/run.mk
 include $(MAKE_DIR)/verify.mk
 include $(MAKE_DIR)/backup.mk
@@ -16,12 +14,16 @@ help:
 	@echo "v3 legacy split targets:"
 	@echo "  make paths       Show resolved paths and ports"
 	@echo "  make run-api     Run v3 API on $(GC_API_PORT)"
-	@echo "  make run-web     Run v3 web on $(GC_WEB_PORT)"
-	@echo "  make run-web-next01..05  Run v3 next frontends on ports 5021..5025"
-	@echo "  make check-web-next-all  Check v3 next02..05 frontends"
-	@echo "  make run-next    Run all v3 next frontends"
-	@echo "  make stop-next   Stop all v3 next frontends"
-	@echo "  make check-next  Check v3 next02..05 frontends"
+	@echo "  make run-web     Run legacy gc-web on $(GC_WEB_PORT)"
+	@echo "  make run-web-next02  Run gc-web-next02 on $(GC_WEB_NEXT02_PORT)"
+	@echo "  make stop-web-next02 Stop gc-web-next02 port"
+	@echo "  make check-web-next02 Check gc-web-next02"
+	@echo "  make run-next    Alias of run-web-next02"
+	@echo "  make stop-next   Alias of stop-web-next02"
+	@echo "  make check-next  Alias of check-web-next02"
+	@echo "  make run-dev     Run API, legacy gc-web, and gc-web-next02 together"
+	@echo "  make stop-dev    Stop API, legacy gc-web, and gc-web-next02"
+	@echo "  make check-dev   Test API and check both web frontends"
 	@echo "  make run-all     Run v3 API and web together"
 	@echo "  make stop-api    Stop v3 API port"
 	@echo "  make stop-web    Stop v3 web port"

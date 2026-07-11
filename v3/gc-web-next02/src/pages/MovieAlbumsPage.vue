@@ -1,8 +1,8 @@
 <template>
   <PageShell class="torrent-albums-page-shell movie-albums-page-shell" title="MovieAlbums" note="" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page-root movie-albums-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <div id="page-root" class="container-fluid torrent-albums-page-root movie-albums-page-root albums-list-standard movie-albums-list-standard">
+      <div v-if="loading" class="alert albums-list-feedback is-loading">加载中...</div>
+      <div v-else-if="error" class="alert albums-list-feedback is-error">{{ error }}</div>
       <div
         v-else
         id="movieAlbumItemsPage"
@@ -10,121 +10,120 @@
         :data-album-id="selectedAlbumID"
         :data-album-name="selectedAlbumName"
       >
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div>
-            <h4 class="mb-1">{{ pageTitle }}</h4>
-            <p v-if="pageNote" class="text-muted mb-0">{{ pageNote }}</p>
+        <header class="albums-list-hero">
+          <div class="albums-list-hero-copy">
+            <span class="albums-list-eyebrow">Movie Albums</span>
+            <h2>{{ pageTitle }}</h2>
+            <p v-if="pageNote">{{ pageNote }}</p>
           </div>
-        </div>
+          <button type="button" class="btn albums-create-button" id="btnOpenCreateMovieAlbumModal" @click="openCreateModal">新增电影相册</button>
+        </header>
 
-        <div id="movieAlbumItemsMsg" class="alert mb-3" :class="messageClass" role="alert">
+        <div id="movieAlbumItemsMsg" class="alert albums-list-message" :class="messageClass" role="alert">
           {{ messageText }}
         </div>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div class="sc-page-summary">
-            <span class="sc-page-summary-label">相册</span>
-            <span class="sc-page-summary-value">{{ selectedAlbumName }}</span>
-            <span class="sc-page-summary-label ms-3">总数</span>
-            <span class="sc-page-summary-value">{{ total }}</span>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenCreateMovieAlbumModal" @click="openCreateModal">新增电影相册</button>
-          </div>
-          <div v-if="hasRows && pageLinks.length" class="ms-xl-auto">
-            <MovieAlbumPagination :links="pageLinks" />
-          </div>
-        </div>
-
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-          <div class="small text-muted">已选 <span id="movieAlbumBatchSelectedCount">{{ selectedCount }}</span> 项</div>
-          <div v-if="canExecuteRemove || canRemoveDownloaded" class="d-flex flex-wrap gap-2">
-            <button
-              v-if="canExecuteRemove"
-              type="button"
-              class="btn btn-sm btn-danger"
-              id="btnBatchExecuteMovieAlbumRemove"
-              :disabled="selectedCount === 0 || selectedAlbumID <= 0"
-              @click="openExecuteModal"
-            >统一删除</button>
-            <button
-              v-if="canRemoveDownloaded"
-              type="button"
-              class="btn btn-sm btn-outline-warning"
-              id="btnRemoveDownloadedMovieAlbumItems"
-              :disabled="loadingDownloaded"
-              @click="loadRemoveDownloadedPreview"
-            >移除已下载条目</button>
-          </div>
-        </div>
-
-        <div class="section-card card mb-3">
-          <div class="card-body">
-            <form ref="filterForm" class="row g-3 align-items-end" id="movieAlbumsFilterForm" method="get" action="/movie-albums">
+        <section class="albums-list-panel">
+          <div class="albums-list-controls">
+            <form ref="filterForm" class="albums-filter-form movie-albums-filter-form" id="movieAlbumsFilterForm" method="get" action="/movie-albums">
               <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
               <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
               <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
-              <div class="col-12">
-                <label class="form-label mb-1">快捷相册</label>
-                <div class="d-flex flex-wrap gap-2 album-quick-filter-group">
+              <div class="albums-filter-row is-primary">
+                <div class="albums-filter-field is-quick-filter">
+                  <span>快捷相册</span>
+                  <div class="album-quick-filter-group">
                   <button
                     type="button"
-                    class="btn btn-sm js-movie-album-quick-filter"
-                    :class="selectedAlbumName === '待下载电影' ? 'btn-warning' : 'btn-outline-warning'"
+                    class="btn album-quick-button js-movie-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === '待下载电影' }"
                     data-album-name="待下载电影"
                     @click="quickFilter('待下载电影')"
                   >待下载电影</button>
                   <button
                     type="button"
-                    class="btn btn-sm js-movie-album-quick-filter"
-                    :class="selectedAlbumName === '待删除' ? 'btn-danger' : 'btn-outline-danger'"
+                    class="btn album-quick-button js-movie-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === '待删除' }"
                     data-album-name="待删除"
                     @click="quickFilter('待删除')"
                   >待删除</button>
                   <button
                     type="button"
-                    class="btn btn-sm js-movie-album-quick-filter"
-                    :class="selectedAlbumName === 'v3' ? 'btn-primary' : 'btn-outline-primary'"
+                    class="btn album-quick-button js-movie-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === 'v3' }"
                     data-album-name="v3"
                     @click="quickFilter('v3')"
                   >v3</button>
                   <button
                     type="button"
-                    class="btn btn-sm js-movie-album-quick-filter"
-                    :class="selectedAlbumName === 'vx' ? 'btn-primary' : 'btn-outline-primary'"
+                    class="btn album-quick-button js-movie-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === 'vx' }"
                     data-album-name="vx"
                     @click="quickFilter('vx')"
                   >vx</button>
+                  </div>
                 </div>
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-4">
-                <label class="form-label mb-1">相册</label>
+                <label class="albums-filter-field is-album">
+                  <span>相册</span>
                 <select class="form-select" id="movieAlbumsAlbumName" name="album_name" :value="selectedAlbumName">
                   <option v-for="option in albumSelectOptions" :key="option.value" :value="option.value">
                     {{ option.label }}
                   </option>
                 </select>
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-4">
-                <label class="form-label mb-1">影片编号 / 标题</label>
+                </label>
+                <label class="albums-filter-field is-keyword">
+                  <span>影片编号 / 标题</span>
                 <input class="form-control" type="text" name="keyword" :value="queryValue('Keyword')" placeholder="movie_name 或 movie_jav_id">
-              </div>
-
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">筛选</button>
-                <a class="btn btn-outline-secondary" href="/movie-albums">清空</a>
+                </label>
+                <div class="albums-filter-actions">
+                  <button class="btn albums-apply-button" type="submit">筛选</button>
+                  <a class="btn albums-clear-button" href="/movie-albums">清空</a>
+                </div>
               </div>
             </form>
-          </div>
-        </div>
 
-        <div class="section-card card">
-          <div class="card-body">
-            <div class="table-responsive">
+            <div class="albums-list-meta">
+              <div class="albums-list-summary">
+                <span class="albums-list-summary-label">相册</span>
+                <span class="albums-list-summary-value is-album-name">{{ selectedAlbumName }}</span>
+                <span class="albums-list-summary-value">{{ total }}</span>
+                <span class="albums-list-summary-label">Total Items</span>
+              </div>
+              <MovieAlbumPagination v-if="hasRows && pageLinks.length" :links="pageLinks" />
+            </div>
+          </div>
+
+          <div class="albums-batch-toolbar">
+            <div class="albums-selected-count">已选 <span id="movieAlbumBatchSelectedCount">{{ selectedCount }}</span> 项</div>
+            <div v-if="canExecuteRemove || canRemoveDownloaded" class="albums-batch-actions">
+              <button
+                v-if="canExecuteRemove"
+                type="button"
+                class="btn albums-batch-button is-danger"
+                id="btnBatchExecuteMovieAlbumRemove"
+                :disabled="selectedCount === 0 || selectedAlbumID <= 0"
+                @click="openExecuteModal"
+              >统一删除</button>
+              <button
+                v-if="canRemoveDownloaded"
+                type="button"
+                class="btn albums-batch-button"
+                id="btnRemoveDownloadedMovieAlbumItems"
+                :disabled="loadingDownloaded"
+                @click="loadRemoveDownloadedPreview"
+              >移除已下载条目</button>
+            </div>
+          </div>
+
+          <div class="albums-table-wrap">
               <table class="table table-hover align-middle mb-0 movie-album-table">
+                <colgroup>
+                  <col class="movie-album-col-select">
+                  <col class="movie-album-col-movie">
+                  <col class="movie-album-col-created">
+                  <col class="movie-album-col-actions">
+                </colgroup>
                 <thead>
                   <tr>
                     <th class="text-center text-nowrap">
@@ -158,8 +157,8 @@
                         @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
                       >
                     </td>
-                    <td class="text-nowrap">
-                      <a class="fw-semibold" :href="movieHref(row)">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
+                    <td class="text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
+                      <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
                     </td>
                     <td class="text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
                     <td class="text-nowrap">
@@ -173,13 +172,8 @@
                   </tr>
                 </tbody>
               </table>
-            </div>
           </div>
-        </div>
-
-        <div v-if="hasRows && pageLinks.length" class="d-flex justify-content-end mt-3">
-          <MovieAlbumPagination :links="pageLinks" />
-        </div>
+        </section>
 
         <MovieAlbumModals
           :active-modal="activeModal"

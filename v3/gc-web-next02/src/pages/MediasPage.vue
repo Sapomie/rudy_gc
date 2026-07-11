@@ -1,107 +1,123 @@
 <template>
-  <PageShell class="medias-page-shell" title="Medias" note="" eyebrow="">
+  <PageShell class="next02-pink-list-page-shell medias-page-shell" :title="title" note="" eyebrow="">
     <div id="msgArea" class="alert fade show small py-2 px-3" :class="msgClass" :style="{ display: msgText ? 'block' : 'none' }">
       {{ msgText }}
     </div>
-    <div id="page-root" class="container-fluid medias-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <div id="page-root" class="container-fluid next02-pink-list-page medias-page-root">
+      <div v-if="loading" class="alert alert-info py-2 next02-pink-list-state">加载中...</div>
+      <div v-else-if="error" class="alert alert-danger next02-pink-list-state">{{ error }}</div>
       <template v-else>
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <h4 class="mb-1">{{ title }}</h4>
-            <p class="text-muted mb-0">按列表查看 w_media(source_type=2) 的基础数据，并复用 MovieType 缓存补充演员与播放信息。</p>
+        <section class="next02-pink-list-hero medias-list-hero">
+          <div class="next02-pink-list-hero-copy">
+            <span class="next02-pink-list-eyebrow">MEDIA / LIBRARY</span>
+            <h4>{{ title }}</h4>
+            <p>按列表查看 w_media(source_type=2) 的基础数据，并复用 MovieType 缓存补充演员与播放信息。</p>
           </div>
-        </div>
+        </section>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div class="sc-page-summary">
-            <span class="sc-page-summary-label">Total Medias</span>
-            <span class="sc-page-summary-value">{{ total }}</span>
-          </div>
-          <div v-if="pageLinks.length" class="ms-xl-auto">
-            <MediaPagination :links="pageLinks" />
-          </div>
-        </div>
-
-        <div class="section-card card mb-3">
+        <div class="card next02-pink-list-panel medias-list-panel">
           <div class="card-body">
-            <form class="row g-3 align-items-end" method="get" action="/medias">
-              <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
-              <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
-              <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
+            <div class="next02-pink-list-toolbar medias-list-toolbar">
+              <form class="medias-filter-form" method="get" action="/medias" id="mediasFilterForm">
+                <input type="hidden" name="p" value="1">
+                <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
+                <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
+                <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">识别码搜索</label>
-                <input class="form-control" type="text" name="keyword" :value="queryValue('Keyword')" placeholder="Movie Name">
-              </div>
+                <div class="medias-filter-main">
+                  <label class="medias-filter-field medias-filter-keyword">
+                    <span>识别码搜索</span>
+                    <input type="text" name="keyword" :value="queryValue('Keyword')" placeholder="Movie Name">
+                  </label>
 
-              <div v-for="field in numberRangeFields" :key="field.label" class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">{{ field.label }}</label>
-                <div class="row g-2">
-                  <div class="col-6">
-                    <input class="form-control" :type="field.type" :name="field.minName" :value="queryValue(field.minKey)" :min="field.min" :step="field.step" :placeholder="field.minPlaceholder">
+                  <div v-for="field in numberRangeFields" :key="field.label" class="medias-filter-field">
+                    <span>{{ field.label }}</span>
+                    <span class="medias-filter-range">
+                      <input :type="field.type" :name="field.minName" :value="queryValue(field.minKey)" :min="field.min" :step="field.step" :placeholder="field.minPlaceholder" :aria-label="`${field.label} minimum`">
+                      <span aria-hidden="true">–</span>
+                      <input :type="field.type" :name="field.maxName" :value="queryValue(field.maxKey)" :min="field.min" :step="field.step" :placeholder="field.maxPlaceholder" :aria-label="`${field.label} maximum`">
+                    </span>
                   </div>
-                  <div class="col-6">
-                    <input class="form-control" :type="field.type" :name="field.maxName" :value="queryValue(field.maxKey)" :min="field.min" :step="field.step" :placeholder="field.maxPlaceholder">
+
+                  <label class="medias-filter-field">
+                    <span>自制</span>
+                    <select name="self_make">
+                      <option v-for="option in selfMakeOptions" :key="option.value" :value="option.value" :selected="queryValue('SelfMake') === option.value">{{ option.label }}</option>
+                    </select>
+                  </label>
+
+                  <label class="medias-filter-field">
+                    <span>遮罩</span>
+                    <select name="has_mask">
+                      <option v-for="option in maskOptions" :key="option.value" :value="option.value" :selected="queryValue('HasMask') === option.value">{{ option.label }}</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="medias-filter-lower">
+                  <div class="medias-filter-date-actions">
+                    <div v-for="field in dateRangeFields" :key="field.label" class="medias-filter-field medias-filter-date">
+                      <span>{{ field.label }}</span>
+                      <span class="medias-filter-range">
+                        <input :type="field.type" :name="field.minName" :value="queryValue(field.minKey)" :placeholder="field.minPlaceholder" :aria-label="`${field.label} from`">
+                        <span aria-hidden="true">–</span>
+                        <input :type="field.type" :name="field.maxName" :value="queryValue(field.maxKey)" :placeholder="field.maxPlaceholder" :aria-label="`${field.label} to`">
+                      </span>
+                    </div>
+
+                    <div class="medias-filter-actions">
+                      <button class="next02-pink-list-submit" type="submit">Apply</button>
+                      <a class="next02-pink-list-clear" href="/medias">Clear</a>
+                    </div>
+                  </div>
+
+                  <div class="medias-list-controls">
+                    <div class="next02-pink-list-metrics" aria-label="媒体列表统计">
+                      <span><strong>{{ total }}</strong> Total Medias</span>
+                    </div>
+                    <div v-if="pageLinks.length" class="next02-pink-list-pagination">
+                      <MediaPagination :links="pageLinks" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </form>
+            </div>
 
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">自制</label>
-                <select class="form-select" name="self_make">
-                  <option v-for="option in selfMakeOptions" :key="option.value" :value="option.value" :selected="queryValue('SelfMake') === option.value">{{ option.label }}</option>
-                </select>
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">遮罩</label>
-                <select class="form-select" name="has_mask">
-                  <option v-for="option in maskOptions" :key="option.value" :value="option.value" :selected="queryValue('HasMask') === option.value">{{ option.label }}</option>
-                </select>
-              </div>
-
-              <div v-for="field in dateRangeFields" :key="field.label" class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">{{ field.label }}</label>
-                <div class="row g-2">
-                  <div class="col-6">
-                    <input class="form-control" :type="field.type" :name="field.minName" :value="queryValue(field.minKey)" :placeholder="field.minPlaceholder">
-                  </div>
-                  <div class="col-6">
-                    <input class="form-control" :type="field.type" :name="field.maxName" :value="queryValue(field.maxKey)" :placeholder="field.maxPlaceholder">
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">Apply</button>
-                <a class="btn btn-outline-secondary" href="/medias">Clear</a>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="section-card card">
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0 list-table medias-table">
+            <div class="next02-pink-list-table-wrap medias-list-table-wrap">
+              <table class="table table-hover align-middle mb-0 next02-pink-list-table medias-table">
+                <colgroup>
+                  <col class="medias-col-name">
+                  <col class="medias-col-cast">
+                  <col class="medias-col-size">
+                  <col class="medias-col-height">
+                  <col class="medias-col-duration">
+                  <col class="medias-col-bitrate">
+                  <col class="medias-col-frame">
+                  <col class="medias-col-play">
+                  <col class="medias-col-self-make">
+                  <col class="medias-col-mask">
+                  <col class="medias-col-sc">
+                  <col class="medias-col-last-sc">
+                  <col class="medias-col-birth">
+                  <col class="medias-col-release">
+                  <col class="medias-col-action">
+                </colgroup>
                 <thead>
                   <tr>
-                    <th><SortLink :link="sortLink('ByMovieName')" label="识别码" /></th>
+                    <th class="next02-pink-list-sortable"><SortLink :link="sortLink('ByMovieName')" label="识别码" /></th>
                     <th>演员</th>
-                    <th><SortLink :link="sortLink('BySize')" label="大小(GB)" /></th>
-                    <th><SortLink :link="sortLink('ByHeight')" label="高度" /></th>
-                    <th><SortLink :link="sortLink('ByDuration')" label="时长(分钟)" /></th>
-                    <th><SortLink :link="sortLink('ByBitRate')" label="码率" /></th>
-                    <th><SortLink :link="sortLink('ByFrameAverage')" label="平均帧率" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('BySize')" label="大小(GB)" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByHeight')" label="高度" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByDuration')" label="时长(分钟)" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByBitRate')" label="码率" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByFrameAverage')" label="平均帧率" /></th>
                     <th>播放</th>
-                    <th><SortLink :link="sortLink('BySelfMake')" label="自制" /></th>
-                    <th><SortLink :link="sortLink('ByHasMask')" label="遮罩" /></th>
-                    <th><SortLink :link="sortLink('ByScTimes')" label="SC" /></th>
-                    <th><SortLink :link="sortLink('ByLastSc')" label="最后SC" /></th>
-                    <th><SortLink :link="sortLink('ByBirthTime')" label="下载时间" /></th>
-                    <th><SortLink :link="sortLink('ByReleasingDate')" label="发行时间" /></th>
+                    <th class="next02-pink-list-sortable"><SortLink :link="sortLink('BySelfMake')" label="自制" /></th>
+                    <th class="next02-pink-list-sortable"><SortLink :link="sortLink('ByHasMask')" label="遮罩" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByScTimes')" label="SC" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByLastSc')" label="最后SC" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByBirthTime')" label="下载时间" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByReleasingDate')" label="发行时间" /></th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -110,34 +126,34 @@
                     <td colspan="15"><div class="sc-empty-state">暂无数据</div></td>
                   </tr>
                   <tr v-for="item in items" v-else :key="itemKey(item)" :data-film-id="value(item, 'Id')">
-                    <td><a :href="value(item, 'MovieHref')">{{ value(item, "MovieName") }}</a></td>
-                    <td class="wide">
+                    <td class="medias-content-cell"><a class="next02-pink-list-link" :href="value(item, 'MovieHref')" :title="value(item, 'MovieName')" target="_blank" rel="noopener noreferrer">{{ value(item, "MovieName") }}</a></td>
+                    <td class="medias-content-cell" :title="value(item, 'CastName') || undefined">
                       <template v-if="casts(item).length">
                         <template v-for="(cast, index) in casts(item)" :key="`${value(item, 'Id')}-${cast.Name || index}`">
-                          <span v-if="index"> / </span><a :href="text(cast, 'Href')">{{ text(cast, "Name") }}</a>
+                          <span v-if="index"> / </span><a class="next02-pink-list-link" :href="text(cast, 'Href')" :title="text(cast, 'Name')" target="_blank" rel="noopener noreferrer">{{ text(cast, "Name") }}</a>
                         </template>
                       </template>
                       <template v-else>{{ value(item, "CastName") || "-" }}</template>
                     </td>
-                    <td>{{ value(item, "SizeGB") }}</td>
-                    <td><span data-role="film-height">{{ probedValue(item, "height", "Height") }}</span></td>
-                    <td><span data-role="film-duration">{{ probedValue(item, "duration_minutes", "DurationMinutes") }}</span></td>
-                    <td><span data-role="film-bitrate">{{ probedValue(item, "bit_rate", "BitRate") }}</span></td>
-                    <td><span data-role="film-frame">{{ probedFrame(item) }}</span></td>
+                    <td class="medias-number">{{ value(item, "SizeGB") }}</td>
+                    <td class="medias-number"><span data-role="film-height">{{ probedValue(item, "height", "Height") }}</span></td>
+                    <td class="medias-number"><span data-role="film-duration">{{ probedValue(item, "duration_minutes", "DurationMinutes") }}</span></td>
+                    <td class="medias-number"><span data-role="film-bitrate">{{ probedValue(item, "bit_rate", "BitRate") }}</span></td>
+                    <td class="medias-number"><span data-role="film-frame">{{ probedFrame(item) }}</span></td>
                     <td>
-                      <a v-if="showPlay(item)" class="btn btn-sm" :class="value(item, 'PlayButtonClass') || 'btn-outline-primary'" :href="value(item, 'VideoURL')">
+                      <a v-if="showPlay(item)" class="btn btn-sm medias-row-action" :class="value(item, 'PlayButtonClass') || 'btn-outline-primary'" :href="value(item, 'VideoURL')" target="_blank" rel="noopener noreferrer">
                         {{ value(item, "PlayButtonText") || "MPlay" }}
                       </a>
                       <span v-else class="text-muted">-</span>
                     </td>
                     <td>{{ value(item, "SelfMakeText") }}</td>
                     <td>{{ value(item, "HasMaskText") }}</td>
-                    <td>{{ value(item, "ScTimes") }}</td>
-                    <td>{{ formatUnixDate(value(item, "LastScTime")) }}</td>
-                    <td>{{ formatUnixDate(value(item, "BirthTime")) }}</td>
-                    <td>{{ formatUnixDate(value(item, "ReleasingDate")) }}</td>
+                    <td class="medias-number">{{ value(item, "ScTimes") }}</td>
+                    <td class="medias-number">{{ formatUnixDate(value(item, "LastScTime")) }}</td>
+                    <td class="medias-number">{{ formatUnixDate(value(item, "BirthTime")) }}</td>
+                    <td class="medias-number">{{ formatUnixDate(value(item, "ReleasingDate")) }}</td>
                     <td>
-                      <button type="button" class="btn btn-sm btn-outline-primary js-film-probe" :data-film-id="value(item, 'Id')" :disabled="probeLoading[value(item, 'Id')]" @click="handleProbe(item)">
+                      <button type="button" class="btn btn-sm btn-outline-primary js-film-probe medias-row-action" :data-film-id="value(item, 'Id')" :disabled="probeLoading[value(item, 'Id')]" @click="handleProbe(item)">
                         {{ probeLoading[value(item, "Id")] ? "scanning..." : "scan_meta" }}
                       </button>
                     </td>
@@ -297,7 +313,7 @@ const SortLink = defineComponent({
       const active = Boolean(link.Active);
       const desc = Boolean(link.Desc);
       return h("a", {
-        class: ["sort-link", active ? "active" : ""],
+        class: ["next02-pink-list-sort-link", "sort-link", active ? "active" : ""],
         href: normalizeHref(text(link, "Href") || "#")
       }, `${props.label}${active ? (desc ? " ↓" : " ↑") : ""}`);
     };

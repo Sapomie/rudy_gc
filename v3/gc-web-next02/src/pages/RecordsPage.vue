@@ -3,15 +3,16 @@
     <div id="page-root" class="container-fluid records-page-root">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
-      <div v-else id="crawlRecordListPage" class="crawl-record-list-page">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <h4 class="mb-1">{{ pageTitle }}</h4>
-            <p v-if="pageNote" class="text-muted mb-0">{{ pageNote }}</p>
+      <div v-else id="crawlRecordListPage" class="crawl-record-list-page next02-records-rewrite">
+        <div class="next02-records-hero">
+          <div class="next02-records-hero-main">
+            <div class="next02-records-kicker">Crawl Trace</div>
+            <h4 class="mb-1">{{ pageTitle || "CrawlRecords" }}</h4>
+            <p class="text-muted mb-0">{{ pageNote || "抓取记录、耗时和类型筛选追踪。" }}</p>
           </div>
         </div>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
+        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3 next02-records-toolbar">
           <div class="crawl-record-summary">
             <span class="crawl-record-summary-label">总行数</span>
             <span class="crawl-record-summary-value">{{ total }}</span>

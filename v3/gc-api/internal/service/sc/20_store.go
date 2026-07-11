@@ -51,7 +51,7 @@ func (s *Service) scFindOneByName(ctx context.Context, name string) (*types.GSc,
 	return mapScModelToTypes(row), nil
 }
 
-func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField, sortOrder string) ([]*types.GSc, int64, error) {
+func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField, sortOrder string, startTime, endTime int64) ([]*types.GSc, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -59,7 +59,7 @@ func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField,
 		pageSize = 20
 	}
 
-	total, err := s.deps.ScModel.CountAll(ctx)
+	total, err := s.deps.ScModel.CountByScTimeRange(ctx, startTime, endTime)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -68,7 +68,7 @@ func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField,
 	}
 
 	offset := int64((page - 1) * pageSize)
-	rows, err := s.deps.ScModel.ListPage(ctx, offset, int64(pageSize), buildScOrderBy(sortField, sortOrder))
+	rows, err := s.deps.ScModel.ListPageByScTimeRange(ctx, offset, int64(pageSize), buildScOrderBy(sortField, sortOrder), startTime, endTime)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -22,7 +22,9 @@ type (
 		ListTopNByScTime(ctx context.Context, n uint64) ([]*GSc, error)
 		FindNearest(ctx context.Context, t int64) (*GSc, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string) ([]*GSc, error)
+		ListPageByScTimeRange(ctx context.Context, offset, limit int64, orderBy string, startTime, endTime int64) ([]*GSc, error)
 		CountAll(ctx context.Context) (int64, error)
+		CountByScTimeRange(ctx context.Context, startTime, endTime int64) (int64, error)
 	}
 
 	customGScModel struct {
@@ -148,13 +150,25 @@ func (m *customGScModel) FindNearest(ctx context.Context, t int64) (*GSc, error)
 }
 
 func (m *customGScModel) ListPage(ctx context.Context, offset, limit int64, orderBy string) ([]*GSc, error) {
+	return m.ListPageByScTimeRange(ctx, offset, limit, orderBy, 0, 0)
+}
+
+func (m *customGScModel) ListPageByScTimeRange(ctx context.Context, offset, limit int64, orderBy string, startTime, endTime int64) ([]*GSc, error) {
 	if orderBy == "" {
 		orderBy = "sc_time DESC"
 	}
 
-	sqlStr, args, err := squirrel.
+	query := squirrel.
 		Select(gScRows).
-		From(m.table).
+		From(m.table)
+	if startTime > 0 {
+		query = query.Where(squirrel.GtOrEq{"sc_time": startTime})
+	}
+	if endTime > 0 {
+		query = query.Where(squirrel.Lt{"sc_time": endTime})
+	}
+
+	sqlStr, args, err := query.
 		OrderBy(orderBy).
 		Offset(uint64(offset)).
 		Limit(uint64(limit)).
@@ -174,9 +188,21 @@ func (m *customGScModel) ListPage(ctx context.Context, offset, limit int64, orde
 }
 
 func (m *customGScModel) CountAll(ctx context.Context) (int64, error) {
-	sqlStr, args, err := squirrel.
+	return m.CountByScTimeRange(ctx, 0, 0)
+}
+
+func (m *customGScModel) CountByScTimeRange(ctx context.Context, startTime, endTime int64) (int64, error) {
+	query := squirrel.
 		Select("COUNT(*)").
-		From(m.table).
+		From(m.table)
+	if startTime > 0 {
+		query = query.Where(squirrel.GtOrEq{"sc_time": startTime})
+	}
+	if endTime > 0 {
+		query = query.Where(squirrel.Lt{"sc_time": endTime})
+	}
+
+	sqlStr, args, err := query.
 		ToSql()
 	if err != nil {
 		return 0, err

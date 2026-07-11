@@ -1,6 +1,6 @@
 <template>
-  <article class="card shadow-sm h-100 card-lift movie-card-v2">
-    <a class="d-block poster-link" :href="detailHref" :aria-label="`查看 ${name} 详情`">
+  <article class="card shadow-sm h-100 card-lift movie-card-v2 next02-pink-movie-card">
+    <a class="d-block poster-link" :href="detailHref" :aria-label="`查看 ${name} 详情`" target="_blank" rel="noopener noreferrer">
       <div class="thumb-2x3">
         <img v-if="poster" :src="poster" :alt="`${name} 海报`" loading="lazy" decoding="async">
         <div v-else class="thumb-empty">No Image</div>
@@ -10,20 +10,20 @@
         </div>
         <div class="badge-bottom-right">
           <span v-if="highestRank" class="badge-rank">#{{ highestRank }}</span>
-          <span v-if="score" class="badge-score">★ {{ score }}</span>
+          <span v-if="score" class="badge-score movie-card-tag-score">★ {{ score }}</span>
         </div>
       </div>
     </a>
     <ul class="list-group list-group-flush">
-      <li class="list-group-item">
+      <li class="list-group-item movie-card-title-block">
         <h6 class="mb-1 text-truncate" :title="title">
-          <a :href="prefixHref" class="stretched-link text-reset text-decoration-none movie-name">{{ name || "-" }}</a>
+          <a :href="prefixHref" class="stretched-link text-reset text-decoration-none movie-name" target="_blank" rel="noopener noreferrer">{{ name || "-" }}</a>
           {{ " " }}
           <small v-if="watched" class="text-muted ml-2 watch-count">({{ watched }})</small>
         </h6>
         <p v-if="title" class="mb-0 text-muted line-clamp-2 movie-subtitle" :title="title">{{ title }}</p>
       </li>
-      <li v-if="periodRankVisible" class="list-group-item period-rank-block">
+      <li v-if="periodRankVisible" class="list-group-item period-rank-block movie-card-period-block">
         <div class="period-rank-badges">
           <span class="badge bg-dark">周期 #{{ rankPos }}</span>
           <span class="badge" :class="rankChangeClass">{{ rankChangeText }}</span>
@@ -35,38 +35,38 @@
           上榜 {{ daysInRank }} 天 · 取样 {{ usedPickDays }} 天 · 分数 {{ itemScore }}
         </div>
       </li>
-      <li v-if="mediaRowVisible && periodMode" class="list-group-item d-flex align-items-center period-play-row">
-        <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm me-2" :class="mediaButtonClass">{{ mediaLabel }}</a>
+      <li v-if="mediaRowVisible && periodMode" class="list-group-item d-flex align-items-center period-play-row movie-card-media-block">
+        <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm me-2" :class="mediaButtonClass" target="_blank" rel="noopener noreferrer">{{ mediaLabel }}</a>
         <span v-else-if="mediaLabel" class="btn btn-sm btn-secondary me-2 disabled" aria-disabled="true">{{ mediaLabel }}</span>
-        <span v-if="mediaBirth" class="text-muted small ms-2">| M {{ mediaBirth }}</span>
+        <span v-if="mediaBirth" class="text-muted small ms-2 movie-card-download-date">下载 {{ mediaBirth }}</span>
       </li>
-      <li v-else-if="mediaRowVisible" class="list-group-item py-2">
+      <li v-else-if="mediaRowVisible" class="list-group-item py-2 movie-card-media-block">
         <div class="card-play-stack">
           <div class="card-play-row">
-            <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm" :class="mediaButtonClass">{{ mediaLabel }}</a>
+            <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm" :class="mediaButtonClass" target="_blank" rel="noopener noreferrer">{{ mediaLabel }}</a>
             <span v-else class="btn btn-sm btn-secondary disabled" aria-disabled="true">{{ mediaLabel }}</span>
-            <span v-if="mediaBirth" class="text-muted small card-play-date">{{ mediaBirth }}</span>
+            <span v-if="mediaBirth" class="text-muted small card-play-date movie-card-download-date">下载 {{ mediaBirth }}</span>
           </div>
         </div>
       </li>
-      <li class="list-group-item text-muted genre-list">
-        <a v-for="genre in genres" :key="genre" class="badge badge-genre me-1 mb-1" :href="`/cards?gn=${encodeURIComponent(genre)}`">
+      <li class="list-group-item text-muted genre-list movie-card-tag-block">
+        <a v-for="genre in genres" :key="genre" class="badge badge-genre movie-card-tag-genre me-1 mb-1" :href="`/cards?gn=${encodeURIComponent(genre)}`" target="_blank" rel="noopener noreferrer">
           {{ genre }}
         </a>
       </li>
-      <li class="list-group-item cast-list">
-        <a v-for="cast in casts" :key="cast.key" class="person-tag mr-2" :href="cast.href" :title="cast.label">
+      <li class="list-group-item cast-list movie-card-tag-block">
+        <a v-for="cast in casts" :key="cast.key" class="person-tag movie-card-tag-person movie-card-tag-cast mr-2" :href="cast.href" :title="cast.label" target="_blank" rel="noopener noreferrer">
           {{ cast.label }}
         </a>
-        <a v-if="director" class="person-tag ml-2" :href="`/cards?dn=${encodeURIComponent(director)}`" :title="director">
+        <a v-if="director" class="person-tag movie-card-tag-person movie-card-tag-director ml-2" :href="`/cards?dn=${encodeURIComponent(director)}`" :title="director" target="_blank" rel="noopener noreferrer">
           {{ director }}
         </a>
       </li>
-      <li class="list-group-item d-flex align-items-center small card-link-row">
-        <a v-if="busUrl" :href="busUrl" class="me-2" target="_blank" rel="noopener">Bus</a>
-        <a v-if="searchUrl" :href="searchUrl" class="me-2" target="_blank" rel="noopener">Suk</a>
-        <a v-if="javUrl" :href="javUrl" class="me-2" target="_blank" rel="noopener">Lib</a>
-        <span class="ms-auto text-muted">{{ releaseDate }}</span>
+      <li class="list-group-item d-flex align-items-center small card-link-row movie-card-footer">
+        <a v-if="busUrl" :href="busUrl" class="movie-card-tag-link me-2" target="_blank" rel="noopener noreferrer">Bus</a>
+        <a v-if="searchUrl" :href="searchUrl" class="movie-card-tag-link me-2" target="_blank" rel="noopener noreferrer">Suk</a>
+        <a v-if="javUrl" :href="javUrl" class="movie-card-tag-link me-2" target="_blank" rel="noopener noreferrer">Lib</a>
+        <span v-if="releaseDate" class="movie-card-tag-date ms-auto text-muted">上映 {{ releaseDate }}</span>
       </li>
     </ul>
   </article>
@@ -109,10 +109,10 @@ const ownedMedia = computed(() => num(movie.value, "owned_w_media", "OwnedWMedia
 const periodMode = computed(() => props.mode === "rank-period" || Boolean(card.value.Item || card.value.item));
 const mediaLabel = computed(() => {
   if (ownedMedia.value === 4 || ownedMedia.value === 5) {
-    return "MPlay";
+    return "Play";
   }
   if (ownedMedia.value === 6) {
-    return "MRemoved";
+    return "Removed";
   }
   return "";
 });

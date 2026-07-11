@@ -1,6 +1,6 @@
 <template>
   <PageShell class="movie-agg-page-shell sc-events-page-shell media-ingest-page-shell sc-media-move-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root media-ingest-page-root sc-media-move-page-root">
+    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root media-ingest-page-root sc-media-move-page-root next02-sc-media-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
@@ -9,24 +9,34 @@
         </div>
 
         <div id="scMediaMovePage">
-          <div class="row mb-3">
-            <div class="col-12 d-flex align-items-center justify-content-between">
-              <div>
-                <h4 class="mb-1">{{ pageTitle }}</h4>
-                <p class="text-muted mb-0">{{ pageNote }}</p>
-              </div>
-              <div class="d-flex gap-2">
-                <a :href="navHref" class="btn btn-outline-primary btn-sm">{{ navLabel }}</a>
-                <a href="/triggers/media" class="btn btn-outline-secondary btn-sm">媒体入库</a>
+          <section class="next02-sc-hero next02-sc-media-hero">
+            <div class="next02-sc-hero-copy">
+              <span class="next02-sc-eyebrow">SC / MEDIA PIPELINE</span>
+              <h4>{{ pageTitle }}</h4>
+              <p>{{ pageNote }}</p>
+              <div class="next02-sc-hero-metrics" aria-label="SC Media 执行摘要">
+                <span><strong>{{ num(state, "total") }}</strong> Total</span>
+                <span><strong>{{ num(state, "movable") }}</strong> Movable</span>
+                <span><strong>{{ num(state, "failed") }}</strong> Failed</span>
               </div>
             </div>
-          </div>
+            <div class="next02-sc-hero-actions">
+              <a :href="navHref" class="btn btn-outline-primary btn-sm">{{ navLabel }}</a>
+              <a href="/triggers/media" class="btn btn-outline-secondary btn-sm">媒体入库</a>
+            </div>
+          </section>
 
           <div class="row">
             <div class="col-lg-4">
-              <div class="card">
+              <div class="card next02-sc-panel next02-sc-scope-panel">
                 <div class="card-body">
-                  <label class="form-label d-block mb-2">执行范围</label>
+                  <div class="next02-sc-panel-head">
+                    <div>
+                      <span class="next02-sc-panel-kicker">SCOPE</span>
+                      <h5 class="card-title mb-0">执行范围</h5>
+                    </div>
+                    <span class="next02-sc-status-dot">{{ mode === 'all' ? '全部 SC' : '单个 SC' }}</span>
+                  </div>
                   <div class="d-flex flex-wrap gap-3 mb-3">
                     <div class="form-check">
                       <input v-model="mode" class="form-check-input" type="radio" name="scopeMode" id="scopeModeSingle" value="single" :disabled="actionLoading">
@@ -49,9 +59,11 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-sc-panel next02-sc-action-panel">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">操作</h5>
+                  <div class="next02-sc-panel-head">
+                    <div><span class="next02-sc-panel-kicker">PIPELINE</span><h5 class="card-title mb-0">两段式操作</h5></div>
+                  </div>
                   <div class="d-grid gap-2">
                     <button type="button" id="btnPrecheck" class="btn btn-primary" :disabled="actionLoading" @click="runPrecheck">第一段：预处理</button>
                     <button type="button" id="btnCommit" class="btn btn-success" :disabled="actionLoading || !canCommit" :data-can-commit="canCommit ? '1' : '0'" @click="runCommit">第二段：执行移动</button>
@@ -64,9 +76,12 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-sc-panel next02-sc-overview-panel">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">运行概览</h5>
+                  <div class="next02-sc-panel-head">
+                    <div><span class="next02-sc-panel-kicker">STATUS</span><h5 class="card-title mb-0">运行概览</h5></div>
+                    <span class="next02-sc-status-dot" :class="{ 'is-busy': actionLoading, 'is-ready': canCommit }">{{ actionLoading ? '处理中' : (canCommit ? '可提交' : '等待操作') }}</span>
+                  </div>
                   <div class="row g-2">
                     <div class="col-3"><div class="overview-item"><div class="label">总数</div><div class="value" id="sumTotal">{{ num(state, "total") }}</div></div></div>
                     <div class="col-3"><div class="overview-item"><div class="label">可移动</div><div class="value text-success" id="sumPass">{{ num(state, "movable") }}</div></div></div>
@@ -81,9 +96,9 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-sc-panel next02-sc-roots-panel">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">Root 目录</h5>
+                  <div class="next02-sc-panel-head"><div><span class="next02-sc-panel-kicker">STORAGE</span><h5 class="card-title mb-0">Root 目录</h5></div></div>
                   <ul class="mb-0 root-list">
                     <li v-for="dir in rootDirs" :key="dir"><code>{{ dir }}</code></li>
                     <li v-if="!rootDirs.length" class="text-muted">未配置 media.rootDirs</li>
@@ -176,7 +191,7 @@ function table(id: string, title: string, labels: string[], keys: string[], rowK
 function emptySingleState() {
   state.value = {
     mode: "single",
-    message: "请先输入 SC 名称",
+    message: "等待操作",
     has_plan: false,
     can_commit: false,
     precheck_pass: [],
@@ -242,9 +257,12 @@ const ResultTable = defineComponent({
   name: "ScMediaMoveResultTable",
   props: { table: { type: Object as PropType<ResultTableDef>, required: true } },
   setup(props) {
-    return () => h("div", { class: "card" }, [
+    return () => h("div", { class: "card next02-sc-panel next02-sc-result-panel" }, [
       h("div", { class: "card-body" }, [
-        h("h5", { class: "card-title" }, props.table.title),
+        h("div", { class: "next02-sc-panel-head" }, [
+          h("div", [h("span", { class: "next02-sc-panel-kicker" }, "RESULT"), h("h5", { class: "card-title mb-0" }, props.table.title)]),
+          h("span", { class: "next02-sc-result-count" }, `${props.table.rows.length} 项`)
+        ]),
         h("div", { class: "table-responsive" }, [
           h("table", { class: "table table-sm table-hover", id: props.table.id }, [
             h("thead", [h("tr", props.table.columns.map((column) => h("th", column.label)))]),

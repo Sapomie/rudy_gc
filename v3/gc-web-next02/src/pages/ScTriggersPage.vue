@@ -1,6 +1,6 @@
 <template>
   <PageShell class="movie-agg-page-shell sc-events-page-shell sc-triggers-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root sc-triggers-page-root">
+    <div id="page-root" class="container-fluid movie-agg-page-root sc-events-page-root sc-triggers-page-root next02-sc-trigger-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
@@ -8,31 +8,49 @@
           {{ message }}
         </div>
 
-        <div class="d-flex align-items-center justify-content-between mb-3 sc-page-head">
-          <div>
-            <h4 class="mb-1">SC Triggers</h4>
-            <p class="text-muted mb-0">在这里执行 SC 事件导入预览、填写和确认提交。</p>
+        <section class="next02-sc-hero next02-sc-trigger-hero">
+          <div class="next02-sc-hero-copy">
+            <span class="next02-sc-eyebrow">SC / IMPORT CONSOLE</span>
+            <h4>SC Preview &amp; Submit</h4>
+            <p>扫描 SC 根目录，核对事件和影片状态，再提交后台任务。</p>
+            <div class="next02-sc-hero-metrics" aria-label="SC 导入摘要">
+              <span><strong>{{ previewMovieCount }}</strong> Movies</span>
+              <span><strong>{{ selectedScMovies.length }}</strong> Selected</span>
+              <span><strong>{{ previewVisible ? 'Ready' : 'Idle' }}</strong> State</span>
+            </div>
           </div>
-          <div class="d-flex gap-2">
+          <div class="next02-sc-hero-actions">
             <a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a>
             <a href="/crawler/tasks" class="btn btn-outline-primary">查看任务列表</a>
           </div>
-        </div>
+        </section>
 
-        <div class="card">
+        <div class="card next02-sc-panel next02-sc-scan-panel">
           <div class="card-body">
-            <h4 class="card-title">添加 SC 事件</h4>
+            <div class="next02-sc-panel-head">
+              <div>
+                <span class="next02-sc-panel-kicker">STEP 01 / DISCOVER</span>
+                <h4 class="card-title">扫描 SC 事件</h4>
+              </div>
+              <span class="next02-sc-status-dot" :class="{ 'is-busy': previewLoading }">{{ previewLoading ? '扫描中' : '等待扫描' }}</span>
+            </div>
             <p class="card-title-desc">扫描配置中的 SC 根目录，并要求其中仅有一个合法事件目录（例如：2026-03-17-20-00）。</p>
             <p class="text-muted small mb-3">SC Root: <code>{{ scRootDir }}</code></p>
             <button id="btnScAddPreview" type="button" class="btn btn-outline-success" :disabled="previewLoading" @click="loadPreview">
-              Add Preview
+              {{ previewLoading ? "正在扫描..." : "Add Preview" }}
             </button>
           </div>
         </div>
 
-        <div class="card mt-3" id="scPreviewPanel" :class="{ 'd-none': !previewVisible }">
+        <div class="card mt-3 next02-sc-panel next02-sc-preview-panel" id="scPreviewPanel" :class="{ 'd-none': !previewVisible }">
           <div class="card-body">
-            <h4 class="card-title mb-3">添加 SC 事件</h4>
+            <div class="next02-sc-panel-head">
+              <div>
+                <span class="next02-sc-panel-kicker">STEP 02 / REVIEW</span>
+                <h4 class="card-title mb-0">核对并提交 SC 事件</h4>
+              </div>
+              <span class="next02-sc-status-dot is-ready">{{ previewName || 'Preview' }}</span>
+            </div>
             <form id="formScAddConfirm" @submit.prevent="submitAdd">
               <div id="scAddPreviewMsg" class="small mb-3" :class="previewMsg ? (previewOk ? 'alert alert-success py-2 px-3' : 'alert alert-danger py-2 px-3') : ''">
                 {{ previewMsg }}
@@ -141,7 +159,7 @@
                 </div>
               </div>
 
-              <div class="d-flex justify-content-end">
+              <div class="d-flex justify-content-end next02-sc-submit-row">
                 <button type="submit" class="btn btn-success">确认提交</button>
               </div>
             </form>

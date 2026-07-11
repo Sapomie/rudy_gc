@@ -1,26 +1,14 @@
 <template>
-  <PageShell class="cards-agg-page-shell" :title="title" :note="note" eyebrow="MovieCard Agg">
+  <PageShell class="cards-agg-page-shell next02-pink-cards-page next02-pink-cards-page-shell" :title="title" :note="note" eyebrow="MovieCard Agg">
+    <template #actions>
+      <a :href="cardsHref" class="next02-pink-cards-hero-link" target="_blank" rel="noopener noreferrer">Cards</a>
+    </template>
     <LoadingState v-if="loading" />
     <ErrorPanel v-else-if="error" :message="error" />
     <template v-else>
-      <div class="sticky-toolbar cards-agg-toolbar">
-        <div class="cards-agg-toolbar-head">
-          <h3>MovieCard Agg</h3>
-          <div class="cards-agg-toolbar-actions">
-            <a :href="cardsHref" class="btn btn-sm btn-outline-primary">Cards</a>
-            <button
-              class="btn btn-sm btn-outline-secondary"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#movieCardFilterCollapse"
-              @click="filterOpen = !filterOpen"
-            >
-              筛选
-            </button>
-          </div>
-        </div>
-        <div class="owned-line cards-agg-owned">
-          <span class="btn btn-sm btn-outline-dark disabled">WMedia</span>
+      <div class="sticky-toolbar cards-agg-toolbar next02-pink-cards-toolbar">
+        <div class="owned-line cards-agg-owned next02-pink-cards-agg-controls">
+          <span class="soft-badge cards-source-badge disabled">WMedia</span>
           <a
             v-for="item in ownedItems"
             :key="item.key"
@@ -30,7 +18,20 @@
           >
             {{ item.label }}
           </a>
-          <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: {{ totalLabel }}</span>
+          <button
+            class="button-secondary cards-filter-button"
+            :class="{ active: filterOpen }"
+            type="button"
+            :aria-pressed="filterOpen"
+            data-bs-toggle="collapse"
+            data-bs-target="#movieCardFilterCollapse"
+            @click="filterOpen = !filterOpen"
+          >
+            筛选
+          </button>
+        </div>
+        <div class="next02-pink-cards-metrics" aria-label="聚合页面摘要">
+          <span><strong>{{ totalLabel }}</strong> Total</span>
         </div>
       </div>
 
@@ -209,10 +210,10 @@ const AggItemTable = defineComponent({
     items: { type: Array as PropType<AnyRecord[]>, default: () => [] }
   },
   setup(props) {
-    return () => h("section", { class: "section-card" }, [
+    return () => h("section", { class: "section-card next02-pink-cards-agg-panel" }, [
       h("h4", { class: "section-title" }, props.title),
       h("div", { class: "table-responsive" }, [
-        h("table", { class: "table table-sm table-hover align-middle mb-0" }, [
+        h("table", { class: "table table-sm table-hover align-middle mb-0 next02-pink-cards-agg-table agg-item-table" }, [
           h("thead", [
             h("tr", [
               h("th", "名称"),
@@ -222,7 +223,7 @@ const AggItemTable = defineComponent({
           ]),
           h("tbody", props.items.length ? props.items.map((row) => h("tr", [
             h("td", { class: "text-nowrap" }, itemHref(row)
-              ? h("a", { href: itemHref(row) }, itemLabel(row))
+              ? h("a", { href: itemHref(row), target: "_blank", rel: "noopener noreferrer" }, itemLabel(row))
               : itemLabel(row)),
             h("td", { class: "text-end" }, itemCount(row)),
             h("td", { class: "text-end" }, itemPercent(row))
@@ -241,10 +242,10 @@ const AggCastTable = defineComponent({
     items: { type: Array as PropType<AnyRecord[]>, default: () => [] }
   },
   setup(props) {
-    return () => h("section", { class: "section-card" }, [
+    return () => h("section", { class: "section-card next02-pink-cards-agg-panel" }, [
       h("h4", { class: "section-title" }, props.title),
       h("div", { class: "table-responsive" }, [
-        h("table", { class: "table table-sm table-hover align-middle mb-0" }, [
+        h("table", { class: "table table-sm table-hover align-middle mb-0 next02-pink-cards-agg-table agg-cast-table" }, [
           h("thead", [
             h("tr", [
               h("th", "名称"),
@@ -259,7 +260,7 @@ const AggCastTable = defineComponent({
           ]),
           h("tbody", props.items.length ? props.items.map((row) => h("tr", [
             h("td", { class: "text-nowrap" }, itemHref(row)
-              ? h("a", { href: itemHref(row) }, itemLabel(row))
+              ? h("a", { href: itemHref(row), target: "_blank", rel: "noopener noreferrer" }, itemLabel(row))
               : itemLabel(row)),
             h("td", { class: "text-end" }, itemCount(row)),
             h("td", { class: "text-end" }, itemPercent(row)),
@@ -283,10 +284,10 @@ const AggTopMovieTable = defineComponent({
     items: { type: Array as PropType<AnyRecord[]>, default: () => [] }
   },
   setup(props) {
-    return () => h("section", { class: "section-card" }, [
+    return () => h("section", { class: "section-card next02-pink-cards-agg-panel" }, [
       h("h4", { class: "section-title" }, props.title),
       h("div", { class: "table-responsive" }, [
-        h("table", { class: "table table-sm table-hover align-middle mb-0" }, [
+        h("table", { class: "table table-sm table-hover align-middle mb-0 next02-pink-cards-agg-table agg-top-movie-table" }, [
           h("thead", [
             h("tr", [
               h("th", "番号"),
@@ -296,7 +297,7 @@ const AggTopMovieTable = defineComponent({
             ])
           ]),
           h("tbody", props.items.length ? props.items.map((row) => h("tr", [
-            h("td", { class: "text-nowrap" }, h("a", { href: topMovieHref(row) }, text(row, "Name", "JavID"))),
+            h("td", { class: "text-nowrap" }, h("a", { href: topMovieHref(row), target: "_blank", rel: "noopener noreferrer" }, text(row, "Name", "JavID"))),
             h("td", text(row, "Title")),
             h("td", { class: "text-end text-nowrap" }, text(row, "ValueLabel", "Value")),
             h("td", { class: "text-nowrap" }, text(row, "Date"))

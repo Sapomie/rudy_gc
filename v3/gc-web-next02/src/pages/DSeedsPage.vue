@@ -1,67 +1,58 @@
 <template>
   <PageShell class="torrent-albums-page-shell d-seeds-page-shell" title="DSeeds" note="" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page-root d-seeds-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <div id="page-root" class="container-fluid torrent-albums-page-root d-seeds-page-root d-seeds-list-standard">
+      <div v-if="loading" class="alert d-seeds-feedback is-loading">加载中...</div>
+      <div v-else-if="error" class="alert d-seeds-feedback is-error">{{ error }}</div>
       <div v-else id="dSeedListPage" class="torrent-albums-page d-seeds-page">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <h4 class="mb-1">{{ pageTitle }}</h4>
-            <p v-if="pageNote" class="text-muted mb-0">{{ pageNote }}</p>
+        <header class="d-seeds-list-hero">
+          <div class="d-seeds-list-hero-copy">
+            <span class="d-seeds-list-eyebrow">DSeed</span>
+            <h2>{{ pageTitle }}</h2>
+            <p v-if="pageNote">{{ pageNote }}</p>
           </div>
-          <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenDSeedCreateModal" @click="openCreateModal">新增条目</button>
-        </div>
+          <button type="button" class="btn d-seeds-create-button" id="btnOpenDSeedCreateModal" @click="openCreateModal">新增条目</button>
+        </header>
 
-        <div id="dSeedMsg" class="alert mb-3" :class="messageClass" role="alert">
+        <div id="dSeedMsg" class="alert d-seeds-message" :class="messageClass" role="alert">
           {{ messageText }}
         </div>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div class="d-seed-page-summary">
-            <span class="d-seed-page-summary-label">总数</span>
-            <span class="d-seed-page-summary-value">{{ total }}</span>
-          </div>
-          <div v-if="hasRows && pageLinks.length" class="ms-xl-auto">
-            <DSeedPagination :links="pageLinks" />
-          </div>
-        </div>
-
-        <div class="section-card card mb-3">
-          <div class="card-body">
-            <form class="row g-2 align-items-end" id="dSeedFilterForm" method="get" action="/d-seeds">
+        <section class="d-seeds-list-panel">
+          <div class="d-seeds-list-controls">
+            <form class="d-seeds-filter-row" id="dSeedFilterForm" method="get" action="/d-seeds">
               <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
               <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">查询名</label>
+              <label class="d-seeds-filter-field is-name">
+                <span>查询名</span>
                 <input class="form-control" type="text" name="name" :value="queryValue('Name')" placeholder="支持模糊搜索">
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">启用状态</label>
+              </label>
+              <label class="d-seeds-filter-field is-select">
+                <span>启用状态</span>
                 <select class="form-select" name="active" :value="queryValue('Active')">
                   <option value="">全部</option>
                   <option value="2">启用</option>
                   <option value="1">停用</option>
                 </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">名称类型</label>
+              </label>
+              <label class="d-seeds-filter-field is-select">
+                <span>名称类型</span>
                 <select class="form-select" name="name_type" :value="queryValue('NameType')">
                   <option value="">全部</option>
                   <option value="1">Prefix</option>
                   <option value="2">Label</option>
                 </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">查询类型</label>
+              </label>
+              <label class="d-seeds-filter-field is-select">
+                <span>查询类型</span>
                 <select class="form-select" name="search_type" :value="queryValue('SearchType')">
                   <option value="">全部</option>
                   <option value="1">偏移量</option>
                   <option value="2">起止页</option>
                 </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">最后状态</label>
+              </label>
+              <label class="d-seeds-filter-field is-select">
+                <span>最后状态</span>
                 <select class="form-select" name="last_status" :value="queryValue('LastStatus')">
                   <option value="">全部</option>
                   <option value="0">空闲</option>
@@ -69,27 +60,47 @@
                   <option value="2">空页</option>
                   <option value="3">错误</option>
                 </select>
-              </div>
-              <div class="col-12 col-md-6 col-xl-1">
-                <label class="form-label mb-1">每页</label>
+              </label>
+              <label class="d-seeds-filter-field is-page-size">
+                <span>每页</span>
                 <select class="form-select" name="ps" :value="String(queryValue('PageSize') || 50)">
                   <option value="24">24</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
                 </select>
-              </div>
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">筛选</button>
-                <a class="btn btn-outline-secondary" href="/d-seeds">清空</a>
+              </label>
+              <div class="d-seeds-filter-actions">
+                <button class="btn d-seeds-apply-button" type="submit">筛选</button>
+                <a class="btn d-seeds-clear-button" href="/d-seeds">清空</a>
               </div>
             </form>
-          </div>
-        </div>
 
-        <div class="section-card card">
-          <div class="card-body">
-            <div class="table-responsive">
+            <div class="d-seeds-list-meta">
+              <div class="d-seed-page-summary">
+                <span class="d-seed-page-summary-value">{{ total }}</span>
+                <span class="d-seed-page-summary-label">Total DSeeds</span>
+              </div>
+              <DSeedPagination v-if="hasRows && pageLinks.length" :links="pageLinks" />
+            </div>
+          </div>
+
+          <div class="d-seeds-table-wrap">
               <table class="table table-hover align-middle mb-0 d-seed-table">
+                <colgroup>
+                  <col class="d-seed-col-name">
+                  <col class="d-seed-col-active">
+                  <col class="d-seed-col-name-type">
+                  <col class="d-seed-col-search-type">
+                  <col class="d-seed-col-movie-total">
+                  <col class="d-seed-col-latest-movie">
+                  <col class="d-seed-col-release-date">
+                  <col class="d-seed-col-last-added">
+                  <col class="d-seed-col-insert-count">
+                  <col class="d-seed-col-page-now">
+                  <col class="d-seed-col-breakpoint">
+                  <col class="d-seed-col-last-query">
+                  <col class="d-seed-col-actions">
+                </colgroup>
                 <thead>
                   <tr>
                     <th><SortLink :link="sortLink('ByName')" label="查询名" /></th>
@@ -112,16 +123,28 @@
                     <td colspan="13"><div class="d-seed-empty-state">当前筛选下没有 d_seed 数据。</div></td>
                   </tr>
                   <tr v-for="row in rows" v-else :key="rowKey(row)">
-                    <td class="text-nowrap">
-                      <a v-if="value(row, 'CardsHref')" class="fw-semibold" :href="value(row, 'CardsHref')">{{ value(row, "Name") }}</a>
+                    <td class="text-nowrap" :title="value(row, 'Name')">
+                      <a
+                        v-if="value(row, 'CardsHref')"
+                        class="d-seed-entry-link"
+                        :href="value(row, 'CardsHref')"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >{{ value(row, "Name") }}</a>
                       <span v-else>{{ value(row, "Name") }}</span>
                     </td>
                     <td><span class="badge" :class="value(row, 'ActiveClass')">{{ value(row, "ActiveText") }}</span></td>
                     <td class="text-nowrap">{{ value(row, "NameTypeText") }}</td>
                     <td class="text-nowrap">{{ value(row, "SearchTypeText") }}</td>
                     <td class="text-nowrap">{{ value(row, "MovieTotal") }}</td>
-                    <td class="text-nowrap">
-                      <a v-if="value(row, 'MovieLatestReleasingMovieHref')" :href="value(row, 'MovieLatestReleasingMovieHref')">{{ value(row, "MovieLatestReleasingMovieName") }}</a>
+                    <td class="text-nowrap" :title="value(row, 'MovieLatestReleasingMovieName')">
+                      <a
+                        v-if="value(row, 'MovieLatestReleasingMovieHref')"
+                        class="d-seed-entry-link"
+                        :href="value(row, 'MovieLatestReleasingMovieHref')"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >{{ value(row, "MovieLatestReleasingMovieName") }}</a>
                       <span v-else>-</span>
                     </td>
                     <td class="text-nowrap">{{ formatUnixDate(value(row, "MovieLatestReleasingDate")) }}</td>
@@ -151,13 +174,8 @@
                   </tr>
                 </tbody>
               </table>
-            </div>
           </div>
-        </div>
-
-        <div v-if="hasRows && pageLinks.length" class="d-flex justify-content-end mt-3">
-          <DSeedPagination :links="pageLinks" />
-        </div>
+        </section>
 
         <DSeedEditModal
           :active="activeModal"

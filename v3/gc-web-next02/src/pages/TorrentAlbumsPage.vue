@@ -1,138 +1,138 @@
 <template>
   <PageShell class="torrent-albums-page-shell" title="TorrentAlbums" note="" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <div id="page-root" class="container-fluid torrent-albums-page-root albums-list-standard torrent-albums-list-standard">
+      <div v-if="loading" class="alert albums-list-feedback is-loading">加载中...</div>
+      <div v-else-if="error" class="alert albums-list-feedback is-error">{{ error }}</div>
       <div v-else id="torrentAlbumsPage" class="torrent-albums-page" :data-album-id="selectedAlbumID">
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div>
-            <h4 class="mb-1">{{ pageTitle }}</h4>
-            <p v-if="pageNote" class="text-muted mb-0">{{ pageNote }}</p>
+        <header class="albums-list-hero">
+          <div class="albums-list-hero-copy">
+            <span class="albums-list-eyebrow">Torrent Albums</span>
+            <h2>{{ pageTitle }}</h2>
+            <p v-if="pageNote">{{ pageNote }}</p>
           </div>
-        </div>
+          <button type="button" class="btn albums-create-button" id="btnOpenCreateTorrentAlbumModal" @click="openModal('create')">新增相册</button>
+        </header>
 
-        <div id="torrentAlbumsMsg" class="alert mb-3" :class="messageClass" role="alert">
+        <div id="torrentAlbumsMsg" class="alert albums-list-message" :class="messageClass" role="alert">
           {{ messageText }}
         </div>
 
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3">
-          <div class="sc-page-summary">
-            <span class="sc-page-summary-label">相册</span>
-            <span class="sc-page-summary-value">{{ selectedAlbumName }}</span>
-            <span class="sc-page-summary-label ms-3">总数</span>
-            <span class="sc-page-summary-value">{{ total }}</span>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenCreateTorrentAlbumModal" @click="openModal('create')">新增相册</button>
-          </div>
-          <div v-if="hasRows && pageLinks.length" class="ms-xl-auto">
-            <TorrentAlbumPagination :links="pageLinks" />
-          </div>
-        </div>
-
-        <div class="section-card card mb-3">
-          <div class="card-body">
-            <form ref="filterForm" class="row g-3 align-items-end" id="torrentAlbumsFilterForm" method="get" action="/torrent-albums">
+        <section class="albums-list-panel">
+          <div class="albums-list-controls">
+            <form ref="filterForm" class="albums-filter-form torrent-albums-filter-form" id="torrentAlbumsFilterForm" method="get" action="/torrent-albums">
               <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
               <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
               <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
-              <div class="col-12">
-                <label class="form-label mb-1">快捷相册</label>
-                <div class="d-flex flex-wrap gap-2 album-quick-filter-group">
+              <div class="albums-filter-row is-primary">
+                <div class="albums-filter-field is-quick-filter">
+                  <span>快捷相册</span>
+                  <div class="album-quick-filter-group">
                   <button
                     type="button"
-                    class="btn btn-sm js-torrent-album-quick-filter"
-                    :class="selectedAlbumName === '下载中' ? 'btn-warning' : 'btn-outline-warning'"
+                    class="btn album-quick-button js-torrent-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === '下载中' }"
                     data-album-name="下载中"
                     @click="quickFilter('下载中')"
                   >下载中</button>
                   <button
                     type="button"
-                    class="btn btn-sm js-torrent-album-quick-filter"
-                    :class="selectedAlbumName === '待下载' ? 'btn-info' : 'btn-outline-info'"
+                    class="btn album-quick-button js-torrent-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === '待下载' }"
                     data-album-name="待下载"
                     @click="quickFilter('待下载')"
                   >待下载</button>
                   <button
                     type="button"
-                    class="btn btn-sm js-torrent-album-quick-filter"
-                    :class="selectedAlbumName === 'Media' ? 'btn-primary' : 'btn-outline-primary'"
+                    class="btn album-quick-button js-torrent-album-quick-filter"
+                    :class="{ 'is-active': selectedAlbumName === 'Media' }"
                     data-album-name="Media"
                     @click="quickFilter('Media')"
                   >Media</button>
+                  </div>
                 </div>
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">相册</label>
+                <label class="albums-filter-field is-album">
+                  <span>相册</span>
                 <select class="form-select" id="torrentAlbumsAlbumName" name="album_name" :value="selectedAlbumName">
                   <option v-for="option in albumSelectOptions" :key="option.value" :value="option.value">
                     {{ option.label }}
                   </option>
                 </select>
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">影片编号 / JavID</label>
+                </label>
+                <label class="albums-filter-field is-keyword">
+                  <span>影片编号</span>
                 <input class="form-control" type="text" name="keyword" :value="queryValue('Keyword')" placeholder="movie_name 或 movie_jav_id">
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label mb-1">来源</label>
+                </label>
+                <label class="albums-filter-field is-source">
+                  <span>来源</span>
                 <select class="form-select" name="source_type" :value="queryValue('SourceType')">
                   <option v-for="option in sourceOptions" :key="option.value" :value="option.value">
                     {{ option.label }}
                   </option>
                 </select>
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-4">
-                <label class="form-label mb-1">Info Hash</label>
+                </label>
+                <label class="albums-filter-field is-hash">
+                  <span>Info Hash</span>
                 <input class="form-control" type="text" name="info_hash" :value="queryValue('InfoHash')" placeholder="按 Info Hash 模糊筛选">
+                </label>
               </div>
 
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">发布日期开始</label>
+              <div class="albums-filter-row is-secondary">
+                <label class="albums-filter-field is-date">
+                  <span>发布开始</span>
                 <input class="form-control" type="date" name="publish_from" :value="queryValue('PublishFrom')">
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">发布日期结束</label>
+                </label>
+                <label class="albums-filter-field is-date">
+                  <span>发布结束</span>
                 <input class="form-control" type="date" name="publish_to" :value="queryValue('PublishTo')">
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">下载中时间开始</label>
+                </label>
+                <label class="albums-filter-field is-date">
+                  <span>下载开始</span>
                 <input class="form-control" type="date" name="created_from" :value="queryValue('CreatedFrom')">
-              </div>
-
-              <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label mb-1">下载中时间结束</label>
+                </label>
+                <label class="albums-filter-field is-date">
+                  <span>下载结束</span>
                 <input class="form-control" type="date" name="created_to" :value="queryValue('CreatedTo')">
-              </div>
-
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">筛选</button>
-                <a class="btn btn-outline-secondary" href="/torrent-albums">清空</a>
+                </label>
+                <div class="albums-filter-actions">
+                  <button class="btn albums-apply-button" type="submit">筛选</button>
+                  <a class="btn albums-clear-button" href="/torrent-albums">清空</a>
+                </div>
               </div>
             </form>
-          </div>
-        </div>
 
-        <div class="section-card card">
-          <div class="card-body">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <div class="small text-muted">已选 <span id="torrentAlbumBatchSelectedCount">{{ selectedCount }}</span> 项</div>
-              <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnBatchCopyTorrentAlbumHashes" :disabled="selectedCount === 0" @click="batchCopyHashes">批量复制 Hash</button>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="btnBatchMoveTorrentAlbumItems" :disabled="selectedCount === 0 || selectedAlbumID <= 0" @click="openBatchMove">批量移动</button>
-                <button type="button" class="btn btn-sm btn-outline-danger" id="btnBatchRemoveTorrentAlbumItems" :disabled="selectedCount === 0 || selectedAlbumID <= 0" @click="openBatchRemove">批量移除</button>
+            <div class="albums-list-meta">
+              <div class="albums-list-summary">
+                <span class="albums-list-summary-label">相册</span>
+                <span class="albums-list-summary-value is-album-name">{{ selectedAlbumName }}</span>
+                <span class="albums-list-summary-value">{{ total }}</span>
+                <span class="albums-list-summary-label">Total Items</span>
               </div>
+              <TorrentAlbumPagination v-if="hasRows && pageLinks.length" :links="pageLinks" />
             </div>
+          </div>
 
-            <div class="table-responsive">
+          <div class="albums-batch-toolbar">
+            <div class="albums-selected-count">已选 <span id="torrentAlbumBatchSelectedCount">{{ selectedCount }}</span> 项</div>
+            <div class="albums-batch-actions">
+              <button type="button" class="btn albums-batch-button" id="btnBatchCopyTorrentAlbumHashes" :disabled="selectedCount === 0" @click="batchCopyHashes">批量复制 Hash</button>
+              <button type="button" class="btn albums-batch-button" id="btnBatchMoveTorrentAlbumItems" :disabled="selectedCount === 0 || selectedAlbumID <= 0" @click="openBatchMove">批量移动</button>
+              <button type="button" class="btn albums-batch-button is-danger" id="btnBatchRemoveTorrentAlbumItems" :disabled="selectedCount === 0 || selectedAlbumID <= 0" @click="openBatchRemove">批量移除</button>
+            </div>
+          </div>
+
+          <div class="albums-table-wrap">
               <table class="table table-hover align-middle mb-0 torrent-album-table">
+                <colgroup>
+                  <col class="torrent-album-col-select">
+                  <col class="torrent-album-col-movie">
+                  <col class="torrent-album-col-source">
+                  <col class="torrent-album-col-hash">
+                  <col class="torrent-album-col-size">
+                  <col class="torrent-album-col-publish">
+                  <col class="torrent-album-col-created">
+                  <col class="torrent-album-col-actions">
+                </colgroup>
                 <thead>
                   <tr>
                     <th class="text-center text-nowrap">
@@ -170,8 +170,8 @@
                         @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
                       >
                     </td>
-                    <td class="text-nowrap">
-                      <a class="fw-semibold" :href="movieHref(row)">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
+                    <td class="text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
+                      <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
                     </td>
                     <td class="text-nowrap"><span class="badge" :class="sourceBadgeClass(row)">{{ sourceBadgeText(row) }}</span></td>
                     <td class="album-hash-cell"><code class="album-hash">{{ value(row, "InfoHash") }}</code></td>
@@ -185,13 +185,8 @@
                   </tr>
                 </tbody>
               </table>
-            </div>
           </div>
-        </div>
-
-        <div v-if="hasRows && pageLinks.length" class="d-flex justify-content-end mt-3">
-          <TorrentAlbumPagination :links="pageLinks" />
-        </div>
+        </section>
 
         <TorrentAlbumModals
           :active-modal="activeModal"

@@ -1,152 +1,212 @@
 <template>
-  <PageShell class="cast-detail-shell cast-detail-page cards-page-shell" :title="title" :note="note" eyebrow="Cast">
-    <div id="cast-detail-root" class="container-fluid">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
-      <template v-else>
-        <div class="cast-detail-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-2">
-          <div>
-            <h4 class="mb-1">{{ actorName }}</h4>
-            <div class="text-muted">查看演员概览、最近参与的 SC 历史，以及代表影片。</div>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <button id="btnRebuildActorRank" type="button" class="btn btn-outline-warning" :data-actor-name="actorRawName">回填该演员 Rank</button>
-            <a :href="cardsHref" class="btn btn-outline-primary">Cards</a>
-          </div>
-        </div>
-
-        <div id="castMsgArea" class="alert alert-success small py-2 px-3 mb-3"></div>
-
-        <div class="row g-3 mb-3 align-items-start cast-summary-row">
-          <div class="col-12 col-xl-6">
-            <section class="cast-section-card">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="cast-section-title mb-0">SC 历史</h5>
-                <span class="text-muted small">{{ recentEvents.length }} 条</span>
-              </div>
-              <div v-if="recentEvents.length" class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead><tr><th>时间</th><th>影片数</th><th>Movies</th><th>Cooldown</th></tr></thead>
-                  <tbody>
-                    <tr v-for="(event, index) in recentEvents" :key="`${eventHref(event)}-${index}`" :class="{ 'sc-history-extra-row d-none': index >= 5 }">
-                      <td><a :href="eventHref(event)">{{ formatUnixMinute(eventTime(event)) }}</a></td>
-                      <td>{{ eventMovieCount(event) }}</td>
-                      <td>
-                        <div v-if="eventMovies(event).length" class="d-flex flex-wrap gap-2">
-                          <a
-                            v-for="movie in eventMovies(event)"
-                            :key="movieHref(movie) || movieName(movie)"
-                            :href="movieHref(movie)"
-                            class="badge bg-light text-dark border text-decoration-none px-2 py-2"
-                          >
-                            {{ movieName(movie) }}<span v-if="movieCome(movie)" class="text-danger ms-1">COME</span>
-                          </a>
-                        </div>
-                        <span v-else class="text-muted">-</span>
-                      </td>
-                      <td>{{ humanDays(eventCooldown(event)) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div v-else class="sc-empty-state">这个演员还没有关联的 SC 记录。</div>
-              <div v-if="recentEvents.length > 5" class="mt-3">
-                <button id="btnToggleScHistory" class="btn btn-sm btn-outline-secondary" type="button" aria-expanded="false" data-expand-text="展开全部" data-collapse-text="收起">展开全部</button>
-              </div>
-            </section>
-          </div>
-
-          <div class="col-12 col-xl-6">
-            <section class="cast-section-card">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="cast-section-title mb-0">概览</h5>
-              </div>
-              <div class="row g-3">
-                <div v-for="item in metricItems" :key="item.label" class="col-md-4">
-                  <button
-                    v-if="item.merge"
-                    class="cast-summary-button"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#personMergeCollapse"
-                    aria-expanded="false"
-                    aria-controls="personMergeCollapse"
-                  >
-                    <div class="sc-metric-card">
-                      <div class="sc-metric-label">{{ item.label }}</div>
-                      <div class="sc-metric-value">{{ item.value }}</div>
-                    </div>
-                  </button>
-                  <div v-else class="sc-metric-card">
-                    <div class="sc-metric-label">{{ item.label }}</div>
-                    <div class="sc-metric-value">{{ item.value }}</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <div v-if="personID > 0" id="personMergeCollapse" class="collapse mb-3">
-          <div class="merge-inline-panel">
-            <div class="small text-muted mb-3">当前详情页对应保留 person。搜索需要并入的 person，先预览，再执行合并。</div>
-            <div class="input-group mb-3">
-              <input id="mergeSearchInput" type="text" class="form-control" placeholder="搜索 person 名称、中文名、alias 或 cast 名">
-              <button id="btnMergeSearch" type="button" class="btn btn-outline-primary">搜索候选</button>
+  <PageShell
+    class="next02-cast-detail-shell next02-cast-page cards-page-shell next02-pink-cards-page next02-pink-cards-page-shell"
+    :title="title"
+    :note="note"
+    eyebrow="Cast"
+  >
+    <LoadingState v-if="loading" />
+    <ErrorPanel v-else-if="error" :message="error" />
+    <template v-else>
+      <div id="cast-detail-root" class="next02-cast-detail-root">
+        <section class="next02-cast-overview" aria-label="人物概览">
+          <div class="next02-cast-overview-toolbar">
+            <div class="next02-cast-identity">
+              <span>人物档案</span>
+              <strong v-if="actorRawName && actorRawName !== actorName">{{ actorRawName }}</strong>
+              <small v-if="actorAliasText">别名：{{ actorAliasText }}</small>
             </div>
-            <div class="mb-3">
-              <div class="small text-muted mb-2">候选 person</div>
-              <div id="mergeCandidateList" class="merge-list"><div class="merge-list-empty">输入关键词后开始搜索。</div></div>
+            <div class="next02-cast-actions">
+              <button
+                id="btnRebuildActorRank"
+                type="button"
+                class="button-secondary next02-cast-action"
+                :data-actor-name="actorRawName"
+              >
+                回填该演员 Rank
+              </button>
+              <a
+                :href="cardsHref"
+                class="button-primary next02-cast-action"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Cards
+              </a>
             </div>
-            <div class="mb-3">
-              <div class="small text-muted mb-2">待合并来源</div>
-              <div id="mergeSelectedList" class="merge-list"><div class="merge-list-empty">还没有选择来源 person。</div></div>
-            </div>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              <button id="btnPreviewMerge" type="button" class="btn btn-primary" disabled>预览合并</button>
-            </div>
-            <div id="mergePreviewArea" class="merge-preview-grid" style="display:none;"></div>
           </div>
-        </div>
 
-        <section class="cast-section-card cast-representative-section">
-          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+          <div class="next02-cast-metrics" aria-label="人物统计">
+            <template v-for="item in metricItems" :key="item.label">
+              <button
+                v-if="item.merge"
+                type="button"
+                class="next02-cast-metric next02-cast-merge-trigger"
+                :class="{ active: mergeOpen }"
+                :aria-expanded="mergeOpen"
+                aria-controls="personMergeCollapse"
+                @click="mergeOpen = !mergeOpen"
+              >
+                <small>{{ item.label }}</small>
+                <strong>{{ item.value }}</strong>
+              </button>
+              <span v-else class="next02-cast-metric">
+                <small>{{ item.label }}</small>
+                <strong>{{ item.value }}</strong>
+              </span>
+            </template>
+          </div>
+        </section>
+
+        <div id="castMsgArea" class="next02-cast-message" aria-live="polite"></div>
+
+        <section class="next02-cast-section next02-cast-history" aria-labelledby="cast-history-title">
+          <div class="next02-cast-section-head">
             <div>
-              <h5 class="cast-section-title mb-0">代表影片</h5>
-              <div class="text-muted small">当前模块与 Cards 同步，支持分页、排序、WOwned 与筛选。</div>
+              <h2 id="cast-history-title">SC 历史</h2>
+              <p>最近参与的 SC 事件及关联影片。</p>
             </div>
-            <div class="d-flex align-items-center">
-              <nav v-if="pageLinks.length" class="mb-0" aria-label="Page navigation">
-                <ul class="pagination pagination-sm mb-0">
-                  <li v-for="(item, index) in pageLinks" :key="`${pageLabel(item)}-${index}`" class="page-item" :class="{ active: pageActive(item), disabled: pageDisabled(item) || pageEllipsis(item) }">
-                    <span v-if="pageEllipsis(item)" class="page-link">...</span>
-                    <a v-else class="page-link" :href="pageDisabled(item) ? undefined : normalizePageHref(pageHref(item))" :tabindex="pageDisabled(item) ? -1 : undefined" :aria-disabled="pageDisabled(item) ? 'true' : undefined">{{ pageLabel(item) }}</a>
-                  </li>
-                </ul>
-              </nav>
-            </div>
-          </div>
-
-          <div class="d-flex flex-wrap justify-content-start align-items-center gap-2 mb-2">
-            <div class="btn-group btn-group-sm" role="group" aria-label="Sort Options">
-              <a v-for="item in sortItems" :key="item.key" :href="item.href" class="btn btn-outline-primary" :class="{ 'active disabled': item.active }">{{ item.label }}</a>
+            <div class="next02-cast-section-status">
+              <span><strong>{{ recentEvents.length }}</strong> 条记录</span>
+              <button
+                v-if="recentEvents.length > 5"
+                id="btnToggleScHistory"
+                type="button"
+                class="button-secondary next02-cast-history-toggle"
+                :aria-expanded="historyExpanded"
+                @click="historyExpanded = !historyExpanded"
+              >
+                {{ historyExpanded ? "收起" : "展开全部" }}
+              </button>
             </div>
           </div>
 
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-              <div class="d-flex flex-wrap align-items-center gap-3">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                  <span class="btn btn-sm btn-outline-dark disabled">WMedia</span>
-                  <a v-for="item in ownedItems" :key="item.key" :href="item.href" class="btn btn-sm waves-effect waves-light" :class="[item.className, { 'active disabled': item.active }]" :aria-current="item.active ? 'true' : 'false'">{{ item.label }}</a>
-                </div>
-                <span class="btn btn-sm btn-primary waves-effect waves-light disabled">Total: {{ total }}</span>
+          <div v-if="recentEvents.length" class="next02-cast-history-table-wrap">
+            <table class="next02-cast-history-table">
+              <colgroup>
+                <col class="next02-cast-history-time">
+                <col class="next02-cast-history-count">
+                <col class="next02-cast-history-movies">
+                <col class="next02-cast-history-cooldown">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>影片数</th>
+                  <th>Movies</th>
+                  <th>Cooldown</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(event, index) in recentEvents"
+                  v-show="historyExpanded || index < 5"
+                  :key="`${eventHref(event)}-${index}`"
+                >
+                  <td>
+                    <a :href="eventHref(event)" target="_blank" rel="noopener noreferrer">
+                      {{ formatUnixMinute(eventTime(event)) }}
+                    </a>
+                  </td>
+                  <td>{{ eventMovieCount(event) }}</td>
+                  <td>
+                    <div v-if="eventMovies(event).length" class="next02-cast-sc-movies">
+                      <a
+                        v-for="movie in eventMovies(event)"
+                        :key="movieHref(movie) || movieName(movie)"
+                        :href="movieHref(movie)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {{ movieName(movie) }}<b v-if="movieCome(movie)">COME</b>
+                      </a>
+                    </div>
+                    <span v-else class="next02-cast-empty-value">-</span>
+                  </td>
+                  <td>{{ humanDays(eventCooldown(event)) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="movie-empty next02-cast-history-empty">这个演员还没有关联的 SC 记录。</div>
+        </section>
+
+        <section
+          v-if="personID > 0"
+          v-show="mergeOpen"
+          id="personMergeCollapse"
+          class="next02-cast-merge-panel"
+          aria-label="Person Merge"
+        >
+          <div class="next02-cast-merge-head">
+            <div>
+              <h2>Person Merge</h2>
+              <p>当前人物作为保留项；搜索来源人物，预览后执行合并。</p>
+            </div>
+            <button type="button" class="button-secondary" @click="mergeOpen = false">收起</button>
+          </div>
+          <div class="next02-cast-merge-search">
+            <input id="mergeSearchInput" type="text" placeholder="搜索 person 名称、中文名、alias 或 cast 名">
+            <button id="btnMergeSearch" type="button" class="button-secondary">搜索候选</button>
+          </div>
+          <div class="next02-cast-merge-grid">
+            <section>
+              <h3>候选 person</h3>
+              <div id="mergeCandidateList" class="merge-list"><div class="merge-list-empty">输入关键词后开始搜索。</div></div>
+            </section>
+            <section>
+              <h3>待合并来源</h3>
+              <div id="mergeSelectedList" class="merge-list"><div class="merge-list-empty">还没有选择来源 person。</div></div>
+            </section>
+          </div>
+          <div class="next02-cast-merge-footer">
+            <button id="btnPreviewMerge" type="button" class="button-primary" disabled>预览合并</button>
+          </div>
+          <div id="mergePreviewArea" class="merge-preview-grid" style="display:none;"></div>
+        </section>
+
+        <section class="next02-cast-representative" aria-labelledby="cast-movies-title">
+          <div class="next02-cast-section-head next02-cast-movies-head">
+            <div>
+              <h2 id="cast-movies-title">代表影片</h2>
+              <p>关联影片、库存状态、排序、筛选与分页。</p>
+            </div>
+          </div>
+
+          <div class="sticky-toolbar cards-toolbar next02-pink-cards-toolbar next02-cast-movie-toolbar" aria-label="Cast 影片控制栏">
+            <div class="cards-toolbar-sort">
+              <LinkStrip :items="sortItems" />
+            </div>
+            <div class="toolbar-line cards-toolbar-bottom">
+              <div class="owned-line cards-toolbar-filters">
+                <LinkStrip :items="ownedItems" />
+                <button
+                  v-if="hasFilter"
+                  type="button"
+                  class="button-secondary cards-filter-button"
+                  :class="{ active: filterOpen }"
+                  :aria-pressed="filterOpen"
+                  @click="filterOpen = !filterOpen"
+                >
+                  筛选
+                </button>
               </div>
-              <button v-if="hasFilter" class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#movieCardFilterCollapse" aria-expanded="false" aria-controls="movieCardFilterCollapse">筛选</button>
+              <div class="next02-pink-cards-toolbar-status">
+                <div class="next02-pink-cards-metrics" aria-label="Cast 影片摘要">
+                  <span><strong>{{ total }}</strong> Total</span>
+                  <span><strong>{{ movies.length }}</strong> Current Page</span>
+                </div>
+                <div class="cards-toolbar-pagination next02-pink-cards-pagination">
+                  <PaginationBar :page-info="pageInfo" />
+                </div>
+              </div>
             </div>
           </div>
 
-          <MovieCardFilterForm v-if="hasFilter" :filter="filter" variant="cards-agg" />
+          <div v-show="filterOpen" class="next02-pink-cards-filter next02-cast-filter">
+            <MovieCardFilterForm v-if="hasFilter" :filter="filter" />
+          </div>
+
           <MovieGrid :cards="movies" />
         </section>
 
@@ -168,8 +228,8 @@
             </div>
           </div>
         </div>
-      </template>
-    </div>
+      </div>
+    </template>
   </PageShell>
 </template>
 
@@ -177,9 +237,13 @@
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
+import ErrorPanel from "@/components/ErrorPanel.vue";
+import LinkStrip from "@/components/LinkStrip.vue";
+import LoadingState from "@/components/LoadingState.vue";
 import MovieCardFilterForm from "@/components/MovieCardFilterForm.vue";
 import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";
+import PaginationBar from "@/components/PaginationBar.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
@@ -191,7 +255,6 @@ const sortLabels = [
   ["ByDaysInRank", "在榜天数"],
   ["ByHighestRank", "最高排名"],
   ["ByBirthTime", "下载时间"],
-  ["ByMediaBirthTime", "Media下载时间"],
   ["ByLastScTime", "最后sc"],
   ["ByScTimes", "sc次数"],
   ["ByComeTimes", "co次数"]
@@ -201,12 +264,18 @@ const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
+const filterOpen = ref(false);
+const historyExpanded = ref(false);
+const mergeOpen = ref(false);
 
 watch(() => route.fullPath, load, { immediate: true });
 
 async function load() {
   loading.value = true;
   error.value = "";
+  filterOpen.value = false;
+  historyExpanded.value = false;
+  mergeOpen.value = false;
   try {
     payload.value = asRecord(await getJSON(apiPathForRoute(route)));
   } catch (err) {
@@ -218,54 +287,58 @@ async function load() {
 
 const page = computed(() => asRecord(pick(payload.value, "Page")));
 const actor = computed(() => asRecord(pick(page.value, "Actor", "actor")));
-const actorName = computed(() => text(actor.value, "Chinese", "chinese") || text(actor.value, "Name", "name") || "");
+const actorName = computed(() => text(actor.value, "Chinese", "chinese") || text(actor.value, "Name", "name") || "Cast");
 const actorRawName = computed(() => text(actor.value, "Name", "name"));
-const title = computed(() => text(payload.value, "Title") || actorName.value || "Cast");
-const note = computed(() => "");
+const title = computed(() => actorName.value || text(payload.value, "Title") || "Cast");
+const note = computed(() => "人物概览、SC 历史与代表影片。");
 const personID = computed(() => Number(text(actor.value, "Id", "id") || 0));
 const total = computed(() => text(payload.value, "total", "Total") || "0");
 const movies = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "Movies")));
 const filter = computed(() => asRecord(pick(payload.value, "MovieCardFilter")));
 const hasFilter = computed(() => Object.keys(filter.value).length > 0);
 const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
-const pageLinks = computed(() => pageInfo.value.Links || []);
 const recentEvents = computed(() => asArray<AnyRecord>(pick(page.value, "RecentEvents", "recentEvents")));
 const actorAliases = computed(() => asArray<string>(pick(page.value, "ActorAliases", "actorAliases")));
-const sortQuery = computed(() => asRecord(payload.value.sortQuery));
-const ownedQuery = computed(() => asRecord(payload.value.ownedQuery));
-const cardsHref = computed(() => text(page.value, "CardsHref", "cardsHref") || "/cards");
+const actorAliasText = computed(() => {
+  const primaryNames = new Set([actorName.value, actorRawName.value].map((item) => item.trim()).filter(Boolean));
+  return [...new Set(actorAliases.value.map((item) => String(item || "").trim()))]
+    .filter((item) => item && !primaryNames.has(item))
+    .join("、");
+});
+const sortQuery = computed(() => asRecord(pick(payload.value, "sortQuery", "SortQuery")));
+const ownedQuery = computed(() => asRecord(pick(payload.value, "ownedQuery", "OwnedQuery")));
+const cardsHref = computed(() => normalizeHref(text(page.value, "CardsHref", "cardsHref") || "/cards"));
 
 const metricItems = computed(() => [
-  { label: "MOVIES", value: text(actor.value, "MovieNumber", "movieNumber") || "0" },
-  { label: "WOWNED", value: text(actor.value, "OwnedWMediaNumber", "ownedWMediaNumber") || "0" },
-  { label: "SC TIMES", value: text(actor.value, "ScTimes", "scTimes") || "0" },
-  { label: "COME TIMES", value: text(actor.value, "ComeTimes", "comeTimes") || "0" },
-  { label: "LAST SC", value: formatUnixDate(text(actor.value, "LastScTime", "lastScTime")) },
-  { label: "LAST SC EVENT", value: formatUnixDate(text(actor.value, "LastScEventTime", "lastScEventTime")) },
-  { label: "HIGHEST RANK", value: rankText(text(actor.value, "HighestRank", "highestRank")) },
-  { label: "CAST ALIAS", value: String(actorAliases.value.length) },
-  { label: "PERSON MERGE", value: personID.value > 0 ? `#${personID.value}` : "-", merge: personID.value > 0 }
+  { label: "影片数", value: text(actor.value, "MovieNumber", "movieNumber") || "0" },
+  { label: "已拥有", value: text(actor.value, "OwnedWMediaNumber", "ownedWMediaNumber") || "0" },
+  { label: "SC 次数", value: text(actor.value, "ScTimes", "scTimes") || "0" },
+  { label: "COME 次数", value: text(actor.value, "ComeTimes", "comeTimes") || "0" },
+  { label: "最后 SC", value: formatUnixDate(text(actor.value, "LastScTime", "lastScTime")) },
+  { label: "最后 SC 事件", value: formatUnixDate(text(actor.value, "LastScEventTime", "lastScEventTime")) },
+  { label: "最高排名", value: rankText(text(actor.value, "HighestRank", "highestRank")) },
+  { label: "别名", value: String(actorAliases.value.length) },
+  { label: "Person Merge", value: personID.value > 0 ? `#${personID.value}` : "-", merge: personID.value > 0 }
 ]);
 
 const sortItems = computed(() => sortLabels.map(([key, label]) => {
   const item = asRecord(sortQuery.value[key]);
   return {
-    key,
     label,
-    href: normalizeHref(text(item, "Href") || "/cards"),
+    href: normalizeHref(text(item, "Href") || route.fullPath),
     active: Boolean(item.Active)
   };
 }));
 
 const ownedItems = computed(() => [
-  { key: "MediaAll", label: "MAll", className: "btn-primary" },
-  { key: "MediaOwned", label: "MOwned", className: "btn-success" },
-  { key: "MediaNotOwned", label: "MNotOwned", className: "btn-secondary" }
-].map((meta) => {
-  const item = asRecord(ownedQuery.value[meta.key]);
+  ["MediaAll", "All"],
+  ["MediaOwned", "Owned"],
+  ["MediaNotOwned", "NotOwned"]
+].map(([key, label]) => {
+  const item = asRecord(ownedQuery.value[key]);
   return {
-    ...meta,
-    href: normalizeHref(text(item, "Href") || "/cards"),
+    label,
+    href: normalizeHref(text(item, "Href") || route.fullPath),
     active: Boolean(item.Active)
   };
 }));
@@ -324,29 +397,5 @@ function movieHref(movie: AnyRecord): string {
 
 function movieCome(movie: AnyRecord): boolean {
   return Boolean(movie.IsCome || movie.isCome);
-}
-
-function pageLabel(item: AnyRecord): string {
-  return text(item, "Label") || "...";
-}
-
-function pageHref(item: AnyRecord): string {
-  return text(item, "Href");
-}
-
-function pageActive(item: AnyRecord): boolean {
-  return Boolean(item.Active);
-}
-
-function pageDisabled(item: AnyRecord): boolean {
-  return Boolean(item.Disabled);
-}
-
-function pageEllipsis(item: AnyRecord): boolean {
-  return Boolean(item.Ellipsis);
-}
-
-function normalizePageHref(href: unknown): string {
-  return normalizeHref(href);
 }
 </script>

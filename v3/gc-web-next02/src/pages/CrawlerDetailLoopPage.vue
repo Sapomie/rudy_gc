@@ -1,13 +1,23 @@
 <template>
   <PageShell class="crawler-detail-loop-page-shell" :title="title" eyebrow="">
-    <div id="crawlerDetailLoopPage" class="crawler-detail-loop-page-root">
+    <div id="crawlerDetailLoopPage" class="crawler-detail-loop-page-root next02-detail-loop-rewrite">
       <LoadingState v-if="loading" />
       <ErrorPanel v-else-if="error" :message="error" />
       <template v-else>
         <div class="row">
           <div class="col-12">
-            <div class="page-title-box d-flex align-items-center justify-content-between">
-              <h4 class="mb-0">{{ title }}</h4>
+            <div class="page-title-box next02-detail-loop-hero d-flex align-items-center justify-content-between">
+              <div>
+                <div class="next02-detail-loop-kicker">Detail Loop</div>
+                <h4 class="mb-0">{{ title }}</h4>
+                <div class="next02-detail-loop-note">详情抓取循环运行状态与实时日志。</div>
+              </div>
+              <div class="next02-detail-loop-metrics" aria-label="detail loop summary">
+                <span v-for="item in loopMetrics" :key="item.label" class="next02-detail-loop-metric">
+                  <strong>{{ item.value }}</strong>
+                  <span>{{ item.label }}</span>
+                </span>
+              </div>
               <a href="/triggers/dailybest" class="btn btn-outline-primary btn-sm">回到 DailyBest</a>
             </div>
           </div>
@@ -15,7 +25,7 @@
 
         <div class="row">
           <div class="col-lg-5">
-            <div class="card">
+            <div class="card next02-detail-loop-panel">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                   <h4 class="card-title mb-0">循环状态</h4>
@@ -47,8 +57,8 @@
                 </div>
 
                 <div class="detail-loop-actions">
-                  <button type="button" class="btn btn-primary" id="startBtn" @click="start">开启 loop</button>
-                  <button type="button" class="btn btn-outline-danger" id="stopBtn" @click="stop">停止 loop</button>
+                  <button type="button" class="btn btn-primary" id="startBtn" :disabled="running" @click="start">开启 loop</button>
+                  <button type="button" class="btn btn-outline-danger" id="stopBtn" :disabled="!running" @click="stop">停止 loop</button>
                 </div>
 
                 <div id="statusMsg" class="small text-muted mt-3">{{ message || "等待加载" }}</div>
@@ -57,7 +67,7 @@
           </div>
 
           <div class="col-lg-7">
-            <div class="card event-card detail-loop-log-card">
+            <div class="card event-card detail-loop-log-card next02-detail-loop-panel">
               <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                   <h4 class="card-title mb-0">实时日志</h4>
@@ -116,6 +126,11 @@ const lastEventAt = computed(() => text(status.value, "last_event_at", "LastEven
 const buffered = computed(() => text(status.value, "buffered", "Buffered") || "0");
 const pausedText = computed(() => Boolean(pick(status.value, "paused", "Paused")) ? "是" : "否");
 const lastLine = computed(() => text(status.value, "last_line", "LastLine"));
+const loopMetrics = computed(() => [
+  { label: "运行状态", value: runningText.value },
+  { label: "缓冲", value: buffered.value },
+  { label: "暂停", value: pausedText.value }
+]);
 
 async function start() {
   await call("/api/crawler/detail-loop/start");

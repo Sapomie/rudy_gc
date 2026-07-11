@@ -1,35 +1,54 @@
 <template>
-  <PageShell class="sc-events-page-shell sc-pick-page-shell" :title="title" eyebrow="">
-    <div id="page-root" class="container-fluid sc-events-page-root sc-pick-page-root">
+  <PageShell class="sc-events-page-shell sc-pick-page-shell cards-page-shell next02-pink-cards-page" :title="title" eyebrow="">
+    <div id="page-root" class="container-fluid sc-pick-page-root next02-sc-pink-theme next02-smart-pick-page-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <div class="d-flex align-items-center justify-content-between mb-3 sc-page-head">
-          <div>
-            <h4 class="mb-1">{{ pageTitle }}</h4>
-            <p class="text-muted mb-0">{{ pageNote }}</p>
+        <section class="next02-sc-movie-top-shell next02-smart-pick-hero">
+          <div class="next02-sc-hero-copy">
+            <span class="next02-sc-eyebrow">SC / SMART PICK LAB</span>
+            <h4>{{ pageTitle }}</h4>
+            <p>{{ pageNote || "组合多组条件、Rank 配额和 SC 阻断策略，完成抽片与 Copy。" }}</p>
           </div>
-        </div>
+          <div class="next02-sc-hero-actions">
+            <a href="/sc-events" class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer">SC Events</a>
+            <a href="/crawler/tasks" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">任务列表</a>
+          </div>
+        </section>
 
-        <div class="card">
+        <div v-if="message" class="next02-sc-feedback" :class="messageOk ? 'is-success' : 'is-error'" role="status">{{ message }}</div>
+
+        <div class="card next02-sc-panel next02-sc-movie-table-card smart-pick-config-panel">
           <div class="card-body">
-            <p class="text-muted mb-2">按多组条件从本地已拥有影片里抽片，并叠加 Cast SC 阻断、Rank 配额和演员去重规则。</p>
-            <p class="text-muted small mb-3">{{ fixedHint }}</p>
+            <div class="next02-sc-panel-head smart-pick-config-head">
+              <div>
+                <span class="next02-sc-panel-kicker">PICK STRATEGY</span>
+                <h5>抽取策略</h5>
+                <p>按多组条件从本地已拥有影片里抽片，并叠加 Cast SC 阻断、Rank 配额和演员去重规则。</p>
+              </div>
+              <div class="smart-pick-config-status">
+                <div class="next02-sc-hero-metrics" aria-label="Smart Pick 摘要">
+                  <span><strong>{{ groups.length }}</strong> Groups</span>
+                  <span><strong>{{ pageSource }}</strong> Source</span>
+                </div>
+                <span class="next02-sc-status-dot" :class="{ 'is-busy': actionLoading }">{{ actionLoading ? '执行中' : '可配置' }}</span>
+              </div>
+            </div>
+            <p class="smart-pick-fixed-hint">{{ fixedHint }}</p>
 
-            <form id="formPickSmart" class="needs-validation" novalidate :data-source="pageSource">
-              <div class="card border mb-3">
+            <form ref="formEl" id="formPickSmart" class="needs-validation" novalidate :data-source="pageSource" @submit.prevent="runPick(true)">
+              <div class="card border smart-pick-global-panel">
                 <div class="card-body">
-                  <h6 class="mb-3">全局抽取策略</h6>
-                  <div class="row g-3 align-items-end">
+                  <div class="smart-pick-section-title"><span>01</span><h6>全局抽取策略</h6></div>
+                  <div class="row g-3 align-items-end smart-pick-global-grid">
                     <FieldInput v-for="field in globalFields" :key="field.id" col-class="col-md-2" v-bind="field" />
                   </div>
                 </div>
               </div>
 
-              <div class="row g-3 align-items-center mb-3">
-                <div class="col-auto">
-                  <button type="button" id="btnAddGroup" class="btn btn-outline-secondary" @click="addGroup">添加一组条件</button>
-                </div>
+              <div class="smart-pick-groups-head">
+                <div class="smart-pick-section-title"><span>02</span><h6>条件组</h6></div>
+                <button type="button" id="btnAddGroup" class="btn btn-outline-secondary" :disabled="actionLoading" @click="addGroup">＋ 添加一组条件</button>
               </div>
 
               <div id="pickGroups">
@@ -45,69 +64,72 @@
                 />
               </div>
 
-              <div class="mt-3">
-                <button type="submit" class="btn btn-primary">执行 Smart Pick + Copy</button>
-                <button type="button" class="btn btn-outline-primary ms-2" id="btnPickOnly">仅 Smart Pick</button>
+              <div class="smart-pick-actions">
+                <button type="submit" class="btn btn-primary" :disabled="actionLoading">{{ actionLoading ? "执行中..." : "执行 Smart Pick + Copy" }}</button>
+                <button type="button" class="btn btn-outline-primary" id="btnPickOnly" :disabled="actionLoading" @click="runPick(false)">仅 Smart Pick</button>
               </div>
             </form>
           </div>
         </div>
 
-        <div class="card mt-3" id="copyCard" style="display: none;">
+        <div v-if="copyVisible" class="card next02-sc-panel smart-pick-copy-panel" id="copyCard">
           <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <h5 class="mb-0">Copy 进度</h5>
-              <button type="button" class="btn btn-sm btn-outline-danger" id="btnStopCopy">停止 Copy</button>
+            <div class="next02-sc-panel-head">
+              <div><span class="next02-sc-panel-kicker">COPY STATUS</span><h5>Copy 进度</h5></div>
+              <button type="button" class="btn btn-sm btn-outline-danger" id="btnStopCopy" :disabled="!copyRunning" @click="stopCopy">停止 Copy</button>
             </div>
-            <div class="text-muted small mb-2" id="copyMeta"></div>
-            <div class="progress mb-2" style="height: 6px;">
-              <div class="progress-bar" role="progressbar" id="copyProgress" style="width: 0%;"></div>
+            <div class="text-muted small mb-2" id="copyMeta">{{ copyMeta }}</div>
+            <div class="progress mb-2 smart-pick-progress">
+              <div class="progress-bar" role="progressbar" id="copyProgress" :style="{ width: `${copyPercent}%` }" :aria-valuenow="copyPercent" aria-valuemin="0" aria-valuemax="100">{{ copyPercent ? `${copyPercent}%` : '' }}</div>
             </div>
-            <div class="small text-muted" id="copyCurrent"></div>
-            <div class="small text-danger mt-1" id="copyError" style="display: none;"></div>
+            <div class="small text-muted" id="copyCurrent">{{ copyCurrent }}</div>
+            <div v-if="copyError" class="small text-danger mt-1" id="copyError">{{ copyError }}</div>
           </div>
         </div>
 
-        <div class="card mt-3" id="pickInfoCard" style="display: none;">
+        <div v-if="pickInfoRows.length" class="card next02-sc-panel smart-pick-info-panel" id="pickInfoCard">
           <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-              <h5 class="mb-0">Pick 概览</h5>
-              <span class="text-muted small" id="pickInfoSummary"></span>
+            <div class="next02-sc-panel-head">
+              <div><span class="next02-sc-panel-kicker">PICK SUMMARY</span><h5>Pick 概览</h5></div>
+              <span class="next02-sc-panel-note" id="pickInfoSummary">保留 Movie {{ pickInfoAfterMovies }} 部 · Cast {{ pickInfoAfterCasts }} 位</span>
             </div>
-            <div class="row g-3" id="pickInfoGrid"></div>
+            <div class="smart-pick-info-grid" id="pickInfoGrid">
+              <div v-for="row in pickInfoRows" :key="row.label" class="smart-pick-info-card"><span>{{ row.label }}</span><strong>{{ row.value }}</strong></div>
+            </div>
           </div>
         </div>
 
-        <div class="card mt-3" id="pickedCard" style="display: none;">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-              <h5 class="mb-0">抽取结果</h5>
-              <div class="d-flex align-items-center flex-wrap gap-2">
-                <div class="btn-group btn-group-sm flex-wrap" id="pickedSortBar" role="group" aria-label="抽取结果排序">
-                  <button v-for="item in pickedSortButtons" :key="item.key" type="button" class="btn btn-outline-primary" :class="{ active: item.active }" :data-sort-base="item.key" :data-default-dir="item.dir">{{ item.label }}</button>
+        <div v-if="pickedMovies.length" class="smart-pick-results" id="pickedCard">
+          <div class="card next02-sc-panel smart-pick-results-panel">
+            <div class="card-body">
+              <div class="next02-sc-panel-head smart-pick-results-head">
+                <div><span class="next02-sc-panel-kicker">PICKED MOVIES</span><h5>抽取结果</h5></div>
+                <div class="smart-pick-sort-tools">
+                  <div class="btn-group btn-group-sm flex-wrap" id="pickedSortBar" role="group" aria-label="抽取结果排序">
+                    <button v-for="item in pickedSortButtons" :key="item.key" type="button" class="btn btn-outline-primary" :class="{ active: pickedSortBase === item.key }" :data-sort-base="item.key" :data-default-dir="item.dir" @click="selectSort(item)">{{ sortButtonLabel(item) }}</button>
+                  </div>
+                  <span class="next02-sc-result-count" id="pickedCount">共 {{ pickedMovies.length }} 部<span v-if="pickedTotalSizeGb"> · {{ pickedTotalSizeGb }} GB</span></span>
                 </div>
-                <span class="text-muted small" id="pickedCount"></span>
               </div>
             </div>
-            <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-3 picked-grid-8" id="pickedGrid"></div>
           </div>
+          <section class="smart-pick-cards-section" aria-label="Picked movies">
+            <MovieGrid :cards="sortedPickedMovies" />
+          </section>
         </div>
-
-        <template id="pickGroupTpl">
-          <PickGroup :payload="payload" />
-        </template>
       </template>
     </div>
   </PageShell>
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
+import { computed, defineComponent, h, onBeforeUnmount, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
-import { apiPathForRoute, getJSON } from "@/api/request";
+import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
+import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
-import { asRecord, text } from "@/utils/format";
+import { asArray, asRecord, num, pick, text } from "@/utils/format";
 
 type FieldConfig = {
   id: string;
@@ -128,12 +150,26 @@ type PickGroupState = {
   expanded: boolean;
 };
 
+type SortButton = { key: string; label: string; dir: "asc" | "desc" };
+
 const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
 const groups = ref<PickGroupState[]>([{ id: 1, expanded: false }]);
 const nextGroupId = ref(2);
+const formEl = ref<HTMLFormElement | null>(null);
+const actionLoading = ref(false);
+const message = ref("");
+const messageOk = ref(true);
+const pickedMovies = ref<AnyRecord[]>([]);
+const pickedTotalSizeGb = ref("");
+const pickInfo = ref<AnyRecord>({});
+const copyStatus = ref<AnyRecord>({});
+const copyStartedInPage = ref(false);
+const pickedSortBase = ref("releasing");
+const pickedSortDir = ref<"asc" | "desc">("desc");
+let copyTimer: number | undefined;
 
 watch(() => route.fullPath, load, { immediate: true });
 
@@ -142,6 +178,8 @@ async function load() {
   error.value = "";
   try {
     payload.value = asRecord(await getJSON(apiPathForRoute(route)));
+    copyStartedInPage.value = false;
+    void fetchCopyStatus();
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -169,15 +207,55 @@ const globalFields = computed<FieldConfig[]>(() => [
   { id: "movieHasScPenaltyAlpha", label: "Movie Has SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
 ]);
 
-const pickedSortButtons = [
-  { key: "picked", label: "抽取顺序", dir: "desc", active: false },
-  { key: "film_birth", label: "下载时间", dir: "desc", active: false },
-  { key: "releasing", label: "上映日期", dir: "desc", active: true },
-  { key: "sc", label: "SC次数", dir: "desc", active: false },
-  { key: "come", label: "CO次数", dir: "desc", active: false },
-  { key: "rank", label: "最高排名", dir: "asc", active: false },
-  { key: "score", label: "评分", dir: "desc", active: false }
+const pickedSortButtons: SortButton[] = [
+  { key: "picked", label: "抽取顺序", dir: "desc" },
+  { key: "film_birth", label: "下载时间", dir: "desc" },
+  { key: "releasing", label: "上映日期", dir: "desc" },
+  { key: "sc", label: "SC次数", dir: "desc" },
+  { key: "come", label: "CO次数", dir: "desc" },
+  { key: "rank", label: "最高排名", dir: "asc" },
+  { key: "score", label: "评分", dir: "desc" }
 ];
+
+const copyRunning = computed(() => Boolean(pick(copyStatus.value, "running")));
+const copyTotal = computed(() => num(copyStatus.value, "total"));
+const copyDone = computed(() => num(copyStatus.value, "done"));
+const copyVisible = computed(() => copyRunning.value || Boolean(pick(copyStatus.value, "stopped")) || Boolean(pick(copyStatus.value, "finished_at")) || copyTotal.value > 0);
+const copyPercent = computed(() => copyTotal.value > 0 ? Math.min(100, Math.round((copyDone.value / copyTotal.value) * 100)) : 0);
+const copyMeta = computed(() => {
+  const state = copyRunning.value ? "复制中" : (pick(copyStatus.value, "stopped") ? "已停止" : (pick(copyStatus.value, "finished_at") ? "已完成" : "等待中"));
+  return `${state} · ${copyDone.value}/${copyTotal.value}`;
+});
+const copyCurrent = computed(() => text(copyStatus.value, "current") ? `当前：${text(copyStatus.value, "current")}` : "");
+const copyError = computed(() => text(copyStatus.value, "last_error"));
+const pickInfoAfterMovies = computed(() => num(pickInfo.value, "after_block_movie_count"));
+const pickInfoAfterCasts = computed(() => num(pickInfo.value, "after_block_cast_count"));
+const pickInfoRows = computed(() => Object.keys(pickInfo.value).length ? [
+  { label: "原始候选电影", value: num(pickInfo.value, "raw_candidate_movie_count") },
+  { label: "阻断后剩余电影", value: pickInfoAfterMovies.value },
+  { label: "参与计算演员", value: num(pickInfo.value, "cast_count") },
+  { label: "阻断后剩余演员", value: pickInfoAfterCasts.value }
+] : []);
+
+const sortedPickedMovies = computed(() => {
+  const list = pickedMovies.value.slice();
+  const dir = pickedSortDir.value === "asc" ? 1 : -1;
+  const order = (row: AnyRecord) => num(row, "_pickedOrder");
+  const numeric = (row: AnyRecord, ...keys: string[]) => Number(pick(row, ...keys) || 0);
+  const dated = (row: AnyRecord, ...keys: string[]) => Date.parse(text(row, ...keys)) || 0;
+  const compare = (a: AnyRecord, b: AnyRecord) => {
+    if (pickedSortBase.value === "picked") return order(a) - order(b);
+    if (pickedSortBase.value === "film_birth") return (dated(a, "film_birth_date", "FilmBirthDate") - dated(b, "film_birth_date", "FilmBirthDate")) * dir || order(a) - order(b);
+    if (pickedSortBase.value === "releasing") return (dated(a, "releasing_date", "ReleasingDate") - dated(b, "releasing_date", "ReleasingDate")) * dir || order(a) - order(b);
+    if (pickedSortBase.value === "sc") return (numeric(a, "sc_times", "ScTimes") - numeric(b, "sc_times", "ScTimes")) * dir || order(a) - order(b);
+    if (pickedSortBase.value === "come") return (numeric(a, "come_times", "ComeTimes") - numeric(b, "come_times", "ComeTimes")) * dir || order(a) - order(b);
+    if (pickedSortBase.value === "score") return (numeric(a, "score", "Score") - numeric(b, "score", "Score")) * dir || order(a) - order(b);
+    const aRank = numeric(a, "highest_rank", "HighestRank") || Number.MAX_SAFE_INTEGER;
+    const bRank = numeric(b, "highest_rank", "HighestRank") || Number.MAX_SAFE_INTEGER;
+    return (aRank - bRank) * dir || order(a) - order(b);
+  };
+  return list.sort(compare);
+});
 
 function addGroup() {
   groups.value.push({ id: nextGroupId.value, expanded: false });
@@ -192,6 +270,188 @@ function removeGroup(id: number) {
 function toggleGroup(id: number) {
   groups.value = groups.value.map((group) => group.id === id ? { ...group, expanded: !group.expanded } : group);
 }
+
+function inputValue(id: string): string {
+  return String((document.getElementById(id) as HTMLInputElement | null)?.value || "").trim();
+}
+
+function parseNumber(raw: string, float = false): number | null {
+  const value = float ? Number.parseFloat(raw) : Number.parseInt(raw, 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+function showMessage(value: string, ok = true) {
+  message.value = value;
+  messageOk.value = ok;
+}
+
+function buildReqFromGroup(group: Element): AnyRecord {
+  const req: AnyRecord = { Page: 1, PageSize: 100000, MediaOwned: 3 };
+  group.querySelectorAll<HTMLInputElement>("[data-req-field]").forEach((input) => {
+    const key = input.dataset.reqField || "";
+    const type = input.dataset.type || "string";
+    const raw = input.value.trim();
+    if (!key) return;
+    if (type === "int" || type === "float") {
+      req[key] = parseNumber(raw, type === "float") ?? 0;
+      return;
+    }
+    if (type === "int-opt" || type === "float-opt") {
+      if (!raw) return;
+      const value = parseNumber(raw, type === "float-opt");
+      if (value !== null) req[key] = value;
+      return;
+    }
+    if (raw) req[key] = raw;
+  });
+  return req;
+}
+
+function buildOptions(n: number): AnyRecord | null {
+  const castLastScBlockDays = parseNumber(inputValue("castLastScBlockDays"));
+  const lastScEventBlockDays = parseNumber(inputValue("lastScEventBlockDays"));
+  const rank20Min = parseNumber(inputValue("rank20Min") || "0");
+  let rank100Min = inputValue("rank100Min") ? parseNumber(inputValue("rank100Min")) : rank20Min;
+  let rank500Min = inputValue("rank500Min") ? parseNumber(inputValue("rank500Min")) : rank100Min;
+  const castLastScPenaltyAlpha = parseNumber(inputValue("castLastScPenaltyAlpha"), true);
+  const lastScEventPenaltyAlpha = parseNumber(inputValue("lastScEventPenaltyAlpha"), true);
+  const castOwnedScRatioPenaltyAlphaValue = parseNumber(inputValue("castOwnedScRatioPenaltyAlpha"), true);
+  const movieHasScPenaltyAlpha = parseNumber(inputValue("movieHasScPenaltyAlpha"), true);
+  if ([castLastScBlockDays, lastScEventBlockDays, rank20Min, rank100Min, rank500Min, castLastScPenaltyAlpha, lastScEventPenaltyAlpha, castOwnedScRatioPenaltyAlphaValue, movieHasScPenaltyAlpha].some((value) => value === null)) {
+    showMessage("全局抽取策略参数不完整", false);
+    return null;
+  }
+  rank100Min = rank100Min as number;
+  rank500Min = rank500Min as number;
+  if ((rank20Min as number) > rank100Min || rank100Min > rank500Min || rank500Min > n) {
+    showMessage("需要满足 0 <= rank20 <= rank100 <= rank500 <= 抽取数量", false);
+    return null;
+  }
+  return {
+    castLastScBlockDays,
+    lastScEventBlockDays,
+    rank20Min,
+    rank100Min,
+    rank500Min,
+    castLastScPenaltyAlpha,
+    lastScEventPenaltyAlpha,
+    castOwnedScRatioPenaltyAlpha: castOwnedScRatioPenaltyAlphaValue,
+    movieHasScPenaltyAlpha
+  };
+}
+
+function buildPayload(): AnyRecord | null {
+  if (!formEl.value?.checkValidity()) {
+    formEl.value?.classList.add("was-validated");
+    showMessage("请检查必填参数", false);
+    return null;
+  }
+  const pickN = parseNumber(inputValue("pickCount"));
+  if (pickN === null || pickN <= 0) {
+    showMessage("请输入大于 0 的数量", false);
+    return null;
+  }
+  const options = buildOptions(pickN);
+  if (!options) return null;
+  const groupElements = Array.from(document.querySelectorAll("#pickGroups .pick-group"));
+  if (!groupElements.length) {
+    showMessage("请添加至少一组条件", false);
+    return null;
+  }
+  const reqs: AnyRecord[] = [];
+  for (const group of groupElements) {
+    const weight = parseNumber(String(group.querySelector<HTMLInputElement>('[data-role="weight"]')?.value || ""));
+    if (weight === null || weight <= 0) {
+      showMessage("权重需为正数", false);
+      return null;
+    }
+    reqs.push({ weight, req: buildReqFromGroup(group) });
+  }
+  return { pickN, source: pageSource.value, options, reqs };
+}
+
+async function runPick(withCopy: boolean) {
+  const body = buildPayload();
+  if (!body) return;
+  actionLoading.value = true;
+  message.value = "";
+  pickInfo.value = {};
+  try {
+    const data = asRecord(await sendJSON(withCopy ? "/api/triggers/sc/pick-smart-copy" : "/api/triggers/sc/pick-smart-only", "POST", body));
+    pickInfo.value = asRecord(pick(data, "pick_info", "PickInfo"));
+    pickedMovies.value = asArray<AnyRecord>(pick(data, "movies", "Movies")).map((movie, index) => ({ ...movie, _pickedOrder: index }));
+    pickedTotalSizeGb.value = text(data, "total_size_gb", "TotalSizeGB");
+    const nextCopyStatus = asRecord(pick(data, "copy_status", "CopyStatus"));
+    if (Object.keys(nextCopyStatus).length) {
+      copyStatus.value = nextCopyStatus;
+      copyStartedInPage.value = Boolean(pick(data, "copy_started", "CopyStarted")) || Boolean(pick(nextCopyStatus, "running"));
+      if (copyRunning.value) startCopyPolling();
+    }
+    if (pick(data, "copy_started", "CopyStarted") === false && copyRunning.value) {
+      showMessage("Copy 任务正在执行，本次不再启动", false);
+      return;
+    }
+    showMessage(`${withCopy ? "Smart Pick + Copy" : "Smart Pick"} 完成，已抽取 ${num(data, "picked", "Picked")} 部`);
+  } catch (err) {
+    showMessage(`异常：${err instanceof Error ? err.message : String(err)}`, false);
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function fetchCopyStatus() {
+  try {
+    const data = asRecord(await getJSON("/api/triggers/sc/copy-status"));
+    if (!copyStartedInPage.value && !pick(data, "running")) {
+      copyStatus.value = {};
+      stopCopyPolling();
+      return;
+    }
+    copyStatus.value = data;
+    if (copyRunning.value) startCopyPolling();
+    else stopCopyPolling();
+  } catch {
+    stopCopyPolling();
+  }
+}
+
+function startCopyPolling() {
+  if (copyTimer !== undefined) return;
+  copyTimer = window.setInterval(() => void fetchCopyStatus(), 2000);
+}
+
+function stopCopyPolling() {
+  if (copyTimer === undefined) return;
+  window.clearInterval(copyTimer);
+  copyTimer = undefined;
+}
+
+async function stopCopy() {
+  try {
+    const data = asRecord(await sendJSON("/api/triggers/sc/copy-stop", "POST", {}));
+    copyStatus.value = asRecord(pick(data, "status", "Status"));
+    showMessage("已发送停止指令");
+    stopCopyPolling();
+  } catch (err) {
+    showMessage(`停止失败：${err instanceof Error ? err.message : String(err)}`, false);
+  }
+}
+
+function selectSort(item: SortButton) {
+  if (pickedSortBase.value === item.key && item.key !== "picked") {
+    pickedSortDir.value = pickedSortDir.value === "asc" ? "desc" : "asc";
+  } else {
+    pickedSortBase.value = item.key;
+    pickedSortDir.value = item.dir;
+  }
+}
+
+function sortButtonLabel(item: SortButton): string {
+  if (pickedSortBase.value !== item.key || item.key === "picked") return item.label;
+  return `${item.label} ${pickedSortDir.value === "asc" ? "↑" : "↓"}`;
+}
+
+onBeforeUnmount(stopCopyPolling);
 
 function dynamicLabel(row: AnyRecord, key: string, fallback: string): string {
   return text(row, key) || fallback;
@@ -218,7 +478,7 @@ const FieldInput = defineComponent({
     required: { type: Boolean, default: false }
   },
   setup(props) {
-    return () => h("div", { class: props.colClass || "col-md-3" }, [
+    return () => h("div", { class: [props.colClass || "col-md-3", "smart-pick-field"] }, [
       h("label", { class: "form-label", for: props.id }, props.label),
       h("input", {
         type: props.type,
@@ -284,23 +544,23 @@ const PickGroup = defineComponent({
       { reqField: dynamicField(props.payload, "Dir3Field", "MediaDir3"), label: dynamicLabel(props.payload, "Dir3Label", "MediaDir3 (md3)"), colClass: "col-md-3" },
       { reqField: "OrderBy", label: "排序 (od)", placeholder: "sc/lsct/bt...", colClass: "col-md-3" }
     ];
-    return () => h("div", { class: "card border mb-3 pick-group" }, [
+    return () => h("div", { class: "card border pick-group smart-pick-group-panel" }, [
       h("div", { class: "card-body" }, [
-        h("div", { class: "d-flex align-items-center justify-content-between mb-2" }, [
-          h("h6", { class: "mb-0" }, "条件组"),
+        h("div", { class: "smart-pick-group-head" }, [
+          h("h6", `条件组 ${props.groupId}`),
           h("button", {
             type: "button",
-            class: "btn btn-sm btn-outline-danger btn-remove-group",
+            class: "btn btn-sm btn-outline-danger btn-remove-group smart-pick-remove-group",
             disabled: !props.canRemove,
             onClick: () => emit("remove")
           }, "移除")
         ]),
-        h("div", { class: "row g-3" }, [
+        h("div", { class: "row g-3 smart-pick-group-grid" }, [
           h(FieldInput, { colClass: "col-md-3", id: fieldId("weight"), label: "权重", type: "number", min: "1", value: "12", required: true, role: "weight" }),
-          h("div", { class: "col-md-3 d-flex align-items-end" }, [
+          h("div", { class: "col-md-3 d-flex align-items-end smart-pick-advanced-toggle-wrap" }, [
             h("button", {
               type: "button",
-              class: "btn btn-sm btn-outline-secondary w-100",
+              class: "btn btn-sm btn-outline-secondary w-100 smart-pick-advanced-toggle",
               "data-role": "adv-toggle",
               "data-bs-toggle": "collapse",
               "data-bs-target": `#${advPanelId()}`,
@@ -310,8 +570,8 @@ const PickGroup = defineComponent({
             }, "高级参数")
           ]),
           ...simpleFields().map((field) => h(FieldInput, { colClass: "col-md-3", ...field })),
-          h("div", { class: `col-12 collapse${props.expanded ? " show" : ""}`, id: advPanelId(), "data-role": "adv-panel" }, [
-            h("div", { class: "row g-3 mt-1" }, [
+          h("div", { class: `col-12 collapse smart-pick-advanced-panel${props.expanded ? " show" : ""}`, id: advPanelId(), "data-role": "adv-panel" }, [
+            h("div", { class: "row g-3 smart-pick-advanced-grid" }, [
               ...advFields().map((field) => h(FieldInput, {
                 colClass: field.colClass || "col-md-4",
                 id: fieldId(field.reqField.toLowerCase()),

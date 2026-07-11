@@ -1,55 +1,58 @@
 <template>
-  <PageShell class="movie-agg-page-shell wdir-page-shell" :title="title" note="按完整目录树浏览 `w_folder / w_media`。" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root wdir-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+  <PageShell
+    :class="['wdir-page-shell', 'cards-page-shell', 'next02-pink-cards-page', 'next02-pink-cards-page-shell', wdirVariantClass]"
+    :title="pageHeadingTitle"
+    :note="pageNote"
+    eyebrow="WDirectory"
+  >
+    <div id="page-root" :class="['container-fluid wdir-page-root next02-wdir-rewrite', wdirVariantClass]">
+      <LoadingState v-if="loading" />
+      <ErrorPanel v-else-if="error" :message="error" />
       <template v-else>
         <template v-if="isDetail">
-          <section class="section-card wdir-detail-head">
-            <nav aria-label="breadcrumb">
-              <ol class="breadcrumb mb-1">
-                <li class="breadcrumb-item"><a href="/wdir">根目录</a></li>
-                <li v-for="(item, index) in breadcrumbs" :key="crumbKey(item, index)" class="breadcrumb-item" :class="{ active: index === breadcrumbs.length - 1 }">
+          <section class="next02-wdir-overview" aria-label="目录概览">
+            <div class="next02-wdir-overview-toolbar">
+              <nav class="next02-wdir-breadcrumbs" aria-label="breadcrumb">
+                <a href="/wdir">根目录</a>
+                <template v-for="(item, index) in breadcrumbs" :key="crumbKey(item, index)">
+                  <span aria-hidden="true">›</span>
                   <a v-if="index < breadcrumbs.length - 1" :href="`/wdir?id=${crumbId(item)}`">{{ crumbName(item) }}</a>
-                  <span v-else>{{ crumbName(item) }}</span>
-                </li>
-              </ol>
-            </nav>
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-              <h3 class="mb-0">{{ directoryName }}</h3>
-              <div class="btn-group">
-                <a class="btn btn-sm btn-outline-secondary" :class="{ active: recursive }" :href="recursiveHref(true)">递归</a>
-                <a class="btn btn-sm btn-outline-secondary" :class="{ active: !recursive }" :href="recursiveHref(false)">直属</a>
-              </div>
-            </div>
-            <div class="row g-2 mt-2">
-              <div v-for="item in statCards" :key="item.label" class="col-6 col-md-3">
-                <div class="card shadow-sm h-100">
-                  <div class="card-body">
-                    <div class="text-muted small">{{ item.label }}</div>
-                    <div class="h6 mb-0">{{ item.value }}</div>
-                  </div>
-                </div>
+                  <strong v-else>{{ crumbName(item) }}</strong>
+                </template>
+              </nav>
+              <div class="next02-wdir-overview-metrics" aria-label="目录统计">
+                <span v-for="item in statCards" :key="item.label"><small>{{ item.label }}</small><strong>{{ item.value || "-" }}</strong></span>
               </div>
             </div>
             <ChildrenGrid :children="children" />
           </section>
 
-          <section class="section-card wdir-toolbar">
-            <div class="d-flex flex-wrap justify-content-start align-items-center mb-2">
-              <a v-for="item in sortButtons" :key="item.key" :href="item.href" class="btn btn-outline-primary" :class="{ 'active disabled': item.active }">{{ item.label }}</a>
+          <div class="sticky-toolbar cards-toolbar wdir-movie-toolbar next02-pink-cards-toolbar" aria-label="WDir 影片控制栏">
+            <div class="cards-toolbar-sort">
+              <LinkStrip :items="sortButtons" />
             </div>
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                <a v-for="item in ownedButtons" :key="item.key" :href="item.href" class="btn btn-sm" :class="[item.className, { 'active disabled': item.active }]">{{ item.label }}</a>
-                <button type="button" class="btn btn-sm btn-outline-secondary" @click="filterOpen = !filterOpen">筛选</button>
+            <div class="toolbar-line cards-toolbar-bottom">
+              <div class="owned-line cards-toolbar-filters">
+                <LinkStrip :items="ownedButtons" />
+                <a class="button-secondary wdir-recursive-button" :class="{ active: recursive }" :href="recursiveHref(true)">递归</a>
+                <a class="button-secondary wdir-recursive-button" :class="{ active: !recursive }" :href="recursiveHref(false)">直属</a>
+                <button type="button" class="button-secondary cards-filter-button" :class="{ active: filterOpen }" :aria-expanded="filterOpen" @click.stop.prevent="toggleFilter">筛选</button>
               </div>
-              <PageLinks v-if="pageLinks.length" :links="pageLinks" />
+              <div class="next02-pink-cards-toolbar-status">
+                <div class="next02-pink-cards-metrics" aria-label="WDir 页面摘要">
+                  <span><strong>{{ total }}</strong> Total</span>
+                  <span><strong>{{ movies.length }}</strong> Current Page</span>
+                </div>
+                <div v-if="pageLinks.length" class="cards-toolbar-pagination next02-pink-cards-pagination">
+                  <PaginationBar :page-info="pageInfo" />
+                </div>
+              </div>
             </div>
-          </section>
+          </div>
 
-          <section v-if="filterOpen" class="card mb-3">
-            <div class="card-body">
+          <div id="movieCardFilterCollapse" class="collapse next02-pink-cards-filter next02-wdir-filter" :class="{ show: filterOpen }">
+            <div class="card">
+              <div class="card-body">
               <form class="row g-2 align-items-end" method="get" :action="filterAction">
                 <input v-if="filterValue('PageSize')" type="hidden" name="ps" :value="filterValue('PageSize')">
                 <input v-if="filterValue('OrderBy')" type="hidden" name="od" :value="filterValue('OrderBy')">
@@ -62,25 +65,25 @@
                   <a class="btn btn-outline-secondary" :href="filterClearHref">清空</a>
                 </div>
               </form>
+              </div>
             </div>
-          </section>
+          </div>
 
-          <section class="section-card">
+          <section class="next02-wdir-movies" aria-label="Movies">
             <MovieGrid v-if="movies.length" :cards="movies" />
-            <div v-else class="alert alert-light border mb-0">这个目录下暂时没有媒体。</div>
+            <div v-else class="movie-empty">这个目录下暂时没有媒体。</div>
           </section>
         </template>
 
         <template v-else>
-          <section class="section-card">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
-              <div>
-                <h3 class="mb-1">媒体目录</h3>
-                <p class="text-muted mb-0">按完整目录树浏览 `w_folder / w_media`。</p>
+          <section class="next02-wdir-overview next02-wdir-root-overview" aria-label="根目录概览">
+            <div class="next02-wdir-overview-toolbar">
+              <div class="next02-wdir-root-scope"><span>根目录</span><strong>完整目录树</strong></div>
+              <div class="next02-wdir-root-status">
+                <span class="next02-wdir-root-count"><strong>{{ total }}</strong> 个目录</span>
+              <div v-if="pageLinks.length" class="cards-toolbar-pagination wdir-root-pagination next02-wdir-root-pagination next02-pink-cards-pagination">
+                <PaginationBar :page-info="pageInfo" />
               </div>
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="btn btn-sm btn-outline-secondary disabled">目录数 {{ total }}</span>
-                <PageLinks v-if="pageLinks.length" :links="pageLinks" />
               </div>
             </div>
             <ChildrenGrid :children="children" />
@@ -95,9 +98,13 @@
 import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
+import ErrorPanel from "@/components/ErrorPanel.vue";
+import LinkStrip from "@/components/LinkStrip.vue";
+import LoadingState from "@/components/LoadingState.vue";
 import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";
-import type { AnyRecord } from "@/types/gc";
+import PaginationBar from "@/components/PaginationBar.vue";
+import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
 const sortLabels: Record<string, string> = {
@@ -108,10 +115,11 @@ const sortLabels: Record<string, string> = {
   ByDaysInRank: "在榜天数",
   ByHighestRank: "最高排名",
   ByBirthTime: "下载时间",
-  ByMediaBirthTime: "Media下载时间",
   ByLastScTime: "最后sc",
   ByScTimes: "sc次数",
-  ByComeTimes: "co次数"
+  ByComeTimes: "co次数",
+  ByCastAgeDesc: "年龄降序",
+  ByCastAgeAsc: "年龄升序"
 };
 
 const route = useRoute();
@@ -137,13 +145,16 @@ async function load() {
 
 const title = computed(() => text(payload.value, "Title") || "媒体目录");
 const isDetail = computed(() => text(payload.value, "ViewType") === "wdir-detail");
+const wdirVariantClass = computed(() => isDetail.value ? "is-wdir-detail" : "is-wdir-root");
 const children = computed(() => asRecord(pick(payload.value, "Children")));
-const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")));
+const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
 const pageLinks = computed(() => asArray<AnyRecord>(pageInfo.value.Links || pageInfo.value.links));
 const total = computed(() => text(payload.value, "Total", "total") || "0");
 const detail = computed(() => asRecord(pick(payload.value, "Detail")));
 const directory = computed(() => asRecord(pick(detail.value, "directory", "Directory")));
 const directoryName = computed(() => text(directory.value, "name", "Name") || title.value);
+const pageHeadingTitle = computed(() => isDetail.value ? directoryName.value : title.value);
+const pageNote = computed(() => isDetail.value ? "目录路径、媒体统计、子目录与影片。" : "按完整目录树浏览 w_folder / w_media。");
 const directoryId = computed(() => text(directory.value, "id", "Id"));
 const breadcrumbs = computed(() => asArray<AnyRecord>(pick(detail.value, "breadcrumbs", "Breadcrumbs")));
 const stats = computed(() => asRecord(pick(detail.value, "stats", "Stats")));
@@ -174,21 +185,25 @@ const statCards = computed(() => [
   { label: "最近下载时间", value: formatUnix(pick(stats.value, "last_film_birth", "LastFilmBirth"), true) },
   { label: "最近更新", value: formatUnix(pick(stats.value, "last_updated_on", "LastUpdatedOn"), true) }
 ]);
-const sortButtons = computed(() => Object.entries(sortQuery.value).map(([key, value]) => {
+const sortButtons = computed(() => Object.entries(sortQuery.value).filter(([key]) => key !== "ByMediaBirthTime").map(([key, value]) => {
   const item = asRecord(value);
-  return { key, label: sortLabels[key] || key, href: normalizeHref(text(item, "Href", "href")), active: Boolean(item.Active || item.active) };
+  return { key, label: sortLabels[key] || key, href: normalizeHref(text(item, "Href", "href")), active: Boolean(item.Active || item.active), disabled: Boolean(item.Active || item.active) };
 }).filter((item) => item.href));
 const ownedButtons = computed(() => [
-  ["MediaAll", "MAll", "btn-primary"],
-  ["MediaOwned", "MOwned", "btn-success"],
-  ["MediaNotOwned", "MNotOwned", "btn-secondary"]
-].map(([key, label, className]) => {
+  ["MediaAll", "All"],
+  ["MediaOwned", "Owned"],
+  ["MediaNotOwned", "NotOwned"]
+].map(([key, label]) => {
   const item = asRecord(ownedQuery.value[key]);
-  return { key, label, className, href: normalizeHref(text(item, "Href", "href")), active: Boolean(item.Active || item.active) };
+  return { key, label, href: normalizeHref(text(item, "Href", "href")), active: Boolean(item.Active || item.active), disabled: Boolean(item.Active || item.active) };
 }));
 
 function filterValue(key: string): string {
   return text(filter.value, key);
+}
+
+function toggleFilter(): void {
+  filterOpen.value = !filterOpen.value;
 }
 
 function recursiveHref(next: boolean): string {
@@ -237,62 +252,29 @@ const ChildrenGrid = defineComponent({
   setup(props) {
     return () => {
       const items = asArray<AnyRecord>(props.children.Items || props.children.items);
-      return h("section", { class: "mt-3", "aria-label": "Subdirectories" }, [
-        h("div", { class: "d-flex align-items-center justify-content-between mb-2" }, [
-          h("h5", { class: "mb-0" }, text(props.children, "Title") || "子目录"),
-          text(props.children, "MoreURL") ? h("a", { class: "small", href: text(props.children, "MoreURL") }, "更多") : null
+      return h("section", { class: "next02-wdir-children", "aria-label": "Subdirectories" }, [
+        h("div", { class: "next02-wdir-children-head" }, [
+          h("h2", text(props.children, "Title") || "子目录"),
+          text(props.children, "MoreURL") ? h("a", { href: text(props.children, "MoreURL") }, "更多") : null
         ]),
         items.length
-          ? h("div", { class: "row row-cols-2 row-cols-sm-3 row-cols-lg-5 row-cols-xxl-6 g-3" }, items.map((item) => {
+          ? h("div", { class: "next02-wdir-directory-grid" }, items.map((item) => {
             const summary = asRecord(pick(item, "Summary"));
             const stat = asRecord(asArray<AnyRecord>(pick(item, "Stats"))[0]);
             const id = text(summary, "id", "Id");
             const name = text(summary, "name", "Name");
-            return h("div", { class: "col", key: id || name }, [
-              h("a", { href: `/wdir?id=${encodeURIComponent(id)}`, class: "text-decoration-none" }, [
-                h("div", { class: "card h-100 shadow-sm" }, [
-                  h("div", { class: "card-body py-2" }, [
-                    h("div", { class: "d-flex align-items-start" }, [
-                      h("div", { class: "flex-grow-1" }, [
-                        h("div", { class: "fw-semibold text-truncate", title: name }, name),
-                        h("div", { class: "text-muted small" }, `${text(stat, "film_count", "FilmCount") || "0"} 个媒体 · ${humanSize(pick(stat, "total_size", "TotalSize"))}`)
-                      ])
-                    ])
-                  ]),
-                  h("div", { class: "card-footer py-1 text-muted small" }, `更新：${formatUnix(pick(summary, "updated_on", "UpdatedOn"), true)}`)
-                ])
-              ])
+            return h("a", { href: `/wdir?id=${encodeURIComponent(id)}`, class: "next02-wdir-directory-item", key: id || name }, [
+              h("span", { class: "next02-wdir-folder-mark", "aria-hidden": "true" }),
+              h("strong", { class: "next02-wdir-directory-name", title: name }, name),
+              h("span", { class: "next02-wdir-directory-metric" }, [h("small", "媒体"), h("b", text(stat, "film_count", "FilmCount") || "0")]),
+              h("span", { class: "next02-wdir-directory-metric" }, [h("small", "容量"), h("b", humanSize(pick(stat, "total_size", "TotalSize")))]),
+              h("time", { class: "next02-wdir-directory-updated" }, `更新 ${formatUnix(pick(summary, "updated_on", "UpdatedOn"), true) || "-"}`)
             ]);
           }))
-          : h("div", { class: "alert alert-light border mb-0" }, "暂无子目录。")
+          : h("div", { class: "movie-empty next02-wdir-empty" }, "暂无子目录。")
       ]);
     };
   }
 });
 
-const PageLinks = defineComponent({
-  name: "WDirPagination",
-  props: {
-    links: { type: Array as PropType<AnyRecord[]>, required: true }
-  },
-  setup(props) {
-    return () => h("nav", { "aria-label": "Page navigation" }, [
-      h("ul", { class: "pagination pagination-sm mb-0" }, props.links.map((item, index) => {
-        if (item.Ellipsis || item.ellipsis) {
-          return h("li", { class: "page-item disabled", key: `ellipsis-${index}` }, [h("span", { class: "page-link" }, "...")]);
-        }
-        const disabled = Boolean(item.Disabled || item.disabled);
-        const active = Boolean(item.Active || item.active);
-        return h("li", { class: ["page-item", { active, disabled }], key: `${item.Label || item.label}-${index}` }, [
-          h("a", {
-            class: "page-link",
-            href: disabled ? "#" : normalizeHref(text(item, "Href", "href") || "#"),
-            tabindex: disabled ? "-1" : undefined,
-            "aria-disabled": disabled ? "true" : undefined
-          }, text(item, "Label", "label"))
-        ]);
-      }))
-    ]);
-  }
-});
 </script>

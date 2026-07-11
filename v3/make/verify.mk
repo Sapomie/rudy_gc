@@ -5,10 +5,9 @@ V3_VERIFY_FILE := $(abspath $(lastword $(MAKEFILE_LIST)))
 V3_VERIFY_MAKE_DIR := $(dir $(V3_VERIFY_FILE))
 
 include $(V3_VERIFY_MAKE_DIR)common.mk
-include $(V3_VERIFY_MAKE_DIR)gc-api.mk
-include $(V3_VERIFY_MAKE_DIR)gc-web.mk
+include $(V3_VERIFY_MAKE_DIR)gc-apps.mk
 
-.PHONY: verify build-all test-all
+.PHONY: verify build-all test-all check-dev
 
 test-all: test-api
 

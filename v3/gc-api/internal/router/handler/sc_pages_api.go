@@ -3,9 +3,11 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -31,10 +33,12 @@ func NewScPagesAPI(deps *dep.Dep) *ScPagesAPI {
 }
 
 type scEventListQuery struct {
-	Page     int64  `form:"p"`
-	PageSize int64  `form:"ps"`
-	Sort     string `form:"sort"`
-	Order    string `form:"order"`
+	Page      int64  `form:"p"`
+	PageSize  int64  `form:"ps"`
+	Sort      string `form:"sort"`
+	Order     string `form:"order"`
+	StartDate string `form:"start_date"`
+	EndDate   string `form:"end_date"`
 }
 
 func (h *ScPagesAPI) ListScEvents(c *gin.Context) {
@@ -49,13 +53,18 @@ func (h *ScPagesAPI) ListScEvents(c *gin.Context) {
 	if q.Page <= 0 {
 		q.Page = 1
 	}
-	if q.PageSize <= 0 || q.PageSize > 100 {
+	if q.PageSize <= 0 || q.PageSize > 200 {
 		q.PageSize = 24
 	}
 	q.Sort = normalizeScEventSortField(q.Sort)
 	q.Order = normalizeScEventSortOrder(q.Order)
+	startTime, endTime, err := parseScEventDateRange(q.StartDate, q.EndDate)
+	if err != nil {
+		jsonBadRequest(c, "时间筛选参数错误", err)
+		return
+	}
 
-	resp, err := h.scSvc.ListEventPage(c.Request.Context(), int(q.Page), int(q.PageSize), q.Sort, q.Order)
+	resp, err := h.scSvc.ListEventPage(c.Request.Context(), int(q.Page), int(q.PageSize), q.Sort, q.Order, startTime, endTime)
 	if err != nil {
 		jsonServerError(c, "加载 SC 事件失败", err)
 		return
@@ -91,8 +100,13 @@ func (h *ScPagesAPI) ListScEventCards(c *gin.Context) {
 	}
 	q.Sort = normalizeScEventSortField(q.Sort)
 	q.Order = normalizeScEventSortOrder(q.Order)
+	startTime, endTime, err := parseScEventDateRange(q.StartDate, q.EndDate)
+	if err != nil {
+		jsonBadRequest(c, "时间筛选参数错误", err)
+		return
+	}
 
-	resp, err := h.scSvc.ListEventCardPage(c.Request.Context(), int(q.Page), int(q.PageSize), q.Sort, q.Order)
+	resp, err := h.scSvc.ListEventCardPage(c.Request.Context(), int(q.Page), int(q.PageSize), q.Sort, q.Order, startTime, endTime)
 	if err != nil {
 		jsonServerError(c, "加载 SC 事件失败", err)
 		return
@@ -109,6 +123,35 @@ func (h *ScPagesAPI) ListScEventCards(c *gin.Context) {
 		"ScSortQuery": buildScEventSortQuery(c, q.Sort, q.Order),
 		"ScViewQuery": buildScEventViewQuery(c),
 	})
+}
+
+func parseScEventDateRange(startDate, endDate string) (int64, int64, error) {
+	const layout = "2006-01-02"
+	startDate = strings.TrimSpace(startDate)
+	endDate = strings.TrimSpace(endDate)
+
+	var startTime int64
+	if startDate != "" {
+		value, err := time.ParseInLocation(layout, startDate, time.Local)
+		if err != nil {
+			return 0, 0, fmt.Errorf("起始日期格式错误: %w", err)
+		}
+		startTime = value.Unix()
+	}
+
+	var endTime int64
+	if endDate != "" {
+		value, err := time.ParseInLocation(layout, endDate, time.Local)
+		if err != nil {
+			return 0, 0, fmt.Errorf("结束日期格式错误: %w", err)
+		}
+		endTime = value.AddDate(0, 0, 1).Unix()
+	}
+
+	if startTime > 0 && endTime > 0 && startTime >= endTime {
+		return 0, 0, errors.New("起始日期不能晚于结束日期")
+	}
+	return startTime, endTime, nil
 }
 
 func (h *ScPagesAPI) ScEventDetail(c *gin.Context) {

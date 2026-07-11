@@ -20,9 +20,11 @@ paths:
 	@echo "ROOT_DIR=$(ROOT_DIR)"
 	@echo "GC_API_DIR=$(GC_API_DIR)"
 	@echo "GC_WEB_DIR=$(GC_WEB_DIR)"
+	@echo "GC_WEB_NEXT02_DIR=$(GC_WEB_NEXT02_DIR)"
 	@echo "DEPLOY_DIR=$(DEPLOY_DIR)"
 	@echo "GC_API_PORT=$(GC_API_PORT)"
 	@echo "GC_WEB_PORT=$(GC_WEB_PORT)"
+	@echo "GC_WEB_NEXT02_PORT=$(GC_WEB_NEXT02_PORT)"
 	@echo "GC_API_ORIGIN=$(GC_API_ORIGIN)"
 	@echo "WEB_HOST=$(WEB_HOST)"
 

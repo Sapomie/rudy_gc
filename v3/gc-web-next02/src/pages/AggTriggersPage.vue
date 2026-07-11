@@ -1,13 +1,32 @@
 <template>
   <PageShell class="movie-agg-page-shell agg-triggers-page-shell" :title="title" :note="pageNote" eyebrow="">
-    <div id="page-root" class="container-fluid movie-agg-page-root agg-triggers-page-root">
+    <div id="page-root" class="container-fluid movie-agg-page-root agg-triggers-page-root next02-agg-trigger-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
+        <section class="next02-movieagg-hero next02-agg-trigger-hero">
+          <div class="next02-movieagg-hero-copy">
+            <div class="next02-rewrite-eyebrow">Agg Triggers / Backfill Console</div>
+            <h2>{{ pageTitle }}</h2>
+            <p>{{ pageNote || "执行 WMedia 与上映日聚合回填，刷新聚合桶和 Top 数据。" }}</p>
+            <div class="next02-movieagg-hero-links">
+              <a href="/w-media-agg/birth">WMedia 聚合页</a>
+              <a href="/movie-agg-all/release">上映日聚合页</a>
+              <a href="/movie-agg-all/release-bucket-list">上映桶表</a>
+            </div>
+          </div>
+          <div class="next02-rewrite-kpis">
+            <div v-for="item in heroStats" :key="item.label" class="next02-rewrite-kpi">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+        </section>
+
         <div
           v-if="message"
           id="msgArea"
-          class="alert fade show small py-2 px-3"
+          class="alert fade show small py-2 px-3 next02-agg-message"
           :class="messageOk ? 'alert-success' : 'alert-danger'"
         >
           {{ message }}
@@ -15,7 +34,7 @@
         <div v-else id="msgArea" class="alert fade small py-2 px-3 agg-trigger-msg-hidden"></div>
 
         <div id="aggTriggersPage">
-          <div class="row mb-3">
+          <div class="row mb-3 next02-agg-trigger-head">
             <div class="col-12 d-flex align-items-center justify-content-between">
               <div>
                 <h4 class="mb-1">{{ pageTitle }}</h4>
@@ -30,7 +49,7 @@
 
           <div class="row g-3">
             <div v-for="card in cards" :key="card.prefix" class="col-xl-6">
-              <div class="card h-100">
+              <div class="card h-100 next02-rewrite-card next02-agg-job-card">
                 <div class="card-body">
                   <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
                     <h5 class="card-title mb-0">{{ card.title }}</h5>
@@ -62,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onUnmounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
@@ -149,6 +168,7 @@ const error = ref("");
 const message = ref("");
 const messageOk = ref(true);
 const running = ref(false);
+let messageTimer: number | undefined;
 const results = reactive<Record<BackfillCard["prefix"], AnyRecord>>({
   agg: {},
   releaseAgg: {}
@@ -164,6 +184,7 @@ async function load() {
   loading.value = true;
   error.value = "";
   message.value = "";
+  clearMessageTimer();
   try {
     payload.value = asRecord(await getJSON(apiPathForRoute(route)));
   } catch (err) {
@@ -176,6 +197,13 @@ async function load() {
 const title = computed(() => text(payload.value, "Title") || "聚合回填");
 const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value);
 const pageNote = computed(() => text(payload.value, "PageNote"));
+const completedCardCount = computed(() => cards.filter((card) => Object.keys(results[card.prefix]).length > 0).length);
+const heroStats = computed(() => [
+  { label: "任务数", value: String(cards.length) },
+  { label: "运行中", value: running.value ? "1" : "0" },
+  { label: "已完成", value: String(completedCardCount.value) },
+  { label: "状态", value: message.value ? (messageOk.value ? "成功" : "失败") : "待执行" }
+]);
 
 function metricValue(prefix: BackfillCard["prefix"], key: string): string {
   const value = num(results[prefix], metricMap[key] || key);
@@ -190,23 +218,47 @@ function doneStatus(result: AnyRecord): string {
   return `回填完成：日桶 ${num(result, "day_buckets")}，Top 行 ${num(result, "top_rows")}`;
 }
 
+function clearMessageTimer(): void {
+  if (messageTimer !== undefined) {
+    window.clearTimeout(messageTimer);
+    messageTimer = undefined;
+  }
+}
+
+function showMessage(value: string, ok: boolean): void {
+  clearMessageTimer();
+  message.value = value;
+  messageOk.value = ok;
+  messageTimer = window.setTimeout(() => {
+    message.value = "";
+    messageTimer = undefined;
+  }, 3000);
+}
+
+function responseResult(data: AnyRecord): AnyRecord {
+  const first = asRecord(pick(data, "result", "Result"));
+  const nested = asRecord(pick(first, "result", "Result"));
+  return Object.keys(nested).length ? nested : first;
+}
+
 async function runBackfill(card: BackfillCard) {
   running.value = true;
   message.value = "";
+  clearMessageTimer();
   statusText[card.prefix] = card.loadingText;
   try {
     const data = asRecord(await sendJSON(card.url, "POST", {}));
-    const result = asRecord(pick(data, "result", "Result"));
+    const result = responseResult(data);
     results[card.prefix] = result;
     statusText[card.prefix] = doneStatus(result);
-    message.value = text(data, "message", "Message") || card.doneMessage;
-    messageOk.value = true;
+    showMessage(text(data, "message", "Message") || card.doneMessage, true);
   } catch (err) {
     statusText[card.prefix] = "回填失败，请查看提示信息";
-    message.value = err instanceof Error ? err.message : "回填失败";
-    messageOk.value = false;
+    showMessage(err instanceof Error ? err.message : "回填失败", false);
   } finally {
     running.value = false;
   }
 }
+
+onUnmounted(clearMessageTimer);
 </script>

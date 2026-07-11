@@ -52,8 +52,8 @@
                           <th>识别码</th>
                           <td>
                             <div class="movie-info-code-line">
-                              <a :href="`/cards?pn=${encodeURIComponent(prefix)}`" class="movie-info-code movie-tag-code">{{ movieName }}</a>
-                              <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm movie-action-button movie-action-button-play" :class="mediaButtonClass">MPlay</a>
+                              <a :href="`/cards?pn=${encodeURIComponent(prefix)}`" class="movie-info-code movie-tag-code" target="_blank" rel="noopener noreferrer">{{ movieName }}</a>
+                              <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm movie-action-button movie-action-button-play" :class="mediaButtonClass" target="_blank" rel="noopener noreferrer">MPlay</a>
                               <span v-else-if="mediaLabel" class="btn btn-sm btn-secondary disabled movie-action-button movie-action-button-play" aria-disabled="true">{{ mediaLabel }}</span>
                               <small v-if="encodeName" class="movie-info-subtle">({{ encodeName }})</small>
                             </div>
@@ -83,21 +83,21 @@
                         </tr>
                         <tr class="table-light">
                           <th>制作商</th>
-                          <td><div class="movie-info-tag-group"><a v-if="maker" class="tag movie-tag-company" :href="`/cards?mn=${encodeURIComponent(maker)}`">{{ maker }}</a><span v-else class="movie-info-empty">-</span></div></td>
+                          <td><div class="movie-info-tag-group"><a v-if="maker" class="tag movie-tag-company" :href="`/cards?mn=${encodeURIComponent(maker)}`" target="_blank" rel="noopener noreferrer">{{ maker }}</a><span v-else class="movie-info-empty">-</span></div></td>
                         </tr>
                         <tr class="table-light">
                           <th>发行商</th>
-                          <td><div class="movie-info-tag-group"><a v-if="label" class="tag movie-tag-company" :href="`/cards?ln=${encodeURIComponent(label)}`">{{ label }}</a><span v-else class="movie-info-empty">-</span></div></td>
+                          <td><div class="movie-info-tag-group"><a v-if="label" class="tag movie-tag-company" :href="`/cards?ln=${encodeURIComponent(label)}`" target="_blank" rel="noopener noreferrer">{{ label }}</a><span v-else class="movie-info-empty">-</span></div></td>
                         </tr>
                         <tr class="table-light">
                           <th>导演</th>
-                          <td><div class="movie-info-tag-group"><a v-if="director" class="tag movie-tag-person" :href="`/cards?dn=${encodeURIComponent(director)}`" :title="director">{{ director }}</a><span v-else class="movie-info-empty">-</span></div></td>
+                          <td><div class="movie-info-tag-group"><a v-if="director" class="tag movie-tag-person movie-tag-director" :href="`/cards?dn=${encodeURIComponent(director)}`" :title="director" target="_blank" rel="noopener noreferrer">{{ director }}</a><span v-else class="movie-info-empty">-</span></div></td>
                         </tr>
                         <tr class="table-light">
                           <th>分类</th>
                           <td>
                             <div class="movie-info-tag-group">
-                              <a v-for="genre in genres" :key="genre" class="tag movie-tag-genre" :href="`/cards?gn=${encodeURIComponent(genre)}`">{{ genre }}</a>
+                              <a v-for="genre in genres" :key="genre" class="tag movie-tag-genre" :href="`/cards?gn=${encodeURIComponent(genre)}`" target="_blank" rel="noopener noreferrer">{{ genre }}</a>
                               <span v-if="!genres.length" class="movie-info-empty">-</span>
                             </div>
                           </td>
@@ -106,7 +106,7 @@
                           <th>演员</th>
                           <td>
                             <div class="movie-info-tag-group movie-info-cast-line">
-                              <a v-for="cast in casts" :key="cast.href + cast.label" class="tag movie-tag-person" :href="cast.href" :title="cast.label">{{ cast.label }}</a>
+                              <a v-for="cast in casts" :key="cast.href + cast.label" class="tag movie-tag-person movie-tag-cast" :href="cast.href" :title="cast.label" target="_blank" rel="noopener noreferrer">{{ cast.label }}</a>
                               <button type="button" class="btn btn-sm btn-outline-primary movie-inline-action" data-bs-toggle="modal" data-bs-target="#addMovieCastModal" :data-jav="javID" @click="openCastModal">添加 Cast</button>
                             </div>
                           </td>
@@ -138,9 +138,9 @@
                           <th>链接</th>
                           <td class="movie-link-strip">
                             <div class="movie-info-tag-group movie-info-links">
-                              <a v-if="busUrl" class="movie-tag-link" :href="busUrl" target="_blank" rel="noopener">Bus</a>
-                              <a v-if="searchUrl" class="movie-tag-link" :href="searchUrl" target="_blank" rel="noopener">Suk</a>
-                              <a v-if="javUrl" class="movie-tag-link" :href="javUrl" target="_blank" rel="noopener">Lib</a>
+                              <a v-if="busUrl" class="movie-tag-link" :href="busUrl" target="_blank" rel="noopener noreferrer">Bus</a>
+                              <a v-if="searchUrl" class="movie-tag-link" :href="searchUrl" target="_blank" rel="noopener noreferrer">Suk</a>
+                              <a v-if="javUrl" class="movie-tag-link" :href="javUrl" target="_blank" rel="noopener noreferrer">Lib</a>
                               <span v-if="!busUrl && !searchUrl && !javUrl" class="movie-info-empty">-</span>
                             </div>
                           </td>
@@ -153,7 +153,7 @@
                           <th>Sc</th>
                           <td>
                             <div v-if="scRows.length" class="movie-info-tag-group">
-                              <a v-for="row in scRows" :key="row.href + row.name" class="tag movie-tag-event" :href="row.href">{{ row.name }}</a>
+                              <a v-for="row in scRows" :key="row.href + row.name" class="tag movie-tag-event" :href="row.href" target="_blank" rel="noopener noreferrer">{{ row.name }}</a>
                             </div>
                             <span v-else class="movie-info-empty">-</span>
                           </td>
@@ -168,6 +168,8 @@
                                 :key="album.name"
                                 class="tag movie-album-badge movie-tag-album"
                                 :href="`/movie-albums?album_name=${encodeURIComponent(album.name)}`"
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
                                 {{ album.name }}
                               </a>
@@ -222,7 +224,7 @@
                         </thead>
                         <tbody>
                           <tr v-for="row in pagedRankRows" :key="row.date">
-                            <td><a :href="`/moviecarddayrank?date=${encodeURIComponent(row.date)}`">{{ row.date }}</a></td>
+                            <td><a :href="`/moviecarddayrank?date=${encodeURIComponent(row.date)}`" target="_blank" rel="noopener noreferrer">{{ row.date }}</a></td>
                             <td><span>{{ row.rank }}</span></td>
                           </tr>
                         </tbody>
@@ -265,7 +267,7 @@
                     <div class="movie-film-item movie-film-size">
                       <span class="movie-film-label">Size</span>
                       <div class="movie-film-value-line">
-                        <a class="movie-film-size-link" :href="mediaText('FilePath')">{{ mediaSize }}</a>
+                        <a class="movie-film-size-link" :href="mediaText('FilePath')" target="_blank" rel="noopener noreferrer">{{ mediaSize }}</a>
                         <button type="button" class="btn btn-sm js-move-wmedia-removed" :class="movieDeleteAlbumMarked ? 'btn-danger' : 'btn-outline-danger'" :data-jav="javID" @click="openMoveRemovedModal">
                           {{ movieDeleteAlbumMarked ? "已在待删除" : "加入待删除" }}
                         </button>
@@ -1208,7 +1210,7 @@ const ResourceTable = defineComponent({
         return h("tr", { class: matched ? "fetch-site-row-match" : "" }, [
           h("td", { class: "movie-resource-title-cell fetch-site-col-title" }, [
             url
-              ? h("a", { class: "movie-resource-title-link", href: url, target: "_blank", rel: "noreferrer", title }, title)
+              ? h("a", { class: "movie-resource-title-link", href: url, target: "_blank", rel: "noopener noreferrer", title }, title)
               : h("span", { class: "movie-resource-title-text", title }, title)
           ]),
           h("td", { class: "movie-resource-number-cell fetch-site-col-compact text-nowrap", "data-sort-key": "size" }, formatResourceSizeGB(text(record, "SizeText"))),

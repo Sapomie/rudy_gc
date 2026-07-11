@@ -8,37 +8,57 @@
           {{ message }}
         </div>
 
-        <div id="mediaRollbackPage">
+        <div id="mediaRollbackPage" class="next02-media-rewrite next02-rollback-rewrite">
           <div class="row mb-3">
-            <div class="col-12 d-flex align-items-center justify-content-between">
-              <div>
+            <div class="col-12">
+              <div class="next02-media-hero">
+                <div class="next02-media-hero-main">
+                  <div class="next02-media-eyebrow">Media Rollback</div>
                 <h4 class="mb-1">{{ pageTitle }}</h4>
                 <p class="text-muted mb-0">{{ pageNote }}</p>
+                  <div class="next02-media-kpi-strip">
+                    <span v-for="item in heroStats" :key="item.label">
+                      <strong>{{ item.value }}</strong>
+                      <em>{{ item.label }}</em>
+                    </span>
+                  </div>
               </div>
-              <div class="d-flex gap-2">
+                <div class="next02-media-hero-actions">
                 <a href="/triggers/media" class="btn btn-outline-primary btn-sm">返回入库页</a>
                 <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="row">
-            <div class="col-lg-4">
-              <div class="card">
+          <div class="row next02-media-grid">
+            <div class="col-lg-4 next02-media-control-col">
+              <div class="card next02-media-action-card next02-rollback-action-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">操作</h5>
-                  <div class="d-grid gap-2">
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Rollback</div>
+                      <h5 class="card-title mb-0">操作</h5>
+                    </div>
+                    <span class="next02-media-live">Ready</span>
+                  </div>
+                  <div class="next02-media-action-stack next02-rollback-action-stack">
                     <button type="button" id="btnRollback" class="btn btn-primary" :disabled="actionLoading" @click="runRollback">开始回滚名称</button>
                   </div>
-                  <div class="mt-3 small text-muted">
+                  <div class="next02-media-help">
                     从每个 root 的 <code>001_process/004_rollback</code> 读取文件，按规则还原名称并移回 <code>001_process/001_ingest_new</code>。
                   </div>
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-overview-card next02-rollback-overview-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">运行概览</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Overview</div>
+                      <h5 class="card-title mb-0">运行概览</h5>
+                    </div>
+                  </div>
                   <div class="row g-2">
                     <div class="col-4"><div class="overview-item"><div class="label">总数</div><div class="value" id="sumTotal">{{ num(result, "total") }}</div></div></div>
                     <div class="col-4"><div class="overview-item"><div class="label">成功</div><div class="value text-success" id="sumSuccess">{{ num(result, "success") }}</div></div></div>
@@ -51,9 +71,15 @@
                 </div>
               </div>
 
-              <div class="card">
+              <div class="card next02-media-root-card next02-rollback-root-card">
                 <div class="card-body">
-                  <h5 class="card-title mb-3">Root 目录</h5>
+                  <div class="next02-media-panel-head">
+                    <div>
+                      <div class="next02-media-eyebrow">Roots</div>
+                      <h5 class="card-title mb-0">Root 目录</h5>
+                    </div>
+                    <span class="next02-media-count-pill">{{ rootDirs.length }} 个</span>
+                  </div>
                   <ul class="mb-0 root-list">
                     <li v-for="dir in rootDirs" :key="dir"><code>{{ dir }}</code></li>
                     <li v-if="!rootDirs.length" class="text-muted">未配置 media.rootDirs</li>
@@ -62,7 +88,7 @@
               </div>
             </div>
 
-            <div class="col-lg-8">
+            <div class="col-lg-8 next02-media-result-col">
               <ResultTable v-for="table in tables" :key="table.id" :table="table" />
             </div>
           </div>
@@ -121,6 +147,12 @@ const title = computed(() => text(payload.value, "Title") || "媒体回滚");
 const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value);
 const pageNote = computed(() => text(payload.value, "PageNote"));
 const rootDirs = computed(() => asArray<string>(pick(payload.value, "RootDirs")));
+const heroStats = computed(() => [
+  { label: "Root", value: rootDirs.value.length },
+  { label: "总数", value: num(result.value, "total") },
+  { label: "成功", value: num(result.value, "success") },
+  { label: "失败", value: num(result.value, "failed") }
+]);
 const tables = computed<ResultTableDef[]>(() => [
   {
     id: "tblRollbackSuccess",
@@ -180,9 +212,15 @@ const ResultTable = defineComponent({
     table: { type: Object as PropType<ResultTableDef>, required: true }
   },
   setup(props) {
-    return () => h("div", { class: "card" }, [
+    return () => h("div", { class: "card next02-media-result-card next02-rollback-result-card" }, [
       h("div", { class: "card-body" }, [
-        h("h5", { class: "card-title" }, props.table.title),
+        h("div", { class: "next02-media-panel-head" }, [
+          h("div", [
+            h("div", { class: "next02-media-eyebrow" }, "Result"),
+            h("h5", { class: "card-title mb-0" }, props.table.title)
+          ]),
+          h("span", { class: "next02-media-count-pill" }, `${props.table.rows.length} 行`)
+        ]),
         h("div", { class: "table-responsive" }, [
           h("table", { class: "table table-sm table-hover", id: props.table.id }, [
             h("thead", [

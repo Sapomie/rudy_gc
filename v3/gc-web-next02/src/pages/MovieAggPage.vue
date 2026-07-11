@@ -1,96 +1,177 @@
 <template>
-  <PageShell class="torrent-albums-page-shell movie-agg-page-shell" :title="title" :note="note" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page movie-agg-page-root">
-      <div v-if="loading" class="alert alert-info py-2">加载中...</div>
-      <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+  <PageShell
+    :class="['torrent-albums-page-shell', 'movie-agg-page-shell', 'cards-page-shell', 'next02-pink-cards-page', 'next02-pink-cards-page-shell', movieAggVariantClass]"
+    :title="title"
+    :note="note"
+    eyebrow="MovieAgg"
+  >
+    <div id="page-root" :class="['container-fluid torrent-albums-page movie-agg-page-root next02-movieagg-rewrite', movieAggVariantClass]">
+      <LoadingState v-if="loading" />
+      <ErrorPanel v-else-if="error" :message="error" />
       <template v-else>
+        <section class="next02-movieagg-hero" aria-label="MovieAgg 页面导航与摘要">
+          <div class="next02-movieagg-hero-main">
+            <div class="next02-movieagg-context">
+              <span class="next02-rewrite-eyebrow">{{ viewLabel }}</span>
+              <strong>{{ rangeLabel }}</strong>
+            </div>
+            <div class="next02-movieagg-hero-links">
+              <a
+                v-for="item in heroLinks"
+                :key="item.href"
+                :href="item.href"
+                :class="{ active: item.active }"
+                target="_blank"
+                rel="noopener noreferrer"
+              >{{ item.label }}</a>
+            </div>
+          </div>
+          <div class="next02-rewrite-kpis">
+            <div v-for="item in heroStats" :key="item.label" class="next02-rewrite-kpi">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+        </section>
+
         <template v-if="isReleaseView">
-          <section class="section-card movie-agg-release-section">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-              <div class="d-flex flex-wrap gap-2">
-                <a v-for="item in modeSwitches" :key="linkKey(item)" :href="linkHref(item)" class="btn btn-sm" :class="linkActive(item) ? 'btn-primary' : 'btn-outline-primary'">{{ linkLabel(item) }}</a>
+          <section class="section-card movie-agg-release-section next02-rewrite-card next02-movieagg-section next02-movieagg-timeline">
+            <div class="next02-movieagg-timeline-toolbar">
+              <div class="next02-movieagg-timeline-heading">
+                <h2>时间聚合</h2>
+                <BreadcrumbLine :items="breadcrumbs" />
+              </div>
+              <div class="next02-movieagg-timeline-controls">
+                <div v-if="hasYearTabs" class="next02-movieagg-segmented" role="tablist" aria-label="时间粒度">
+                  <button v-if="bucketsQAll.length" type="button" role="tab" :aria-selected="releaseBucketTabActive('quarters')" :class="{ active: releaseBucketTabActive('quarters') }" @click="selectReleaseBucketTab('quarters')">季度</button>
+                  <button v-if="bucketsMAll.length" type="button" role="tab" :aria-selected="releaseBucketTabActive('months')" :class="{ active: releaseBucketTabActive('months') }" @click="selectReleaseBucketTab('months')">月份</button>
+                </div>
+                <div class="next02-movieagg-mode-switches">
+                  <a v-for="item in modeSwitches" :key="linkKey(item)" :href="linkHref(item)" :class="{ active: linkActive(item) }">{{ linkLabel(item) }}</a>
+                </div>
               </div>
             </div>
-            <BreadcrumbLine :items="breadcrumbs" />
-            <h4 class="section-title">时间聚合</h4>
             <template v-if="hasYearTabs">
-              <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
-                <li v-if="bucketsQAll.length" class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-year-quarters" role="tab">季度</a></li>
-                <li v-if="bucketsMAll.length" class="nav-item"><a class="nav-link" :class="{ active: !bucketsQAll.length }" data-bs-toggle="tab" href="#tab-year-months" role="tab">月份</a></li>
-              </ul>
-              <div class="tab-content pt-3">
-                <BucketRows v-if="bucketsQAll.length" id="tab-year-quarters" class="tab-pane p-2 active" :items="bucketsQAll" grid-class="bucket-grid bucket-grid-quarter" />
-                <BucketRows v-if="bucketsMAll.length" id="tab-year-months" class="tab-pane p-2" :class="{ active: !bucketsQAll.length }" :items="bucketsMAll" grid-class="bucket-grid bucket-grid-month" />
-              </div>
+              <BucketRows v-if="bucketsQAll.length" v-show="releaseBucketTabActive('quarters')" :items="bucketsQAll" grid-class="bucket-grid-quarter" />
+              <BucketRows v-if="bucketsMAll.length" v-show="releaseBucketTabActive('months')" :items="bucketsMAll" grid-class="bucket-grid-month" />
             </template>
-            <BucketRows v-else-if="bucketsAll.length" :items="bucketsAll" grid-class="bucket-grid bucket-grid-default" />
-            <div v-else class="alert alert-info mb-0">暂无聚合数据。</div>
+            <BucketRows v-else-if="bucketsAll.length" :items="bucketsAll" grid-class="bucket-grid-default" />
+            <div v-else class="movie-empty next02-movieagg-empty">暂无聚合数据。</div>
           </section>
 
-          <section v-if="topGroups.length" class="section-card movie-agg-top-section">
-            <div class="d-flex align-items-center justify-content-start mb-2">
-              <h4 class="section-title mb-0 me-3">Top 聚合（{{ aggModeLabel }}）</h4>
-              <button type="button" class="btn btn-outline-info waves-effect waves-light btn-sm" @click="topExpanded = !topExpanded">展开</button>
+          <section v-if="topGroups.length" class="section-card movie-agg-top-section next02-rewrite-card next02-movieagg-section next02-movieagg-top">
+            <div class="next02-movieagg-top-toolbar">
+              <div class="next02-movieagg-section-title">
+                <h2>Top 聚合</h2>
+                <span v-if="aggModeLabel" class="next02-movieagg-mode-badge">{{ aggModeLabel }}</span>
+              </div>
+              <div class="next02-movieagg-top-tabs" role="tablist" aria-label="Top 聚合类型">
+                <button v-for="(group, index) in topGroups" :key="group.type" type="button" role="tab" :aria-selected="topGroupActive(group, index)" :class="{ active: topGroupActive(group, index) }" @click="selectTopGroup(group)">{{ group.label }}</button>
+              </div>
+              <button type="button" class="button-secondary next02-movieagg-expand" :aria-expanded="topExpanded" @click="topExpanded = !topExpanded">{{ topExpanded ? "收起" : "展开" }}</button>
             </div>
             <div class="collapse" :class="{ show: topExpanded }" id="topAggCollapse">
-              <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
-                <li v-for="(group, index) in topGroups" :key="group.type" class="nav-item">
-                  <a class="nav-link" :class="{ active: index === 0 }" data-bs-toggle="tab" :href="`#tab-top-${group.type}`" role="tab">{{ group.label }}</a>
-                </li>
-              </ul>
-              <div class="tab-content pt-3">
-                <div v-for="(group, index) in topGroups" :key="`${group.type}-pane`" class="tab-pane p-2" :class="{ active: index === 0 }" :id="`tab-top-${group.type}`" role="tabpanel">
-                  <div class="top-stat-grid">
-                    <a v-for="(item, itemIndex) in group.items" :key="topKey(group.type, item, itemIndex)" :href="topHref(group.type, item)" class="top-stat-card text-decoration-none" :title="topName(item)">
-                      <div class="card shadow-sm">
-                        <div class="card-body p-2 text-center">
-                          <div class="mb-1">
-                            <span class="badge bg-secondary text-white fw-normal badge-slim">#{{ itemIndex + 1 }}</span>
-                            <span class="text-primary fw-semibold text-truncate">{{ topName(item) }}</span>
-                          </div>
-                          <div v-if="isWMediaBirth" class="d-flex flex-column align-items-center gap-1">
-                            <span class="badge bg-light text-muted border badge-slim">出现：<span class="text-dark fw-semibold">{{ topCountAll(item) }}</span></span>
-                            <span class="badge bg-light text-muted border badge-slim">体积：<span class="text-dark fw-semibold">{{ topSize(item) }}</span></span>
-                          </div>
-                          <div v-else class="d-flex flex-column align-items-center gap-1">
-                            <span class="badge bg-light text-muted border badge-slim">总：<span class="text-dark fw-semibold">{{ topCountAll(item) }}</span></span>
-                            <span class="badge bg-light text-muted border badge-slim">拥有：<span class="text-dark fw-semibold">{{ topCountOwned(item) }}</span></span>
-                          </div>
-                        </div>
-                      </div>
-                    </a>
-                  </div>
+              <div v-for="(group, index) in topGroups" v-show="topGroupActive(group, index)" :key="`${group.type}-pane`" class="next02-movieagg-top-pane" role="tabpanel">
+                <div class="top-stat-grid">
+                  <a v-for="(item, itemIndex) in group.items" :key="topKey(group.type, item, itemIndex)" :href="topHref(group.type, item)" class="top-stat-card" :title="topName(item)" target="_blank" rel="noopener noreferrer">
+                    <span class="top-stat-rank">#{{ String(itemIndex + 1).padStart(2, "0") }}</span>
+                    <strong class="top-stat-name">{{ topName(item) }}</strong>
+                    <span class="top-stat-metric"><small>总</small><b>{{ topCountAll(item) }}</b></span>
+                    <span class="top-stat-metric"><small>拥有</small><b>{{ topCountOwned(item) }}</b></span>
+                  </a>
                 </div>
               </div>
             </div>
           </section>
 
-          <section v-if="moviesProvided" class="section-card movie-agg-movies-section">
-            <MovieToolbar :sort-query="sortQuery" :owned-query="ownedQuery" :total-label="totalLabel" :page-links="pageLinks" />
+          <section v-if="moviesProvided" class="movie-agg-cards-section movie-agg-movies-section">
+            <MovieToolbar :sort-query="sortQuery" :owned-query="ownedQuery" :total-label="totalLabel" :current-page-count="movies.length" :page-links="pageLinks" />
             <MovieGrid v-if="movies.length" :cards="movies" />
-            <div v-else class="row"><div class="col-12"><div class="alert alert-info mb-0">暂无影片。</div></div></div>
+            <div v-else class="movie-empty next02-movieagg-empty">暂无影片。</div>
           </section>
         </template>
 
+        <template v-else-if="isWMediaBirth">
+          <div class="w-media-agg-page">
+            <section class="section-card next02-rewrite-card next02-movieagg-section next02-movieagg-timeline">
+              <div class="next02-movieagg-timeline-toolbar">
+                <div class="next02-movieagg-timeline-heading">
+                  <h2>下载时间聚合</h2>
+                  <BreadcrumbLine :items="breadcrumbs" />
+                </div>
+                <div v-if="hasWMediaYearTabs" class="next02-movieagg-timeline-controls">
+                  <div class="next02-movieagg-segmented" role="tablist" aria-label="时间粒度">
+                    <button v-if="bucketsQ.length" type="button" role="tab" :aria-selected="wMediaBucketTabActive('quarters')" :class="{ active: wMediaBucketTabActive('quarters') }" @click="selectWMediaBucketTab('quarters')">季度</button>
+                    <button v-if="bucketsM.length" type="button" role="tab" :aria-selected="wMediaBucketTabActive('months')" :class="{ active: wMediaBucketTabActive('months') }" @click="selectWMediaBucketTab('months')">月份</button>
+                  </div>
+                </div>
+              </div>
+              <template v-if="hasWMediaYearTabs">
+                <BucketRows v-if="bucketsQ.length" v-show="wMediaBucketTabActive('quarters')" :items="bucketsQ" grid-class="bucket-grid-quarter" />
+                <BucketRows v-if="bucketsM.length" v-show="wMediaBucketTabActive('months')" :items="bucketsM" grid-class="bucket-grid-month" />
+              </template>
+              <template v-else-if="hasWMediaBuckets">
+                <BucketRows title="年份" :items="bucketsY" grid-class="bucket-grid-default" />
+                <BucketRows title="季度" :items="bucketsQ" grid-class="bucket-grid-quarter" />
+                <BucketRows title="月份" :items="bucketsM" grid-class="bucket-grid-month" />
+                <BucketRows title="日期" :items="bucketsD" grid-class="bucket-grid-month" />
+              </template>
+              <div v-else class="movie-empty next02-movieagg-empty">
+                当前范围暂无可展示的时间桶。<a href="/triggers/agg" class="alert-link" target="_blank" rel="noopener noreferrer">如为新建统计表，请先到聚合回填页执行 WMedia 时间聚合回填。</a>
+              </div>
+            </section>
+
+            <section v-if="topGroups.length" class="section-card movie-agg-top-section next02-rewrite-card next02-movieagg-section next02-movieagg-top">
+              <div class="next02-movieagg-top-toolbar">
+                <div class="next02-movieagg-section-title">
+                  <h2>Top 聚合</h2>
+                </div>
+                <div class="next02-movieagg-top-tabs" role="tablist" aria-label="Top 聚合类型">
+                  <button v-for="(group, index) in topGroups" :key="group.type" type="button" role="tab" :aria-selected="topGroupActive(group, index)" :class="{ active: topGroupActive(group, index) }" @click="selectTopGroup(group)">{{ group.label }}</button>
+                </div>
+                <button type="button" class="button-secondary next02-movieagg-expand" :aria-expanded="topExpanded" @click="topExpanded = !topExpanded">{{ topExpanded ? "收起" : "展开" }}</button>
+              </div>
+              <div class="collapse" :class="{ show: topExpanded }" id="topAggCollapse">
+                <div v-for="(group, index) in topGroups" v-show="topGroupActive(group, index)" :key="`${group.type}-pane`" class="next02-movieagg-top-pane" role="tabpanel">
+                  <div class="top-stat-grid">
+                    <a v-for="(item, itemIndex) in group.items" :key="topKey(group.type, item, itemIndex)" :href="topHref(group.type, item)" class="top-stat-card" :title="topName(item)" target="_blank" rel="noopener noreferrer">
+                      <span class="top-stat-rank">#{{ String(itemIndex + 1).padStart(2, "0") }}</span>
+                      <strong class="top-stat-name">{{ topName(item) }}</strong>
+                      <span class="top-stat-metric"><small>出现</small><b>{{ topCountAll(item) }}</b></span>
+                      <span class="top-stat-metric"><small>容量</small><b>{{ topSize(item) }}</b></span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="movie-agg-cards-section">
+              <MovieToolbar :sort-query="sortQuery" :owned-query="ownedQuery" :total-label="totalLabel" :current-page-count="movies.length" :page-links="pageLinks" />
+              <MovieGrid v-if="movies.length" :cards="movies" />
+              <div v-else class="movie-empty next02-movieagg-empty">当前范围暂无媒体卡片。</div>
+            </section>
+          </div>
+        </template>
+
         <template v-else>
-          <section class="section-card">
+          <section class="section-card next02-rewrite-card">
             <BreadcrumbLine :items="breadcrumbs" />
             <h4 class="section-title">{{ title }}</h4>
             <BucketRows v-for="section in fallbackBucketSections" :key="section.key" :title="section.title" :items="section.items" grid-class="bucket-grid bucket-grid-default" />
           </section>
-          <section v-if="topGroups.length" class="section-card movie-agg-top-section">
+          <section v-if="topGroups.length" class="section-card movie-agg-top-section next02-rewrite-card">
             <div class="d-flex align-items-center justify-content-start mb-2">
               <h4 class="section-title mb-0 me-3">Top 聚合</h4>
-              <button type="button" class="btn btn-outline-info waves-effect waves-light btn-sm" @click="topExpanded = !topExpanded">展开</button>
+              <button type="button" class="btn btn-outline-info waves-effect waves-light btn-sm" @click="topExpanded = !topExpanded">{{ topExpanded ? "收起" : "展开" }}</button>
             </div>
             <div class="collapse" :class="{ show: topExpanded }" id="topAggCollapse">
               <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
                 <li v-for="(group, index) in topGroups" :key="group.type" class="nav-item">
-                  <a class="nav-link" :class="{ active: index === 0 }" data-bs-toggle="tab" :href="`#tab-top-${group.type}`" role="tab">{{ group.label }}</a>
+                  <a class="nav-link" :class="{ active: topGroupActive(group, index) }" :href="`#tab-top-${group.type}`" role="tab" @click.prevent="selectTopGroup(group)">{{ group.label }}</a>
                 </li>
               </ul>
               <div class="tab-content pt-3">
-                <div v-for="(group, index) in topGroups" :key="`${group.type}-pane`" class="tab-pane p-2" :class="{ active: index === 0 }" :id="`tab-top-${group.type}`" role="tabpanel">
+                <div v-for="(group, index) in topGroups" :key="`${group.type}-pane`" class="tab-pane p-2" :class="{ active: topGroupActive(group, index) }" :id="`tab-top-${group.type}`" role="tabpanel">
                   <div class="top-stat-grid">
                     <a v-for="(item, itemIndex) in group.items" :key="topKey(group.type, item, itemIndex)" :href="topHref(group.type, item)" class="top-stat-card text-decoration-none" :title="topName(item)">
                       <div class="card shadow-sm">
@@ -115,8 +196,8 @@
               </div>
             </div>
           </section>
-          <section v-if="movies.length" class="section-card">
-            <MovieToolbar :sort-query="sortQuery" :owned-query="ownedQuery" :total-label="totalLabel" :page-links="pageLinks" />
+          <section v-if="movies.length" class="movie-agg-cards-section">
+            <MovieToolbar :sort-query="sortQuery" :owned-query="ownedQuery" :total-label="totalLabel" :current-page-count="movies.length" :page-links="pageLinks" />
             <MovieGrid :cards="movies" />
           </section>
         </template>
@@ -129,6 +210,8 @@
 import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
+import ErrorPanel from "@/components/ErrorPanel.vue";
+import LoadingState from "@/components/LoadingState.vue";
 import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
@@ -148,7 +231,6 @@ const sortLabels: [string, string][] = [
   ["ByDaysInRank", "在榜天数"],
   ["ByHighestRank", "最高排名"],
   ["ByBirthTime", "下载时间"],
-  ["ByMediaBirthTime", "Media下载时间"],
   ["ByLastScTime", "最后sc"],
   ["ByScTimes", "sc次数"],
   ["ByComeTimes", "co次数"]
@@ -159,6 +241,9 @@ const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
 const topExpanded = ref(false);
+const activeReleaseBucketTab = ref<"quarters" | "months">("quarters");
+const activeWMediaBucketTab = ref<"quarters" | "months">("quarters");
+const activeTopType = ref("");
 
 watch(() => route.fullPath, load, { immediate: true });
 
@@ -168,6 +253,9 @@ async function load() {
   try {
     payload.value = asRecord(await getJSON(apiPathForRoute(route)));
     topExpanded.value = false;
+    activeReleaseBucketTab.value = "quarters";
+    activeWMediaBucketTab.value = "quarters";
+    activeTopType.value = "";
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -177,15 +265,23 @@ async function load() {
 
 const title = computed(() => text(payload.value, "Title") || String(route.meta.title || "MovieAgg"));
 const aggModeLabel = computed(() => text(payload.value, "AggModeLabel"));
-const note = computed(() => [aggModeLabel.value, text(payload.value, "RangeStart"), text(payload.value, "RangeEnd")].filter(Boolean).join(" · "));
+const note = computed(() => [aggModeLabel.value, text(payload.value, "RangeStart"), text(payload.value, "RangeEnd")].filter(Boolean).join(" · ") || "按时间桶、Top 维度和媒体状态查看聚合结果。");
 const isReleaseView = computed(() => text(payload.value, "ViewType") === "movie-agg-release" || route.path === "/movie-agg-all/release");
 const isWMediaBirth = computed(() => text(payload.value, "ViewType") === "w-media-agg-birth" || route.path === "/w-media-agg/birth");
+const viewLabel = computed(() => isReleaseView.value ? "Release Timeline" : (isWMediaBirth.value ? "WMedia Birth" : "Timeline"));
+const movieAggVariantClass = computed(() => isReleaseView.value ? "is-release-view" : (isWMediaBirth.value ? "is-wmedia-birth-view" : "is-generic-view"));
 const breadcrumbs = computed(() => asArray<AnyRecord>(pick(payload.value, "Breadcrumbs")));
 const modeSwitches = computed(() => asArray<AnyRecord>(pick(payload.value, "ModeSwitches")));
 const bucketsAll = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsAll")));
 const bucketsQAll = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsQAll")));
 const bucketsMAll = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsMAll")));
+const bucketsY = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsY")));
+const bucketsQ = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsQ")));
+const bucketsM = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsM")));
+const bucketsD = computed(() => asArray<AnyRecord>(pick(payload.value, "BucketsD")));
 const hasYearTabs = computed(() => bucketsQAll.value.length > 0 || bucketsMAll.value.length > 0);
+const hasWMediaYearTabs = computed(() => text(payload.value, "Level") === "year" && (bucketsQ.value.length > 0 || bucketsM.value.length > 0));
+const hasWMediaBuckets = computed(() => bucketsY.value.length > 0 || bucketsQ.value.length > 0 || bucketsM.value.length > 0 || bucketsD.value.length > 0);
 const movies = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "Movies")));
 const moviesProvided = computed(() => Object.prototype.hasOwnProperty.call(payload.value, "Movies") || Object.prototype.hasOwnProperty.call(payload.value, "movies"));
 const sortQuery = computed(() => asRecord(pick(payload.value, "SortQuery", "sortQuery")));
@@ -198,6 +294,38 @@ const topGroups = computed<TopGroup[]>(() => [
   { label: "Label", type: "label", items: asArray<AnyRecord>(pick(payload.value, "TopLabelsAll", "TopLabels")) },
   { label: "Prefix", type: "prefix", items: asArray<AnyRecord>(pick(payload.value, "TopPrefixesAll", "TopPrefixes")) }
 ].filter((group) => group.items.length > 0));
+const bucketTotal = computed(() => {
+  if (isReleaseView.value) return hasYearTabs.value ? bucketsQAll.value.length + bucketsMAll.value.length : bucketsAll.value.length;
+  if (isWMediaBirth.value) return bucketsY.value.length + bucketsQ.value.length + bucketsM.value.length + bucketsD.value.length;
+  return fallbackBucketSections.value.reduce((sum, section) => sum + section.items.length, 0);
+});
+const topItemTotal = computed(() => topGroups.value.reduce((sum, group) => sum + group.items.length, 0));
+const rangeLabel = computed(() => {
+  const start = text(payload.value, "RangeStart");
+  const end = text(payload.value, "RangeEnd");
+  return [start, end].filter(Boolean).join(" 至 ") || "全量范围";
+});
+const heroStats = computed(() => [
+  { label: "时间桶", value: String(bucketTotal.value) },
+  { label: "Top 项", value: String(topItemTotal.value) }
+]);
+const heroLinks = computed(() => [
+  { label: "上映聚合", href: "/movie-agg-all/release", active: route.path === "/movie-agg-all/release" },
+  { label: "上映桶表", href: "/movie-agg-all/release-bucket-list", active: route.path === "/movie-agg-all/release-bucket-list" },
+  { label: "WMedia 聚合", href: "/w-media-agg/birth", active: route.path === "/w-media-agg/birth" },
+  { label: "WMedia 桶表", href: "/w-media-agg/bucket-list", active: route.path === "/w-media-agg/bucket-list" },
+  { label: "回填入口", href: "/triggers/agg", active: route.path === "/triggers/agg" }
+]);
+
+watch(topGroups, (groups) => {
+  if (!groups.length) {
+    activeTopType.value = "";
+    return;
+  }
+  if (!groups.some((group) => group.type === activeTopType.value)) {
+    activeTopType.value = groups[0].type;
+  }
+});
 const fallbackBucketSections = computed(() => {
   const keys: [string, string][] = [
     ["BucketsY", "年份"],
@@ -224,6 +352,36 @@ function linkActive(item: AnyRecord): boolean {
 
 function linkKey(item: AnyRecord): string {
   return `${linkLabel(item)}-${linkHref(item)}`;
+}
+
+function selectReleaseBucketTab(tab: "quarters" | "months"): void {
+  activeReleaseBucketTab.value = tab;
+}
+
+function releaseBucketTabActive(tab: "quarters" | "months"): boolean {
+  if (tab === "quarters") {
+    return bucketsQAll.value.length > 0 && activeReleaseBucketTab.value === "quarters";
+  }
+  return bucketsMAll.value.length > 0 && (bucketsQAll.value.length === 0 || activeReleaseBucketTab.value === "months");
+}
+
+function selectWMediaBucketTab(tab: "quarters" | "months"): void {
+  activeWMediaBucketTab.value = tab;
+}
+
+function wMediaBucketTabActive(tab: "quarters" | "months"): boolean {
+  if (tab === "quarters") {
+    return bucketsQ.value.length > 0 && activeWMediaBucketTab.value === "quarters";
+  }
+  return bucketsM.value.length > 0 && (bucketsQ.value.length === 0 || activeWMediaBucketTab.value === "months");
+}
+
+function selectTopGroup(group: TopGroup): void {
+  activeTopType.value = group.type;
+}
+
+function topGroupActive(group: TopGroup, index: number): boolean {
+  return activeTopType.value ? activeTopType.value === group.type : index === 0;
 }
 
 function bucketLabel(item: AnyRecord): string {
@@ -302,9 +460,9 @@ const BreadcrumbLine = defineComponent({
     items: { type: Array as PropType<AnyRecord[]>, required: true }
   },
   setup(props) {
-    return () => h("div", { class: "bucket-breadcrumbs mb-2" }, props.items.map((item, index) => [
-      index > 0 ? h("span", { class: "text-muted mx-1" }, "/") : null,
-      h("a", { href: linkHref(item), class: "text-muted text-decoration-none me-1" }, linkLabel(item))
+    return () => h("div", { class: "bucket-breadcrumbs" }, props.items.map((item, index) => [
+      index > 0 ? h("span", { class: "bucket-breadcrumb-separator", "aria-hidden": "true" }, "›") : null,
+      h("a", { href: linkHref(item) }, linkLabel(item))
     ]).flat());
   }
 });
@@ -319,28 +477,27 @@ const BucketRows = defineComponent({
   setup(props, { attrs }) {
     return () => h("section", { ...attrs, class: ["bucket-section", attrs.class] }, [
       props.title ? h("div", { class: "bucket-section-title" }, props.title) : null,
-      h("div", { class: ["row", "g-3", props.gridClass] }, props.items.map((item) => h("div", { class: "col", key: bucketHref(item) }, [
-        h("a", { href: bucketHref(item), class: "text-decoration-none" }, [
-          h("div", { class: "card bucket-card h-100 shadow-sm" }, [
-            h("div", { class: "card-body py-2" }, [
-              h("div", { class: "fw-semibold" }, bucketLabel(item)),
-              h("div", { class: "text-muted small" }, pick(item, "Count") !== undefined
-                ? [
-                  h("span", { class: "count" }, `${bucketCountAll(item)} 部`),
-                  "，",
-                  h("span", { class: "sizegb" }, `${bucketSizeGb(item)} GB`)
-                ]
-                : [
-                  h("span", { class: "count" }, `总数：${bucketCountAll(item)}`),
-                  "，",
-                  h("span", { class: "count" }, `已拥有：${bucketCountOwned(item)}`),
-                  h("br"),
-                  h("span", { class: "sizegb" }, `${bucketSizeGb(item)} GB`)
-                ])
-            ])
+      h("div", {
+        class: ["next02-movieagg-bucket-strip", props.gridClass],
+        style: { gridTemplateColumns: `repeat(${props.items.length}, minmax(0, 1fr))` }
+      }, props.items.map((item) => {
+        const mediaBucket = pick(item, "Count") !== undefined;
+        return h("a", { href: bucketHref(item), class: "next02-movieagg-bucket-item", key: bucketHref(item) }, [
+          h("strong", { class: "next02-movieagg-bucket-label" }, bucketLabel(item)),
+          h("span", { class: "next02-movieagg-bucket-metric" }, [
+            h("small", mediaBucket ? "影片" : "总数"),
+            h("b", bucketCountAll(item))
+          ]),
+          mediaBucket ? null : h("span", { class: "next02-movieagg-bucket-metric" }, [
+            h("small", "拥有"),
+            h("b", bucketCountOwned(item))
+          ]),
+          h("span", { class: "next02-movieagg-bucket-metric next02-movieagg-bucket-size" }, [
+            h("small", "容量"),
+            h("b", `${bucketSizeGb(item)} GB`)
           ])
-        ])
-      ])))
+        ]);
+      }))
     ]);
   }
 });
@@ -351,54 +508,66 @@ const MovieToolbar = defineComponent({
     sortQuery: { type: Object as PropType<AnyRecord>, required: true },
     ownedQuery: { type: Object as PropType<AnyRecord>, required: true },
     totalLabel: { type: String, required: true },
+    currentPageCount: { type: Number, required: true },
     pageLinks: { type: Array as PropType<AnyRecord[]>, required: true }
   },
   setup(props) {
-    const sortButton = (key: string, label: string) => {
+    const sortItem = (key: string, label: string) => {
       const item = asRecord(props.sortQuery[key]);
-      return h("a", {
+      return {
+        label,
         href: linkHref(item),
-        class: ["btn", "btn-outline-primary", { "active disabled": linkActive(item) }]
-      }, label);
+        active: linkActive(item),
+        disabled: false
+      };
     };
-    const ownedButton = (key: string, label: string, cls: string) => {
+    const ownedItem = (key: string, label: string) => {
       const item = asRecord(props.ownedQuery[key]);
-      return h("a", {
+      return {
+        label,
         href: linkHref(item),
-        class: ["btn", "btn-sm", cls, "waves-effect", "waves-light", { "active disabled": linkActive(item) }]
-      }, label);
+        active: linkActive(item),
+        disabled: false
+      };
     };
-    const pager = () => props.pageLinks.length ? h("nav", { class: "mb-0", "aria-label": "Page navigation" }, [
-      h("ul", { class: "pagination pagination-sm mb-0" }, props.pageLinks.map((item, index) => {
+    const linkStrip = (items: { label: string; href?: string; active?: boolean; disabled?: boolean }[]) => items.length
+      ? h("div", { class: "link-strip" }, items.map((item, index) => h("a", {
+        key: `${item.label}-${index}`,
+        href: item.href || "#",
+        class: ["strip-link", { active: item.active, disabled: item.disabled }]
+      }, item.label)))
+      : null;
+    const pager = () => props.pageLinks.length ? h("nav", { class: "pagination-bar", "aria-label": "分页" }, props.pageLinks.map((item, index) => {
         if (item.Ellipsis || item.ellipsis) {
-          return h("li", { class: "page-item disabled", key: `ellipsis-${index}` }, [h("span", { class: "page-link" }, "...")]);
+          return h("a", { class: "page-pill disabled", key: `ellipsis-${index}` }, "...");
         }
         const disabled = Boolean(item.Disabled || item.disabled);
         const active = Boolean(item.Active || item.active);
-        return h("li", { class: ["page-item", { active, disabled }], key: `${item.Label || item.label}-${index}` }, [
-          h("a", {
-            class: "page-link",
-            href: disabled ? "#" : normalizeHref(text(item, "Href", "href") || "#"),
-            tabindex: disabled ? "-1" : undefined,
-            "aria-disabled": disabled ? "true" : undefined
-          }, text(item, "Label", "label"))
-        ]);
-      }))
-    ]) : null;
-    return () => h("div", { class: "position-sticky pb-2 pt-2 mb-3 border-bottom movie-agg-toolbar" }, [
-      h("div", { class: "container-fluid px-0" }, [
-        h("div", { class: "d-flex flex-wrap justify-content-start align-items-center mb-2" }, [
-          h("div", { class: "btn-group btn-group-sm flex-wrap", role: "group", "aria-label": "Sort Options" }, sortLabels.map(([key, label]) => sortButton(key, label)))
+        return h("a", {
+          class: ["page-pill", { active, disabled }],
+          href: disabled ? undefined : normalizeHref(text(item, "Href", "href") || "#"),
+          key: `${text(item, "Label", "label")}-${index}`,
+          "aria-disabled": disabled ? "true" : undefined
+        }, text(item, "Label", "label"));
+      })) : null;
+    return () => h("div", { class: "sticky-toolbar cards-toolbar movie-agg-toolbar next02-pink-cards-toolbar", "aria-label": "MovieAgg 影片控制栏" }, [
+      h("div", { class: "cards-toolbar-sort" }, [
+        linkStrip(sortLabels.map(([key, label]) => sortItem(key, label)))
+      ]),
+      h("div", { class: "toolbar-line cards-toolbar-bottom" }, [
+        h("div", { class: "owned-line cards-toolbar-filters" }, [
+          linkStrip([
+            ownedItem("MediaAll", "All"),
+            ownedItem("MediaOwned", "Owned"),
+            ownedItem("MediaNotOwned", "NotOwned")
+          ])
         ]),
-        h("div", { class: "d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2" }, [
-          h("div", { class: "d-flex flex-wrap align-items-center gap-2" }, [
-            h("span", { class: "btn btn-sm btn-outline-dark disabled" }, "WMedia"),
-            ownedButton("MediaAll", "MAll", "btn-primary"),
-            ownedButton("MediaOwned", "MOwned", "btn-success"),
-            ownedButton("MediaNotOwned", "MNotOwned", "btn-secondary"),
-            h("span", { class: "btn btn-sm btn-primary waves-effect waves-light disabled" }, `Total: ${props.totalLabel || "0"}`)
+        h("div", { class: "next02-pink-cards-toolbar-status" }, [
+          h("div", { class: "next02-pink-cards-metrics", "aria-label": "MovieAgg 页面摘要" }, [
+            h("span", [h("strong", props.totalLabel || "0"), " Total"]),
+            h("span", [h("strong", String(props.currentPageCount)), " Current Page"])
           ]),
-          h("div", { class: "d-flex align-items-center ms-md-3" }, [pager()])
+          props.pageLinks.length ? h("div", { class: "cards-toolbar-pagination next02-pink-cards-pagination" }, [pager()]) : null
         ])
       ])
     ]);

@@ -21,8 +21,8 @@ const (
 	eventDetailMovieFilterNoSc = "nosc"
 )
 
-func (l *ScService) ListEventPage(ctx context.Context, page, pageSize int, sortField, sortOrder string) (*types.ScEventListPage, error) {
-	rows, total, err := l.scListPage(ctx, page, pageSize, sortField, sortOrder)
+func (l *ScService) ListEventPage(ctx context.Context, page, pageSize int, sortField, sortOrder string, startTime, endTime int64) (*types.ScEventListPage, error) {
+	rows, total, err := l.scListPage(ctx, page, pageSize, sortField, sortOrder, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -177,8 +177,8 @@ func statTotalMovieCount(stat *moviex.GListScNameStat) int64 {
 	return stat.TotalMovieCount
 }
 
-func (l *ScService) ListEventCardPage(ctx context.Context, page, pageSize int, sortField, sortOrder string) (*types.ScEventCardPage, error) {
-	rows, total, err := l.scListPage(ctx, page, pageSize, sortField, sortOrder)
+func (l *ScService) ListEventCardPage(ctx context.Context, page, pageSize int, sortField, sortOrder string, startTime, endTime int64) (*types.ScEventCardPage, error) {
+	rows, total, err := l.scListPage(ctx, page, pageSize, sortField, sortOrder, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
