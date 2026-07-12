@@ -2,6 +2,7 @@ package fetchsehuatang
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -12,22 +13,54 @@ import (
 )
 
 type SHDetailFetchRequest struct {
-	TargetForumIDs  []string `json:"target_forum_ids"`
-	Keyword         string   `json:"keyword"`
-	DetailStatus    string   `json:"detail_status"`
-	ThreadTIDs      []string `json:"thread_tids"`
-	PostTimeFrom    int64    `json:"post_time_from"`
-	HasPostTimeFrom bool     `json:"has_post_time_from"`
-	PostTimeTo      int64    `json:"post_time_to"`
-	HasPostTimeTo   bool     `json:"has_post_time_to"`
+	TriggerSource     string   `json:"trigger_source"`
+	SelectionCriteria string   `json:"selection_criteria"`
+	TargetForumIDs    []string `json:"target_forum_ids"`
+	Keyword           string   `json:"keyword"`
+	DetailStatus      string   `json:"detail_status"`
+	ThreadTIDs        []string `json:"thread_tids"`
+	PostTimeFrom      int64    `json:"post_time_from"`
+	HasPostTimeFrom   bool     `json:"has_post_time_from"`
+	PostTimeTo        int64    `json:"post_time_to"`
+	HasPostTimeTo     bool     `json:"has_post_time_to"`
 }
 
-func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (*SHFetchResult, error) {
+type shListPageCoverage struct {
+	Page           int64  `json:"page"`
+	URL            string `json:"url"`
+	Status         string `json:"status"`
+	PostTimeFrom   int64  `json:"post_time_from"`
+	PostTimeTo     int64  `json:"post_time_to"`
+	FirstThreadTID string `json:"first_thread_tid"`
+	LastThreadTID  string `json:"last_thread_tid"`
+	SeenCount      int64  `json:"seen_count"`
+	InsertedCount  int64  `json:"inserted_count"`
+	ExistingCount  int64  `json:"existing_count"`
+	FailedCount    int64  `json:"failed_count"`
+	StartedOn      int64  `json:"started_on"`
+	FinishedOn     int64  `json:"finished_on"`
+	Error          string `json:"error"`
+}
+
+type shListForumCoverage struct {
+	PostTimeFrom    int64                `json:"post_time_from"`
+	PostTimeTo      int64                `json:"post_time_to"`
+	LastSuccessPage int64                `json:"last_success_page"`
+	Pages           []shListPageCoverage `json:"pages"`
+}
+
+type shListCoverage map[string]*shListForumCoverage
+
+func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (result *SHFetchResult, err error) {
 	if s == nil || s.deps == nil {
 		return nil, fmt.Errorf("fetchsehuatang service is nil")
 	}
-	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShSehuatangFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
+	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShSehuatangThreadListFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
 		return nil, fmt.Errorf("sh sehuatang models are nil")
+	}
+	jobID := taskctx.JobID(ctx)
+	if jobID == "" {
+		return nil, fmt.Errorf("job_id 不能为空")
 	}
 
 	req = normalizeSHFetchRequest(req)
@@ -62,18 +95,22 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (*S
 
 	targetForumIDs := strings.Join(req.TargetForumIDs, ",")
 	now := time.Now().Unix()
-	run := &moviex.ShSehuatangFetchRun{
-		FetchMode:      SHFetchModeForumList,
+	run := &moviex.ShSehuatangThreadListFetchRun{
+		JobID:          jobID,
 		TargetForumIDs: targetForumIDs,
-		StartURL:       jobs[0].URL,
+		StartPage:      req.StartPage,
+		EndPage:        req.EndPage,
+		CurrentForumID: jobs[0].ForumID,
+		CurrentPage:    jobs[0].Page,
 		CurrentURL:     jobs[0].URL,
-		CurrentPage:    req.StartPage,
+		TotalPageCount: int64(len(jobs)),
+		PageCoverage:   "{}",
 		Status:         SHRunStatusRunning,
 		StartedOn:      now,
 		CreatedOn:      now,
 		UpdatedOn:      now,
 	}
-	insertResult, err := s.deps.ShSehuatangFetchRunModel.Insert(ctx, run)
+	insertResult, err := s.deps.ShSehuatangThreadListFetchRunModel.Insert(ctx, run)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +119,32 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (*S
 		return nil, err
 	}
 	run.Id = runID
+	defer func() {
+		finishTime := time.Now().Unix()
+		run.FinishedOn = finishTime
+		run.UpdatedOn = finishTime
+		if result != nil {
+			syncSHListRunCounts(run, result)
+		}
+		if err != nil {
+			run.Status = SHRunStatusFailed
+			run.StopReason = "failed"
+			run.LastError = err.Error()
+			if ctx.Err() != nil {
+				run.Status = SHRunStatusStopped
+				run.StopReason = "context_canceled"
+			}
+		} else {
+			run.Status = SHRunStatusSuccess
+			run.StopReason = "range_completed"
+		}
+		run.CoverageComplete = run.CompletedPageCount == run.TotalPageCount && run.FailedPageCount == 0
+		if updateErr := s.deps.ShSehuatangThreadListFetchRunModel.Update(context.Background(), run); updateErr != nil && err == nil {
+			err = updateErr
+		}
+	}()
 
-	result := &SHFetchResult{
+	result = &SHFetchResult{
 		RunID:           runID,
 		FetchMode:       SHFetchModeForumList,
 		TargetForumIDs:  targetForumIDs,
@@ -93,6 +154,11 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (*S
 		CurrentPage:     jobs[0].Page,
 		CurrentPageText: jobs[0].PageText,
 	}
+	defer func() {
+		if aggErr := s.flushSHThreadAgg(context.Background(), "sh_list", result); aggErr != nil && err == nil {
+			err = aggErr
+		}
+	}()
 
 	reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池开始: run_id=%d | forums=%s | page=%d-%d", runID, targetForumIDs, req.StartPage, req.EndPage))
 	reportSHProgress(ctx, result, taskctx.Progress{
@@ -101,23 +167,10 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (*S
 		CurrentPhaseKey: "list",
 	})
 
-	fetchErr := s.fetchSHListPages(ctx, cfg, state, req, jobs, run, result)
-	finishTime := time.Now().Unix()
-	run.FinishedOn = finishTime
-	run.UpdatedOn = finishTime
-	syncSHRunCounts(run, result)
-	if fetchErr != nil {
-		run.Status = SHRunStatusFailed
-		run.LastError = fetchErr.Error()
-		result.LastError = fetchErr.Error()
-	} else {
-		run.Status = SHRunStatusSuccess
-	}
-	if updateErr := s.deps.ShSehuatangFetchRunModel.Update(context.Background(), run); updateErr != nil && fetchErr == nil {
-		return result, updateErr
-	}
-	if fetchErr != nil {
-		return result, fetchErr
+	coverage := make(shListCoverage, len(req.TargetForumIDs))
+	if err = s.fetchSHListPages(ctx, cfg, state, req, jobs, run, result, coverage); err != nil {
+		result.LastError = err.Error()
+		return result, err
 	}
 
 	reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池完成: run_id=%d | seen=%d | matched=%d | list_saved=%d | failed=%d", runID, result.SeenCount, result.MatchedCount, result.FetchedCount, result.FailedCount))
@@ -131,12 +184,16 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (*S
 	return result, nil
 }
 
-func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchRequest) (*SHFetchResult, error) {
+func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchRequest) (result *SHFetchResult, err error) {
 	if s == nil || s.deps == nil {
 		return nil, fmt.Errorf("fetchsehuatang service is nil")
 	}
-	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShSehuatangFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
+	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShSehuatangThreadDetailFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
 		return nil, fmt.Errorf("sh sehuatang models are nil")
+	}
+	jobID := taskctx.JobID(ctx)
+	if jobID == "" {
+		return nil, fmt.Errorf("job_id 不能为空")
 	}
 
 	req = normalizeSHDetailFetchRequest(req)
@@ -180,23 +237,29 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		}
 	}
 
-	startURL := ""
-	if len(rows) > 0 && rows[0] != nil {
-		startURL = rows[0].ThreadURL
-	}
 	targetForumText := strings.Join(uniqueSHStrings(targetForumIDs), ",")
-	now := time.Now().Unix()
-	run := &moviex.ShSehuatangFetchRun{
-		FetchMode:      SHFetchModeDetail,
-		TargetForumIDs: targetForumText,
-		StartURL:       startURL,
-		CurrentURL:     startURL,
-		Status:         SHRunStatusRunning,
-		StartedOn:      now,
-		CreatedOn:      now,
-		UpdatedOn:      now,
+	selectedThreadTIDsJSON, err := json.Marshal(req.ThreadTIDs)
+	if err != nil {
+		return nil, err
 	}
-	insertResult, err := s.deps.ShSehuatangFetchRunModel.Insert(ctx, run)
+	selectionCriteria := strings.TrimSpace(req.SelectionCriteria)
+	if selectionCriteria == "" {
+		selectionCriteria = "{}"
+	}
+	now := time.Now().Unix()
+	run := &moviex.ShSehuatangThreadDetailFetchRun{
+		JobID:              jobID,
+		TriggerSource:      normalizeSHDetailTriggerSource(req.TriggerSource),
+		TargetForumIDs:     targetForumText,
+		SelectionCriteria:  selectionCriteria,
+		SelectedThreadTIDs: string(selectedThreadTIDsJSON),
+		SelectedCount:      int64(len(rows)),
+		Status:             SHRunStatusRunning,
+		StartedOn:          now,
+		CreatedOn:          now,
+		UpdatedOn:          now,
+	}
+	insertResult, err := s.deps.ShSehuatangThreadDetailFetchRunModel.Insert(ctx, run)
 	if err != nil {
 		return nil, err
 	}
@@ -205,14 +268,47 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		return nil, err
 	}
 	run.Id = runID
+	defer func() {
+		finishTime := time.Now().Unix()
+		run.FinishedOn = finishTime
+		run.UpdatedOn = finishTime
+		if result != nil {
+			run.CompletedCount = result.CompletedPageCount
+			run.FetchedCount = result.FetchedCount
+			run.FailedCount = result.FailedCount
+			if result.LastError != "" {
+				run.LastError = result.LastError
+			}
+		}
+		if err != nil {
+			run.Status = SHRunStatusFailed
+			run.StopReason = "failed"
+			run.LastError = err.Error()
+			if ctx.Err() != nil {
+				run.Status = SHRunStatusStopped
+				run.StopReason = "context_canceled"
+			}
+		} else {
+			run.Status = SHRunStatusSuccess
+			run.StopReason = "completed"
+		}
+		if updateErr := s.deps.ShSehuatangThreadDetailFetchRunModel.Update(context.Background(), run); updateErr != nil && err == nil {
+			err = updateErr
+		}
+	}()
 
-	result := &SHFetchResult{
+	result = &SHFetchResult{
 		RunID:           runID,
 		FetchMode:       SHFetchModeDetail,
 		TargetForumIDs:  targetForumText,
 		TotalPageCount:  int64(len(rows)),
 		CurrentPageText: "detail=0",
 	}
+	defer func() {
+		if aggErr := s.flushSHThreadAgg(context.Background(), "sh_detail", result); aggErr != nil && err == nil {
+			err = aggErr
+		}
+	}()
 	reportInfoLog(ctx, fmt.Sprintf("色花堂选中帖子详情抓取开始: selected=%d", len(rows)))
 	reportSHProgress(ctx, result, taskctx.Progress{
 		Stage:           "fetch_sehuatang_sh_detail_start",
@@ -234,11 +330,12 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		result.CurrentPage = int64(index + 1)
 		result.CurrentPageText = fmt.Sprintf("detail=%d/%d tid=%s", index+1, len(rows), row.ThreadTID)
 		result.CompletedPageCount = int64(index)
-		run.CurrentURL = row.ThreadURL
-		run.CurrentPage = int64(index + 1)
+		run.CurrentIndex = int64(index + 1)
+		run.CurrentThreadTID = row.ThreadTID
+		run.CurrentThreadURL = row.ThreadURL
+		run.CompletedCount = int64(index)
 		run.UpdatedOn = time.Now().Unix()
-		syncSHRunCounts(run, result)
-		if err := s.deps.ShSehuatangFetchRunModel.Update(ctx, run); err != nil {
+		if err := s.deps.ShSehuatangThreadDetailFetchRunModel.Update(ctx, run); err != nil {
 			return result, err
 		}
 
@@ -252,14 +349,17 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		})
 
 		topic := shThreadRowToTopic(row)
-		if err := s.fetchSHTopicDetailWithOptions(ctx, cfg, state, SHFetchRequest{FetchMode: SHFetchModeDetail}, run, result, topic, false); err != nil {
+		if err := s.fetchSHTopicDetailWithOptions(ctx, cfg, state, SHFetchRequest{FetchMode: SHFetchModeDetail}, shRunRef{ID: run.Id, Source: SHRunSourceDetail}, result, topic, false); err != nil {
 			return result, err
 		}
 
 		result.CompletedPageCount = int64(index + 1)
+		run.CompletedCount = result.CompletedPageCount
+		run.FetchedCount = result.FetchedCount
+		run.FailedCount = result.FailedCount
+		run.LastError = result.LastError
 		run.UpdatedOn = time.Now().Unix()
-		syncSHRunCounts(run, result)
-		if err := s.deps.ShSehuatangFetchRunModel.Update(ctx, run); err != nil {
+		if err := s.deps.ShSehuatangThreadDetailFetchRunModel.Update(ctx, run); err != nil {
 			return result, err
 		}
 		reportSHProgress(ctx, result, taskctx.Progress{
@@ -270,18 +370,6 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 			PhaseHandledCount: index + 1,
 			PhaseTotalCount:   len(rows),
 		})
-	}
-
-	finishTime := time.Now().Unix()
-	run.FinishedOn = finishTime
-	run.UpdatedOn = finishTime
-	syncSHRunCounts(run, result)
-	run.Status = SHRunStatusSuccess
-	if result.FailedCount > 0 {
-		run.LastError = result.LastError
-	}
-	if err := s.deps.ShSehuatangFetchRunModel.Update(context.Background(), run); err != nil {
-		return result, err
 	}
 
 	reportInfoLog(ctx, fmt.Sprintf("色花堂选中帖子详情抓取完成: selected=%d | fetched=%d | failed=%d", result.SeenCount, result.FetchedCount, result.FailedCount))
@@ -295,21 +383,23 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 	return result, nil
 }
 
-func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, req SHFetchRequest, jobs []shPageJob, run *moviex.ShSehuatangFetchRun, result *SHFetchResult) error {
+func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, req SHFetchRequest, jobs []shPageJob, run *moviex.ShSehuatangThreadListFetchRun, result *SHFetchResult, coverage shListCoverage) error {
 	seenThreads := make(map[string]struct{}, 128)
 	for index, job := range jobs {
 		if err := taskctx.WaitIfPaused(ctx); err != nil {
 			return err
 		}
 
+		pageStartedOn := time.Now().Unix()
 		result.CurrentPage = job.Page
 		result.CurrentPageText = job.PageText
 		result.CompletedPageCount = int64(index)
+		run.CurrentForumID = job.ForumID
 		run.CurrentURL = job.URL
 		run.CurrentPage = job.Page
+		run.CompletedPageCount = int64(index)
 		run.UpdatedOn = time.Now().Unix()
-		syncSHRunCounts(run, result)
-		if err := s.deps.ShSehuatangFetchRunModel.Update(ctx, run); err != nil {
+		if err := s.updateSHListRun(ctx, run, result, coverage); err != nil {
 			return err
 		}
 
@@ -327,13 +417,17 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 		if fetchErr != nil {
 			result.FailedCount++
 			result.LastError = fetchErr.Error()
+			run.FailedPageCount++
+			run.CompletedPageCount = int64(index + 1)
 			run.LastError = fetchErr.Error()
-			run.UpdatedOn = time.Now().Unix()
-			syncSHRunCounts(run, result)
-			if updateErr := s.deps.ShSehuatangFetchRunModel.Update(ctx, run); updateErr != nil {
+			result.CompletedPageCount = int64(index + 1)
+			setSHListPageCoverage(coverage, job.ForumID, shListPageCoverage{
+				Page: job.Page, URL: job.URL, Status: SHRunStatusFailed,
+				StartedOn: pageStartedOn, FinishedOn: time.Now().Unix(), Error: fetchErr.Error(),
+			})
+			if updateErr := s.updateSHListRun(ctx, run, result, coverage); updateErr != nil {
 				return updateErr
 			}
-			result.CompletedPageCount = int64(index + 1)
 			reportErrorLog(ctx, fmt.Sprintf("列表页抓取失败: %s | err=%v", job.PageText, fetchErr))
 			reportSHProgress(ctx, result, taskctx.Progress{
 				Stage:             "fetch_sehuatang_sh_list_page_failed",
@@ -351,13 +445,17 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 		if err != nil {
 			result.FailedCount++
 			result.LastError = err.Error()
+			run.FailedPageCount++
+			run.CompletedPageCount = int64(index + 1)
 			run.LastError = err.Error()
-			run.UpdatedOn = time.Now().Unix()
-			syncSHRunCounts(run, result)
-			if updateErr := s.deps.ShSehuatangFetchRunModel.Update(ctx, run); updateErr != nil {
+			result.CompletedPageCount = int64(index + 1)
+			setSHListPageCoverage(coverage, job.ForumID, shListPageCoverage{
+				Page: job.Page, URL: job.URL, Status: SHRunStatusFailed,
+				StartedOn: pageStartedOn, FinishedOn: time.Now().Unix(), Error: err.Error(),
+			})
+			if updateErr := s.updateSHListRun(ctx, run, result, coverage); updateErr != nil {
 				return updateErr
 			}
-			result.CompletedPageCount = int64(index + 1)
 			reportErrorLog(ctx, fmt.Sprintf("列表页解析失败: %s | err=%v", job.PageText, err))
 			reportSHProgress(ctx, result, taskctx.Progress{
 				Stage:             "fetch_sehuatang_sh_list_page_failed",
@@ -371,34 +469,83 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 			continue
 		}
 
+		page := shListPageCoverage{
+			Page:      job.Page,
+			URL:       job.URL,
+			Status:    SHRunStatusSuccess,
+			StartedOn: pageStartedOn,
+		}
+		threadTIDs := make([]string, 0, len(topics))
+		pageNow := time.Now()
+		for _, topic := range topics {
+			if topic == nil || strings.TrimSpace(topic.ThreadTID) == "" {
+				continue
+			}
+			threadTIDs = append(threadTIDs, topic.ThreadTID)
+			if page.FirstThreadTID == "" {
+				page.FirstThreadTID = topic.ThreadTID
+			}
+			page.LastThreadTID = topic.ThreadTID
+			postTime := parseForumTimeText(topic.ListPostAt, pageNow)
+			if postTime > 0 && (page.PostTimeFrom == 0 || postTime < page.PostTimeFrom) {
+				page.PostTimeFrom = postTime
+			}
+			if postTime > page.PostTimeTo {
+				page.PostTimeTo = postTime
+			}
+		}
+		existingTargets, err := s.deps.ShSehuatangThreadModel.FindThreadAggTargetsByTIDs(ctx, threadTIDs)
+		if err != nil {
+			return err
+		}
+
 		result.HandledPageCount++
+		run.SkippedTopCount += int64(skippedTopCount)
 		for _, topic := range topics {
 			if topic == nil || topic.ThreadTID == "" {
 				continue
 			}
 			result.SeenCount++
+			page.SeenCount++
 			if _, ok := seenThreads[topic.ThreadTID]; ok {
 				continue
 			}
 			seenThreads[topic.ThreadTID] = struct{}{}
 			result.MatchedCount++
-			if err = s.saveSHListTopic(ctx, req, run, topic); err != nil {
+			oldTarget, existed := existingTargets[topic.ThreadTID]
+			if existed {
+				markSHThreadAggTarget(result, oldTarget)
+			}
+			if err = s.saveSHListTopic(ctx, req, shRunRef{ID: run.Id, Source: SHRunSourceList}, result, topic); err != nil {
 				result.FailedCount++
+				page.FailedCount++
 				result.LastError = err.Error()
 				run.LastError = err.Error()
 				reportErrorLog(ctx, fmt.Sprintf("列表帖子基础入库失败: tid=%s | %s | err=%v", topic.ThreadTID, topic.Title, err))
 			} else {
 				result.FetchedCount++
-			}
-			run.UpdatedOn = time.Now().Unix()
-			syncSHRunCounts(run, result)
-			if err = s.deps.ShSehuatangFetchRunModel.Update(ctx, run); err != nil {
-				return err
+				if existed {
+					page.ExistingCount++
+					run.ExistingCount++
+				} else {
+					page.InsertedCount++
+					run.InsertedCount++
+				}
 			}
 		}
 
 		reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池页完成: run_id=%d | %s | topics=%d | skipped_top=%d | seen=%d | saved=%d", run.Id, job.PageText, len(topics), skippedTopCount, result.SeenCount, result.FetchedCount))
 		result.CompletedPageCount = int64(index + 1)
+		run.CompletedPageCount = int64(index + 1)
+		run.SuccessPageCount++
+		page.FinishedOn = time.Now().Unix()
+		if page.FailedCount > 0 {
+			page.Error = result.LastError
+		}
+		setSHListPageCoverage(coverage, job.ForumID, page)
+		if err = s.updateSHListRun(ctx, run, result, coverage); err != nil {
+			return err
+		}
 		reportSHProgress(ctx, result, taskctx.Progress{
 			Stage:             "fetch_sehuatang_sh_list_page_done",
 			Message:           fmt.Sprintf("列表页完成：%s，帖子=%d，跳过置顶=%d，累计入库=%d", job.PageText, len(topics), skippedTopCount, result.FetchedCount),
@@ -411,13 +558,87 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 	return nil
 }
 
+func syncSHListRunCounts(run *moviex.ShSehuatangThreadListFetchRun, result *SHFetchResult) {
+	if run == nil || result == nil {
+		return
+	}
+	run.SeenCount = result.SeenCount
+	run.FailedCount = result.FailedCount
+	if result.LastError != "" {
+		run.LastError = result.LastError
+	}
+}
+
+func (s *Service) updateSHListRun(ctx context.Context, run *moviex.ShSehuatangThreadListFetchRun, result *SHFetchResult, coverage shListCoverage) error {
+	syncSHListRunCounts(run, result)
+	run.CoveragePostTimeFrom = 0
+	run.CoveragePostTimeTo = 0
+	for _, forum := range coverage {
+		if forum == nil {
+			continue
+		}
+		if forum.PostTimeFrom > 0 && (run.CoveragePostTimeFrom == 0 || forum.PostTimeFrom < run.CoveragePostTimeFrom) {
+			run.CoveragePostTimeFrom = forum.PostTimeFrom
+		}
+		if forum.PostTimeTo > run.CoveragePostTimeTo {
+			run.CoveragePostTimeTo = forum.PostTimeTo
+		}
+	}
+	pageCoverage, err := json.Marshal(coverage)
+	if err != nil {
+		return err
+	}
+	run.PageCoverage = string(pageCoverage)
+	run.UpdatedOn = time.Now().Unix()
+	return s.deps.ShSehuatangThreadListFetchRunModel.Update(ctx, run)
+}
+
+func setSHListPageCoverage(coverage shListCoverage, forumID string, page shListPageCoverage) {
+	forumID = strings.TrimSpace(forumID)
+	forum := coverage[forumID]
+	if forum == nil {
+		forum = &shListForumCoverage{Pages: make([]shListPageCoverage, 0)}
+		coverage[forumID] = forum
+	}
+	replaced := false
+	for index := range forum.Pages {
+		if forum.Pages[index].Page == page.Page {
+			forum.Pages[index] = page
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		forum.Pages = append(forum.Pages, page)
+	}
+	if page.Status != SHRunStatusSuccess {
+		return
+	}
+	forum.LastSuccessPage = page.Page
+	if page.PostTimeFrom > 0 && (forum.PostTimeFrom == 0 || page.PostTimeFrom < forum.PostTimeFrom) {
+		forum.PostTimeFrom = page.PostTimeFrom
+	}
+	if page.PostTimeTo > forum.PostTimeTo {
+		forum.PostTimeTo = page.PostTimeTo
+	}
+}
+
 func normalizeSHDetailFetchRequest(req SHDetailFetchRequest) SHDetailFetchRequest {
 	out := req
+	out.TriggerSource = normalizeSHDetailTriggerSource(out.TriggerSource)
+	out.SelectionCriteria = strings.TrimSpace(out.SelectionCriteria)
 	out.Keyword = strings.TrimSpace(out.Keyword)
 	out.TargetForumIDs = normalizeSHTargetForumIDs(out.TargetForumIDs)
 	out.DetailStatus = normalizeSHDetailStatus(out.DetailStatus)
 	out.ThreadTIDs = uniqueSHStrings(out.ThreadTIDs)
 	return out
+}
+
+func normalizeSHDetailTriggerSource(raw string) string {
+	if strings.TrimSpace(raw) == "shpool" {
+		return "shpool"
+	}
+	return "shfill"
 }
 
 func validateSHDetailFetchRequest(req SHDetailFetchRequest) error {

@@ -13,10 +13,10 @@
           <section class="next02-wdir-overview" aria-label="目录概览">
             <div class="next02-wdir-overview-toolbar">
               <nav class="next02-wdir-breadcrumbs" aria-label="breadcrumb">
-                <a href="/wdir">根目录</a>
+                <a href="/mediadir">根目录</a>
                 <template v-for="(item, index) in breadcrumbs" :key="crumbKey(item, index)">
                   <span aria-hidden="true">›</span>
-                  <a v-if="index < breadcrumbs.length - 1" :href="`/wdir?id=${crumbId(item)}`">{{ crumbName(item) }}</a>
+                  <a v-if="index < breadcrumbs.length - 1" :href="`/mediadir?id=${crumbId(item)}`">{{ crumbName(item) }}</a>
                   <strong v-else>{{ crumbName(item) }}</strong>
                 </template>
               </nav>
@@ -164,8 +164,8 @@ const movies = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "
 const sortQuery = computed(() => asRecord(pick(payload.value, "SortQuery", "sortQuery")));
 const ownedQuery = computed(() => asRecord(pick(payload.value, "ownedQuery", "OwnedQuery")));
 const filter = computed(() => asRecord(pick(payload.value, "MovieCardFilter")));
-const filterAction = computed(() => text(filter.value, "Action") || "/wdir");
-const filterClearHref = computed(() => text(filter.value, "ClearHref") || "/wdir");
+const filterAction = computed(() => text(filter.value, "Action") || "/mediadir");
+const filterClearHref = computed(() => text(filter.value, "ClearHref") || "/mediadir");
 const filterFields = computed(() => [
   ["cn", "演员", "CastNames", "演员名，支持多值"],
   ["gn", "类型", "GenreNames", "类型名，支持多值"],
@@ -207,7 +207,7 @@ function toggleFilter(): void {
 }
 
 function recursiveHref(next: boolean): string {
-  return `/wdir?id=${encodeURIComponent(directoryId.value)}&recursive=${next ? "1" : "0"}${query.value || ""}`;
+  return `/mediadir?id=${encodeURIComponent(directoryId.value)}&recursive=${next ? "1" : "0"}${query.value || ""}`;
 }
 
 function crumbName(item: AnyRecord): string {
@@ -263,7 +263,7 @@ const ChildrenGrid = defineComponent({
             const stat = asRecord(asArray<AnyRecord>(pick(item, "Stats"))[0]);
             const id = text(summary, "id", "Id");
             const name = text(summary, "name", "Name");
-            return h("a", { href: `/wdir?id=${encodeURIComponent(id)}`, class: "next02-wdir-directory-item", key: id || name }, [
+            return h("a", { href: `/mediadir?id=${encodeURIComponent(id)}`, class: "next02-wdir-directory-item", key: id || name }, [
               h("span", { class: "next02-wdir-folder-mark", "aria-hidden": "true" }),
               h("strong", { class: "next02-wdir-directory-name", title: name }, name),
               h("span", { class: "next02-wdir-directory-metric" }, [h("small", "媒体"), h("b", text(stat, "film_count", "FilmCount") || "0")]),

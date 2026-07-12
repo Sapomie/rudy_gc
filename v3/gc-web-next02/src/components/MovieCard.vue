@@ -50,7 +50,7 @@
         </div>
       </li>
       <li class="list-group-item text-muted genre-list movie-card-tag-block">
-        <a v-for="genre in genres" :key="genre" class="badge badge-genre movie-card-tag-genre me-1 mb-1" :href="`/cards?gn=${encodeURIComponent(genre)}`" target="_blank" rel="noopener noreferrer">
+        <a v-for="genre in genres" :key="genre" class="badge badge-genre movie-card-tag-genre me-1 mb-1" :href="`/listcard?gn=${encodeURIComponent(genre)}`" target="_blank" rel="noopener noreferrer">
           {{ genre }}
         </a>
       </li>
@@ -58,7 +58,7 @@
         <a v-for="cast in casts" :key="cast.key" class="person-tag movie-card-tag-person movie-card-tag-cast mr-2" :href="cast.href" :title="cast.label" target="_blank" rel="noopener noreferrer">
           {{ cast.label }}
         </a>
-        <a v-if="director" class="person-tag movie-card-tag-person movie-card-tag-director ml-2" :href="`/cards?dn=${encodeURIComponent(director)}`" :title="director" target="_blank" rel="noopener noreferrer">
+        <a v-if="director" class="person-tag movie-card-tag-person movie-card-tag-director ml-2" :href="`/listcard?dn=${encodeURIComponent(director)}`" :title="director" target="_blank" rel="noopener noreferrer">
           {{ director }}
         </a>
       </li>
@@ -95,8 +95,8 @@ const score = computed(() => text(movie.value, "score", "Score"));
 const watched = computed(() => text(movie.value, "viewers_number_watched", "ViewersNumberWatched"));
 const releaseDate = computed(() => text(movie.value, "releasing_date", "ReleasingDate"));
 const director = computed(() => text(movie.value, "director", "Director"));
-const detailHref = computed(() => `/movie/${encodeURIComponent(name.value)}`);
-const prefixHref = computed(() => `/cards?pn=${encodeURIComponent(prefix.value)}`);
+const detailHref = computed(() => `/moviedetail/${encodeURIComponent(name.value)}`);
+const prefixHref = computed(() => `/listcard?pn=${encodeURIComponent(prefix.value)}`);
 const busUrl = computed(() => text(movie.value, "bus_url", "BusUrl"));
 const searchUrl = computed(() => text(movie.value, "search_url", "SearchUrl"));
 const javUrl = computed(() => text(movie.value, "jav_url", "JavUrl"));
@@ -127,7 +127,7 @@ const casts = computed(() => asArray<AnyRecord>(pick(movie.value, "cast", "Cast"
   return {
     key: `${label}-${index}`,
     label,
-    href: personID && personID !== "0" ? `/cast/${encodeURIComponent(personID)}` : `/cards?cn=${encodeURIComponent(label)}`
+    href: personID && personID !== "0" ? `/castdetail/${encodeURIComponent(personID)}` : `/listcard?cn=${encodeURIComponent(label)}`
   };
 }).filter((item) => item.label));
 const rankPos = computed(() => text(rank.value, "RankPos", "rank_pos"));

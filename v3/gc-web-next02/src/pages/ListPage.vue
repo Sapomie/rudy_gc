@@ -1,7 +1,7 @@
 <template>
   <PageShell
     class="fetch-site-list-page-shell"
-    :class="{ 'sc-events-page-shell': viewType === 'fetch-site-javbus-list' || viewType === 'fetch-site-sukebei-list' || viewType === 'fetch-site-sehuatang-list' || viewType === 'fetch-site-sehuatang-sh-list' }"
+    :class="{ 'sc-events-page-shell': viewType === 'fetch-site-javbus-list' || viewType === 'fetch-site-sukebei-list' || viewType === 'fetch-site-sehuatang-list' || viewType === 'fetch-site-sehuatang-sh-list' || viewType === 'fetch-site-sehuatang-sh-detail' }"
     :title="title"
     eyebrow=""
   >
@@ -13,6 +13,7 @@
       class="fetch-site-list-page-root"
       :class="listRewriteClass"
       @click="handlePageClick"
+      @change="handlePageChange"
       @submit="handlePageSubmit"
       v-html="pageHTML"
     ></div>
@@ -27,10 +28,12 @@ import ErrorPanel from "@/components/ErrorPanel.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
-import { asArray, asRecord, pick, text as readText } from "@/utils/format";
+import { asArray, asRecord, normalizeHref, pick, text as readText } from "@/utils/format";
+import { loadSHForumOptions, shForumFilterOptions, shForumName, shForumNames, type SHForumOption } from "@/utils/shForums";
 
 const route = useRoute();
 const payload = ref<AnyRecord>({});
+const shForums = ref<SHForumOption[]>([]);
 const loading = ref(false);
 const error = ref("");
 const otherAlbumTarget = ref<{ movieJavID: string; sourceType: string; sourceRowID: number } | null>(null);
@@ -41,7 +44,13 @@ async function load() {
   loading.value = true;
   error.value = "";
   try {
-    payload.value = asRecord(await getJSON(apiPathForRoute(route)));
+    const needsSHForums = route.path === "/shpool" || route.path.startsWith("/shthread/");
+    const [pagePayload, forumOptions] = await Promise.all([
+      getJSON(apiPathForRoute(route)),
+      needsSHForums ? loadSHForumOptions() : Promise.resolve([])
+    ]);
+    payload.value = asRecord(pagePayload);
+    shForums.value = forumOptions;
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -63,6 +72,9 @@ const listRewriteClass = computed(() => {
   }
   if (viewType.value === "fetch-site-sehuatang-sh-list") {
     return "next02-fetch-site-sehuatang-sh-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
+  }
+  if (viewType.value === "fetch-site-sehuatang-sh-detail") {
+    return "next02-fetch-site-sehuatang-sh-detail-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
   }
   return "";
 });
@@ -158,7 +170,7 @@ function pageLinks(pageInfo: unknown, label: string): string {
           return `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
         return `<li class="page-item ${pick(link, "Active") ? "active" : ""} ${pick(link, "Disabled") ? "disabled" : ""}">
-          <a class="page-link" href="${attr(readText(link, "Href") || "#")}" ${pick(link, "Disabled") ? `tabindex="-1" aria-disabled="true"` : ""}>${escapeHtml(readText(link, "Label"))}</a>
+          <a class="page-link" href="${attr(normalizeHref(readText(link, "Href") || "#"))}" ${pick(link, "Disabled") ? `tabindex="-1" aria-disabled="true"` : ""}>${escapeHtml(readText(link, "Label"))}</a>
         </li>`;
       }).join("")}
     </ul>
@@ -168,7 +180,7 @@ function pageLinks(pageInfo: unknown, label: string): string {
 function sortLabel(link: unknown, label: string): string {
   const row = asRecord(link);
   const arrow = pick(row, "Active") ? (pick(row, "Desc") ? " ↓" : " ↑") : "";
-  return `<a class="fetch-site-sort-link sc-sort-link ${pick(row, "Active") ? "active" : ""}" href="${attr(readText(row, "Href") || "#")}">${escapeHtml(label)}${arrow}</a>`;
+  return `<a class="fetch-site-sort-link sc-sort-link ${pick(row, "Active") ? "active" : ""}" href="${attr(normalizeHref(readText(row, "Href") || "#"))}">${escapeHtml(label)}${arrow}</a>`;
 }
 
 function statusChecked(data: AnyRecord, value: number): string {
@@ -213,7 +225,7 @@ function renderJavbusOwnedFilter(data: AnyRecord): string {
   const owned = asRecord(pick(data, "ownedQuery"));
   const link = (item: unknown, label: string) => {
     const current = asRecord(item);
-    return `<a href="${attr(readText(current, "Href") || "#")}" class="btn btn-sm ${pick(current, "Active") ? "btn-primary active disabled" : "btn-outline-primary"}" aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
+    return `<a href="${attr(normalizeHref(readText(current, "Href") || "#"))}" class="btn btn-sm ${pick(current, "Active") ? "btn-primary active disabled" : "btn-outline-primary"}" aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
   };
   return `<div class="album-quick-filter-group" aria-label="WMedia 筛选">
     ${link(pick(owned, "MediaAll"), "MAll")}
@@ -323,7 +335,7 @@ function renderJavbusRow(row: AnyRecord, index: number, rows: AnyRecord[]): stri
     ? `<details class="fetch-site-error-details"><summary>有错误</summary><div>${escapeHtml(readText(row, "LastError"))}</div></details>`
     : `<span class="javbus-no-error">无错误</span>`;
   return `<tr class="next02-sc-event-row ${javbusDayClass(rows, index)}${dayStartClass}" data-movie-jav-id="${attr(readText(row, "MovieJavID"))}" data-movie-name="${attr(movieName)}" data-fetch-day="${attr(javbusDayKey(row))}">
-    <td class="sc-content-cell"><a class="sc-event-link" href="/movie/${attr(encodeURIComponent(movieName))}" title="${attr(movieName)}">${escapeHtml(movieName)}</a></td>
+    <td class="sc-content-cell"><a class="sc-event-link" href="/moviedetail/${attr(encodeURIComponent(movieName))}" title="${attr(movieName)}">${escapeHtml(movieName)}</a></td>
     <td title="${attr(readText(row, "ReleaseDateText"))}">${renderJavbusTime(readText(row, "ReleaseDateText"))}</td>
     <td><div class="fetch-site-album-inline"><span class="btn btn-sm btn-outline-secondary disabled">${escapeHtml(readText(row, "FetchStatusText"))}</span></div></td>
     <td class="sc-number">${escapeHtml(valueOf(pick(row, "TryCount"), 0))}</td>
@@ -452,7 +464,7 @@ function renderSukebeiOwnedFilter(data: AnyRecord): string {
   const owned = asRecord(pick(data, "ownedQuery"));
   const link = (item: unknown, label: string) => {
     const current = asRecord(item);
-    return `<a href="${attr(readText(current, "Href") || "#")}" class="btn btn-sm ${pick(current, "Active") ? "btn-primary active disabled" : "btn-outline-primary"}" aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
+    return `<a href="${attr(normalizeHref(readText(current, "Href") || "#"))}" class="btn btn-sm ${pick(current, "Active") ? "btn-primary active disabled" : "btn-outline-primary"}" aria-current="${pick(current, "Active") ? "true" : "false"}">${escapeHtml(label)}</a>`;
   };
   return `<div class="album-quick-filter-group" aria-label="WMedia 筛选">
     ${link(pick(owned, "MediaAll"), "MAll")}
@@ -523,7 +535,7 @@ function renderSukebeiRow(row: AnyRecord, index: number, rows: AnyRecord[]): str
     ? `<details class="fetch-site-error-details"><summary>有错误</summary><div>${escapeHtml(readText(row, "LastError"))}</div></details>`
     : `<span class="sukebei-no-error">无错误</span>`;
   return `<tr class="next02-sc-event-row ${sukebeiDayClass(rows, index)}${dayStartClass}" data-movie-jav-id="${attr(readText(row, "MovieJavID"))}" data-movie-name="${attr(movieName)}" data-fetch-day="${attr(sukebeiDayKey(row))}">
-    <td class="sc-content-cell"><a class="sc-event-link" href="/movie/${attr(encodeURIComponent(movieName))}" title="${attr(movieName)}">${escapeHtml(movieName)}</a></td>
+    <td class="sc-content-cell"><a class="sc-event-link" href="/moviedetail/${attr(encodeURIComponent(movieName))}" title="${attr(movieName)}">${escapeHtml(movieName)}</a></td>
     <td title="${attr(readText(row, "ReleaseDateText"))}">${renderSukebeiTime(readText(row, "ReleaseDateText"))}</td>
     <td><div class="fetch-site-album-inline"><span class="btn btn-sm btn-outline-secondary disabled">${escapeHtml(readText(row, "FetchStatusText"))}</span></div></td>
     <td class="sc-number">${escapeHtml(valueOf(pick(row, "TryCount"), 0))}</td>
@@ -602,7 +614,7 @@ function renderSukebeiPage(data: AnyRecord): string {
 
 function renderQuickTags(data: AnyRecord): string {
   return asArray<AnyRecord>(pick(data, "QuickTags")).map((item) =>
-    `<a class="btn btn-sm ${pick(item, "Active") ? "btn-primary" : "btn-outline-primary"}" href="${attr(readText(item, "Href") || "#")}">${escapeHtml(readText(item, "Label"))}</a>`
+    `<a class="btn btn-sm ${pick(item, "Active") ? "btn-primary" : "btn-outline-primary"}" href="${attr(normalizeHref(readText(item, "Href") || "#"))}">${escapeHtml(readText(item, "Label"))}</a>`
   ).join("");
 }
 
@@ -716,7 +728,7 @@ function renderSehuatangRow(row: AnyRecord, index: number, rows: AnyRecord[]): s
     ? `<a class="fetch-site-title-ellipsis" href="${attr(readText(row, "ThreadURL"))}" target="_blank" rel="noopener noreferrer" title="${attr(threadTitle)}">${escapeHtml(threadTitle)}</a>`
     : `<span class="fetch-site-title-ellipsis" title="${attr(threadTitle)}">${escapeHtml(threadTitle)}</span>`;
   const movieName = readText(row, "MovieName");
-  const movieHTML = movieName ? `<a class="sehuatang-movie-link" href="/movie/${attr(encodeURIComponent(movieName))}" target="_blank" rel="noopener noreferrer" title="${attr(movieName)}">${escapeHtml(movieName)}</a>` : "-";
+  const movieHTML = movieName ? `<a class="sehuatang-movie-link" href="/moviedetail/${attr(encodeURIComponent(movieName))}" target="_blank" rel="noopener noreferrer" title="${attr(movieName)}">${escapeHtml(movieName)}</a>` : "-";
   const dayStartClass = isSehuatangDayStart(rows, index) ? " sehuatang-day-start" : "";
   return `<tr class="js-sehuatang-row next02-sc-event-row ${sehuatangDayClass(rows, index)}${dayStartClass}"
     data-movie-route-key="${attr(readText(row, "MovieRouteKey"))}"
@@ -843,73 +855,89 @@ function lineCount(value: unknown): number {
   return current ? current.split(/\r?\n/).filter((line) => line.trim() !== "").length : 0;
 }
 
-function renderOptions(current: unknown, options: [string, string][]): string {
-  const value = String(current || "");
-  return options.map(([optionValue, label]) =>
-    `<option value="${attr(optionValue)}" ${value === optionValue ? "selected" : ""}>${escapeHtml(label)}</option>`
-  ).join("");
+function shMultiQueryValues(q: AnyRecord, pluralKey: string, legacyKey: string): string[] {
+  const values = asArray<unknown>(pick(q, pluralKey)).map((value) => String(value || "").trim()).filter(Boolean);
+  const legacy = String(pick(q, legacyKey) || "").trim();
+  if (legacy) {
+    values.push(legacy);
+  }
+  return Array.from(new Set(values));
+}
+
+function renderSHMultiFilter(label: string, name: string, selectedValues: string[], options: [string, string][]): string {
+  const selected = new Set(selectedValues);
+  return `<div class="next02-sh-filter-cluster next02-sh-filter-choice" data-sh-multi-group="${attr(name)}" aria-label="${attr(label)}">
+    <span class="next02-sh-filter-cluster-label">${escapeHtml(label)}</span>
+    <div class="next02-sh-filter-choice-buttons">
+      <button type="button" class="next02-sh-filter-choice-all ${selected.size === 0 ? "active" : ""}" data-sh-multi-clear>全部</button>
+      ${options.map(([value, optionLabel]) => {
+        const id = `sehuatangSH-${name}-${value}`;
+        return `<input class="next02-sh-filter-choice-input" id="${attr(id)}" type="checkbox" name="${attr(name)}" value="${attr(value)}" data-sh-multi-input ${selected.has(value) ? "checked" : ""}><label class="next02-sh-filter-choice-button" for="${attr(id)}">${escapeHtml(optionLabel)}</label>`;
+      }).join("")}
+    </div>
+  </div>`;
 }
 
 function renderSHFilterForm(data: AnyRecord): string {
   const q = asRecord(pick(data, "Query"));
-  return `<form class="next02-sh-filter-form" id="sehuatangSHFilterForm" method="get" action="/fetch-site-sehuatang-sh-list">
-        <input type="hidden" name="ps" value="${attr(pick(q, "PageSize") || "")}">
+  const sourceForumIDs = shMultiQueryValues(q, "SourceForumIDs", "SourceForumID");
+  const detailStatuses = shMultiQueryValues(q, "DetailStatuses", "DetailStatus");
+  const pageSize = Number(pick(q, "PageSize") || 50);
+  return `<form class="next02-sh-filter-form" id="sehuatangSHFilterForm" method="get" action="/shpool">
         ${pick(q, "Sort") ? `<input type="hidden" name="sort" value="${attr(pick(q, "Sort"))}">` : ""}
         ${pick(q, "Order") ? `<input type="hidden" name="order" value="${attr(pick(q, "Order"))}">` : ""}
         <div class="next02-sh-filter-cluster next02-sh-filter-query" aria-label="检索条件">
-          <label class="next02-sh-filter-field" for="sehuatangSHKeywordInput"><span>关键词</span><input class="form-control" id="sehuatangSHKeywordInput" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="标题 / 正文 / thread_tid"></label>
-          <label class="next02-sh-filter-field" for="sehuatangSHThreadTIDInput"><span>thread_tid</span><input class="form-control" id="sehuatangSHThreadTIDInput" type="text" name="thread_tid" value="${attr(pick(q, "ThreadTID") || "")}"></label>
-          <label class="next02-sh-filter-field" for="sehuatangSHAuthorInput"><span>作者</span><input class="form-control" id="sehuatangSHAuthorInput" type="text" name="author_name" value="${attr(pick(q, "AuthorName") || "")}"></label>
+          <label class="next02-sh-filter-field" for="sehuatangSHKeywordInput"><span>关键词</span><input class="form-control" id="sehuatangSHKeywordInput" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="帖子标题 / 正文"></label>
           <label class="next02-sh-filter-field" for="sehuatangSHHashInput"><span>info_hash</span><input class="form-control" id="sehuatangSHHashInput" type="text" name="info_hash" value="${attr(pick(q, "InfoHash") || "")}"></label>
+          <label class="next02-sh-filter-field next02-sh-page-size-field" for="sehuatangSHPageSize"><span>每页</span><input class="form-control" id="sehuatangSHPageSize" type="number" step="1" name="ps" value="${attr(pageSize)}" inputmode="numeric"></label>
         </div>
         <div class="next02-sh-filter-secondary">
-          <div class="next02-sh-filter-cluster next02-sh-filter-options" aria-label="帖子状态">
-            <label class="next02-sh-filter-field" for="sehuatangSHForumSelect"><span>来源版块</span><select class="form-select" id="sehuatangSHForumSelect" name="source_forum_id">${renderOptions(pick(q, "SourceForumID"), [["", "全部"], ["36", "亚洲无码原创"], ["103", "高清中文字幕"]])}</select></label>
-            <label class="next02-sh-filter-field" for="sehuatangSHStatusSelect"><span>详情状态</span><select class="form-select" id="sehuatangSHStatusSelect" name="detail_status">${renderOptions(pick(q, "DetailStatus"), [["", "全部"], ["pending", "待抓详情"], ["failed", "详情失败"], ["fetched", "已抓详情"]])}</select></label>
-            <label class="next02-sh-filter-field" for="sehuatangSHMagnetSelect"><span>magnet</span><select class="form-select" id="sehuatangSHMagnetSelect" name="has_magnet">${renderOptions(pick(q, "HasMagnet"), [["", "全部"], ["1", "有 magnet"], ["0", "无 magnet"]])}</select></label>
-          </div>
+          ${renderSHMultiFilter("来源版块", "source_forum_ids", sourceForumIDs, shForumFilterOptions(shForums.value))}
+          ${renderSHMultiFilter("详情状态", "detail_statuses", detailStatuses, [["pending", "待抓详情"], ["failed", "详情失败"], ["fetched", "已抓详情"]])}
           <div class="next02-sh-filter-cluster next02-sh-filter-dates" aria-label="发帖日期范围">
             <span class="next02-sh-filter-cluster-label">发帖日期</span>
             <label class="next02-sh-filter-field" for="sehuatangSHPostFromInput"><span>开始</span><input class="form-control" id="sehuatangSHPostFromInput" type="text" name="post_time_from" value="${attr(pick(q, "PostTimeFrom") || "")}" placeholder="YYYY-MM-DD"></label>
             <span class="next02-sh-filter-range-separator" aria-hidden="true">—</span>
             <label class="next02-sh-filter-field" for="sehuatangSHPostToInput"><span>结束</span><input class="form-control" id="sehuatangSHPostToInput" type="text" name="post_time_to" value="${attr(pick(q, "PostTimeTo") || "")}" placeholder="YYYY-MM-DD"></label>
           </div>
-          <div class="next02-sh-filter-cluster next02-sh-filter-dates" aria-label="最近抓到日期范围">
-            <span class="next02-sh-filter-cluster-label">最近抓到</span>
-            <label class="next02-sh-filter-field" for="sehuatangSHSeenFromInput"><span>开始</span><input class="form-control" id="sehuatangSHSeenFromInput" type="text" name="last_seen_time_from" value="${attr(pick(q, "LastSeenTimeFrom") || "")}" placeholder="YYYY-MM-DD"></label>
-            <span class="next02-sh-filter-range-separator" aria-hidden="true">—</span>
-            <label class="next02-sh-filter-field" for="sehuatangSHSeenToInput"><span>结束</span><input class="form-control" id="sehuatangSHSeenToInput" type="text" name="last_seen_time_to" value="${attr(pick(q, "LastSeenTimeTo") || "")}" placeholder="YYYY-MM-DD"></label>
+          <div class="next02-sh-filter-actions">
+            <button class="sc-event-filter-submit" type="submit">筛选</button>
+            <a class="sc-event-filter-clear" href="/shpool">清空</a>
           </div>
         </div>
-      </form>
-      <div class="next02-sh-filter-actions">
-        <button class="sc-event-filter-submit" type="submit" form="sehuatangSHFilterForm">筛选</button>
-        <a class="sc-event-filter-clear" href="/fetch-site-sehuatang-sh-list">清空</a>
-      </div>`;
+      </form>`;
 }
 
 function renderSHThreadRow(row: AnyRecord, index: number, rows: AnyRecord[]): string {
   const title = readText(row, "ThreadTitle");
-  const titleHTML = readText(row, "ThreadURL")
-    ? `<a class="fetch-site-title-ellipsis" href="${attr(readText(row, "ThreadURL"))}" target="_blank" rel="noopener noreferrer" title="${attr(title)}">${escapeHtml(title)}</a>`
+  const threadTID = readText(row, "ThreadTID");
+  const threadURL = readText(row, "ThreadURL");
+  const titleHTML = threadTID
+    ? `<a class="fetch-site-title-ellipsis" href="/shthread/${attr(encodeURIComponent(threadTID))}" target="_blank" rel="noopener noreferrer" title="${attr(title)}">${escapeHtml(title)}</a>`
     : `<span class="fetch-site-title-ellipsis" title="${attr(title)}">${escapeHtml(title)}</span>`;
+  const originalPostHTML = threadURL
+    ? `<a class="btn btn-outline-primary" href="${attr(threadURL)}" target="_blank" rel="noopener noreferrer">原帖</a>`
+    : `<button type="button" class="btn btn-outline-primary" disabled title="缺少原帖地址">原帖</button>`;
   const magnetCount = lineCount(pick(row, "MagnetText"));
   const hashCount = lineCount(pick(row, "InfoHashText"));
   const status = readText(row, "DetailStatus");
+  const forumID = readText(row, "SourceForumID");
   const dayStartClass = isSehuatangDayStart(rows, index) ? " sehuatang-day-start" : "";
   return `<tr class="next02-sc-event-row ${sehuatangDayClass(rows, index)}${dayStartClass}" data-post-day="${attr(formatUnix(pick(row, "PostTime"), "date"))}">
-    <td class="next02-sh-number-cell" title="${attr(readText(row, "ThreadTID"))}">${escapeHtml(readText(row, "ThreadTID"))}</td>
+    <td class="next02-sh-select-cell"><input class="form-check-input js-sh-detail-select" type="checkbox" value="${attr(threadTID)}" aria-label="选择帖子 ${attr(threadTID)}" ${threadTID ? "" : "disabled"}></td>
+    <td class="next02-sh-number-cell" title="${attr(threadTID)}">${escapeHtml(threadTID)}</td>
     <td class="sc-content-cell">${titleHTML}</td>
     <td class="sc-content-cell" title="${attr(readText(row, "AuthorName"))}">${escapeHtml(readText(row, "AuthorName"))}</td>
     <td>${renderSehuatangTime(pick(row, "PostTime"))}</td>
-    <td><span class="next02-sh-forum-pill">${escapeHtml(readText(row, "SourceForumID"))}</span></td>
+    <td><span class="next02-sh-forum-pill" data-forum-id="${attr(forumID)}">${escapeHtml(formatSHForumName(forumID))}</span></td>
     <td><span class="next02-sh-status-pill" data-status="${attr(status)}">${escapeHtml(status)}</span></td>
     <td><span class="next02-sh-count-pill">${escapeHtml(magnetCount)}</span></td>
     <td><span class="next02-sh-count-pill">${escapeHtml(hashCount)}</span></td>
     <td title="${attr(formatUnix(pick(row, "LastSeenTime")))}">${renderSehuatangTime(pick(row, "LastSeenTime"))}</td>
     <td class="next02-sh-actions-cell"><div class="btn-group btn-group-sm" role="group" aria-label="帖子操作">
+      <button type="button" class="btn btn-outline-primary js-sh-detail-start" data-thread-tid="${attr(threadTID)}" title="抓取详情" ${threadTID ? "" : "disabled"}>抓取</button>
       <button type="button" class="btn btn-outline-primary js-sh-view" data-index="${attr(index)}">内容</button>
-      <a class="btn btn-outline-primary" href="/fetch-site-sehuatang-sh-detail/${attr(encodeURIComponent(readText(row, "ThreadTID")))}" target="_blank" rel="noopener noreferrer">详情</a>
+      ${originalPostHTML}
       <button type="button" class="btn btn-outline-secondary js-sh-copy" data-index="${attr(index)}" data-field="MagnetText" title="复制 magnet" ${magnetCount ? "" : "disabled"}>M</button>
       <button type="button" class="btn btn-outline-secondary js-sh-copy" data-index="${attr(index)}" data-field="InfoHashText" title="复制 info_hash" ${hashCount ? "" : "disabled"}>H</button>
     </div></td>
@@ -922,11 +950,12 @@ function renderSHThreadTable(data: AnyRecord): string {
   return `<div class="table-responsive">
         <table class="table table-hover align-middle mb-0 sc-events-table next02-sh-thread-table">
           <colgroup>
-            <col class="next02-sh-col-tid"><col class="next02-sh-col-title"><col class="next02-sh-col-author"><col class="next02-sh-col-post">
+            <col class="next02-sh-col-select"><col class="next02-sh-col-tid"><col class="next02-sh-col-title"><col class="next02-sh-col-author"><col class="next02-sh-col-post">
             <col class="next02-sh-col-forum"><col class="next02-sh-col-status"><col class="next02-sh-col-magnet"><col class="next02-sh-col-hash">
             <col class="next02-sh-col-seen"><col class="next02-sh-col-actions">
           </colgroup>
           <thead><tr>
+            <th>选择</th>
             <th class="sc-sortable-head">${sortLabel(pick(sort, "ByThreadTID"), "thread_tid")}</th>
             <th>帖子标题</th>
             <th>作者</th>
@@ -938,9 +967,23 @@ function renderSHThreadTable(data: AnyRecord): string {
             <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLastSeenTime"), "最近抓到")}</th>
             <th>操作</th>
           </tr></thead>
-          <tbody>${rows.length ? rows.map((row, index) => renderSHThreadRow(row, index, rows)).join("") : `<tr><td colspan="10"><div class="fetch-site-empty-state">当前筛选下没有 Sehuatang SH 帖子数据。</div></td></tr>`}</tbody>
+          <tbody>${rows.length ? rows.map((row, index) => renderSHThreadRow(row, index, rows)).join("") : `<tr><td colspan="11"><div class="fetch-site-empty-state">当前筛选下没有 Sehuatang SH 帖子数据。</div></td></tr>`}</tbody>
         </table>
       </div>`;
+}
+
+function renderSHDetailBatchActions(rows: AnyRecord[]): string {
+  if (!rows.length) {
+    return "";
+  }
+  return `<div class="next02-sh-detail-batch-bar" aria-label="详情抓取批量操作">
+    <div class="next02-sh-detail-batch-actions">
+      <button type="button" class="btn btn-outline-secondary btn-sm js-sh-detail-select-all">全选当前页</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm js-sh-detail-clear-selection" disabled>取消选择</button>
+      <button type="button" class="btn btn-primary btn-sm js-sh-detail-start-selected" disabled>抓取选中详情</button>
+    </div>
+    <div class="next02-sh-detail-selection-count"><strong id="shDetailSelectedCount">0</strong> Selected</div>
+  </div>`;
 }
 
 function renderSHRuns(data: AnyRecord): string {
@@ -967,7 +1010,7 @@ function renderSHRuns(data: AnyRecord): string {
             <td>${escapeHtml(pick(run, "Id") || "")}</td>
             <td>${escapeHtml(readText(run, "FetchMode"))}</td>
             <td>${escapeHtml(readText(run, "Keyword"))}</td>
-            <td>${escapeHtml(readText(run, "TargetForumIDs"))}</td>
+            <td>${escapeHtml(shForumNames(shForums.value, readText(run, "TargetForumIDs")))}</td>
             <td><span class="badge fetch-site-badge">${escapeHtml(readText(run, "Status"))}</span></td>
             <td>${escapeHtml(valueOf(pick(run, "SeenCount"), 0))}</td>
             <td>${escapeHtml(valueOf(pick(run, "MatchedCount"), 0))}</td>
@@ -985,6 +1028,17 @@ function renderSHRuns(data: AnyRecord): string {
   </div>`;
 }
 
+function formatSHForumName(value: unknown): string {
+  return shForumName(shForums.value, value);
+}
+
+function renderSHForumSummary(aggregate: AnyRecord): string {
+  return shForums.value.map((forum) => {
+    const count = valueOf(pick(aggregate, `Forum${forum.forumID}Count`), 0);
+    return `<span class="next02-sh-summary-item"><strong>${escapeHtml(count)}</strong> ${escapeHtml(forum.forumName)}</span>`;
+  }).join("");
+}
+
 function renderSHDetailModal(): string {
   return `<div class="modal fade" id="shThreadDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
@@ -997,8 +1051,7 @@ function renderSHDetailModal(): string {
 function renderSHPage(data: AnyRecord): string {
   const rows = asArray<AnyRecord>(pick(data, "Rows"));
   const total = valueOf(pick(data, "Total"), 0);
-  const magnetTotal = rows.reduce((sum, row) => sum + lineCount(pick(row, "MagnetText")), 0);
-  const hashTotal = rows.reduce((sum, row) => sum + lineCount(pick(row, "InfoHashText")), 0);
+  const aggregate = asRecord(pick(data, "Aggregate"));
   return `<div id="sehuatangSHListPage" class="next02-sh-list-rewrite">
     <section class="next02-sc-hero next02-sc-events-hero next02-sh-list-hero next02-sc-movie-top-shell">
       <div class="next02-sc-hero-copy">
@@ -1007,10 +1060,10 @@ function renderSHPage(data: AnyRecord): string {
         <p>${escapeHtml(pick(data, "PageNote") || "")}</p>
       </div>
       <div class="next02-sc-hero-actions next02-sh-list-actions">
-        <a class="btn btn-outline-primary btn-sm" href="/fetch-site-sehuatang-sh-list">SehuatangSH 列表</a>
+        <a class="btn btn-outline-primary btn-sm" href="/shpool">SehuatangSH 列表</a>
         <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "OldListURL") || "/fetch-site-sehuatang-list")}" target="_blank" rel="noopener noreferrer">旧磁力列表</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-list")}" target="_blank" rel="noopener noreferrer">列表抓取</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "DetailTaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-detail")}" target="_blank" rel="noopener noreferrer">详情补全</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/shfetch")}" target="_blank" rel="noopener noreferrer">列表抓取</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "DetailTaskPageURL") || "/shfill")}" target="_blank" rel="noopener noreferrer">详情补全</a>
         <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}" target="_blank" rel="noopener noreferrer">任务列表</a>
       </div>
     </section>
@@ -1019,9 +1072,14 @@ function renderSHPage(data: AnyRecord): string {
       <div class="card-body">
         <div class="next02-sc-panel-head next02-sh-list-control">
           ${renderSHFilterForm(data)}
-          ${rows.length ? `<div class="next02-sc-hero-metrics next02-sh-list-metrics" aria-label="Sehuatang SH 摘要"><span><strong>${escapeHtml(total)}</strong> Records</span><span><strong>${escapeHtml(rows.length)}</strong> Current Page</span><span><strong>${escapeHtml(magnetTotal)}</strong> Magnet</span><span><strong>${escapeHtml(hashTotal)}</strong> Hash</span></div>` : ""}
+          <div class="next02-sh-list-metrics" aria-label="Sehuatang SH 聚合摘要">
+            <div class="next02-sh-summary-group is-overview"><span class="next02-sh-summary-label">数据</span><span class="next02-sh-summary-item"><strong>${escapeHtml(total)}</strong> 总数</span><span class="next02-sh-summary-item"><strong>${escapeHtml(rows.length)}</strong> 当前页</span></div>
+            <div class="next02-sh-summary-group is-detail"><span class="next02-sh-summary-label">详情状态</span><span class="next02-sh-summary-item is-pending"><strong>${escapeHtml(valueOf(pick(aggregate, "PendingDetailCount"), 0))}</strong> 待抓</span><span class="next02-sh-summary-item is-fetched"><strong>${escapeHtml(valueOf(pick(aggregate, "FetchedDetailCount"), 0))}</strong> 已抓</span><span class="next02-sh-summary-item is-failed"><strong>${escapeHtml(valueOf(pick(aggregate, "FailedDetailCount"), 0))}</strong> 失败</span></div>
+            <div class="next02-sh-summary-group is-source"><span class="next02-sh-summary-label">来源版块</span>${renderSHForumSummary(aggregate)}</div>
+          </div>
           ${rows.length ? `<div class="next02-sc-movie-pager">${pageLinks(pick(data, "PageInfo"), "SehuatangSH")}</div>` : ""}
         </div>
+        ${renderSHDetailBatchActions(rows)}
         ${renderSHThreadTable(data)}
       </div>
     </div>
@@ -1038,105 +1096,129 @@ function formatSHDetailStatus(status: unknown): string {
   return text(current);
 }
 
-function renderInfoCard(thread: AnyRecord): string {
-  const item = (label: string, value: string) => `<div class="col-12 col-md-4 col-xl-2"><div class="text-muted small">${escapeHtml(label)}</div><div class="fw-semibold">${value}</div></div>`;
-  return `<div class="card mb-3">
+function renderSHDetailInfo(thread: AnyRecord): string {
+  const status = readText(thread, "DetailStatus");
+  const item = (label: string, value: string, className = "") => `<div class="next02-sh-detail-info-item${className ? ` ${className}` : ""}">
+    <span class="next02-sh-detail-info-label">${escapeHtml(label)}</span>
+    <div class="next02-sh-detail-info-value">${value || "-"}</div>
+  </div>`;
+  return `<section class="card next02-sc-panel next02-sc-events-panel next02-sh-detail-panel next02-sh-detail-info-panel">
     <div class="card-body">
-      <div class="row g-3">
-        ${item("thread_tid", escapeHtml(readText(thread, "ThreadTID")))}
-        ${item("来源版块", escapeHtml(readText(thread, "SourceForumID")))}
-        ${item("来源页", readText(thread, "SourcePageURL") ? `<a href="${attr(readText(thread, "SourcePageURL"))}" target="_blank" rel="noopener noreferrer">${escapeHtml(readText(thread, "SourcePage"))}</a>` : escapeHtml(readText(thread, "SourcePage")))}
-        ${item("详情状态", escapeHtml(formatSHDetailStatus(pick(thread, "DetailStatus"))))}
+      <div class="next02-sh-detail-section-head">
+        <div><span class="next02-sh-section-kicker">THREAD METADATA</span><h5>帖子信息</h5></div>
+        <span class="next02-sh-detail-table-meta">${escapeHtml(readText(thread, "ThreadTID"))}</span>
+      </div>
+      <div class="next02-sh-detail-info-grid">
+        ${item("thread_tid", `<span class="next02-sh-detail-code-pill">${escapeHtml(readText(thread, "ThreadTID"))}</span>`)}
+        ${item("来源版块", `<span class="next02-sh-detail-forum-pill">${escapeHtml(formatSHForumName(readText(thread, "SourceForumID")))}</span>`)}
+        ${item("来源页", readText(thread, "SourcePageURL") ? `<a class="next02-sh-detail-link-pill" href="${attr(readText(thread, "SourcePageURL"))}" target="_blank" rel="noopener noreferrer">${escapeHtml(readText(thread, "SourcePage"))}</a>` : escapeHtml(readText(thread, "SourcePage")))}
+        ${item("详情状态", `<span class="next02-sh-detail-status-pill" data-status="${attr(status)}">${escapeHtml(formatSHDetailStatus(status))}</span>`)}
         ${item("作者", escapeHtml(readText(thread, "AuthorName")))}
-        ${item("发布时间", escapeHtml(formatUnix(pick(thread, "PostTime"))))}
-        ${item("最近抓到", escapeHtml(formatUnix(pick(thread, "LastSeenTime"))))}
-        ${item("详情抓取时间", escapeHtml(formatUnix(pick(thread, "DetailFetchedOn"))))}
-        ${item("详情失败时间", escapeHtml(formatUnix(pick(thread, "DetailFailedOn"))))}
-        ${item("入库时间", escapeHtml(formatUnix(pick(thread, "CreatedOn"))))}
-        ${item("更新时间", escapeHtml(formatUnix(pick(thread, "UpdatedOn"))))}
-        <div class="col-12"><div class="text-muted small">content_hash</div><div class="font-monospace small">${escapeHtml(readText(thread, "ContentHash"))}</div></div>
-        ${readText(thread, "DetailError") ? `<div class="col-12"><div class="text-muted small">详情错误</div><div class="small text-danger">${escapeHtml(readText(thread, "DetailError"))}</div></div>` : ""}
+        ${item("发布时间", renderSehuatangTime(pick(thread, "PostTime")))}
+        ${item("初始获取时间", renderSehuatangTime(pick(thread, "FirstSeenTime")))}
+        ${item("最近抓到", renderSehuatangTime(pick(thread, "LastSeenTime")))}
+        ${item("详情抓取时间", renderSehuatangTime(pick(thread, "DetailFetchedOn")))}
+        ${readText(thread, "DetailError") ? item("详情错误", `<span class="next02-sh-detail-error">${escapeHtml(readText(thread, "DetailError"))}</span>`, "is-wide") : ""}
       </div>
     </div>
-  </div>`;
+  </section>`;
 }
 
 function splitLines(value: unknown): string[] {
   return String(value || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
-function renderCopyList(title: string, items: string[], copyAllLabel: string): string {
-  return `<div class="card mb-3">
+function renderSHDetailCopyList(title: string, items: string[], copyAllLabel: string, kind: "magnet" | "hash"): string {
+  return `<section class="card next02-sc-panel next02-sc-events-panel next02-sh-detail-panel next02-sh-detail-resource-panel is-${kind}">
     <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-        <h5 class="card-title mb-0">${escapeHtml(title)}</h5>
-        <button type="button" class="btn btn-sm btn-outline-secondary js-copy-value" data-copy-value="${attr(items.join("\n"))}" ${items.length ? "" : "disabled"}>${escapeHtml(copyAllLabel)}</button>
+      <div class="next02-sh-detail-section-head">
+        <div><span class="next02-sh-section-kicker">${kind === "magnet" ? "MAGNET RESOURCES" : "INFO HASH RESOURCES"}</span><h5>${escapeHtml(title)}</h5></div>
+        <div class="next02-sh-detail-section-actions">
+          <span class="next02-sh-detail-count-pill">${escapeHtml(items.length)}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary js-copy-value" data-copy-value="${attr(items.join("\n"))}" ${items.length ? "" : "disabled"}>${escapeHtml(copyAllLabel)}</button>
+        </div>
       </div>
-      ${items.length ? `<div class="list-group list-group-flush">${items.map((item) => `<div class="list-group-item px-0 d-flex align-items-start gap-2"><code class="flex-grow-1 text-break">${escapeHtml(item)}</code><button type="button" class="btn btn-sm btn-outline-secondary js-copy-value" data-copy-value="${attr(item)}">复制</button></div>`).join("")}</div>` : `<div class="text-muted small">暂无数据。</div>`}
+      ${items.length ? `<div class="next02-sh-detail-resource-list">${items.map((item) => `<div class="next02-sh-detail-resource-item"><code title="${attr(item)}">${escapeHtml(item)}</code><button type="button" class="btn btn-sm btn-outline-secondary js-copy-value" data-copy-value="${attr(item)}">复制</button></div>`).join("")}</div>` : `<div class="next02-sh-detail-empty">暂无${escapeHtml(title)}数据。</div>`}
     </div>
-  </div>`;
+  </section>`;
 }
 
-function renderContent(thread: AnyRecord): string {
-  return `<div class="card mb-3">
+function renderSHDetailContent(thread: AnyRecord): string {
+  const content = readText(thread, "RawContentText");
+  return `<section class="card next02-sc-panel next02-sc-events-panel next02-sh-detail-panel next02-sh-detail-content-panel">
     <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-        <h5 class="card-title mb-0">正文</h5>
-        <button type="button" class="btn btn-sm btn-outline-secondary js-copy-value" data-copy-value="${attr(readText(thread, "RawContentText"))}" ${readText(thread, "RawContentText") ? "" : "disabled"}>复制正文</button>
+      <div class="next02-sh-detail-section-head">
+        <div><span class="next02-sh-section-kicker">THREAD CONTENT</span><h5>正文</h5></div>
+        <button type="button" class="btn btn-sm btn-outline-secondary js-copy-value" data-copy-value="${attr(content)}" ${content ? "" : "disabled"}>复制正文</button>
       </div>
-      <pre class="bg-light border rounded p-3 small mb-0">${escapeHtml(readText(thread, "RawContentText"))}</pre>
+      ${content ? `<pre class="next02-sh-detail-content">${escapeHtml(content)}</pre>` : `<div class="next02-sh-detail-empty">当前帖子尚未抓取正文。</div>`}
     </div>
-  </div>`;
+  </section>`;
 }
 
-function renderFetchItems(items: unknown): string {
+function renderSHDetailFetchItems(items: unknown): string {
   const rows = asArray<AnyRecord>(items);
-  return `<div class="card">
+  return `<section class="card next02-sc-panel next02-sc-events-panel next02-sh-detail-panel next02-sh-detail-runs-panel">
     <div class="card-body">
-      <h5 class="card-title mb-3">相关抓取记录</h5>
+      <div class="next02-sh-detail-section-head">
+        <div><span class="next02-sh-section-kicker">FETCH HISTORY</span><h5>相关抓取记录</h5></div>
+        <span class="next02-sh-detail-table-meta">${escapeHtml(rows.length)} Records</span>
+      </div>
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead><tr><th>run_id</th><th>模式</th><th>来源版块</th><th>来源页</th><th>状态</th><th>thread_row_id</th><th>更新时间</th><th>错误</th></tr></thead>
+        <table class="table table-sm align-middle mb-0 next02-sh-detail-runs-table">
+          <colgroup><col class="next02-sh-detail-run-id"><col class="next02-sh-detail-run-mode"><col class="next02-sh-detail-run-mode"><col class="next02-sh-detail-run-forum"><col class="next02-sh-detail-run-page"><col class="next02-sh-detail-run-status"><col class="next02-sh-detail-run-row"><col class="next02-sh-detail-run-time"><col class="next02-sh-detail-run-error"></colgroup>
+          <thead><tr><th>run_id</th><th>运行来源</th><th>模式</th><th>来源版块</th><th>来源页</th><th>状态</th><th>thread_row_id</th><th>更新时间</th><th>错误</th></tr></thead>
           <tbody>${rows.length ? rows.map((item) => `<tr>
             <td>${escapeHtml(pick(item, "RunID") || "")}</td>
+            <td>${escapeHtml(readText(item, "RunSource"))}</td>
             <td>${escapeHtml(readText(item, "FetchMode"))}</td>
-            <td>${escapeHtml(readText(item, "SourceForumID"))}</td>
+            <td>${escapeHtml(formatSHForumName(readText(item, "SourceForumID")))}</td>
             <td>${readText(item, "SourcePageURL") ? `<a href="${attr(readText(item, "SourcePageURL"))}" target="_blank" rel="noopener noreferrer">${escapeHtml(readText(item, "SourcePage"))}</a>` : escapeHtml(readText(item, "SourcePage"))}</td>
-            <td><span class="badge fetch-site-badge">${escapeHtml(readText(item, "Status"))}</span></td>
+            <td><span class="next02-sh-detail-run-status-pill" data-status="${attr(readText(item, "Status"))}">${escapeHtml(readText(item, "Status"))}</span></td>
             <td>${escapeHtml(pick(item, "ThreadRowID") || "")}</td>
             <td class="text-nowrap">${escapeHtml(formatUnix(pick(item, "UpdatedOn")))}</td>
-            <td>${readText(item, "Error") ? `<details><summary>错误</summary><div class="mt-2">${escapeHtml(readText(item, "Error"))}</div></details>` : "-"}</td>
-          </tr>`).join("") : `<tr><td colspan="8"><div class="fetch-site-empty-state">暂无相关抓取记录。</div></td></tr>`}</tbody>
+            <td class="next02-sh-detail-run-error-cell">${readText(item, "Error") ? `<details><summary>错误</summary><div class="mt-2">${escapeHtml(readText(item, "Error"))}</div></details>` : "-"}</td>
+          </tr>`).join("") : `<tr><td colspan="9"><div class="fetch-site-empty-state">暂无相关抓取记录。</div></td></tr>`}</tbody>
         </table>
       </div>
     </div>
-  </div>`;
+  </section>`;
 }
 
 function renderSHDetailPage(data: AnyRecord): string {
   const thread = asRecord(pick(data, "Thread"));
   const magnets = splitLines(pick(thread, "MagnetText"));
   const hashes = splitLines(pick(thread, "InfoHashText"));
-  return `<div id="shDetailPage">
-    <div class="d-flex flex-column flex-xl-row align-items-xl-start justify-content-between gap-3 mb-3">
-      <div>
-        <h4 class="mb-1">${escapeHtml(readText(thread, "ThreadTitle") || pick(data, "PageTitle") || "Sehuatang SH 帖子详情")}</h4>
-        <p class="text-muted mb-0">${escapeHtml(pick(data, "PageTitle") || "")}</p>
+  const status = readText(thread, "DetailStatus");
+  const title = readText(thread, "ThreadTitle") || pick(data, "PageTitle") || "Sehuatang SH 帖子详情";
+  return `<div id="shDetailPage" class="next02-sh-detail-rewrite">
+    <section class="next02-sc-hero next02-sc-events-hero next02-sh-detail-hero next02-sc-movie-top-shell">
+      <div class="next02-sc-hero-copy next02-sh-detail-hero-copy">
+        <span class="next02-sc-eyebrow">SEHUATANG / SH THREAD DETAIL</span>
+        <h4 title="${attr(title)}">${escapeHtml(title)}</h4>
+        <div class="next02-sh-detail-hero-meta" aria-label="帖子摘要">
+          <span>Thread <strong>${escapeHtml(readText(thread, "ThreadTID"))}</strong></span>
+          <span>版块 <strong>${escapeHtml(formatSHForumName(readText(thread, "SourceForumID")))}</strong></span>
+          <span class="is-status" data-status="${attr(status)}">${escapeHtml(formatSHDetailStatus(status))}</span>
+          <span>${escapeHtml(formatUnix(pick(thread, "PostTime")))}</span>
+        </div>
       </div>
-      <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-outline-primary btn-sm" href="${attr(pick(data, "ListPageURL") || "/fetch-site-sehuatang-sh-list")}">返回列表</a>
+      <div class="next02-sc-hero-actions next02-sh-detail-actions">
+        <a class="btn btn-outline-primary btn-sm" href="${attr(pick(data, "ListPageURL") || "/shpool")}">返回列表</a>
         ${readText(thread, "ThreadURL") ? `<a class="btn btn-outline-secondary btn-sm" href="${attr(readText(thread, "ThreadURL"))}" target="_blank" rel="noopener noreferrer">打开原帖</a>` : ""}
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-detail")}">详情补全</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "ListTaskPageURL") || "/triggers/fetch-sehuatang-sh-thread-list")}">列表抓取</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/shfill")}">详情补全</a>
+        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "ListTaskPageURL") || "/shfetch")}">列表抓取</a>
         <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TasksPageURL") || "/crawler/tasks")}">任务列表</a>
       </div>
+    </section>
+    <div id="shDetailMsg" class="alert d-none" role="alert"></div>
+    ${renderSHDetailInfo(thread)}
+    ${renderSHDetailContent(thread)}
+    <div class="next02-sh-detail-resource-grid">
+      ${renderSHDetailCopyList("Magnet", magnets, "复制全部 Magnet", "magnet")}
+      ${renderSHDetailCopyList("Info Hash", hashes, "复制全部 Hash", "hash")}
     </div>
-    <div id="shDetailMsg" class="alert d-none mb-3" role="alert"></div>
-    ${renderInfoCard(thread)}
-    ${renderContent(thread)}
-    ${renderCopyList("magnet", magnets, "复制全部 magnet")}
-    ${renderCopyList("info_hash", hashes, "复制全部 hash")}
-    ${renderFetchItems(pick(data, "FetchItems"))}
+    ${renderSHDetailFetchItems(pick(data, "FetchItems"))}
   </div>`;
 }
 
@@ -1258,6 +1340,99 @@ function refreshStatusClearButton(form: Element | null) {
   }
   const checkedCount = form?.querySelectorAll("input[name='statuses']:checked").length || 0;
   clearButton.classList.toggle("active", checkedCount === 0);
+}
+
+function refreshSHMultiClearButton(group: Element | null) {
+  if (!group) {
+    return;
+  }
+  const checkedCount = group.querySelectorAll("input[data-sh-multi-input]:checked").length;
+  group.querySelector("[data-sh-multi-clear]")?.classList.toggle("active", checkedCount === 0);
+}
+
+let shDetailTaskStarting = false;
+
+function shDetailSelectionInputs(): HTMLInputElement[] {
+  return Array.from(document.querySelectorAll<HTMLInputElement>(".js-sh-detail-select"));
+}
+
+function selectedSHDetailThreadTIDs(): string[] {
+  return Array.from(new Set(shDetailSelectionInputs()
+    .filter((input) => input.checked)
+    .map((input) => input.value.trim())
+    .filter(Boolean)));
+}
+
+function refreshSHDetailSelection() {
+  const inputs = shDetailSelectionInputs();
+  const selectedCount = inputs.filter((input) => input.checked).length;
+  const count = document.getElementById("shDetailSelectedCount");
+  if (count) {
+    count.textContent = String(selectedCount);
+  }
+  inputs.forEach((input) => {
+    input.closest("tr")?.classList.toggle("is-selected", input.checked);
+  });
+  document.querySelectorAll<HTMLButtonElement>(".js-sh-detail-select-all").forEach((button) => {
+    button.disabled = shDetailTaskStarting || inputs.length === 0 || selectedCount === inputs.length;
+  });
+  document.querySelectorAll<HTMLButtonElement>(".js-sh-detail-clear-selection, .js-sh-detail-start-selected").forEach((button) => {
+    button.disabled = shDetailTaskStarting || selectedCount === 0;
+  });
+}
+
+function setSHDetailTaskStarting(starting: boolean) {
+  shDetailTaskStarting = starting;
+  shDetailSelectionInputs().forEach((input) => {
+    input.disabled = starting || !input.value.trim();
+  });
+  document.querySelectorAll<HTMLButtonElement>(".js-sh-detail-start").forEach((button) => {
+    button.disabled = starting || !String(button.getAttribute("data-thread-tid") || "").trim();
+  });
+  refreshSHDetailSelection();
+}
+
+async function startSHDetailTask(threadTIDs: string[]) {
+  const tids = Array.from(new Set(threadTIDs.map((item) => item.trim()).filter(Boolean)));
+  if (!tids.length) {
+    showMsg("请选择要抓取详情的帖子", false);
+    return;
+  }
+  setSHDetailTaskStarting(true);
+  try {
+    const query = asRecord(pick(payload.value, "Query"));
+    const data = asRecord(await sendJSON("/api/crawler/jobs/start", "POST", {
+      task_type: "spider_fetch_sehuatang_sh_thread_detail",
+      trigger_source: "shpool",
+      thread_tids: tids,
+      target_forum_ids: shMultiQueryValues(query, "SourceForumIDs", "SourceForumID"),
+      detail_statuses: shMultiQueryValues(query, "DetailStatuses", "DetailStatus"),
+      keyword: String(pick(query, "Keyword") || "").trim(),
+      post_time_from: String(pick(query, "PostTimeFrom") || "").trim(),
+      post_time_to: String(pick(query, "PostTimeTo") || "").trim()
+    }));
+    const jobID = readText(data, "job_id", "JobID");
+    if (!jobID) {
+      showMsg("详情抓取任务已创建，但缺少 job_id", false);
+      return;
+    }
+    window.location.href = `/shfill?job_id=${encodeURIComponent(jobID)}`;
+  } catch (err) {
+    showMsg(err instanceof Error ? err.message : "详情抓取任务启动失败", false);
+  } finally {
+    setSHDetailTaskStarting(false);
+  }
+}
+
+function handlePageChange(event: Event) {
+  const target = event.target instanceof Element ? event.target : null;
+  const input = target?.closest("input[data-sh-multi-input]");
+  if (input) {
+    refreshSHMultiClearButton(input.closest("[data-sh-multi-group]"));
+  }
+  if (target?.closest(".js-sh-detail-select")) {
+    refreshSHDetailSelection();
+  }
 }
 
 function closeModal(modal: HTMLElement | null) {
@@ -1515,6 +1690,15 @@ function handlePageClick(event: MouseEvent) {
     closeModal(dismiss.closest(".modal") as HTMLElement | null);
     return;
   }
+  const shMultiClearButton = target.closest("[data-sh-multi-clear]");
+  if (shMultiClearButton) {
+    const group = shMultiClearButton.closest("[data-sh-multi-group]");
+    group?.querySelectorAll<HTMLInputElement>("input[data-sh-multi-input]").forEach((input) => {
+      input.checked = false;
+    });
+    refreshSHMultiClearButton(group);
+    return;
+  }
   const clearStatusButton = target.closest("[data-status-clear]");
   if (clearStatusButton) {
     const form = clearStatusButton.closest("form");
@@ -1527,6 +1711,32 @@ function handlePageClick(event: MouseEvent) {
   const filteredButton = target.closest(".js-trigger-filtered-fetch-site, .js-trigger-filtered-sukebei");
   if (filteredButton) {
     void startFilteredTask(filteredButton);
+    return;
+  }
+  const selectAllSHDetailsButton = target.closest(".js-sh-detail-select-all");
+  if (selectAllSHDetailsButton) {
+    shDetailSelectionInputs().forEach((input) => {
+      input.checked = true;
+    });
+    refreshSHDetailSelection();
+    return;
+  }
+  const clearSHDetailsButton = target.closest(".js-sh-detail-clear-selection");
+  if (clearSHDetailsButton) {
+    shDetailSelectionInputs().forEach((input) => {
+      input.checked = false;
+    });
+    refreshSHDetailSelection();
+    return;
+  }
+  const startSelectedSHDetailsButton = target.closest(".js-sh-detail-start-selected");
+  if (startSelectedSHDetailsButton) {
+    void startSHDetailTask(selectedSHDetailThreadTIDs());
+    return;
+  }
+  const startSHDetailButton = target.closest(".js-sh-detail-start");
+  if (startSHDetailButton) {
+    void startSHDetailTask([String(startSHDetailButton.getAttribute("data-thread-tid") || "")]);
     return;
   }
   const openDateButton = target.closest("#btnEditShtTime");

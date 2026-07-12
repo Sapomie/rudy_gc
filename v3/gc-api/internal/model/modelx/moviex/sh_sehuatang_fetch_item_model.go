@@ -13,10 +13,10 @@ type (
 	ShSehuatangFetchItemModel interface {
 		Insert(ctx context.Context, data *ShSehuatangFetchItem) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*ShSehuatangFetchItem, error)
-		FindOneByRunThread(ctx context.Context, runID int64, threadTID string) (*ShSehuatangFetchItem, error)
+		FindOneByRunThread(ctx context.Context, runSource string, runID int64, threadTID string) (*ShSehuatangFetchItem, error)
 		ListByThreadTID(ctx context.Context, threadTID string, limit int64) ([]*ShSehuatangFetchItem, error)
 		Upsert(ctx context.Context, data *ShSehuatangFetchItem) (*ShSehuatangFetchItem, error)
-		UpdateStatus(ctx context.Context, runID int64, threadTID string, status string, threadRowID int64, errText string, now int64) (*ShSehuatangFetchItem, error)
+		UpdateStatus(ctx context.Context, runSource string, runID int64, threadTID string, status string, threadRowID int64, errText string, now int64) (*ShSehuatangFetchItem, error)
 		TableName() string
 	}
 
@@ -27,6 +27,7 @@ type (
 
 	ShSehuatangFetchItem struct {
 		Id            int64  `db:"id"`
+		RunSource     string `db:"run_source"`
 		RunID         int64  `db:"run_id"`
 		FetchMode     string `db:"fetch_mode"`
 		SourceForumID string `db:"source_forum_id"`
@@ -44,12 +45,12 @@ type (
 	}
 )
 
-var shSehuatangFetchItemRows = "`id`,`run_id`,`fetch_mode`,`source_forum_id`,`source_page`,`source_page_url`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`status`,`thread_row_id`,`error`,`created_on`,`updated_on`"
+var shSehuatangFetchItemRows = "`id`,`run_source`,`run_id`,`fetch_mode`,`source_forum_id`,`source_page`,`source_page_url`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`status`,`thread_row_id`,`error`,`created_on`,`updated_on`"
 
 func NewShSehuatangFetchItemModel(conn sqlx.SqlConn) ShSehuatangFetchItemModel {
 	return &defaultShSehuatangFetchItemModel{
 		conn:  conn,
-		table: "`sh_sehuatang_fetch_item`",
+		table: "`sh_item`",
 	}
 }
 
@@ -58,8 +59,8 @@ func (m *defaultShSehuatangFetchItemModel) TableName() string {
 }
 
 func (m *defaultShSehuatangFetchItemModel) Insert(ctx context.Context, data *ShSehuatangFetchItem) (sql.Result, error) {
-	query := "insert into " + m.table + " (`run_id`,`fetch_mode`,`source_forum_id`,`source_page`,`source_page_url`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`status`,`thread_row_id`,`error`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	return m.conn.ExecCtx(ctx, query, data.RunID, data.FetchMode, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.Status, data.ThreadRowID, data.Error, data.CreatedOn, data.UpdatedOn)
+	query := "insert into " + m.table + " (`run_source`,`run_id`,`fetch_mode`,`source_forum_id`,`source_page`,`source_page_url`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`status`,`thread_row_id`,`error`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	return m.conn.ExecCtx(ctx, query, data.RunSource, data.RunID, data.FetchMode, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.Status, data.ThreadRowID, data.Error, data.CreatedOn, data.UpdatedOn)
 }
 
 func (m *defaultShSehuatangFetchItemModel) FindOne(ctx context.Context, id int64) (*ShSehuatangFetchItem, error) {
@@ -74,14 +75,15 @@ func (m *defaultShSehuatangFetchItemModel) FindOne(ctx context.Context, id int64
 	return &row, nil
 }
 
-func (m *defaultShSehuatangFetchItemModel) FindOneByRunThread(ctx context.Context, runID int64, threadTID string) (*ShSehuatangFetchItem, error) {
+func (m *defaultShSehuatangFetchItemModel) FindOneByRunThread(ctx context.Context, runSource string, runID int64, threadTID string) (*ShSehuatangFetchItem, error) {
+	runSource = strings.TrimSpace(runSource)
 	threadTID = strings.TrimSpace(threadTID)
-	if runID <= 0 || threadTID == "" {
+	if runSource == "" || runID <= 0 || threadTID == "" {
 		return nil, ErrNotFound
 	}
 	var row ShSehuatangFetchItem
-	query := "select " + shSehuatangFetchItemRows + " from " + m.table + " where `run_id` = ? and `thread_tid` = ? limit 1"
-	if err := m.conn.QueryRowCtx(ctx, &row, query, runID, threadTID); err != nil {
+	query := "select " + shSehuatangFetchItemRows + " from " + m.table + " where `run_source` = ? and `run_id` = ? and `thread_tid` = ? limit 1"
+	if err := m.conn.QueryRowCtx(ctx, &row, query, runSource, runID, threadTID); err != nil {
 		if err == sqlx.ErrNotFound {
 			return nil, ErrNotFound
 		}
@@ -98,7 +100,7 @@ func (m *defaultShSehuatangFetchItemModel) ListByThreadTID(ctx context.Context, 
 	if limit <= 0 {
 		limit = 20
 	}
-	query := "select " + shSehuatangFetchItemRows + " from " + m.table + " where `thread_tid` = ? order by `run_id` desc, `id` desc limit ?"
+	query := "select " + shSehuatangFetchItemRows + " from " + m.table + " where `thread_tid` = ? order by `created_on` desc, `id` desc limit ?"
 	var rows []*ShSehuatangFetchItem
 	if err := m.conn.QueryRowsCtx(ctx, &rows, query, threadTID, limit); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
@@ -110,21 +112,22 @@ func (m *defaultShSehuatangFetchItemModel) ListByThreadTID(ctx context.Context, 
 }
 
 func (m *defaultShSehuatangFetchItemModel) Upsert(ctx context.Context, data *ShSehuatangFetchItem) (*ShSehuatangFetchItem, error) {
-	query := "insert into " + m.table + " (`run_id`,`fetch_mode`,`source_forum_id`,`source_page`,`source_page_url`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`status`,`thread_row_id`,`error`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `fetch_mode` = values(`fetch_mode`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `status` = values(`status`), `thread_row_id` = values(`thread_row_id`), `error` = values(`error`), `updated_on` = values(`updated_on`)"
-	if _, err := m.conn.ExecCtx(ctx, query, data.RunID, data.FetchMode, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.Status, data.ThreadRowID, data.Error, data.CreatedOn, data.UpdatedOn); err != nil {
+	query := "insert into " + m.table + " (`run_source`,`run_id`,`fetch_mode`,`source_forum_id`,`source_page`,`source_page_url`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`status`,`thread_row_id`,`error`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `fetch_mode` = values(`fetch_mode`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `status` = values(`status`), `thread_row_id` = values(`thread_row_id`), `error` = values(`error`), `updated_on` = values(`updated_on`)"
+	if _, err := m.conn.ExecCtx(ctx, query, data.RunSource, data.RunID, data.FetchMode, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.Status, data.ThreadRowID, data.Error, data.CreatedOn, data.UpdatedOn); err != nil {
 		return nil, err
 	}
-	return m.FindOneByRunThread(ctx, data.RunID, data.ThreadTID)
+	return m.FindOneByRunThread(ctx, data.RunSource, data.RunID, data.ThreadTID)
 }
 
-func (m *defaultShSehuatangFetchItemModel) UpdateStatus(ctx context.Context, runID int64, threadTID string, status string, threadRowID int64, errText string, now int64) (*ShSehuatangFetchItem, error) {
+func (m *defaultShSehuatangFetchItemModel) UpdateStatus(ctx context.Context, runSource string, runID int64, threadTID string, status string, threadRowID int64, errText string, now int64) (*ShSehuatangFetchItem, error) {
+	runSource = strings.TrimSpace(runSource)
 	threadTID = strings.TrimSpace(threadTID)
-	if runID <= 0 || threadTID == "" {
+	if runSource == "" || runID <= 0 || threadTID == "" {
 		return nil, ErrNotFound
 	}
-	query := "update " + m.table + " set `status` = ?, `thread_row_id` = ?, `error` = ?, `updated_on` = ? where `run_id` = ? and `thread_tid` = ?"
-	if _, err := m.conn.ExecCtx(ctx, query, status, threadRowID, errText, now, runID, threadTID); err != nil {
+	query := "update " + m.table + " set `status` = ?, `thread_row_id` = ?, `error` = ?, `updated_on` = ? where `run_source` = ? and `run_id` = ? and `thread_tid` = ?"
+	if _, err := m.conn.ExecCtx(ctx, query, status, threadRowID, errText, now, runSource, runID, threadTID); err != nil {
 		return nil, err
 	}
-	return m.FindOneByRunThread(ctx, runID, threadTID)
+	return m.FindOneByRunThread(ctx, runSource, runID, threadTID)
 }

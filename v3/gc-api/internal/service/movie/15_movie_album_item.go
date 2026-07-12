@@ -13,6 +13,8 @@ import (
 var (
 	ErrMovieAlbumInvalidID                   = errors.New("无效电影相册")
 	ErrMovieAlbumItemInvalid                 = errors.New("无效电影相册条目")
+	ErrMovieAlbumTargetInvalid               = errors.New("无效目标电影相册")
+	ErrMovieAlbumTargetSame                  = errors.New("目标电影相册不能与当前相册相同")
 	ErrMovieAlbumUnsupportedRemoveDownloaded = errors.New("当前电影相册不支持移除已下载条目")
 )
 
@@ -40,6 +42,12 @@ type RemoveDownloadedMovieAlbumPreviewItem struct {
 type RemoveDownloadedMovieAlbumPreviewResult struct {
 	Items []*RemoveDownloadedMovieAlbumPreviewItem
 	Count int64
+}
+
+type TransferMovieAlbumItemsResult struct {
+	ProcessedCount int64
+	SkippedCount   int64
+	FailedIDs      []int64
 }
 
 func (s *Service) AddMovieToAlbum(ctx context.Context, albumName string, movieJavID string) (bool, string, error) {
@@ -111,6 +119,103 @@ func (s *Service) RemoveMovieAlbumItemByID(ctx context.Context, albumID int64, i
 		return false, err
 	}
 	return true, nil
+}
+
+func (s *Service) MoveMovieAlbumItemsByIDs(ctx context.Context, sourceAlbumID int64, targetAlbumID int64, itemIDs []int64) (*TransferMovieAlbumItemsResult, error) {
+	return s.transferMovieAlbumItemsByIDs(ctx, sourceAlbumID, targetAlbumID, itemIDs, true)
+}
+
+func (s *Service) CopyMovieAlbumItemsByIDs(ctx context.Context, sourceAlbumID int64, targetAlbumID int64, itemIDs []int64) (*TransferMovieAlbumItemsResult, error) {
+	return s.transferMovieAlbumItemsByIDs(ctx, sourceAlbumID, targetAlbumID, itemIDs, false)
+}
+
+func (s *Service) transferMovieAlbumItemsByIDs(ctx context.Context, sourceAlbumID int64, targetAlbumID int64, itemIDs []int64, move bool) (*TransferMovieAlbumItemsResult, error) {
+	if sourceAlbumID <= 0 {
+		return nil, ErrMovieAlbumInvalidID
+	}
+	if targetAlbumID <= 0 {
+		return nil, ErrMovieAlbumTargetInvalid
+	}
+	if sourceAlbumID == targetAlbumID {
+		return nil, ErrMovieAlbumTargetSame
+	}
+	if _, err := s.deps.MovieAlbumModel.FindOne(ctx, sourceAlbumID); err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, ErrMovieAlbumInvalidID
+		}
+		return nil, err
+	}
+	if _, err := s.deps.MovieAlbumModel.FindOne(ctx, targetAlbumID); err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, ErrMovieAlbumTargetInvalid
+		}
+		return nil, err
+	}
+
+	result := &TransferMovieAlbumItemsResult{FailedIDs: []int64{}}
+	ids := uniquePositiveIDs(itemIDs)
+	if len(ids) == 0 {
+		return result, nil
+	}
+	nextSortNo, err := s.nextMovieAlbumSortNo(ctx, targetAlbumID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().Unix()
+
+	for _, itemID := range ids {
+		row, err := s.deps.MovieAlbumItemModel.FindOne(ctx, itemID)
+		if err != nil || row == nil || row.AlbumId != sourceAlbumID {
+			result.FailedIDs = append(result.FailedIDs, itemID)
+			continue
+		}
+
+		existing, findErr := s.deps.MovieAlbumItemModel.FindOneByAlbumIdMovieJavId(ctx, targetAlbumID, row.MovieJavId)
+		if findErr == nil && existing != nil {
+			if !move {
+				result.SkippedCount++
+				continue
+			}
+			if err := s.deps.MovieAlbumItemModel.Delete(ctx, row.Id); err != nil {
+				result.FailedIDs = append(result.FailedIDs, itemID)
+				continue
+			}
+			result.ProcessedCount++
+			continue
+		}
+		if findErr != nil && !errors.Is(findErr, moviex.ErrNotFound) {
+			result.FailedIDs = append(result.FailedIDs, itemID)
+			continue
+		}
+
+		if move {
+			row.AlbumId = targetAlbumID
+			row.SortNo = nextSortNo
+			row.UpdatedOn = now
+			if err := s.deps.MovieAlbumItemModel.Update(ctx, row); err != nil {
+				result.FailedIDs = append(result.FailedIDs, itemID)
+				continue
+			}
+		} else {
+			if _, err := s.deps.MovieAlbumItemModel.Insert(ctx, &moviex.CMovieAlbumItem{
+				AlbumId:       targetAlbumID,
+				MovieJavId:    row.MovieJavId,
+				MovieName:     row.MovieName,
+				ReleasingDate: row.ReleasingDate,
+				SortNo:        nextSortNo,
+				CreatedOn:     now,
+				UpdatedOn:     now,
+			}); err != nil {
+				result.FailedIDs = append(result.FailedIDs, itemID)
+				continue
+			}
+		}
+
+		nextSortNo++
+		result.ProcessedCount++
+	}
+
+	return result, nil
 }
 
 func (s *Service) RemoveMovieFromAlbum(ctx context.Context, albumName string, movieJavID string) (bool, string, error) {
@@ -286,7 +391,7 @@ func (s *Service) getMovieAlbumIDByName(ctx context.Context, albumName string, c
 }
 
 func (s *Service) nextMovieAlbumSortNo(ctx context.Context, albumID int64) (int64, error) {
-	rows, err := s.deps.MovieAlbumItemModel.ListPageRows(ctx, albumID, 0, 1, "`sort_no` DESC, `id` DESC", "")
+	rows, err := s.deps.MovieAlbumItemModel.ListPageRows(ctx, albumID, 0, 1, "`sort_no` DESC, `id` DESC", moviex.CMovieAlbumItemPageFilter{})
 	if err != nil {
 		return 0, err
 	}

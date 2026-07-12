@@ -299,7 +299,7 @@ const collapseId = computed(() => props.collapseId || "movieCardFilterCollapse")
 const isCardsAggVariant = computed(() => props.variant === "cards-agg");
 const explicit = computed(() => asRecord(filter.value.Explicit));
 const hasFilter = computed(() => Object.keys(filter.value).length > 0);
-const action = computed(() => text(filter.value, "Action") || "/cards");
+const action = computed(() => text(filter.value, "Action") || "/listcard");
 const clearHref = computed(() => text(filter.value, "ClearHref") || action.value);
 const open = computed(() => Boolean(props.open));
 

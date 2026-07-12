@@ -50,7 +50,7 @@ var shSehuatangFetchRunRows = "`id`,`fetch_mode`,`keyword`,`target_forum_ids`,`s
 func NewShSehuatangFetchRunModel(conn sqlx.SqlConn) ShSehuatangFetchRunModel {
 	return &defaultShSehuatangFetchRunModel{
 		conn:  conn,
-		table: "`sh_sehuatang_fetch_run`",
+		table: "`sh_fetch_run`",
 	}
 }
 

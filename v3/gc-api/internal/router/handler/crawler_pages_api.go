@@ -359,7 +359,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-sehuatang-sh")()
+	defer withFrontendPath(c, "/shfetchall")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "色花堂帖子新流程",
@@ -367,7 +367,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
 		"PageTitle":         "色花堂帖子新流程（sh 表）",
 		"QuickNavCurrent":   "fetch_sehuatang_sh",
 		"TaskPanelTitle":    "色花堂帖子新流程",
-		"PageNote":          "抓取搜索结果或指定版块普通帖，详情写入 sh_sehuatang_thread，并记录 sh_sehuatang_fetch_run / sh_sehuatang_fetch_item。",
+		"PageNote":          "抓取搜索结果或指定版块普通帖，详情写入 sh_thread，并记录 sh_fetch_run / sh_item。",
 		"TaskTableTitle":    "色花堂帖子新流程任务",
 		"EventTitle":        "色花堂帖子新流程事件流",
 		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_selected_job",
@@ -408,7 +408,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSehuatangSHThreadListPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-sehuatang-sh-thread-list")()
+	defer withFrontendPath(c, "/shfetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "色花堂帖子列表抓取",
@@ -430,8 +430,8 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadListPage(c *gin.Context) {
 			{TaskType: loop.TaskSpiderFetchSehuatangSHList, Label: "色花堂帖子列表抓取"},
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/triggers/fetch-sehuatang-sh-thread-detail", Label: "详情补全"},
-			{Href: "/fetch-site-sehuatang-sh-list", Label: "帖子池"},
+			{Href: "/shfill", Label: "详情补全"},
+			{Href: "/shpool", Label: "帖子池"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "任务类型",
@@ -451,7 +451,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadListPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-sehuatang-sh-thread-detail")()
+	defer withFrontendPath(c, "/shfill")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "色花堂帖子详情补全",
@@ -459,7 +459,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
 		"PageTitle":         "色花堂帖子详情补全",
 		"QuickNavCurrent":   "fetch_sehuatang_sh_thread_detail",
 		"TaskPanelTitle":    "色花堂帖子详情补全",
-		"PageNote":          "先从 sh_sehuatang_thread 筛选并预览帖子，再抓取页面上选中的帖子详情。",
+		"PageNote":          "先从 sh_thread 筛选并预览帖子，再抓取页面上选中的帖子详情。",
 		"TaskTableTitle":    "色花堂帖子详情补全任务",
 		"EventTitle":        "色花堂帖子详情补全事件流",
 		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_thread_detail_selected_job",
@@ -473,8 +473,8 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
 			{TaskType: loop.TaskSpiderFetchSehuatangSHDetail, Label: "抓取选中详情"},
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/triggers/fetch-sehuatang-sh-thread-list", Label: "列表抓取"},
-			{Href: "/fetch-site-sehuatang-sh-list", Label: "帖子池"},
+			{Href: "/shfetch", Label: "列表抓取"},
+			{Href: "/shpool", Label: "帖子池"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "任务类型",

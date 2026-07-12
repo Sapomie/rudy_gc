@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"rudy_gc/internal/dep"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 )
 
@@ -21,12 +22,17 @@ const (
 	SHFetchModeForumList = "forum_list"
 	SHFetchModeDetail    = "detail"
 
+	SHRunSourceFetch  = "fetch"
+	SHRunSourceList   = "list"
+	SHRunSourceDetail = "detail"
+
 	SHForumAsiaUncensoredOriginal = "36"
 	SHForumHDChineseSubtitle      = "103"
 
 	SHRunStatusRunning = "running"
 	SHRunStatusSuccess = "success"
 	SHRunStatusFailed  = "failed"
+	SHRunStatusStopped = "stopped"
 
 	SHFetchItemStatusDiscovered      = "discovered"
 	SHFetchItemStatusFetched         = "fetched"
@@ -112,6 +118,7 @@ type SHFetchResult struct {
 	FetchedCount         int64  `json:"fetched_count"`
 	FailedCount          int64  `json:"failed_count"`
 	LastError            string `json:"last_error"`
+	aggTargets           map[string]moviex.ShThreadAggTarget
 }
 
 type remoteState struct {

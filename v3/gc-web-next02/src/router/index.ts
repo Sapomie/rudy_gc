@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
-import HomePage from "@/pages/HomePage.vue";
 import CardsPage from "@/pages/CardsPage.vue";
 import CardsAggPage from "@/pages/CardsAggPage.vue";
 import RankPage from "@/pages/RankPage.vue";
@@ -16,6 +15,7 @@ import EItemsPage from "@/pages/EItemsPage.vue";
 import ListPage from "@/pages/ListPage.vue";
 import MovieAggPage from "@/pages/MovieAggPage.vue";
 import ReleaseBucketListPage from "@/pages/ReleaseBucketListPage.vue";
+import SHBucketListPage from "@/pages/SHBucketListPage.vue";
 import WDirPage from "@/pages/WDirPage.vue";
 import ScEventsPage from "@/pages/ScEventsPage.vue";
 import ScPickSmartPage from "@/pages/ScPickSmartPage.vue";
@@ -30,22 +30,21 @@ import FetchSitesPage from "@/pages/FetchSitesPage.vue";
 import CrawlerTasksPage from "@/pages/CrawlerTasksPage.vue";
 import CrawlerDetailLoopPage from "@/pages/CrawlerDetailLoopPage.vue";
 import NotFoundPage from "@/pages/NotFoundPage.vue";
+import { compactRouteQuery, type CompactQuery } from "@/utils/query";
 
 const cardRoutes = [
-  "/cards",
-  "/cardstoday",
-  "/cardshasrank",
-  "/cardsmediamowned",
-  "/cardsneeddownload",
-  "/cardsrandom"
-].map((path) => ({ path, component: CardsPage, meta: { title: path.slice(1) } }));
+  { path: "/listcard", apiPath: "/cards", title: "Cards" },
+  { path: "/listcardtoday", apiPath: "/cardstoday", title: "Cards Today" },
+  { path: "/listcardrank", apiPath: "/cardshasrank", title: "Cards HasRank" },
+  { path: "/listcardowned", apiPath: "/cardsmediamowned", title: "Cards MediaOwned" },
+  { path: "/listcardneed", apiPath: "/cardsneeddownload", title: "Cards NeedDownload" },
+  { path: "/listcardrandom", apiPath: "/cardsrandom", title: "Cards Random" }
+].map(({ path, apiPath, title }) => ({ path, component: CardsPage, meta: { title, apiPath } }));
 
 const listRoutes = [
   "/fetch-site-javbus-list",
   "/fetch-site-sukebei-list",
   "/fetch-site-sehuatang-list",
-  "/fetch-site-sehuatang-sh-list",
-  "/fetch-site-sehuatang-sh-detail/:threadTid"
 ].map((path) => ({ path, component: ListPage, meta: { title: path.replace("/:eventName", "").replace("/:threadTid", "").slice(1) || "List" } }));
 
 const triggerRoutes = [
@@ -55,32 +54,30 @@ const triggerRoutes = [
   "/triggers/backfill",
   "/triggers/fetch-site",
   "/triggers/fetch-sehuatang",
-  "/triggers/fetch-sehuatang-sh",
-  "/triggers/fetch-sehuatang-sh-thread-list",
-  "/triggers/fetch-sehuatang-sh-thread-detail",
   "/triggers/fetch-site-javbus-filtered",
   "/triggers/fetch-site-sukebei-filtered"
 ].map((path) => ({ path, component: TriggerPage, meta: { title: path.slice(1) } }));
 
 const routes: RouteRecordRaw[] = [
-  { path: "/", component: HomePage, meta: { title: "Dashboard" } },
+  { path: "/", redirect: "/listcardtoday" },
   ...cardRoutes,
-  { path: "/cardsagg", component: CardsAggPage, meta: { title: "cardsagg" } },
-  { path: "/moviecarddayrank", component: RankPage, meta: { title: "MovieCard DayRank" } },
-  { path: "/moviecardperiodrank", component: RankPage, meta: { title: "MovieCard PeriodRank" } },
-  { path: "/movie/:movieName", component: MoviePage, meta: { title: "Movie Detail" } },
+  { path: "/listcardagg", component: CardsAggPage, meta: { title: "cardsagg", apiPath: "/cardsagg" } },
+  { path: "/listcarddayrank", component: RankPage, meta: { title: "MovieCard DayRank", apiPath: "/moviecarddayrank" } },
+  { path: "/listcardperiodrank", component: RankPage, meta: { title: "MovieCard PeriodRank", apiPath: "/moviecardperiodrank" } },
+  { path: "/moviedetail/:movieName", component: MoviePage, meta: { title: "Movie Detail", apiPath: "/movie/:movieName" } },
   { path: "/cast", component: CastPage, meta: { title: "Cast" } },
-  { path: "/cast/:personId", component: CastPage, meta: { title: "Cast" } },
-  { path: "/movie-agg-all/release", component: MovieAggPage, meta: { title: "MovieAgg Release" } },
-  { path: "/movie-agg-all/release-bucket-list", component: ReleaseBucketListPage, meta: { title: "MovieAgg Release Bucket" } },
-  { path: "/w-media-agg/bucket-list", component: ReleaseBucketListPage, meta: { title: "WMedia Bucket" } },
-  { path: "/w-media-agg/birth", component: MovieAggPage, meta: { title: "WMedia Birth" } },
-  { path: "/wdir", component: WDirPage, meta: { title: "WDirectory" } },
+  { path: "/castdetail/:personId", component: CastPage, meta: { title: "Cast", apiPath: "/cast/:personId" } },
+  { path: "/aggrelease", component: MovieAggPage, meta: { title: "MovieAgg Release", apiPath: "/movie-agg-all/release" } },
+  { path: "/bucketsrelease", component: ReleaseBucketListPage, meta: { title: "MovieAgg Release Bucket", apiPath: "/movie-agg-all/release-bucket-list" } },
+  { path: "/bucketsbirth", component: ReleaseBucketListPage, meta: { title: "WMedia Bucket", apiPath: "/w-media-agg/bucket-list" } },
+  { path: "/bucketssh", component: SHBucketListPage, meta: { title: "SH 聚合桶", apiPath: "/sh-thread-agg/bucket-list" } },
+  { path: "/aggbirth", component: MovieAggPage, meta: { title: "WMedia Birth", apiPath: "/w-media-agg/birth" } },
+  { path: "/mediadir", component: WDirPage, meta: { title: "Media Directory", apiPath: "/wdir" } },
   { path: "/sc-events", component: ScEventsPage, meta: { title: "SC Events" } },
   { path: "/sc-events-cards", component: ScEventsPage, meta: { title: "SC Event Cards" } },
   { path: "/sc-events/:eventName", component: ScEventsPage, meta: { title: "SC Event Detail" } },
   { path: "/sc-pick-smart-media", component: ScPickSmartPage, meta: { title: "SC Pick Smart Media" } },
-  { path: "/triggers/agg", component: AggTriggersPage, meta: { title: "聚合回填" } },
+  { path: "/aggbackfill", component: AggTriggersPage, meta: { title: "聚合回填", apiPath: "/triggers/agg" } },
   { path: "/triggers/sc", component: ScTriggersPage, meta: { title: "SC Triggers" } },
   { path: "/triggers/media", component: MediaIngestPage, meta: { title: "媒体入库" } },
   { path: "/triggers/media-rescan", component: MediaRescanPage, meta: { title: "媒体重扫" } },
@@ -97,6 +94,11 @@ const routes: RouteRecordRaw[] = [
   { path: "/e-items", component: EItemsPage, meta: { title: "e-items" } },
   ...listRoutes,
   ...triggerRoutes,
+  { path: "/shfetchall", component: TriggerPage, meta: { title: "SH 一体抓取", apiPath: "/triggers/fetch-sehuatang-sh" } },
+  { path: "/shfetch", component: TriggerPage, meta: { title: "SH 列表建池", apiPath: "/triggers/fetch-sehuatang-sh-thread-list" } },
+  { path: "/shfill", component: TriggerPage, meta: { title: "SH 详情补全", apiPath: "/triggers/fetch-sehuatang-sh-thread-detail" } },
+  { path: "/shpool", component: ListPage, meta: { title: "SH 帖子池", apiPath: "/fetch-site-sehuatang-sh-list" } },
+  { path: "/shthread/:threadTid", component: ListPage, meta: { title: "SH 帖子详情", apiPath: "/fetch-site-sehuatang-sh-detail/:threadTid" } },
   { path: "/fetch-sites", component: FetchSitesPage, meta: { title: "FetchSites" } },
   { path: "/crawler/tasks", component: CrawlerTasksPage, meta: { title: "Crawler Tasks" } },
   { path: "/crawler/detail-loop", component: CrawlerDetailLoopPage, meta: { title: "Detail Loop", apiPath: "/crawler/detail-loop/page" } },
@@ -106,6 +108,28 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+function querySignature(query: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  Object.keys(query).sort().forEach((key) => {
+    const rawValues = Array.isArray(query[key]) ? query[key] as unknown[] : [query[key]];
+    rawValues.forEach((value) => params.append(key, value === undefined || value === null ? "" : String(value)));
+  });
+  return params.toString();
+}
+
+router.beforeEach((to) => {
+  const compacted = compactRouteQuery(to.path, to.query);
+  if (querySignature(to.query) === querySignature(compacted as CompactQuery)) {
+    return true;
+  }
+  return {
+    path: to.path,
+    query: compacted,
+    hash: to.hash,
+    replace: true
+  };
 });
 
 router.afterEach((to) => {

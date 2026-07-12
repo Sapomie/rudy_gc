@@ -74,7 +74,7 @@ function linkFor(row: AnyRecord, column: string): string {
   if (/name|title|jav|movie/i.test(column)) {
     const movie = text(record, "movie_name", "MovieName", "name", "Name", "JavID", "jav_id");
     if (movie && column !== "SiteName") {
-      return `/movie/${encodeURIComponent(movie)}`;
+      return `/moviedetail/${encodeURIComponent(movie)}`;
     }
   }
   return "";

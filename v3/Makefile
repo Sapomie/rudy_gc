@@ -30,6 +30,7 @@ help:
 	@echo "  make stop-all    Stop API, legacy gc-web, and gc-web-next02 ports"
 	@echo "  make test-api    Run Go tests"
 	@echo "  make build-api   Build Go packages"
+	@echo "  make migrate-api Run database migrations"
 	@echo "  make check-web   Run web syntax checks"
 	@echo "  make verify      Run API tests and web checks"
 	@echo "  make db-backup   Backup local rudy_gc MySQL database"

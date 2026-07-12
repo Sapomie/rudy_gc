@@ -8,12 +8,13 @@
           <div class="next02-agg-trigger-hero-main">
             <div class="next02-rewrite-eyebrow">Agg Triggers / Backfill Console</div>
             <h4 id="aggTriggerTitle">{{ pageTitle }}</h4>
-            <p>{{ pageNote || "执行 WMedia 与上映日聚合回填，刷新聚合桶和 Top 数据。" }}</p>
+            <p>{{ pageNote || "执行 WMedia、上映日与 SH 帖子聚合回填，刷新时间桶和 Top 数据。" }}</p>
           </div>
           <div class="next02-agg-trigger-hero-actions">
-            <a href="/w-media-agg/birth" class="btn btn-outline-primary btn-sm">WMedia 聚合页</a>
-            <a href="/movie-agg-all/release" class="btn btn-outline-secondary btn-sm">上映日聚合页</a>
-            <a href="/movie-agg-all/release-bucket-list" class="btn btn-outline-secondary btn-sm">上映桶表</a>
+            <a href="/aggbirth" class="btn btn-outline-primary btn-sm">WMedia 聚合页</a>
+            <a href="/aggrelease" class="btn btn-outline-secondary btn-sm">上映日聚合页</a>
+            <a href="/bucketsrelease" class="btn btn-outline-secondary btn-sm">上映桶表</a>
+            <a href="/bucketssh" class="btn btn-outline-secondary btn-sm">SH 桶表</a>
           </div>
         </section>
 
@@ -80,7 +81,7 @@ type Metric = {
 type BackfillCard = {
   title: string;
   note: string;
-  prefix: "agg" | "releaseAgg";
+  prefix: "agg" | "releaseAgg" | "shAgg";
   buttonId: string;
   url: string;
   loadingText: string;
@@ -97,6 +98,7 @@ const metricMap: Record<string, string> = {
   YearBuckets: "year_buckets",
   QuarterBuckets: "quarter_buckets",
   MonthBuckets: "month_buckets",
+  WeekBuckets: "week_buckets",
   DayBuckets: "day_buckets",
   TopRows: "top_rows",
   ElapsedMs: "elapsed_ms"
@@ -117,7 +119,7 @@ const commonMetrics: Metric[] = [
 const cards: BackfillCard[] = [
   {
     title: "WMedia 时间聚合回填",
-    note: "新建 `w_media` 时间聚合表后，在这里执行一次回填，旧数据才会写入 `/w-media-agg/birth`。",
+    note: "新建 `w_media` 时间聚合表后，在这里执行一次回填，旧数据才会写入 `/aggbirth`。",
     prefix: "agg",
     buttonId: "btnBackfillWMediaAgg",
     url: "/api/agg/w-media/backfill",
@@ -131,7 +133,7 @@ const cards: BackfillCard[] = [
   },
   {
     title: "上映日时间聚合回填",
-    note: "新建 `movie_release_*` 表后，在这里执行一次回填，旧数据才会写入 `/movie-agg-all/release`。",
+    note: "新建 `movie_release_*` 表后，在这里执行一次回填，旧数据才会写入 `/aggrelease`。",
     prefix: "releaseAgg",
     buttonId: "btnBackfillMovieReleaseAgg",
     url: "/api/agg/movie-release/backfill",
@@ -141,6 +143,25 @@ const cards: BackfillCard[] = [
       ...commonMetrics.slice(0, 3),
       { key: "DirtyMonths", label: "脏月份数" },
       ...commonMetrics.slice(3)
+    ]
+  },
+  {
+    title: "SH 帖子时间聚合回填",
+    note: "按帖子发布时间回填全量及各论坛的日、ISO 周、月、季度和年聚合桶。",
+    prefix: "shAgg",
+    buttonId: "btnBackfillSHThreadAgg",
+    url: "/api/agg/sh-thread/backfill",
+    loadingText: "正在回填 SH 帖子时间聚合数据...",
+    doneMessage: "SH 帖子时间聚合回填完成",
+    metrics: [
+      { key: "ClearedBucketRows", label: "清空桶行" },
+      { key: "DirtyDays", label: "帖子日期数" },
+      { key: "YearBuckets", label: "年桶" },
+      { key: "QuarterBuckets", label: "季桶" },
+      { key: "MonthBuckets", label: "月桶" },
+      { key: "WeekBuckets", label: "ISO 周桶" },
+      { key: "DayBuckets", label: "日桶" },
+      { key: "ElapsedMs", label: "耗时" }
     ]
   }
 ];
@@ -155,11 +176,13 @@ const running = ref(false);
 let messageTimer: number | undefined;
 const results = reactive<Record<BackfillCard["prefix"], AnyRecord>>({
   agg: {},
-  releaseAgg: {}
+  releaseAgg: {},
+  shAgg: {}
 });
 const statusText = reactive<Record<BackfillCard["prefix"], string>>({
   agg: "",
-  releaseAgg: ""
+  releaseAgg: "",
+  shAgg: ""
 });
 
 watch(() => route.fullPath, load, { immediate: true });
@@ -190,7 +213,10 @@ function statusFor(prefix: BackfillCard["prefix"]): string {
   return statusText[prefix] || "尚未执行回填";
 }
 
-function doneStatus(result: AnyRecord): string {
+function doneStatus(card: BackfillCard, result: AnyRecord): string {
+  if (card.prefix === "shAgg") {
+    return `回填完成：日桶 ${num(result, "day_buckets")}，ISO 周桶 ${num(result, "week_buckets")}`;
+  }
   return `回填完成：日桶 ${num(result, "day_buckets")}，Top 行 ${num(result, "top_rows")}`;
 }
 
@@ -226,7 +252,7 @@ async function runBackfill(card: BackfillCard) {
     const data = asRecord(await sendJSON(card.url, "POST", {}));
     const result = responseResult(data);
     results[card.prefix] = result;
-    statusText[card.prefix] = doneStatus(result);
+    statusText[card.prefix] = doneStatus(card, result);
     showMessage(text(data, "message", "Message") || card.doneMessage, true);
   } catch (err) {
     statusText[card.prefix] = "回填失败，请查看提示信息";

@@ -307,7 +307,7 @@ const actorAliasText = computed(() => {
 });
 const sortQuery = computed(() => asRecord(pick(payload.value, "sortQuery", "SortQuery")));
 const ownedQuery = computed(() => asRecord(pick(payload.value, "ownedQuery", "OwnedQuery")));
-const cardsHref = computed(() => normalizeHref(text(page.value, "CardsHref", "cardsHref") || "/cards"));
+const cardsHref = computed(() => normalizeHref(text(page.value, "CardsHref", "cardsHref") || "/listcard"));
 
 const metricItems = computed(() => [
   { label: "影片数", value: text(actor.value, "MovieNumber", "movieNumber") || "0" },

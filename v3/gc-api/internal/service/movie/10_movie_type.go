@@ -247,7 +247,7 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 					displayName = personRow.Name
 				}
 				birthDay = personRow.BirthDay
-				ci.Url = fmt.Sprintf("/cast/%d", castRow.PersonId)
+				ci.Url = fmt.Sprintf("/castdetail/%d", castRow.PersonId)
 			}
 		}
 		displayKey := buildMovieTypeCastDisplayKey(castRow.PersonId, castRow.Name)

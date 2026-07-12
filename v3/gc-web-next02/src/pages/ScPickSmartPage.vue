@@ -16,52 +16,62 @@
           </div>
         </section>
 
-        <div v-if="message" class="next02-sc-feedback" :class="messageOk ? 'is-success' : 'is-error'" role="status">{{ message }}</div>
+        <div v-if="message" class="next02-sc-feedback" :class="messageOk ? 'is-success' : 'is-error'" role="status">
+          <span class="smart-pick-feedback-message">{{ message }}</span>
+          <span v-if="messageOk && pickInfoRows.length" class="smart-pick-feedback-summary">
+            <span v-for="row in pickInfoRows" :key="row.label" class="smart-pick-feedback-stat"><span>{{ row.label }}</span><strong>{{ row.value }}</strong></span>
+          </span>
+        </div>
 
         <div class="card next02-sc-panel next02-sc-movie-table-card smart-pick-config-panel">
           <div class="card-body">
-            <div class="next02-sc-panel-head smart-pick-config-head">
-              <div>
-                <span class="next02-sc-panel-kicker">PICK STRATEGY</span>
-                <h5>抽取策略</h5>
-                <p>按多组条件从本地已拥有影片里抽片，并叠加 Cast SC 阻断、Rank 配额和演员去重规则。</p>
-              </div>
-              <div class="smart-pick-config-status">
-                <div class="next02-sc-hero-metrics" aria-label="Smart Pick 摘要">
-                  <span><strong>{{ groups.length }}</strong> Groups</span>
-                  <span><strong>{{ pageSource }}</strong> Source</span>
-                </div>
-                <span class="next02-sc-status-dot" :class="{ 'is-busy': actionLoading }">{{ actionLoading ? '执行中' : '可配置' }}</span>
-              </div>
-            </div>
-            <p class="smart-pick-fixed-hint">{{ fixedHint }}</p>
-
             <form ref="formEl" id="formPickSmart" class="needs-validation" novalidate :data-source="pageSource" @submit.prevent="runPick(true)">
-              <div class="card border smart-pick-global-panel">
-                <div class="card-body">
-                  <div class="smart-pick-section-title"><span>01</span><h6>全局抽取策略</h6></div>
-                  <div class="row g-3 align-items-end smart-pick-global-grid">
-                    <FieldInput v-for="field in globalFields" :key="field.id" col-class="col-md-2" v-bind="field" />
+              <div class="smart-pick-strategy-row">
+                <div class="card border smart-pick-global-panel">
+                  <div class="card-body">
+                    <div class="smart-pick-section-title"><span>01</span><h6>全局抽取策略</h6></div>
+                    <div class="row g-3 align-items-end smart-pick-global-grid">
+                      <FieldInput v-for="field in globalBasicFields" :key="field.id" col-class="col-md-2" v-bind="field" />
+                      <div class="col-md-2 d-flex align-items-end smart-pick-advanced-toggle-wrap">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-secondary w-100 smart-pick-advanced-toggle"
+                          data-role="global-adv-toggle"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#smartGlobalAdvancedPanel"
+                          aria-controls="smartGlobalAdvancedPanel"
+                          :aria-expanded="globalAdvancedExpanded ? 'true' : 'false'"
+                          @click="globalAdvancedExpanded = !globalAdvancedExpanded"
+                        >高级参数</button>
+                      </div>
+                      <div id="smartGlobalAdvancedPanel" class="col-12 collapse smart-pick-advanced-panel" :class="{ show: globalAdvancedExpanded }" data-role="global-adv-panel">
+                        <div class="row g-3 smart-pick-advanced-grid">
+                          <FieldInput v-for="field in globalAdvancedFields" :key="field.id" col-class="col-md-3" v-bind="field" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="smart-pick-groups-head">
-                <div class="smart-pick-section-title"><span>02</span><h6>条件组</h6></div>
-                <button type="button" id="btnAddGroup" class="btn btn-outline-secondary" :disabled="actionLoading" @click="addGroup">＋ 添加一组条件</button>
-              </div>
+                <div class="smart-pick-groups-column">
+                  <div class="smart-pick-groups-head">
+                    <div class="smart-pick-section-title"><span>02</span><h6>条件组</h6></div>
+                    <button type="button" id="btnAddGroup" class="btn btn-outline-secondary" :disabled="actionLoading" @click="addGroup">＋ 添加一组条件</button>
+                  </div>
 
-              <div id="pickGroups">
-                <PickGroup
-                  v-for="group in groups"
-                  :key="group.id"
-                  :payload="payload"
-                  :group-id="group.id"
-                  :can-remove="groups.length > 1"
-                  :expanded="group.expanded"
-                  @remove="removeGroup(group.id)"
-                  @toggle="toggleGroup(group.id)"
-                />
+                  <div id="pickGroups">
+                    <PickGroup
+                      v-for="group in groups"
+                      :key="group.id"
+                      :payload="payload"
+                      :group-id="group.id"
+                      :can-remove="groups.length > 1"
+                      :expanded="group.expanded"
+                      @remove="removeGroup(group.id)"
+                      @toggle="toggleGroup(group.id)"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div class="smart-pick-actions">
@@ -84,18 +94,6 @@
             </div>
             <div class="small text-muted" id="copyCurrent">{{ copyCurrent }}</div>
             <div v-if="copyError" class="small text-danger mt-1" id="copyError">{{ copyError }}</div>
-          </div>
-        </div>
-
-        <div v-if="pickInfoRows.length" class="card next02-sc-panel smart-pick-info-panel" id="pickInfoCard">
-          <div class="card-body">
-            <div class="next02-sc-panel-head">
-              <div><span class="next02-sc-panel-kicker">PICK SUMMARY</span><h5>Pick 概览</h5></div>
-              <span class="next02-sc-panel-note" id="pickInfoSummary">保留 Movie {{ pickInfoAfterMovies }} 部 · Cast {{ pickInfoAfterCasts }} 位</span>
-            </div>
-            <div class="smart-pick-info-grid" id="pickInfoGrid">
-              <div v-for="row in pickInfoRows" :key="row.label" class="smart-pick-info-card"><span>{{ row.label }}</span><strong>{{ row.value }}</strong></div>
-            </div>
           </div>
         </div>
 
@@ -157,6 +155,7 @@ const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
 const groups = ref<PickGroupState[]>([{ id: 1, expanded: false }]);
+const globalAdvancedExpanded = ref(false);
 const nextGroupId = ref(2);
 const formEl = ref<HTMLFormElement | null>(null);
 const actionLoading = ref(false);
@@ -191,7 +190,6 @@ const title = computed(() => text(payload.value, "Title") || "SC Pick Smart Medi
 const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value);
 const pageNote = computed(() => text(payload.value, "PageNote"));
 const pageSource = computed(() => (text(payload.value, "PageSource").toLowerCase() === "wmedia" ? "wmedia" : "vfilm"));
-const fixedHint = computed(() => text(payload.value, "FixedHint"));
 const castOwnedScRatioPenaltyAlpha = computed(() => pageSource.value === "wmedia" ? "0" : "0.7");
 
 const globalFields = computed<FieldConfig[]>(() => [
@@ -206,6 +204,8 @@ const globalFields = computed<FieldConfig[]>(() => [
   { id: "castOwnedScRatioPenaltyAlpha", label: "Cast SC Ratio 惩罚系数", type: "number", min: "0", step: "0.1", value: castOwnedScRatioPenaltyAlpha.value, required: true },
   { id: "movieHasScPenaltyAlpha", label: "Movie Has SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
 ]);
+const globalBasicFields = computed(() => globalFields.value.slice(0, 1));
+const globalAdvancedFields = computed(() => globalFields.value.slice(1));
 
 const pickedSortButtons: SortButton[] = [
   { key: "picked", label: "抽取顺序", dir: "desc" },
@@ -512,17 +512,17 @@ const PickGroup = defineComponent({
   setup(props, { emit }) {
     const fieldId = (name: string) => `smart-${props.groupId}-${name}`;
     const advPanelId = () => `smart-adv-panel-${props.groupId}`;
-    const simpleFields = () => [
+    const basicFields = () => [
       { id: fieldId("rs"), label: "放映日期起 (rs)", reqField: "ReleasingDateStart", placeholder: "YYYY-MM-DD" },
-      { id: fieldId("re"), label: "放映日期止 (re)", reqField: "ReleasingDateEnd", placeholder: "YYYY-MM-DD" },
-      { id: fieldId("birth-start"), label: dynamicLabel(props.payload, "BirthStartLabel", "下载日期起 (mbs)"), reqField: dynamicField(props.payload, "BirthStartField", "MediaBirthTimeStart"), placeholder: "YYYY-MM-DD" },
-      { id: fieldId("birth-end"), label: dynamicLabel(props.payload, "BirthEndLabel", "下载日期止 (mbe)"), reqField: dynamicField(props.payload, "BirthEndField", "MediaBirthTimeEnd"), placeholder: "YYYY-MM-DD" },
-      { id: fieldId("scmin"), label: "ScTimes 最小 (scmin)", type: "number", reqField: "ScTimesMin", dataType: "int-opt", placeholder: "可为空" },
-      { id: fieldId("scmax"), label: "ScTimes 最大 (scmax)", type: "number", reqField: "ScTimesMax", dataType: "int-opt", placeholder: "可为空" },
-      { id: fieldId("comin"), label: "ComeTimes 最小 (comin)", type: "number", reqField: "ComeTimesMin", dataType: "int-opt", placeholder: "可为空" },
-      { id: fieldId("comax"), label: "ComeTimes 最大 (comax)", type: "number", reqField: "ComeTimesMax", dataType: "int-opt", placeholder: "可为空" }
+      { id: fieldId("re"), label: "放映日期止 (re)", reqField: "ReleasingDateEnd", placeholder: "YYYY-MM-DD" }
     ];
     const advFields = () => [
+      { reqField: dynamicField(props.payload, "BirthStartField", "MediaBirthTimeStart"), label: dynamicLabel(props.payload, "BirthStartLabel", "下载日期起 (mbs)"), placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: dynamicField(props.payload, "BirthEndField", "MediaBirthTimeEnd"), label: dynamicLabel(props.payload, "BirthEndLabel", "下载日期止 (mbe)"), placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "ScTimesMin", label: "ScTimes 最小 (scmin)", type: "number", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "ScTimesMax", label: "ScTimes 最大 (scmax)", type: "number", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "ComeTimesMin", label: "ComeTimes 最小 (comin)", type: "number", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "ComeTimesMax", label: "ComeTimes 最大 (comax)", type: "number", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
       { reqField: "CastNames", label: "演员 (cn)" },
       { reqField: "GenreNames", label: "类型 (gn)" },
       { reqField: "DirectorName", label: "导演 (dn)" },
@@ -557,6 +557,7 @@ const PickGroup = defineComponent({
         ]),
         h("div", { class: "row g-3 smart-pick-group-grid" }, [
           h(FieldInput, { colClass: "col-md-3", id: fieldId("weight"), label: "权重", type: "number", min: "1", value: "12", required: true, role: "weight" }),
+          ...basicFields().map((field) => h(FieldInput, { colClass: "col-md-3", ...field })),
           h("div", { class: "col-md-3 d-flex align-items-end smart-pick-advanced-toggle-wrap" }, [
             h("button", {
               type: "button",
@@ -569,7 +570,6 @@ const PickGroup = defineComponent({
               onClick: () => emit("toggle")
             }, "高级参数")
           ]),
-          ...simpleFields().map((field) => h(FieldInput, { colClass: "col-md-3", ...field })),
           h("div", { class: `col-12 collapse smart-pick-advanced-panel${props.expanded ? " show" : ""}`, id: advPanelId(), "data-role": "adv-panel" }, [
             h("div", { class: "row g-3 smart-pick-advanced-grid" }, [
               ...advFields().map((field) => h(FieldInput, {

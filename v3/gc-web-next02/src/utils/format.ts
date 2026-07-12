@@ -1,4 +1,5 @@
 import type { AnyRecord } from "@/types/gc";
+import { compactInternalHref } from "@/utils/query";
 
 export function asRecord(value: unknown): AnyRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as AnyRecord : {};
@@ -70,5 +71,5 @@ export function queryPart(fullPath: string): string {
 
 export function normalizeHref(href: unknown, fallback = "#"): string {
   const value = String(href ?? "").trim();
-  return value || fallback;
+  return compactInternalHref(value, fallback);
 }

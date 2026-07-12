@@ -550,5 +550,5 @@ func buildScEventMovieHref(name string) string {
 	if name == "" {
 		return ""
 	}
-	return "/movie/" + url.PathEscape(name)
+	return "/moviedetail/" + url.PathEscape(name)
 }

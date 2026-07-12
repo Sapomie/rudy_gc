@@ -24,8 +24,8 @@
           </div>
           <div class="next02-pink-cards-toolbar-status">
             <div class="next02-pink-cards-metrics" aria-label="Cards 页面摘要">
-              <span><strong>{{ total }}</strong> Total</span>
-              <span><strong>{{ movies.length }}</strong> Current Page</span>
+              <span :title="`总数 ${total}`" :aria-label="`总数 ${total}`"><strong>{{ total }}</strong></span>
+              <span :title="`当前页 ${movies.length}`" :aria-label="`当前页 ${movies.length}`"><strong>{{ movies.length }}</strong></span>
             </div>
             <div class="cards-toolbar-pagination next02-pink-cards-pagination">
               <PaginationBar :page-info="pageInfo" />
@@ -147,12 +147,12 @@ async function load() {
 }
 
 const cardsPageTitles: Record<string, string> = {
-  "/cards": "Cards",
-  "/cardstoday": "Cards Today",
-  "/cardsmediamowned": "Cards MediaOwned",
-  "/cardshasrank": "Cards HasRank",
-  "/cardsneeddownload": "Cards NeedDownload",
-  "/cardsrandom": "Cards Random",
+  "/listcard": "Cards",
+  "/listcardtoday": "Cards Today",
+  "/listcardowned": "Cards MediaOwned",
+  "/listcardrank": "Cards HasRank",
+  "/listcardneed": "Cards NeedDownload",
+  "/listcardrandom": "Cards Random",
 };
 const title = computed(() => cardsPageTitles[route.path] || text(payload.value, "Title") || String(route.meta.title || "MovieCard"));
 const pageClass = computed(() => `cards-route-${route.path.replace(/^\/+/, "").replaceAll("/", "-") || "home"}`);

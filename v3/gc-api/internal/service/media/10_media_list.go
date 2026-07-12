@@ -54,7 +54,7 @@ func (s *Service) buildMediaListItem(ctx context.Context, row *moviex.NativeMedi
 	item := &types.MediaListItem{
 		Id:              row.Id,
 		MovieName:       row.MovieName,
-		MovieHref:       "/movie/" + url.PathEscape(row.MovieName),
+		MovieHref:       "/moviedetail/" + url.PathEscape(row.MovieName),
 		CastName:        "-",
 		Casts:           []*types.MediaListCastItem{},
 		SizeGB:          formatMediaSizeGB(row.Size),
@@ -127,7 +127,7 @@ func buildMediaListCastItems(casts []*types.CastInfo) []*types.MediaListCastItem
 			Name: name,
 		}
 		if cast.PersonId > 0 {
-			item.Href = "/cast/" + strconv.FormatInt(cast.PersonId, 10)
+			item.Href = "/castdetail/" + strconv.FormatInt(cast.PersonId, 10)
 		}
 		items = append(items, item)
 	}

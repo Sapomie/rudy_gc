@@ -44,7 +44,7 @@ func (h *MovieCardAPI) ListMovieCardFull(c *gin.Context) {
 	h.movieCardAPI(c,
 		types.ListMovieFullRequest{OrderBy: consts.OrderByReleasingDate},
 		"MovieCard",
-		"/cards",
+		"/listcard",
 	)
 }
 
@@ -55,13 +55,13 @@ func (h *MovieCardAPI) ListMovieCardToday(c *gin.Context) {
 			ReleasingDateEnd: time.Now().Format("2006-01-02"),
 		},
 		"MovieCard",
-		"/cardstoday",
+		"/listcardtoday",
 	)
 }
 
 func (h *MovieCardAPI) ListMovieCardHasRank(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/cardshasrank"
+	c.Request.URL.Path = "/listcardrank"
 	defer func() {
 		c.Request.URL.Path = originalPath
 	}()
@@ -102,7 +102,7 @@ func (h *MovieCardAPI) ListMovieCardMediaOwned(c *gin.Context) {
 			OrderBy:    consts.OrderByMediaBirthTime,
 		},
 		"MovieCard",
-		"/cardsmediamowned",
+		"/listcardowned",
 	)
 }
 
@@ -113,7 +113,7 @@ func (h *MovieCardAPI) ListMovieCardNeedDownload(c *gin.Context) {
 			OrderBy:      consts.OrderByReleasingDate,
 		},
 		"MovieCard",
-		"/cardsneeddownload",
+		"/listcardneed",
 	)
 }
 
@@ -141,7 +141,7 @@ func (h *MovieCardAPI) movieCardAPI(c *gin.Context, base types.ListMovieFullRequ
 
 func (h *MovieCardAPI) ListMovieCardFullRandom(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/cardsrandom"
+	c.Request.URL.Path = "/listcardrandom"
 	defer func() {
 		c.Request.URL.Path = originalPath
 	}()
@@ -193,7 +193,7 @@ func (h *MovieCardAPI) ListMovieCardFullRandom(c *gin.Context) {
 
 func (h *MovieCardAPI) ListMovieCardAgg(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/cardsagg"
+	c.Request.URL.Path = "/listcardagg"
 	defer func() {
 		c.Request.URL.Path = originalPath
 	}()
@@ -205,8 +205,8 @@ func (h *MovieCardAPI) ListMovieCardAgg(c *gin.Context) {
 	}
 
 	filterView := buildMovieCardFilterView(c, req, req.OrderBy, nil)
-	filterView.Action = "/cardsagg"
-	filterView.ClearHref = "/cardsagg"
+	filterView.Action = "/listcardagg"
+	filterView.ClearHref = "/listcardagg"
 
 	if !hasMovieCardAggEffectiveFilter(c) {
 		c.JSON(http.StatusOK, gin.H{
@@ -287,7 +287,7 @@ func hasMovieCardAggEffectiveFilter(c *gin.Context) bool {
 
 func (h *MovieCardAPI) ListMovieCardDayRank(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/moviecarddayrank"
+	c.Request.URL.Path = "/listcarddayrank"
 	defer func() {
 		c.Request.URL.Path = originalPath
 	}()
@@ -377,7 +377,7 @@ func (h *MovieCardAPI) ListMovieCardDayRank(c *gin.Context) {
 
 func (h *MovieCardAPI) ListMovieCardPeriodRank(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/moviecardperiodrank"
+	c.Request.URL.Path = "/listcardperiodrank"
 	defer func() {
 		c.Request.URL.Path = originalPath
 	}()

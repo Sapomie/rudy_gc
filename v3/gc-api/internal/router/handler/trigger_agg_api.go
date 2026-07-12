@@ -7,12 +7,14 @@ import (
 
 	"rudy_gc/internal/dep"
 	"rudy_gc/internal/service/moviereleaseagg"
+	"rudy_gc/internal/service/shthreadagg"
 	"rudy_gc/internal/service/wmediaagg"
 )
 
 type AggTriggerAPI struct {
-	wMediaAggSvc  *wmediaagg.Service
-	releaseAggSvc *moviereleaseagg.Service
+	wMediaAggSvc   *wmediaagg.Service
+	releaseAggSvc  *moviereleaseagg.Service
+	shThreadAggSvc *shthreadagg.Service
 }
 
 type mediaAggBackfillResponse struct {
@@ -25,10 +27,16 @@ type movieReleaseAggBackfillResponse struct {
 	Result  *moviereleaseagg.BackfillResult `json:"result"`
 }
 
+type shThreadAggBackfillResponse struct {
+	Message string                      `json:"message"`
+	Result  *shthreadagg.BackfillResult `json:"result"`
+}
+
 func NewAggTriggerAPI(deps *dep.Dep) *AggTriggerAPI {
 	return &AggTriggerAPI{
-		wMediaAggSvc:  wmediaagg.NewService(deps),
-		releaseAggSvc: moviereleaseagg.NewService(deps),
+		wMediaAggSvc:   wmediaagg.NewService(deps),
+		releaseAggSvc:  moviereleaseagg.NewService(deps),
+		shThreadAggSvc: shthreadagg.NewService(deps),
 	}
 }
 
@@ -37,8 +45,24 @@ func (h *AggTriggerAPI) Page(c *gin.Context) {
 		"Title":     "聚合回填",
 		"ViewType":  "agg-triggers",
 		"PageTitle": "聚合回填",
-		"PageNote":  "这里只处理 WMedia 时间聚合和上映日时间聚合的手动回填。",
+		"PageNote":  "这里处理 WMedia、上映日和 SH 帖子时间聚合的手动回填。",
 	})
+}
+
+func (h *AggTriggerAPI) BackfillSHThreadAgg(c *gin.Context) {
+	result, err := h.shThreadAggSvc.BackfillAll(c.Request.Context())
+	resp := shThreadAggBackfillResponse{
+		Message: "SH 帖子时间聚合回填完成",
+		Result:  result,
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  err.Error(),
+			"result": resp,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *AggTriggerAPI) BackfillWMediaAgg(c *gin.Context) {

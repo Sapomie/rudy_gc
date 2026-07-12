@@ -2,6 +2,7 @@ package loop
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -47,6 +48,7 @@ const (
 
 type StartTaskRequest struct {
 	TaskType        string               `json:"task_type"`
+	TriggerSource   string               `json:"trigger_source"`
 	Name            string               `json:"name"`
 	ActorName       string               `json:"actor_name"`
 	AutoFetchSite   string               `json:"auto_fetch_site"`
@@ -855,8 +857,22 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreadList(req StartTaskRequest)
 
 func (l *FetchLoopService) StartFetchSehuatangSHThreadDetails(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchSehuatangSHDetail, taskRuntimePolicy{}, func(ctx context.Context) error {
+		selectionCriteria, err := json.Marshal(map[string]any{
+			"source_forum_ids": req.TargetForumIDs,
+			"detail_statuses":  req.DetailStatuses,
+			"keyword":          strings.TrimSpace(req.Keyword),
+			"post_time_from":   strings.TrimSpace(req.PostTimeFrom),
+			"post_time_to":     strings.TrimSpace(req.PostTimeTo),
+		})
+		if err != nil {
+			return err
+		}
 		request := fetchsehuatang.SHDetailFetchRequest{
-			ThreadTIDs: req.ThreadTIDs,
+			TriggerSource:     req.TriggerSource,
+			SelectionCriteria: string(selectionCriteria),
+			TargetForumIDs:    req.TargetForumIDs,
+			Keyword:           req.Keyword,
+			ThreadTIDs:        req.ThreadTIDs,
 		}
 
 		taskctx.ReportProgress(ctx, taskctx.Progress{
@@ -926,6 +942,7 @@ func (l *FetchLoopService) startManagedTask(taskType string, policy taskRuntimeP
 		defer l.jobs.clearCancel(jobID)
 		defer l.finishTaskRuntime(jobID, policy)
 
+		ctx = taskctx.WithJobID(ctx, jobID)
 		ctx = taskctx.WithPauseWaiter(ctx, func(ctx context.Context) error {
 			return l.jobs.waitIfPaused(ctx, jobID)
 		})

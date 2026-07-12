@@ -68,7 +68,13 @@ func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField,
 	}
 
 	offset := int64((page - 1) * pageSize)
-	rows, err := s.deps.ScModel.ListPageByScTimeRange(ctx, offset, int64(pageSize), buildScOrderBy(sortField, sortOrder), startTime, endTime)
+	field := normalizeScSortField(sortField)
+	var rows []*moviex.GSc
+	if field == "total_movie_count" || field == "sc_movie_count" {
+		rows, err = s.deps.ScModel.ListPageByScTimeRangeWithMovieStats(ctx, offset, int64(pageSize), field, sortOrder, startTime, endTime)
+	} else {
+		rows, err = s.deps.ScModel.ListPageByScTimeRange(ctx, offset, int64(pageSize), buildScOrderBy(field, sortOrder), startTime, endTime)
+	}
 	if err != nil {
 		return nil, 0, err
 	}
@@ -855,7 +861,7 @@ func buildScOrderBy(sortField, sortOrder string) string {
 
 func normalizeScSortField(sortField string) string {
 	switch strings.ToLower(strings.TrimSpace(sortField)) {
-	case "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
+	case "total_movie_count", "sc_movie_count", "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
 		return strings.ToLower(strings.TrimSpace(sortField))
 	default:
 		return "sc_time"

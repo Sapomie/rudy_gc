@@ -280,15 +280,15 @@ func buildActorPageHrefByName(name string) string {
 }
 
 func buildActorCardsHrefByName(name string) string {
-	return "/cards?cn=" + url.QueryEscape(name)
+	return "/listcard?cn=" + url.QueryEscape(name)
 }
 
 func buildActorPageHrefByID(id int64) string {
-	return "/cast/" + strconv.FormatInt(id, 10)
+	return "/castdetail/" + strconv.FormatInt(id, 10)
 }
 
 func buildActorCardsHrefByID(id int64) string {
-	return "/cards?pid=" + strconv.FormatInt(id, 10)
+	return "/listcard?pid=" + strconv.FormatInt(id, 10)
 }
 
 func personFromCast(cast *types.Cast) *types.Person {
@@ -438,7 +438,7 @@ func actorMovieIsCome(gl *types.GList) bool {
 }
 
 func buildMovieHref(name string) string {
-	return "/movie/" + url.PathEscape(name)
+	return "/moviedetail/" + url.PathEscape(name)
 }
 
 func parseActorScMovieName(gl *types.GList) string {

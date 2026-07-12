@@ -11,7 +11,7 @@
             </div>
             <div class="movie-detail-title-meta">
               <span v-if="movieName" class="movie-title-meta-chip movie-title-meta-code">{{ movieName }}</span>
-              <span v-if="releaseDate" class="movie-title-meta-chip movie-title-meta-date">{{ releaseDate }}</span>
+              <span v-if="releaseDate" class="movie-title-meta-chip movie-title-meta-date">上映 {{ releaseDate }}</span>
               <span v-if="score" class="movie-title-meta-chip movie-title-meta-score">{{ score }}</span>
               <span v-if="castSummary" class="movie-title-meta-chip movie-title-meta-cast" :title="castSummary">{{ castSummary }}</span>
             </div>
@@ -52,8 +52,8 @@
                           <th>识别码</th>
                           <td>
                             <div class="movie-info-code-line">
-                              <a :href="`/cards?pn=${encodeURIComponent(prefix)}`" class="movie-info-code movie-tag-code" target="_blank" rel="noopener noreferrer">{{ movieName }}</a>
-                              <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm movie-action-button movie-action-button-play" :class="mediaButtonClass" target="_blank" rel="noopener noreferrer">MPlay</a>
+                              <a :href="`/listcard?pn=${encodeURIComponent(prefix)}`" class="movie-info-code movie-tag-code" target="_blank" rel="noopener noreferrer">{{ movieName }}</a>
+                              <a v-if="mediaPlayable" :href="videoUrl" class="btn btn-sm movie-action-button movie-action-button-play" :class="mediaButtonClass" target="_blank" rel="noopener noreferrer">Play</a>
                               <span v-else-if="mediaLabel" class="btn btn-sm btn-secondary disabled movie-action-button movie-action-button-play" aria-disabled="true">{{ mediaLabel }}</span>
                               <small v-if="encodeName" class="movie-info-subtle">({{ encodeName }})</small>
                             </div>
@@ -61,7 +61,7 @@
                         </tr>
                         <tr class="table-light">
                           <th>发行时间</th>
-                          <td><span class="movie-info-value movie-tag-date">{{ releaseDate || "-" }}</span></td>
+                          <td><span class="movie-info-value movie-tag-date movie-release-date">{{ releaseDate ? `上映 ${releaseDate}` : "-" }}</span></td>
                         </tr>
                         <tr class="table-light">
                           <th>长度</th>
@@ -83,21 +83,21 @@
                         </tr>
                         <tr class="table-light">
                           <th>制作商</th>
-                          <td><div class="movie-info-tag-group"><a v-if="maker" class="tag movie-tag-company" :href="`/cards?mn=${encodeURIComponent(maker)}`" target="_blank" rel="noopener noreferrer">{{ maker }}</a><span v-else class="movie-info-empty">-</span></div></td>
+                          <td><div class="movie-info-tag-group"><a v-if="maker" class="tag movie-tag-company" :href="`/listcard?mn=${encodeURIComponent(maker)}`" target="_blank" rel="noopener noreferrer">{{ maker }}</a><span v-else class="movie-info-empty">-</span></div></td>
                         </tr>
                         <tr class="table-light">
                           <th>发行商</th>
-                          <td><div class="movie-info-tag-group"><a v-if="label" class="tag movie-tag-company" :href="`/cards?ln=${encodeURIComponent(label)}`" target="_blank" rel="noopener noreferrer">{{ label }}</a><span v-else class="movie-info-empty">-</span></div></td>
+                          <td><div class="movie-info-tag-group"><a v-if="label" class="tag movie-tag-company" :href="`/listcard?ln=${encodeURIComponent(label)}`" target="_blank" rel="noopener noreferrer">{{ label }}</a><span v-else class="movie-info-empty">-</span></div></td>
                         </tr>
                         <tr class="table-light">
                           <th>导演</th>
-                          <td><div class="movie-info-tag-group"><a v-if="director" class="tag movie-tag-person movie-tag-director" :href="`/cards?dn=${encodeURIComponent(director)}`" :title="director" target="_blank" rel="noopener noreferrer">{{ director }}</a><span v-else class="movie-info-empty">-</span></div></td>
+                          <td><div class="movie-info-tag-group"><a v-if="director" class="tag movie-tag-person movie-tag-director" :href="`/listcard?dn=${encodeURIComponent(director)}`" :title="director" target="_blank" rel="noopener noreferrer">{{ director }}</a><span v-else class="movie-info-empty">-</span></div></td>
                         </tr>
                         <tr class="table-light">
                           <th>分类</th>
                           <td>
                             <div class="movie-info-tag-group">
-                              <a v-for="genre in genres" :key="genre" class="tag movie-tag-genre" :href="`/cards?gn=${encodeURIComponent(genre)}`" target="_blank" rel="noopener noreferrer">{{ genre }}</a>
+                              <a v-for="genre in genres" :key="genre" class="tag movie-tag-genre" :href="`/listcard?gn=${encodeURIComponent(genre)}`" target="_blank" rel="noopener noreferrer">{{ genre }}</a>
                               <span v-if="!genres.length" class="movie-info-empty">-</span>
                             </div>
                           </td>
@@ -117,7 +117,7 @@
                             <div class="movie-info-score-line">
                               <span class="movie-info-score movie-tag-score">{{ score || "-" }}</span>
                               <span class="movie-info-pill-soft movie-tag-count">{{ watched || "-" }}</span>
-                              <span class="movie-info-date movie-tag-date">{{ updateDate || "-" }}</span>
+                              <span class="movie-info-date movie-tag-date movie-update-date">{{ updateDate || "-" }}</span>
                               <button
                                 id="btn-downloadlater"
                                 type="button"
@@ -224,7 +224,7 @@
                         </thead>
                         <tbody>
                           <tr v-for="row in pagedRankRows" :key="row.date">
-                            <td><a :href="`/moviecarddayrank?date=${encodeURIComponent(row.date)}`" target="_blank" rel="noopener noreferrer">{{ row.date }}</a></td>
+                            <td><a :href="`/listcarddayrank?date=${encodeURIComponent(row.date)}`" target="_blank" rel="noopener noreferrer">{{ row.date }}</a></td>
                             <td><span>{{ row.rank }}</span></td>
                           </tr>
                         </tbody>
@@ -262,7 +262,7 @@
                     </div>
                     <div class="movie-film-item">
                       <span class="movie-film-label">BirthTime</span>
-                      <strong class="movie-film-value">{{ mediaText("BirthTime") || "-" }}</strong>
+                      <strong class="movie-film-value movie-detail-download-date">{{ mediaText("BirthTime") ? `下载 ${mediaText("BirthTime")}` : "-" }}</strong>
                     </div>
                     <div class="movie-film-item movie-film-size">
                       <span class="movie-film-label">Size</span>
@@ -304,12 +304,14 @@
           </div>
         </div>
 
-        <div v-if="fetchSiteMessage" id="fetchSiteListMsg" class="alert small py-2 px-3 mb-3" :class="fetchSiteMessageOk ? 'alert-success' : 'alert-danger'" role="alert">{{ fetchSiteMessage }}</div>
         <div class="row movie-resource-row">
           <div class="col-12 mb-3">
             <div class="card shadow-sm movie-section-card movie-resource-card">
               <div class="card-body">
-                <h5 class="card-title mb-3 movie-section-title">资源列表</h5>
+                <div class="movie-resource-heading-row">
+                  <h5 class="card-title mb-0 movie-section-title">资源列表</h5>
+                  <div v-if="resourceAlbumError" class="movie-resource-album-error" role="alert">{{ resourceAlbumError }}</div>
+                </div>
                 <ul class="nav nav-tabs nav-tabs-custom mb-3 movie-resource-tabs movie-resource-tabs-compact" role="tablist">
                   <li class="nav-item" role="presentation">
                     <button class="nav-link" :class="{ active: activeResourceTab === 'javbus' }" id="tab-javbus-magnets" type="button" @click="activeResourceTab = 'javbus'">
@@ -350,7 +352,13 @@
         </div>
 
         <div class="row mt-3 movie-fetch-row">
-          <div class="col-12 mb-2 d-flex justify-content-end">
+          <div class="col-12 mb-2 d-flex align-items-center justify-content-end gap-2 movie-fetch-toolbar">
+            <div
+              v-if="fetchTaskMessage"
+              class="movie-fetch-notice"
+              :class="fetchTaskMessageOk ? 'is-success' : 'is-error'"
+              role="status"
+            >{{ fetchTaskMessage }}</div>
             <button type="button" class="btn btn-sm btn-primary js-trigger-both" :disabled="fetchTaskBusy" @click="startBothFetchTasks">{{ fetchTaskBusy ? "触发中" : "同时触发 JavBus + Sukebei" }}</button>
           </div>
           <FetchStatusCard title="JavBus 抓取状态" :status="javbusFetch" trigger-class="js-trigger-javbus" task-type="spider_fetch_javbus_resources" :loading="fetchTaskBusy" @trigger="startFetchTask" />
@@ -490,8 +498,9 @@ const coverBusy = ref(false);
 const coverMessage = ref("");
 const coverError = ref("");
 const fetchTaskBusy = ref(false);
-const fetchSiteMessage = ref("");
-const fetchSiteMessageOk = ref(true);
+const fetchTaskMessage = ref("");
+const fetchTaskMessageOk = ref(true);
+const resourceAlbumError = ref("");
 const favoriteBusyKey = ref("");
 const rankPage = ref(1);
 const rankPageSize = ref(10);
@@ -526,7 +535,8 @@ async function load() {
   downloadLaterError.value = "";
   coverMessage.value = "";
   coverError.value = "";
-  fetchSiteMessage.value = "";
+  fetchTaskMessage.value = "";
+  resourceAlbumError.value = "";
   rankPage.value = 1;
   try {
     payload.value = asRecord(await getJSON(apiPathForRoute(route)));
@@ -572,14 +582,14 @@ const downloadLaterButtonText = computed(() => {
   return downloadLaterActive.value ? "已添加" : "稍后下载";
 });
 const ownedMedia = computed(() => num(movie.value, "owned_w_media", "OwnedWMedia"));
-const mediaLabel = computed(() => ownedMedia.value === 6 ? "MRemoved" : (ownedMedia.value === 4 || ownedMedia.value === 5 ? "MPlay" : ""));
+const mediaLabel = computed(() => ownedMedia.value === 6 ? "Removed" : (ownedMedia.value === 4 || ownedMedia.value === 5 ? "Play" : ""));
 const mediaButtonClass = computed(() => ownedMedia.value === 5 ? "btn-info" : "btn-success");
 const mediaPlayable = computed(() => Boolean(videoUrl.value) && (ownedMedia.value === 4 || ownedMedia.value === 5));
 const genres = computed(() => asArray<string>(pick(movie.value, "genre", "Genre")).map(String).filter(Boolean));
 const casts = computed(() => asArray<AnyRecord>(pick(movie.value, "cast", "Cast")).map((item) => {
   const row = asRecord(item);
   const labelText = text(row, "NameShow", "DisplayName", "Name", "name");
-  const href = text(row, "Url", "url") || `/cards?cn=${encodeURIComponent(text(row, "Name", "name") || labelText)}`;
+  const href = text(row, "Url", "url") || `/listcard?cn=${encodeURIComponent(text(row, "Name", "name") || labelText)}`;
   return { label: labelText, href };
 }).filter((item) => item.label));
 const castSummary = computed(() => casts.value.map((cast) => cast.label).join("、"));
@@ -673,9 +683,9 @@ function errText(err: unknown, fallback = "网络错误，请稍后重试") {
   return err instanceof Error ? err.message : String(err || fallback);
 }
 
-function showFetchSiteMessage(value: string, ok: boolean) {
-  fetchSiteMessage.value = value;
-  fetchSiteMessageOk.value = ok;
+function showFetchTaskMessage(value: string, ok: boolean) {
+  fetchTaskMessage.value = value;
+  fetchTaskMessageOk.value = ok;
 }
 
 function updatePayloadRecord(keys: string[], updates: AnyRecord) {
@@ -931,20 +941,20 @@ function taskSiteName(taskType: string) {
 
 async function startFetchTask(taskType: string) {
   if (!javID.value || !movieName.value) {
-    showFetchSiteMessage("缺少影片参数，无法触发任务", false);
+    showFetchTaskMessage("缺少影片参数，无法触发任务", false);
     return;
   }
   fetchTaskBusy.value = true;
-  fetchSiteMessage.value = "";
+  fetchTaskMessage.value = "";
   try {
     await sendJSON("/api/crawler/jobs/start", "POST", {
       task_type: taskType,
       movie_jav_id: javID.value,
       movie_name: movieName.value
     });
-    showFetchSiteMessage(`已开启${taskSiteName(taskType)}抓取：${movieName.value}`, true);
+    showFetchTaskMessage(`已开启${taskSiteName(taskType)}抓取：${movieName.value}`, true);
   } catch (err) {
-    showFetchSiteMessage(errText(err, "启动失败"), false);
+    showFetchTaskMessage(errText(err, "启动失败"), false);
   } finally {
     fetchTaskBusy.value = false;
   }
@@ -952,11 +962,11 @@ async function startFetchTask(taskType: string) {
 
 async function startBothFetchTasks() {
   if (!javID.value || !movieName.value) {
-    showFetchSiteMessage("缺少影片参数，无法触发任务", false);
+    showFetchTaskMessage("缺少影片参数，无法触发任务", false);
     return;
   }
   fetchTaskBusy.value = true;
-  fetchSiteMessage.value = "";
+  fetchTaskMessage.value = "";
   const tasks = ["spider_fetch_javbus_resources", "spider_fetch_sukebei_resources"];
   try {
     const results = await Promise.allSettled(tasks.map((taskType) => sendJSON("/api/crawler/jobs/start", "POST", {
@@ -975,11 +985,11 @@ async function startBothFetchTasks() {
       }
     });
     if (successSites.length === 2) {
-      showFetchSiteMessage(`已同时开启 JavBus + Sukebei 抓取：${movieName.value}`, true);
+      showFetchTaskMessage(`已同时开启 JavBus + Sukebei 抓取：${movieName.value}`, true);
     } else if (successSites.length === 1) {
-      showFetchSiteMessage(`部分成功：已开启${successSites[0]}；${failedSites.join("；")}`, false);
+      showFetchTaskMessage(`部分成功：已开启${successSites[0]}；${failedSites.join("；")}`, false);
     } else {
-      showFetchSiteMessage(`同时触发失败：${failedSites.join("；")}`, false);
+      showFetchTaskMessage(`同时触发失败：${failedSites.join("；")}`, false);
     }
   } finally {
     fetchTaskBusy.value = false;
@@ -988,6 +998,16 @@ async function startBothFetchTasks() {
 
 function resourceRowID(row: AnyRecord) {
   return Number(text(row, "RowID", "row_id", "ID", "id") || 0);
+}
+
+function normalizeResourceInfoHash(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function resourceHashMatchesMedia(infoHash: string, mediaHash: string) {
+  const normalizedInfoHash = normalizeResourceInfoHash(infoHash);
+  const normalizedMediaHash = normalizeResourceInfoHash(mediaHash);
+  return Boolean(normalizedInfoHash && normalizedMediaHash && normalizedInfoHash === normalizedMediaHash);
 }
 
 function favoriteKey(row: AnyRecord, sourceType: string, albumName: string) {
@@ -1014,9 +1034,12 @@ function setResourceFavorited(row: AnyRecord, albumName: string, favorited: bool
 
 function favoriteButtonClass(row: AnyRecord, albumName: string) {
   const favorited = isResourceFavorited(row, albumName);
-  return albumName === "待下载"
+  const albumClass = albumName === "待下载" ? "movie-resource-album-pending" : "movie-resource-album-downloading";
+  const stateClass = favorited ? "is-selected" : "is-idle";
+  const bootstrapClass = albumName === "待下载"
     ? (favorited ? "btn-info" : "btn-outline-info")
     : (favorited ? "btn-warning" : "btn-outline-warning");
+  return `movie-resource-album-state ${albumClass} ${stateClass} ${bootstrapClass}`;
 }
 
 function favoriteButtonText(row: AnyRecord, albumName: string) {
@@ -1031,10 +1054,11 @@ async function switchFetchResourceAlbum(row: AnyRecord, sourceType: string, albu
   const sourceRowID = resourceRowID(row);
   const currentFavorited = isResourceFavorited(row, albumName);
   if (!javID.value || !sourceType || !Number.isInteger(sourceRowID) || sourceRowID <= 0) {
-    showFetchSiteMessage(`缺少${albumName}参数，无法执行`, false);
+    resourceAlbumError.value = `缺少${albumName}参数，无法执行`;
     return;
   }
   const key = favoriteKey(row, sourceType, albumName);
+  resourceAlbumError.value = "";
   favoriteBusyKey.value = key;
   try {
     const data = asRecord(await sendJSON(`/api/movie/${encodeURIComponent(javID.value)}/album-item`, currentFavorited ? "DELETE" : "POST", {
@@ -1046,9 +1070,8 @@ async function switchFetchResourceAlbum(row: AnyRecord, sourceType: string, albu
     const favorited = typeof data.favorited === "boolean" ? data.favorited : !currentFavorited;
     const responseAlbumName = text(data, "album_name", "AlbumName") || albumName;
     setResourceFavorited(row, responseAlbumName, favorited);
-    showFetchSiteMessage(text(data, "message") || "操作成功", true);
   } catch (err) {
-    showFetchSiteMessage(errText(err, `${albumName}操作失败`), false);
+    resourceAlbumError.value = errText(err, `${albumName}操作失败`);
   } finally {
     favoriteBusyKey.value = "";
   }
@@ -1166,6 +1189,7 @@ const ResourceTable = defineComponent({
         "data-source-row-id": String(resourceRowID(record)),
         "data-album-name": "下载中",
         "data-favorited": isResourceFavorited(record, "下载中") ? "1" : "0",
+        "aria-pressed": isResourceFavorited(record, "下载中") ? "true" : "false",
         title: favoriteButtonTitle(record, "下载中"),
         disabled: favoriteBusyKey.value === favoriteKey(record, props.type, "下载中"),
         onClick: () => switchFetchResourceAlbum(record, props.type, "下载中")
@@ -1177,6 +1201,7 @@ const ResourceTable = defineComponent({
         "data-source-row-id": String(resourceRowID(record)),
         "data-album-name": "待下载",
         "data-favorited": isResourceFavorited(record, "待下载") ? "1" : "0",
+        "aria-pressed": isResourceFavorited(record, "待下载") ? "true" : "false",
         title: favoriteButtonTitle(record, "待下载"),
         disabled: favoriteBusyKey.value === favoriteKey(record, props.type, "待下载"),
         onClick: () => switchFetchResourceAlbum(record, props.type, "待下载")
@@ -1185,7 +1210,7 @@ const ResourceTable = defineComponent({
 
     const hashCell = (record: AnyRecord) => {
       const infoHash = text(record, "InfoHash");
-      const matched = Boolean(pick(record, "HasMatchedHash")) || Boolean(infoHash && infoHash === props.mediaHash);
+      const matched = resourceHashMatchesMedia(infoHash, props.mediaHash);
       return h("td", { class: "movie-resource-col-hash text-monospace" }, [
         h("span", { class: `movie-resource-hash ${matched ? "fetch-site-hash-match" : ""}`, title: infoHash }, infoHash || "-")
       ]);
@@ -1203,7 +1228,7 @@ const ResourceTable = defineComponent({
     const renderRows = () => sortedResourceRows(props.rows as AnyRecord[], props.type).map((row) => {
       const record = asRecord(row);
       const infoHash = text(record, "InfoHash");
-      const matched = Boolean(pick(record, "HasMatchedHash")) || Boolean(infoHash && infoHash === props.mediaHash);
+      const matched = Boolean(pick(record, "HasMatchedHash")) || resourceHashMatchesMedia(infoHash, props.mediaHash);
       if (props.type === "sukebei_torrent") {
         const title = text(record, "TorrentTitle");
         const url = text(record, "ViewURL");

@@ -886,12 +886,14 @@ func buildTorrentAlbumsSortQuery(c *gin.Context, currentField string, currentOrd
 }
 
 type movieAlbumItemsListQuery struct {
-	Page      int64  `form:"p"`
-	PageSize  int64  `form:"ps"`
-	Sort      string `form:"sort"`
-	Order     string `form:"order"`
-	AlbumName string `form:"album_name"`
-	Keyword   string `form:"keyword"`
+	Page          int64  `form:"p"`
+	PageSize      int64  `form:"ps"`
+	Sort          string `form:"sort"`
+	Order         string `form:"order"`
+	AlbumName     string `form:"album_name"`
+	Keyword       string `form:"keyword"`
+	ReleasingFrom string `form:"releasing_from"`
+	ReleasingTo   string `form:"releasing_to"`
 }
 
 type movieAlbumItemsSortLink struct {
@@ -901,10 +903,11 @@ type movieAlbumItemsSortLink struct {
 }
 
 type movieAlbumItemsSortQuery struct {
-	ByMovieName movieAlbumItemsSortLink
-	ByJavID     movieAlbumItemsSortLink
-	BySortNo    movieAlbumItemsSortLink
-	ByCreated   movieAlbumItemsSortLink
+	ByMovieName     movieAlbumItemsSortLink
+	ByJavID         movieAlbumItemsSortLink
+	BySortNo        movieAlbumItemsSortLink
+	ByReleasingDate movieAlbumItemsSortLink
+	ByCreated       movieAlbumItemsSortLink
 }
 
 type removeMovieAlbumItemReq struct {
@@ -913,6 +916,11 @@ type removeMovieAlbumItemReq struct {
 
 type batchMovieAlbumItemReq struct {
 	ItemIDs []int64 `json:"item_ids"`
+}
+
+type batchTransferMovieAlbumItemReq struct {
+	ItemIDs       []int64 `json:"item_ids"`
+	TargetAlbumID int64   `json:"target_album_id"`
 }
 
 func (h *ListPagesAPI) MovieAlbumItems(c *gin.Context) {
@@ -933,14 +941,30 @@ func (h *ListPagesAPI) MovieAlbumItems(c *gin.Context) {
 	q.Sort = normalizeMovieAlbumItemsSortField(q.Sort)
 	q.Order = normalizeMovieAlbumItemsSortOrder(q.Order)
 
-	result, err := h.movieSvc.BuildMovieAlbumItemsPage(c.Request.Context(), movie.MovieAlbumItemsPageQuery{
+	pageQuery := movie.MovieAlbumItemsPageQuery{
 		AlbumName: strings.TrimSpace(q.AlbumName),
 		Page:      q.Page,
 		PageSize:  q.PageSize,
 		Sort:      q.Sort,
 		Order:     q.Order,
 		Keyword:   strings.TrimSpace(q.Keyword),
-	})
+	}
+	if ts, ok, err := parseOptionalDateStart(q.ReleasingFrom); err != nil {
+		jsonBadRequest(c, "上映开始日期错误", err)
+		return
+	} else if ok {
+		pageQuery.ReleasingDateFrom = ts
+		pageQuery.HasReleasingDateFrom = true
+	}
+	if ts, ok, err := parseOptionalDateEnd(q.ReleasingTo); err != nil {
+		jsonBadRequest(c, "上映结束日期错误", err)
+		return
+	} else if ok {
+		pageQuery.ReleasingDateTo = ts
+		pageQuery.HasReleasingDateTo = true
+	}
+
+	result, err := h.movieSvc.BuildMovieAlbumItemsPage(c.Request.Context(), pageQuery)
 	if err != nil {
 		jsonServerError(c, "电影相册加载失败", err)
 		return
@@ -1001,6 +1025,65 @@ func (h *ListPagesAPI) RemoveMovieAlbumItem(c *gin.Context) {
 		"removed": removed,
 		"message": "移除完成",
 	})
+}
+
+func (h *ListPagesAPI) BatchMoveMovieAlbumItems(c *gin.Context) {
+	h.batchTransferMovieAlbumItems(c, true)
+}
+
+func (h *ListPagesAPI) BatchCopyMovieAlbumItems(c *gin.Context) {
+	h.batchTransferMovieAlbumItems(c, false)
+}
+
+func (h *ListPagesAPI) batchTransferMovieAlbumItems(c *gin.Context, move bool) {
+	albumID, err := parseMovieAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req batchTransferMovieAlbumItemReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+	if len(req.ItemIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少待处理条目"})
+		return
+	}
+
+	var result *movie.TransferMovieAlbumItemsResult
+	if move {
+		result, err = h.movieSvc.MoveMovieAlbumItemsByIDs(c.Request.Context(), albumID, req.TargetAlbumID, req.ItemIDs)
+	} else {
+		result, err = h.movieSvc.CopyMovieAlbumItemsByIDs(c.Request.Context(), albumID, req.TargetAlbumID, req.ItemIDs)
+	}
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumInvalidID), errors.Is(err, movie.ErrMovieAlbumTargetInvalid), errors.Is(err, movie.ErrMovieAlbumTargetSame):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	action := "复制"
+	countKey := "copied_count"
+	if move {
+		action = "移动"
+		countKey = "moved_count"
+	}
+	response := gin.H{
+		"ok":              true,
+		"processed_count": result.ProcessedCount,
+		"skipped_count":   result.SkippedCount,
+		"failed_ids":      result.FailedIDs,
+		"target_album_id": req.TargetAlbumID,
+		"message":         "批量" + action + "完成",
+	}
+	response[countKey] = result.ProcessedCount
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ListPagesAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
@@ -1137,7 +1220,7 @@ func (h *ListPagesAPI) RemoveDownloadedMovieAlbumItems(c *gin.Context) {
 
 func normalizeMovieAlbumItemsSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
-	case "movie_name", "movie_jav_id", "sort_no", "created_on":
+	case "movie_name", "movie_jav_id", "sort_no", "releasing_date", "created_on":
 		return strings.TrimSpace(raw)
 	default:
 		return "created_on"
@@ -1173,10 +1256,11 @@ func buildMovieAlbumItemsSortQuery(c *gin.Context, currentField string, currentO
 	}
 
 	return &movieAlbumItemsSortQuery{
-		ByMovieName: makeHref("movie_name"),
-		ByJavID:     makeHref("movie_jav_id"),
-		BySortNo:    makeHref("sort_no"),
-		ByCreated:   makeHref("created_on"),
+		ByMovieName:     makeHref("movie_name"),
+		ByJavID:         makeHref("movie_jav_id"),
+		BySortNo:        makeHref("sort_no"),
+		ByReleasingDate: makeHref("releasing_date"),
+		ByCreated:       makeHref("created_on"),
 	}
 }
 

@@ -116,14 +116,14 @@ func personDisplayName(person *types.Person) string {
 
 func buildCastDetailFrontendPath(person *types.Person, rawName string) string {
 	if person != nil && person.Id > 0 {
-		return "/cast/" + strconv.FormatInt(person.Id, 10)
+		return "/castdetail/" + strconv.FormatInt(person.Id, 10)
 	}
 	return "/cast"
 }
 
 func buildCastDetailMovieCardTargets(person *types.Person, rawName string) (string, string) {
 	if person != nil && person.Id > 0 {
-		target := "/cast/" + strconv.FormatInt(person.Id, 10)
+		target := "/castdetail/" + strconv.FormatInt(person.Id, 10)
 		return target, target
 	}
 

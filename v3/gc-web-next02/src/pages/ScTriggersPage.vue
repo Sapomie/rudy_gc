@@ -51,58 +51,58 @@
                 {{ previewMsg }}
               </div>
 
-              <div class="row g-3 mb-3">
-                <div class="col-xl-3 col-lg-4 col-md-6">
+              <div class="next02-sc-review-grid mb-3">
+                <div class="next02-sc-review-field is-name">
                   <label class="form-label">事件名</label>
                   <input type="text" class="form-control" id="scPreviewName" :value="previewName" readonly>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-image">
                   <label class="form-label">图片</label>
                   <input type="text" class="form-control" id="scPreviewImage" :value="previewImageText" readonly>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-count">
                   <label class="form-label">影片数</label>
                   <input type="text" class="form-control" id="scPreviewMovieCount" :value="String(previewMovieCount)" readonly>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-selected-count">
                   <label class="form-label">SC 影片数</label>
                   <input type="text" class="form-control" id="scPreviewSelectedMovieCount" :value="String(selectedScMovies.length)" readonly>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-come-movie">
                   <label class="form-label">Come Movie</label>
                   <select class="form-select" id="scPreviewComeMovie" v-model="form.comeMovieJavId">
                     <option value="">可为空</option>
                     <option v-for="movie in selectedScMovies" :key="movie.movieJavId" :value="movie.movieJavId">{{ movie.movieName }}</option>
                   </select>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-movie-cast">
                   <label class="form-label">Movie Cast</label>
                   <select class="form-select" id="scPreviewMovieCast" v-model="form.movieCast">
                     <option value="">可为空</option>
                     <option v-for="cast in comeMovieCasts" :key="cast" :value="cast">{{ cast }}</option>
                   </select>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-kind">
                   <label class="form-label">种类</label>
                   <input type="text" class="form-control" id="scPreviewKind" v-model="form.kind" placeholder="可为空">
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-duration">
                   <label class="form-label">时长(分钟)</label>
                   <input type="number" class="form-control" id="scPreviewDuration" v-model="form.duration" placeholder="分钟">
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-fg">
                   <label class="form-label">FG</label>
                   <input type="text" class="form-control" id="scPreviewFg" v-model="form.fg" placeholder="可为空">
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="next02-sc-review-field is-vessel">
                   <label class="form-label">Vessel</label>
                   <input type="text" class="form-control" id="scPreviewVessel" v-model="form.vessel" placeholder="可为空">
                 </div>
-                <div class="col-12">
+                <div class="next02-sc-review-field is-remarks">
                   <label class="form-label">Remarks</label>
-                  <textarea class="form-control" id="scPreviewRemarks" v-model="form.remarks" rows="3" placeholder="可为空"></textarea>
+                  <textarea class="form-control" id="scPreviewRemarks" v-model="form.remarks" rows="1" placeholder="可为空"></textarea>
                 </div>
-                <div class="col-12">
+                <div class="next02-sc-review-field is-movie-details">
                   <label class="form-label">影片明细</label>
                   <div class="sc-preview-movie-grid" id="scPreviewMovieTableBody">
                     <div v-if="!previewMovies.length" class="text-muted">暂无预览数据</div>

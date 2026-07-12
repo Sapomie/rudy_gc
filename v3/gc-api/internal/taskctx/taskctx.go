@@ -44,10 +44,26 @@ type Log struct {
 type pauseWaiterKey struct{}
 type progressReporterKey struct{}
 type logReporterKey struct{}
+type jobIDKey struct{}
 
 type pauseWaiter func(context.Context) error
 type progressReporter func(Progress)
 type logReporter func(Log)
+
+func WithJobID(ctx context.Context, jobID string) context.Context {
+	if ctx == nil || jobID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, jobIDKey{}, jobID)
+}
+
+func JobID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	jobID, _ := ctx.Value(jobIDKey{}).(string)
+	return jobID
+}
 
 func WithPauseWaiter(ctx context.Context, fn func(context.Context) error) context.Context {
 	if fn == nil {

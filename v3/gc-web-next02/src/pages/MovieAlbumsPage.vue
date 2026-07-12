@@ -1,6 +1,6 @@
 <template>
-  <PageShell class="torrent-albums-page-shell movie-albums-page-shell" title="MovieAlbums" note="" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page-root movie-albums-page-root albums-list-standard movie-albums-list-standard">
+  <PageShell class="torrent-albums-page-shell sc-events-page-shell movie-albums-page-shell" title="MovieAlbums" note="" eyebrow="">
+    <div id="page-root" class="container-fluid torrent-albums-page-root movie-albums-page-root albums-list-standard movie-albums-list-standard next02-sc-pink-theme next02-sc-events-rewrite">
       <div v-if="loading" class="alert albums-list-feedback is-loading">加载中...</div>
       <div v-else-if="error" class="alert albums-list-feedback is-error">{{ error }}</div>
       <div
@@ -23,7 +23,7 @@
           {{ messageText }}
         </div>
 
-        <section class="albums-list-panel">
+        <section class="albums-list-panel next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="albums-list-controls">
             <form ref="filterForm" class="albums-filter-form movie-albums-filter-form" id="movieAlbumsFilterForm" method="get" action="/movie-albums">
               <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
@@ -76,6 +76,14 @@
                   <span>影片编号 / 标题</span>
                 <input class="form-control" type="text" name="keyword" :value="queryValue('Keyword')" placeholder="movie_name 或 movie_jav_id">
                 </label>
+                <div class="albums-filter-field movie-albums-release-range">
+                  <span>上映日期</span>
+                  <div class="movie-albums-release-range-inputs">
+                    <input class="form-control" type="date" name="releasing_from" aria-label="上映开始日期" :value="queryValue('ReleasingFrom')">
+                    <span class="movie-albums-release-range-separator" aria-hidden="true">—</span>
+                    <input class="form-control" type="date" name="releasing_to" aria-label="上映结束日期" :value="queryValue('ReleasingTo')">
+                  </div>
+                </div>
                 <div class="albums-filter-actions">
                   <button class="btn albums-apply-button" type="submit">筛选</button>
                   <a class="btn albums-clear-button" href="/movie-albums">清空</a>
@@ -96,7 +104,21 @@
 
           <div class="albums-batch-toolbar">
             <div class="albums-selected-count">已选 <span id="movieAlbumBatchSelectedCount">{{ selectedCount }}</span> 项</div>
-            <div v-if="canExecuteRemove || canRemoveDownloaded" class="albums-batch-actions">
+            <div class="albums-batch-actions">
+              <button
+                type="button"
+                class="btn albums-batch-button"
+                id="btnBatchCopyMovieAlbumItems"
+                :disabled="selectedCount === 0 || selectedAlbumID <= 0 || !transferTargetOptions.length"
+                @click="openTransferModal('copy')"
+              >批量复制</button>
+              <button
+                type="button"
+                class="btn albums-batch-button"
+                id="btnBatchMoveMovieAlbumItems"
+                :disabled="selectedCount === 0 || selectedAlbumID <= 0 || !transferTargetOptions.length"
+                @click="openTransferModal('move')"
+              >批量移动</button>
               <button
                 v-if="canExecuteRemove"
                 type="button"
@@ -116,8 +138,8 @@
             </div>
           </div>
 
-          <div class="albums-table-wrap">
-              <table class="table table-hover align-middle mb-0 movie-album-table">
+          <div class="table-responsive albums-table-wrap">
+              <table class="table table-hover align-middle mb-0 sc-events-table movie-album-table">
                 <colgroup>
                   <col class="movie-album-col-select">
                   <col class="movie-album-col-movie">
@@ -138,9 +160,9 @@
                         @change="toggleAll(($event.target as HTMLInputElement).checked)"
                       >
                     </th>
-                    <th><SortLink :link="sortLink('ByMovieName')" label="影片" /></th>
-                    <th>上映日期</th>
-                    <th><SortLink :link="sortLink('ByCreated')" label="加入时间" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByMovieName')" label="影片" /></th>
+                    <th class="sc-sortable-head sc-number"><SortLink :link="sortLink('ByReleasingDate')" label="上映日期" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByCreated')" label="加入时间" /></th>
                     <th class="text-nowrap">操作</th>
                   </tr>
                 </thead>
@@ -159,11 +181,11 @@
                         @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
                       >
                     </td>
-                    <td class="text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
+                    <td class="sc-content-cell text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
                       <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
                     </td>
-                    <td class="text-nowrap">{{ formatUnixDate(value(row, "ReleasingDate")) }}</td>
-                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
+                    <td class="sc-number text-nowrap">{{ formatUnixDate(value(row, "ReleasingDate")) }}</td>
+                    <td class="sc-number text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
                     <td class="text-nowrap">
                       <button
                         type="button"
@@ -184,11 +206,14 @@
           :create-name="createName"
           :downloaded-items="downloadedPreviewItems"
           :loading-downloaded="loadingDownloaded"
+          :transfer-mode="transferMode"
+          :transfer-target-options="transferTargetOptions"
           @close="closeModal"
           @update-create-name="createName = $event"
           @confirm-create="createMovieAlbum"
           @confirm-execute="executeRemove"
           @confirm-remove-downloaded="removeDownloadedItems"
+          @confirm-transfer="transferMovieAlbumItems"
         />
       </div>
     </div>
@@ -211,7 +236,8 @@ const loading = ref(false);
 const error = ref("");
 const messageText = ref("");
 const messageOk = ref(true);
-const activeModal = ref<"" | "create" | "execute" | "downloaded">("");
+const activeModal = ref<"" | "create" | "execute" | "downloaded" | "transfer">("");
+const transferMode = ref<"move" | "copy">("copy");
 const createName = ref("");
 const downloadedPreviewItems = ref<AnyRecord[]>([]);
 const loadingDownloaded = ref(false);
@@ -259,6 +285,9 @@ const albumSelectOptions = computed(() => {
   }
   return options;
 });
+const transferTargetOptions = computed(() => albums.value
+  .filter((album) => Number(value(album, "ID")) > 0 && Number(value(album, "ID")) !== selectedAlbumID.value)
+  .map((album) => ({ value: value(album, "ID"), label: value(album, "Name") || value(album, "ID") })));
 
 function queryValue(key: string): string {
   return text(query.value, key);
@@ -277,7 +306,7 @@ function sortLink(key: string): AnyRecord {
 }
 
 function movieHref(row: AnyRecord): string {
-  return `/movie/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
+  return `/moviedetail/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
 }
 
 function formatUnixMinute(input: unknown): string {
@@ -355,6 +384,56 @@ function openExecuteModal() {
     return;
   }
   activeModal.value = "execute";
+}
+
+function openTransferModal(mode: "move" | "copy") {
+  if (!selectedIDs.value.size) {
+    showMessage("请先选择电影相册条目", false);
+    return;
+  }
+  if (!transferTargetOptions.value.length) {
+    showMessage("没有可用的目标电影相册", false);
+    return;
+  }
+  transferMode.value = mode;
+  activeModal.value = "transfer";
+}
+
+async function transferMovieAlbumItems(targetAlbumID: string) {
+  const targetID = Number(targetAlbumID || 0);
+  if (targetID <= 0) {
+    showMessage("请选择目标电影相册", false);
+    return;
+  }
+  const ids = [...selectedIDs.value];
+  if (!ids.length) {
+    showMessage("请先选择电影相册条目", false);
+    return;
+  }
+
+  const mode = transferMode.value;
+  closeModal();
+  try {
+    const data = asRecord(await sendJSON(`/api/movie-albums/${selectedAlbumID.value}/items/batch-${mode}`, "POST", {
+      item_ids: ids,
+      target_album_id: targetID
+    }));
+    const failedIDs = new Set(asArray<number>(pick(data, "failed_ids", "FailedIDs")).map(Number).filter((id) => id > 0));
+    const processedCount = Number(pick(data, "processed_count") || 0);
+    const skippedCount = Number(pick(data, "skipped_count") || 0);
+    if (mode === "move") {
+      await load();
+    } else {
+      selectedIDs.value = new Set();
+    }
+    const action = mode === "move" ? "移动" : "复制";
+    const details = [`已${action} ${processedCount} 条`];
+    if (skippedCount > 0) details.push(`跳过重复 ${skippedCount} 条`);
+    if (failedIDs.size > 0) details.push(`失败 ${failedIDs.size} 条`);
+    showMessage(details.join("，"), failedIDs.size === 0);
+  } catch (err) {
+    showMessage(err instanceof Error ? err.message : `批量${mode === "move" ? "移动" : "复制"}失败`, false);
+  }
 }
 
 async function createMovieAlbum() {
@@ -464,7 +543,7 @@ const SortLink = defineComponent({
       const active = Boolean(link.Active);
       const desc = Boolean(link.Desc);
       return h("a", {
-        class: ["album-sort-link", active ? "active" : ""],
+        class: ["album-sort-link", "sc-sort-link", active ? "active" : ""],
         href: normalizeHref(text(link, "Href") || "#")
       }, `${props.label}${active ? (desc ? " ↓" : " ↑") : ""}`);
     };
@@ -505,9 +584,11 @@ const MovieAlbumModals = defineComponent({
     selectedCount: { type: Number, required: true },
     createName: { type: String, required: true },
     downloadedItems: { type: Array as PropType<AnyRecord[]>, required: true },
-    loadingDownloaded: { type: Boolean, required: true }
+    loadingDownloaded: { type: Boolean, required: true },
+    transferMode: { type: String as PropType<"move" | "copy">, required: true },
+    transferTargetOptions: { type: Array as PropType<Array<{ value: string; label: string }>>, required: true }
   },
-  emits: ["close", "updateCreateName", "confirmCreate", "confirmExecute", "confirmRemoveDownloaded"],
+  emits: ["close", "updateCreateName", "confirmCreate", "confirmExecute", "confirmRemoveDownloaded", "confirmTransfer"],
   setup(props, { emit }) {
     const modalClass = (name: string) => ["modal", "fade", props.activeModal === name ? "show d-block" : ""];
     const ariaHidden = (name: string) => props.activeModal === name ? "false" : "true";
@@ -570,6 +651,39 @@ const MovieAlbumModals = defineComponent({
         h("div", { class: "modal-footer" }, [
           h("button", { type: "button", class: "btn btn-light", onClick: () => emit("close") }, "取消"),
           h("button", { type: "button", class: "btn btn-danger", id: "movieAlbumExecuteRemoveConfirmBtn", onClick: () => emit("confirmExecute") }, "确认删除")
+        ])
+      ])])]),
+      h("div", {
+        class: modalClass("transfer"),
+        id: "movieAlbumTransferModal",
+        tabindex: "-1",
+        "aria-hidden": ariaHidden("transfer")
+      }, [h("div", { class: "modal-dialog modal-dialog-centered" }, [h("div", { class: "modal-content" }, [
+        h("div", { class: "modal-header" }, [
+          h("h5", { class: "modal-title" }, props.transferMode === "move" ? "批量移动电影相册条目" : "批量复制电影相册条目"),
+          h("button", { type: "button", class: "btn-close", "aria-label": "Close", onClick: () => emit("close") })
+        ]),
+        h("div", { class: "modal-body" }, [
+          h("label", { class: "form-label mb-1", for: "movieAlbumTransferTarget" }, "目标电影相册"),
+          h("select", { class: "form-select", id: "movieAlbumTransferTarget" }, [
+            h("option", { value: "" }, "请选择目标电影相册"),
+            ...props.transferTargetOptions.map((option) => h("option", { value: option.value }, option.label))
+          ]),
+          h("p", { class: "small text-muted mt-2 mb-0" }, props.transferMode === "move"
+            ? `将已选中的 ${props.selectedCount} 条记录移动到目标相册，当前相册将移除这些条目。`
+            : `将已选中的 ${props.selectedCount} 条记录复制到目标相册，当前相册继续保留这些条目。`)
+        ]),
+        h("div", { class: "modal-footer" }, [
+          h("button", { type: "button", class: "btn btn-light", onClick: () => emit("close") }, "取消"),
+          h("button", {
+            type: "button",
+            class: "btn btn-primary",
+            id: "movieAlbumTransferConfirmBtn",
+            onClick: () => {
+              const target = document.getElementById("movieAlbumTransferTarget") as HTMLSelectElement | null;
+              emit("confirmTransfer", target?.value || "");
+            }
+          }, props.transferMode === "move" ? "确认移动" : "确认复制")
         ])
       ])])]),
       h("div", {

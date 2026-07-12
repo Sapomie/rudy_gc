@@ -92,7 +92,7 @@
                 <BucketRows v-if="bucketsD.length" title="日期" :items="bucketsD" grid-class="bucket-grid-month" />
               </template>
               <div v-else class="movie-empty next02-movieagg-empty">
-                当前范围暂无可展示的时间桶。<a href="/triggers/agg" class="alert-link" target="_blank" rel="noopener noreferrer">如为新建统计表，请先到聚合回填页执行 WMedia 时间聚合回填。</a>
+                当前范围暂无可展示的时间桶。<a href="/aggbackfill" class="alert-link" target="_blank" rel="noopener noreferrer">如为新建统计表，请先到聚合回填页执行 WMedia 时间聚合回填。</a>
               </div>
             </section>
 
@@ -241,8 +241,8 @@ async function load() {
 const title = computed(() => text(payload.value, "Title") || String(route.meta.title || "MovieAgg"));
 const aggModeLabel = computed(() => text(payload.value, "AggModeLabel"));
 const note = computed(() => [aggModeLabel.value, text(payload.value, "RangeStart"), text(payload.value, "RangeEnd")].filter(Boolean).join(" · ") || "按时间桶、Top 维度和媒体状态查看聚合结果。");
-const isReleaseView = computed(() => text(payload.value, "ViewType") === "movie-agg-release" || route.path === "/movie-agg-all/release");
-const isWMediaBirth = computed(() => text(payload.value, "ViewType") === "w-media-agg-birth" || route.path === "/w-media-agg/birth");
+const isReleaseView = computed(() => text(payload.value, "ViewType") === "movie-agg-release" || route.path === "/aggrelease");
+const isWMediaBirth = computed(() => text(payload.value, "ViewType") === "w-media-agg-birth" || route.path === "/aggbirth");
 const movieAggVariantClass = computed(() => isReleaseView.value ? "is-release-view" : (isWMediaBirth.value ? "is-wmedia-birth-view" : "is-generic-view"));
 const breadcrumbs = computed(() => asArray<AnyRecord>(pick(payload.value, "Breadcrumbs")));
 const modeSwitches = computed(() => asArray<AnyRecord>(pick(payload.value, "ModeSwitches")));
@@ -403,7 +403,7 @@ function topHref(type: string, item: AnyRecord): string {
   const end = text(payload.value, "RangeEnd");
   if (start) params.set(isWMediaBirth.value ? "mbs" : "rs", start);
   if (end) params.set(isWMediaBirth.value ? "mbe" : "re", end);
-  return `/cards?${params.toString()}`;
+  return `/listcard?${params.toString()}`;
 }
 
 const BreadcrumbLine = defineComponent({

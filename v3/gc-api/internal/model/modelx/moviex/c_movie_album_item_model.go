@@ -20,9 +20,17 @@ type (
 		ListByAlbumIdMovieJavId(ctx context.Context, albumId int64, movieJavId string) ([]*CMovieAlbumItem, error)
 		ListByMovieJavId(ctx context.Context, movieJavId string) ([]*CMovieAlbumItem, error)
 		DeleteByAlbumIdMovieJavId(ctx context.Context, albumId int64, movieJavId string) (bool, error)
-		CountPageRows(ctx context.Context, albumId int64, keyword string) (int64, error)
-		ListPageRows(ctx context.Context, albumId int64, offset int64, limit int64, orderBy string, keyword string) ([]*CMovieAlbumItem, error)
+		CountPageRows(ctx context.Context, albumId int64, filter CMovieAlbumItemPageFilter) (int64, error)
+		ListPageRows(ctx context.Context, albumId int64, offset int64, limit int64, orderBy string, filter CMovieAlbumItemPageFilter) ([]*CMovieAlbumItem, error)
 		CountByAlbumNameMovieJavId(ctx context.Context, albumName string, movieJavId string) (int64, error)
+	}
+
+	CMovieAlbumItemPageFilter struct {
+		Keyword              string
+		ReleasingDateFrom    int64
+		HasReleasingDateFrom bool
+		ReleasingDateTo      int64
+		HasReleasingDateTo   bool
 	}
 
 	customCMovieAlbumItemModel struct {
@@ -118,9 +126,9 @@ func (m *customCMovieAlbumItemModel) DeleteByAlbumIdMovieJavId(ctx context.Conte
 	return true, nil
 }
 
-func (m *customCMovieAlbumItemModel) CountPageRows(ctx context.Context, albumId int64, keyword string) (int64, error) {
+func (m *customCMovieAlbumItemModel) CountPageRows(ctx context.Context, albumId int64, filter CMovieAlbumItemPageFilter) (int64, error) {
 	queryBuilder := squirrel.Select("COUNT(1)").From(strings.Trim(m.table, "`")).Where(squirrel.Eq{"album_id": albumId})
-	queryBuilder = applyCMovieAlbumKeywordFilter(queryBuilder, keyword)
+	queryBuilder = applyCMovieAlbumPageFilter(queryBuilder, filter)
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		return 0, err
@@ -135,9 +143,9 @@ func (m *customCMovieAlbumItemModel) CountPageRows(ctx context.Context, albumId 
 	return total, nil
 }
 
-func (m *customCMovieAlbumItemModel) ListPageRows(ctx context.Context, albumId int64, offset int64, limit int64, orderBy string, keyword string) ([]*CMovieAlbumItem, error) {
+func (m *customCMovieAlbumItemModel) ListPageRows(ctx context.Context, albumId int64, offset int64, limit int64, orderBy string, filter CMovieAlbumItemPageFilter) ([]*CMovieAlbumItem, error) {
 	queryBuilder := squirrel.Select(cMovieAlbumItemRows).From(strings.Trim(m.table, "`")).Where(squirrel.Eq{"album_id": albumId})
-	queryBuilder = applyCMovieAlbumKeywordFilter(queryBuilder, keyword)
+	queryBuilder = applyCMovieAlbumPageFilter(queryBuilder, filter)
 	if strings.TrimSpace(orderBy) != "" {
 		queryBuilder = queryBuilder.OrderBy(orderBy)
 	}
@@ -194,4 +202,15 @@ func applyCMovieAlbumKeywordFilter(queryBuilder squirrel.SelectBuilder, keyword 
 		squirrel.Like{"movie_name": like},
 		squirrel.Like{"movie_jav_id": like},
 	})
+}
+
+func applyCMovieAlbumPageFilter(queryBuilder squirrel.SelectBuilder, filter CMovieAlbumItemPageFilter) squirrel.SelectBuilder {
+	queryBuilder = applyCMovieAlbumKeywordFilter(queryBuilder, filter.Keyword)
+	if filter.HasReleasingDateFrom {
+		queryBuilder = queryBuilder.Where(squirrel.GtOrEq{"releasing_date": filter.ReleasingDateFrom})
+	}
+	if filter.HasReleasingDateTo {
+		queryBuilder = queryBuilder.Where(squirrel.LtOrEq{"releasing_date": filter.ReleasingDateTo})
+	}
+	return queryBuilder
 }

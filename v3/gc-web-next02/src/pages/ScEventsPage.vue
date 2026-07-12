@@ -90,11 +90,11 @@
                   <thead>
                     <tr>
                       <th class="sc-sortable-head"><SortLink sort-key="ByTime" label="时间" /></th>
-                      <th class="sc-number">总片数</th>
+                      <th class="sc-number sc-sortable-head"><SortLink sort-key="ByTotalMovieCnt" label="总片数" /></th>
                       <th class="sc-number sc-sortable-head"><SortLink sort-key="ByMovieCnt" label="有 SC" /></th>
                       <th class="sc-sortable-head"><SortLink sort-key="ByComeMovie" label="Come 片" /></th>
                       <th class="sc-number sc-sortable-head"><SortLink sort-key="ByCooldown" label="Cooldown" /></th>
-                      <th class="sc-number sc-sortable-head"><SortLink sort-key="ByDuration" label="时长(分钟)" /></th>
+                      <th class="sc-number sc-sortable-head"><SortLink sort-key="ByDuration" label="时长" /></th>
                       <th class="sc-sortable-head"><SortLink sort-key="ByKind" label="种类" /></th>
                       <th class="sc-sortable-head"><SortLink sort-key="ByMovieCast" label="演员" /></th>
                       <th class="sc-sortable-head"><SortLink sort-key="ByVessel" label="Vessel" /></th>
@@ -271,7 +271,7 @@
                 <MetricCard label="Cooldown" :value="num(event, 'Cooldown') > 0 ? humanDays(pick(event, 'Cooldown')) : '-'" />
                 <MetricCard label="Come Movie" :value="text(event, 'ComeMovieName') || '-'" :href="movieHref(text(event, 'ComeMovieName'))" />
                 <MetricCard label="种类" :value="text(event, 'Kind') || '-'" />
-                <MetricCard label="Lead Cast" :value="text(event, 'MovieCast') || '-'" :href="text(event, 'MovieCast') ? `/cards?cn=${encodeURIComponent(text(event, 'MovieCast'))}` : ''" />
+                <MetricCard label="Lead Cast" :value="text(event, 'MovieCast') || '-'" :href="text(event, 'MovieCast') ? `/listcard?cn=${encodeURIComponent(text(event, 'MovieCast'))}` : ''" />
                 <MetricCard label="时长(分钟)" :value="num(event, 'DurationMinutes') > 0 ? `${text(event, 'DurationMinutes')} 分钟` : '-'" />
                 <MetricCard label="FG" :value="text(event, 'Fg') || '-'" />
                 <MetricCard label="Vessel" :value="text(event, 'Vessel') || '-'" />
@@ -443,7 +443,7 @@ function eventDetailHref(name: string): string {
 }
 
 function movieHref(name: string): string {
-  return name ? `/movie/${encodeURI(name)}` : "";
+  return name ? `/moviedetail/${encodeURI(name)}` : "";
 }
 
 function sortItem(key: string): AnyRecord {
@@ -509,6 +509,13 @@ function eventRunningMonthClass(input: unknown): string {
   return `sc-running-month-${(monthNumber % 3) + 1}`;
 }
 
+function eventRunningTableMonthClass(input: unknown): string {
+  const month = eventMonthKey(input);
+  if (!month) return "sc-running-month-neutral";
+  const monthNumber = Number(month.slice(5, 7));
+  return monthNumber % 2 === 0 ? "sc-running-month-light" : "sc-running-month-deep";
+}
+
 function isEventRunningMonthStart(item: AnyRecord, index: number): boolean {
   if (index <= 0) return false;
   const currentMonth = eventMonthKey(pick(eventOf(item), "ScTime"));
@@ -519,7 +526,7 @@ function isEventRunningMonthStart(item: AnyRecord, index: number): boolean {
 function eventRunningRowClass(item: AnyRecord, index: number) {
   return [
     "next02-sc-event-row",
-    eventRunningMonthClass(pick(eventOf(item), "ScTime")),
+    eventRunningTableMonthClass(pick(eventOf(item), "ScTime")),
     { "sc-running-month-start": isEventRunningMonthStart(item, index) },
   ];
 }
@@ -720,11 +727,11 @@ const ScMovieCard = defineComponent({
         ])])
       ]);
     };
-    const genreLinks = () => asArray<string>(pick(movie(), "genre", "Genre")).map((genre) => h("a", { href: `/cards?gn=${encodeURIComponent(genre)}`, class: "badge badge-genre movie-card-tag-genre me-1 mb-1", target: "_blank", rel: "noopener noreferrer" }, String(genre)));
+    const genreLinks = () => asArray<string>(pick(movie(), "genre", "Genre")).map((genre) => h("a", { href: `/listcard?gn=${encodeURIComponent(genre)}`, class: "badge badge-genre movie-card-tag-genre me-1 mb-1", target: "_blank", rel: "noopener noreferrer" }, String(genre)));
     const castLinks = () => asArray<AnyRecord>(pick(movie(), "cast", "Cast")).map((cast) => {
       const label = text(cast, "NameShow", "DisplayName", "Name", "name");
       const personID = text(cast, "PersonId", "person_id", "Id", "id");
-      return h("a", { href: personID && personID !== "0" ? `/cast/${encodeURIComponent(personID)}` : `/cards?cn=${encodeURIComponent(label)}`, class: "person-tag movie-card-tag-person movie-card-tag-cast mr-2", title: label, target: "_blank", rel: "noopener noreferrer" }, label);
+      return h("a", { href: personID && personID !== "0" ? `/castdetail/${encodeURIComponent(personID)}` : `/listcard?cn=${encodeURIComponent(label)}`, class: "person-tag movie-card-tag-person movie-card-tag-cast mr-2", title: label, target: "_blank", rel: "noopener noreferrer" }, label);
     });
     return () => h("article", { class: "card shadow-sm h-100 card-lift movie-card-v2 next02-pink-movie-card" }, [
       h("a", { href: movieHref(movieName()), class: "d-block poster-link", "aria-label": `查看 ${movieName()} 详情`, target: "_blank", rel: "noopener noreferrer" }, [
@@ -744,7 +751,7 @@ const ScMovieCard = defineComponent({
         statusControls(),
         h("li", { class: "list-group-item movie-card-title-block" }, [
           h("h6", { class: "mb-1 text-truncate", title: movieTitle() }, [
-            h("a", { href: `/cards?pn=${encodeURIComponent(text(movie(), "prefix", "Prefix"))}`, class: "stretched-link text-reset text-decoration-none movie-name", target: "_blank", rel: "noopener noreferrer" }, movieName() || "-"),
+            h("a", { href: `/listcard?pn=${encodeURIComponent(text(movie(), "prefix", "Prefix"))}`, class: "stretched-link text-reset text-decoration-none movie-name", target: "_blank", rel: "noopener noreferrer" }, movieName() || "-"),
             text(movie(), "viewers_number_watched", "ViewersNumberWatched") ? h("small", { class: "text-muted ml-2" }, `(${text(movie(), "viewers_number_watched", "ViewersNumberWatched")})`) : null
           ]),
           movieTitle() ? h("p", { class: "mb-0 text-muted line-clamp-2 movie-subtitle", title: movieTitle() }, movieTitle()) : null
@@ -753,7 +760,7 @@ const ScMovieCard = defineComponent({
         h("li", { class: "list-group-item text-muted genre-list movie-card-tag-block" }, genreLinks()),
         h("li", { class: "list-group-item cast-list movie-card-tag-block" }, [
           ...castLinks(),
-          text(movie(), "director", "Director") ? h("a", { href: `/cards?dn=${encodeURIComponent(text(movie(), "director", "Director"))}`, class: "person-tag movie-card-tag-person movie-card-tag-director ml-2", title: text(movie(), "director", "Director"), target: "_blank", rel: "noopener noreferrer" }, text(movie(), "director", "Director")) : null
+          text(movie(), "director", "Director") ? h("a", { href: `/listcard?dn=${encodeURIComponent(text(movie(), "director", "Director"))}`, class: "person-tag movie-card-tag-person movie-card-tag-director ml-2", title: text(movie(), "director", "Director"), target: "_blank", rel: "noopener noreferrer" }, text(movie(), "director", "Director")) : null
         ]),
         h("li", { class: "list-group-item d-flex align-items-center small card-link-row movie-card-footer" }, [
           text(movie(), "bus_url", "BusUrl") ? h("a", { href: text(movie(), "bus_url", "BusUrl"), class: "movie-card-tag-link me-2", target: "_blank", rel: "noopener noreferrer" }, "Bus") : null,

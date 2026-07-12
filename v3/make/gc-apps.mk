@@ -11,7 +11,7 @@ GC_WEB_NEXT02_DIR ?= $(ROOT_DIR)/gc-web-next02
 GC_WEB_NEXT02_PORT ?= 5022
 
 .PHONY: apps-help api-help web-help web-next-help \
-	run-api stop-api test-api build-api \
+	run-api stop-api test-api build-api migrate-api \
 	run-web stop-web check-web \
 	run-web-next02 stop-web-next02 check-web-next02 \
 	run-next stop-next check-next \
@@ -23,6 +23,7 @@ apps-help:
 	@echo "  make stop-api         Stop v3 API port"
 	@echo "  make test-api         Run Go tests"
 	@echo "  make build-api        Build Go packages"
+	@echo "  make migrate-api      Run database migrations"
 	@echo "  make run-web          Run legacy gc-web on $(GC_WEB_PORT)"
 	@echo "  make stop-web         Stop legacy gc-web port"
 	@echo "  make check-web        Check legacy gc-web"
@@ -70,6 +71,9 @@ test-api:
 
 build-api:
 	@cd "$(GC_API_DIR)" && go build ./...
+
+migrate-api:
+	@cd "$(GC_API_DIR)" && go run ./cmd/migrate -f "$(GC_API_CONFIG_FILE)"
 
 run-web: stop-web
 	@echo "Starting legacy gc-web from $(GC_WEB_DIR)"

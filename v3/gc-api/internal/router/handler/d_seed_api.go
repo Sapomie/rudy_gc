@@ -197,7 +197,7 @@ func buildDSeedCardsHref(name string, nameType int64) string {
 	default:
 		return ""
 	}
-	return "/cards?" + q.Encode()
+	return "/listcard?" + q.Encode()
 }
 
 func buildMovieDetailHrefByName(movieName string) string {
@@ -205,7 +205,7 @@ func buildMovieDetailHrefByName(movieName string) string {
 	if name == "" {
 		return ""
 	}
-	return "/movie/" + url.PathEscape(name)
+	return "/moviedetail/" + url.PathEscape(name)
 }
 
 func buildDSeedListFilter(q dSeedListQuery) (spiderx.DSeedListFilter, error) {

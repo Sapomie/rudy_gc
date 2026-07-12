@@ -25,6 +25,6 @@ type SehuatangFetchRun struct {
 	UpdatedOn  int64  `gorm:"column:updated_on;not null;default:0"`
 }
 
-const sehuatangFetchRunTableName = "sh_sehuatang_fetch_run"
+const sehuatangFetchRunTableName = "sh_fetch_run"
 
 func (SehuatangFetchRun) TableName() string { return sehuatangFetchRunTableName }

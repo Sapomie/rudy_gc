@@ -15,8 +15,13 @@ type (
 		Insert(ctx context.Context, data *ShSehuatangThread) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*ShSehuatangThread, error)
 		FindOneByThreadTID(ctx context.Context, threadTID string) (*ShSehuatangThread, error)
+		FindExistingThreadTIDs(ctx context.Context, threadTIDs []string) (map[string]struct{}, error)
+		FindThreadAggTargetsByTIDs(ctx context.Context, threadTIDs []string) (map[string]ShThreadAggTarget, error)
+		ListDistinctPostDayForumTargets(ctx context.Context) ([]ShThreadAggTarget, error)
+		CalcBucket(ctx context.Context, startUnix, endUnix int64, sourceForumID string) (*ShThreadBucketCalc, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string, filter ShSehuatangThreadListFilter) ([]*ShSehuatangThread, error)
 		CountAll(ctx context.Context, filter ShSehuatangThreadListFilter) (int64, error)
+		Aggregate(ctx context.Context, filter ShSehuatangThreadListFilter) (*ShSehuatangThreadAggregate, error)
 		UpdateLastSeenByThreadTID(ctx context.Context, threadTID string, now int64) (*ShSehuatangThread, error)
 		UpdateDetailFailureByThreadTID(ctx context.Context, threadTID string, errText string, now int64) (*ShSehuatangThread, error)
 		UpsertListBasic(ctx context.Context, data *ShSehuatangThread) (*ShSehuatangThread, error)
@@ -47,6 +52,7 @@ type (
 		MagnetText      string `db:"magnet_text"`
 		InfoHashText    string `db:"info_hash_text"`
 		ContentHash     string `db:"content_hash"`
+		FirstSeenTime   int64  `db:"first_seen_time"`
 		LastSeenTime    int64  `db:"last_seen_time"`
 		CreatedOn       int64  `db:"created_on"`
 		UpdatedOn       int64  `db:"updated_on"`
@@ -61,8 +67,6 @@ type (
 		SourceForumIDs      []string
 		DetailStatus        string
 		DetailStatuses      []string
-		HasMagnet           bool
-		HasMagnetSet        bool
 		PostTimeFrom        int64
 		HasPostTimeFrom     bool
 		PostTimeTo          int64
@@ -72,14 +76,39 @@ type (
 		LastSeenTimeTo      int64
 		HasLastSeenTimeTo   bool
 	}
+
+	ShSehuatangThreadAggregate struct {
+		Total              int64 `db:"total"`
+		PendingDetailCount int64 `db:"pending_detail_count"`
+		FetchedDetailCount int64 `db:"fetched_detail_count"`
+		FailedDetailCount  int64 `db:"failed_detail_count"`
+		Forum36Count       int64 `db:"forum_36_count"`
+		Forum103Count      int64 `db:"forum_103_count"`
+	}
+
+	ShThreadAggTarget struct {
+		ThreadTID     string `db:"thread_tid"`
+		PostTime      int64  `db:"post_time"`
+		SourceForumID string `db:"source_forum_id"`
+	}
+
+	ShThreadBucketCalc struct {
+		CountAll          int64 `db:"count_all"`
+		CountPending      int64 `db:"count_pending"`
+		CountFetched      int64 `db:"count_fetched"`
+		CountFailed       int64 `db:"count_failed"`
+		CountWithMagnet   int64 `db:"count_with_magnet"`
+		CountWithInfoHash int64 `db:"count_with_info_hash"`
+		LatestPostTime    int64 `db:"latest_post_time"`
+	}
 )
 
-var shSehuatangThreadRows = "`id`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,COALESCE(`detail_error`, '') AS `detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`last_seen_time`,`created_on`,`updated_on`"
+var shSehuatangThreadRows = "`id`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,COALESCE(`detail_error`, '') AS `detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`"
 
 func NewShSehuatangThreadModel(conn sqlx.SqlConn) ShSehuatangThreadModel {
 	return &defaultShSehuatangThreadModel{
 		conn:  conn,
-		table: "`sh_sehuatang_thread`",
+		table: "`sh_thread`",
 	}
 }
 
@@ -88,8 +117,8 @@ func (m *defaultShSehuatangThreadModel) TableName() string {
 }
 
 func (m *defaultShSehuatangThreadModel) Insert(ctx context.Context, data *ShSehuatangThread) (sql.Result, error) {
-	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	return m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
+	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	return m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
 }
 
 func (m *defaultShSehuatangThreadModel) FindOne(ctx context.Context, id int64) (*ShSehuatangThread, error) {
@@ -118,6 +147,142 @@ func (m *defaultShSehuatangThreadModel) FindOneByThreadTID(ctx context.Context, 
 		return nil, err
 	}
 	return &row, nil
+}
+
+func (m *defaultShSehuatangThreadModel) FindExistingThreadTIDs(ctx context.Context, threadTIDs []string) (map[string]struct{}, error) {
+	values := make([]string, 0, len(threadTIDs))
+	seen := make(map[string]struct{}, len(threadTIDs))
+	for _, threadTID := range threadTIDs {
+		threadTID = strings.TrimSpace(threadTID)
+		if threadTID == "" {
+			continue
+		}
+		if _, ok := seen[threadTID]; ok {
+			continue
+		}
+		seen[threadTID] = struct{}{}
+		values = append(values, threadTID)
+	}
+	if len(values) == 0 {
+		return map[string]struct{}{}, nil
+	}
+
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(values)), ",")
+	args := make([]any, len(values))
+	for index, value := range values {
+		args[index] = value
+	}
+	var rows []struct {
+		ThreadTID string `db:"thread_tid"`
+	}
+	query := "select `thread_tid` from " + m.table + " where `thread_tid` in (" + placeholders + ")"
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return map[string]struct{}{}, nil
+		}
+		return nil, err
+	}
+	out := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		out[row.ThreadTID] = struct{}{}
+	}
+	return out, nil
+}
+
+func (m *defaultShSehuatangThreadModel) FindThreadAggTargetsByTIDs(ctx context.Context, threadTIDs []string) (map[string]ShThreadAggTarget, error) {
+	values := normalizeShThreadTIDs(threadTIDs)
+	if len(values) == 0 {
+		return map[string]ShThreadAggTarget{}, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(values)), ",")
+	args := make([]any, len(values))
+	for index, value := range values {
+		args[index] = value
+	}
+	var rows []ShThreadAggTarget
+	query := "select `thread_tid`,`post_time`,`source_forum_id` from " + m.table + " where `thread_tid` in (" + placeholders + ")"
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return map[string]ShThreadAggTarget{}, nil
+		}
+		return nil, err
+	}
+	out := make(map[string]ShThreadAggTarget, len(rows))
+	for _, row := range rows {
+		out[row.ThreadTID] = row
+	}
+	return out, nil
+}
+
+func (m *defaultShSehuatangThreadModel) ListDistinctPostDayForumTargets(ctx context.Context) ([]ShThreadAggTarget, error) {
+	query := `
+select
+	cast(unix_timestamp(date(from_unixtime(post_time))) as signed) as post_time,
+	source_forum_id
+from sh_thread
+where post_time > 0
+group by cast(unix_timestamp(date(from_unixtime(post_time))) as signed), source_forum_id
+order by post_time asc, source_forum_id asc`
+	type row struct {
+		PostTime      int64  `db:"post_time"`
+		SourceForumID string `db:"source_forum_id"`
+	}
+	var rows []row
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []ShThreadAggTarget{}, nil
+		}
+		return nil, err
+	}
+	out := make([]ShThreadAggTarget, 0, len(rows))
+	for _, item := range rows {
+		out = append(out, ShThreadAggTarget{PostTime: item.PostTime, SourceForumID: item.SourceForumID})
+	}
+	return out, nil
+}
+
+func (m *defaultShSehuatangThreadModel) CalcBucket(ctx context.Context, startUnix, endUnix int64, sourceForumID string) (*ShThreadBucketCalc, error) {
+	query := `
+select
+	count(*) as count_all,
+	coalesce(sum(case when detail_status = 'pending' then 1 else 0 end), 0) as count_pending,
+	coalesce(sum(case when detail_status = 'fetched' then 1 else 0 end), 0) as count_fetched,
+	coalesce(sum(case when detail_status = 'failed' then 1 else 0 end), 0) as count_failed,
+	coalesce(sum(case when trim(coalesce(magnet_text, '')) <> '' then 1 else 0 end), 0) as count_with_magnet,
+	coalesce(sum(case when trim(coalesce(info_hash_text, '')) <> '' then 1 else 0 end), 0) as count_with_info_hash,
+	coalesce(max(post_time), 0) as latest_post_time
+from sh_thread
+where post_time >= ? and post_time <= ?`
+	args := []any{startUnix, endUnix}
+	if sourceForumID = strings.TrimSpace(sourceForumID); sourceForumID != "" {
+		query += " and source_forum_id = ?"
+		args = append(args, sourceForumID)
+	}
+	var out ShThreadBucketCalc
+	if err := m.conn.QueryRowCtx(ctx, &out, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return &ShThreadBucketCalc{}, nil
+		}
+		return nil, err
+	}
+	return &out, nil
+}
+
+func normalizeShThreadTIDs(threadTIDs []string) []string {
+	values := make([]string, 0, len(threadTIDs))
+	seen := make(map[string]struct{}, len(threadTIDs))
+	for _, threadTID := range threadTIDs {
+		threadTID = strings.TrimSpace(threadTID)
+		if threadTID == "" {
+			continue
+		}
+		if _, ok := seen[threadTID]; ok {
+			continue
+		}
+		seen[threadTID] = struct{}{}
+		values = append(values, threadTID)
+	}
+	return values
 }
 
 func (m *defaultShSehuatangThreadModel) ListPage(ctx context.Context, offset, limit int64, orderBy string, filter ShSehuatangThreadListFilter) ([]*ShSehuatangThread, error) {
@@ -169,6 +334,29 @@ func (m *defaultShSehuatangThreadModel) CountAll(ctx context.Context, filter ShS
 	return total, nil
 }
 
+func (m *defaultShSehuatangThreadModel) Aggregate(ctx context.Context, filter ShSehuatangThreadListFilter) (*ShSehuatangThreadAggregate, error) {
+	builder := applyShSehuatangThreadListFilter(squirrel.
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN `detail_status` = 'pending' THEN 1 ELSE 0 END), 0) AS pending_detail_count",
+			"COALESCE(SUM(CASE WHEN `detail_status` = 'fetched' THEN 1 ELSE 0 END), 0) AS fetched_detail_count",
+			"COALESCE(SUM(CASE WHEN `detail_status` = 'failed' THEN 1 ELSE 0 END), 0) AS failed_detail_count",
+			"COALESCE(SUM(CASE WHEN `source_forum_id` = '36' THEN 1 ELSE 0 END), 0) AS forum_36_count",
+			"COALESCE(SUM(CASE WHEN `source_forum_id` = '103' THEN 1 ELSE 0 END), 0) AS forum_103_count",
+		).
+		From(m.table), filter)
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var aggregate ShSehuatangThreadAggregate
+	if err := m.conn.QueryRowCtx(ctx, &aggregate, query, args...); err != nil {
+		return nil, err
+	}
+	return &aggregate, nil
+}
+
 func (m *defaultShSehuatangThreadModel) UpdateLastSeenByThreadTID(ctx context.Context, threadTID string, now int64) (*ShSehuatangThread, error) {
 	threadTID = strings.TrimSpace(threadTID)
 	if threadTID == "" {
@@ -194,16 +382,16 @@ func (m *defaultShSehuatangThreadModel) UpdateDetailFailureByThreadTID(ctx conte
 }
 
 func (m *defaultShSehuatangThreadModel) UpsertListBasic(ctx context.Context, data *ShSehuatangThread) (*ShSehuatangThread, error) {
-	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = case when trim(coalesce(`detail_status`, '')) = '' then values(`detail_status`) else `detail_status` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
-	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
+	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = case when trim(coalesce(`detail_status`, '')) = '' then values(`detail_status`) else `detail_status` end, `first_seen_time` = case when `first_seen_time` = 0 then values(`first_seen_time`) else `first_seen_time` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
+	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
 		return nil, err
 	}
 	return m.FindOneByThreadTID(ctx, data.ThreadTID)
 }
 
 func (m *defaultShSehuatangThreadModel) Upsert(ctx context.Context, data *ShSehuatangThread) (*ShSehuatangThread, error) {
-	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = values(`detail_status`), `detail_fetched_on` = values(`detail_fetched_on`), `detail_failed_on` = values(`detail_failed_on`), `detail_error` = values(`detail_error`), `raw_content_text` = values(`raw_content_text`), `magnet_text` = values(`magnet_text`), `info_hash_text` = values(`info_hash_text`), `content_hash` = values(`content_hash`), `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
-	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
+	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = values(`detail_status`), `detail_fetched_on` = values(`detail_fetched_on`), `detail_failed_on` = values(`detail_failed_on`), `detail_error` = values(`detail_error`), `raw_content_text` = values(`raw_content_text`), `magnet_text` = values(`magnet_text`), `info_hash_text` = values(`info_hash_text`), `content_hash` = values(`content_hash`), `first_seen_time` = case when `first_seen_time` = 0 then values(`first_seen_time`) else `first_seen_time` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
+	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
 		return nil, err
 	}
 	return m.FindOneByThreadTID(ctx, data.ThreadTID)
@@ -260,13 +448,6 @@ func applyShSehuatangThreadListFilter(builder squirrel.SelectBuilder, filter ShS
 		builder = builder.Where(squirrel.Eq{"detail_status": detailStatuses})
 	} else if detailStatus := strings.TrimSpace(filter.DetailStatus); detailStatus != "" {
 		builder = builder.Where(squirrel.Eq{"detail_status": detailStatus})
-	}
-	if filter.HasMagnetSet {
-		if filter.HasMagnet {
-			builder = builder.Where(squirrel.Expr("TRIM(`magnet_text`) <> ''"))
-		} else {
-			builder = builder.Where(squirrel.Expr("TRIM(`magnet_text`) = ''"))
-		}
 	}
 	if filter.HasPostTimeFrom {
 		builder = builder.Where(squirrel.GtOrEq{"post_time": filter.PostTimeFrom})

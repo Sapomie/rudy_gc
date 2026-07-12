@@ -20,7 +20,7 @@ const (
 	aggTypeLabel    = "label"
 	aggTypePrefix   = "prefix"
 
-	rootPath        = "/w-media-agg/birth"
+	rootPath        = "/aggbirth"
 	topPersistLimit = 200
 	gbDiv           = 1024.0 * 1024.0 * 1024.0
 )

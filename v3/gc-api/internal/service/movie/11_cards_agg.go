@@ -164,17 +164,17 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 		}
 		owned.add(cardsAggOwnedKey(mt.OwnedWMedia), cardsAggOwnedLabel(mt.OwnedWMedia), cardsAggOwnedHref(mt.OwnedWMedia), float64(mt.OwnedWMedia))
 		if mt.ScTimes > 0 {
-			scPresence.add("1", "有 SC", "/cardsagg?scmin=1", 1)
+			scPresence.add("1", "有 SC", "/listcardagg?scmin=1", 1)
 		} else {
-			scPresence.add("0", "无 SC", "/cardsagg?scmax=0", 0)
+			scPresence.add("0", "无 SC", "/listcardagg?scmax=0", 0)
 		}
 		if mt.ComeTimes > 0 {
-			comePresence.add("1", "有 Come", "/cardsagg?comin=1", 1)
+			comePresence.add("1", "有 Come", "/listcardagg?comin=1", 1)
 		} else {
-			comePresence.add("0", "无 Come", "/cardsagg?comax=0", 0)
+			comePresence.add("0", "无 Come", "/listcardagg?comax=0", 0)
 		}
 		if mt.HighestRank > 0 {
-			rankPresence.add("1", "有榜单", "/cardshasrank", 1)
+			rankPresence.add("1", "有榜单", "/listcardrank", 1)
 		} else {
 			rankPresence.add("0", "无榜单", "", 0)
 		}
@@ -184,18 +184,18 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 				continue
 			}
 			key := strings.TrimSpace(cast.Name)
-			href := "/cards?cn=" + url.QueryEscape(key)
+			href := "/listcard?cn=" + url.QueryEscape(key)
 			if cast.PersonId > 0 {
 				key = "p:" + strconv.FormatInt(cast.PersonId, 10)
-				href = "/cast/" + strconv.FormatInt(cast.PersonId, 10)
+				href = "/castdetail/" + strconv.FormatInt(cast.PersonId, 10)
 			}
 			label := firstNonEmpty(cast.DisplayName, cast.Name)
 			casts.add(key, label, href, mt)
 		}
-		directors.add(mt.Director, emptyLabel(mt.Director), "/cards?dn="+url.QueryEscape(mt.Director), 0)
-		prefixes.add(mt.Prefix, emptyLabel(mt.Prefix), "/cards?pn="+url.QueryEscape(mt.Prefix), 0)
-		makers.add(mt.Maker, emptyLabel(mt.Maker), "/cards?mn="+url.QueryEscape(mt.Maker), 0)
-		labels.add(mt.Label, emptyLabel(mt.Label), "/cards?ln="+url.QueryEscape(mt.Label), 0)
+		directors.add(mt.Director, emptyLabel(mt.Director), "/listcard?dn="+url.QueryEscape(mt.Director), 0)
+		prefixes.add(mt.Prefix, emptyLabel(mt.Prefix), "/listcard?pn="+url.QueryEscape(mt.Prefix), 0)
+		makers.add(mt.Maker, emptyLabel(mt.Maker), "/listcard?mn="+url.QueryEscape(mt.Maker), 0)
+		labels.add(mt.Label, emptyLabel(mt.Label), "/listcard?ln="+url.QueryEscape(mt.Label), 0)
 
 		addDateAgg(releaseYears, releaseMonths, mt.ReleasingDate, "rs", "re")
 		addDateAgg(mediaBirthYears, mediaBirthMonths, mt.FilmBirthDateWMedia, "mbs", "mbe")
@@ -443,7 +443,7 @@ func cardsAggMovieItem(mt *types.MovieType, value float64, valueLabel, date stri
 		JavID:      mt.JavId,
 		Name:       mt.Name,
 		Title:      mt.Title,
-		Href:       "/movie/" + url.PathEscape(mt.Name),
+		Href:       "/moviedetail/" + url.PathEscape(mt.Name),
 		Value:      value,
 		ValueLabel: valueLabel,
 		Date:       date,
@@ -472,14 +472,14 @@ func addDateAgg(years, months *cardsAggCounter, raw, startParam, endParam string
 	raw = strings.TrimSpace(raw)
 	if len(raw) >= 4 {
 		year := raw[:4]
-		years.add(year, year, "/cards?"+startParam+"="+url.QueryEscape(year+"-01-01")+"&"+endParam+"="+url.QueryEscape(year+"-12-31"), 0)
+		years.add(year, year, "/listcard?"+startParam+"="+url.QueryEscape(year+"-01-01")+"&"+endParam+"="+url.QueryEscape(year+"-12-31"), 0)
 	} else {
 		years.add("", "(空)", "", 0)
 	}
 	if len(raw) >= 7 {
 		month := raw[:7]
 		start, end := monthRange(month)
-		months.add(month, month, "/cards?"+startParam+"="+url.QueryEscape(start)+"&"+endParam+"="+url.QueryEscape(end), 0)
+		months.add(month, month, "/listcard?"+startParam+"="+url.QueryEscape(start)+"&"+endParam+"="+url.QueryEscape(end), 0)
 	} else {
 		months.add("", "(空)", "", 0)
 	}
@@ -492,7 +492,7 @@ func addUnixMonthAgg(months *cardsAggCounter, ts int64) {
 	}
 	t := time.Unix(ts, 0)
 	month := t.Format("2006-01")
-	months.add(month, month, "/cards?lsctmin="+url.QueryEscape(month+"-01")+"&lsctmax="+url.QueryEscape(monthRangeEnd(month)), 0)
+	months.add(month, month, "/listcard?lsctmin="+url.QueryEscape(month+"-01")+"&lsctmax="+url.QueryEscape(monthRangeEnd(month)), 0)
 }
 
 func monthRange(month string) (string, string) {
@@ -557,7 +557,7 @@ func cardsAggOwnedHref(v int64) string {
 	if v == 0 {
 		v = consts.OwnedNotOwned
 	}
-	return "/cardsagg?mowned=" + strconv.FormatInt(v, 10)
+	return "/listcardagg?mowned=" + strconv.FormatInt(v, 10)
 }
 
 func cardsAggFloatKey(v float64) string {

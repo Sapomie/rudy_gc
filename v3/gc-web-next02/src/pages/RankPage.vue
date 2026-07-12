@@ -8,7 +8,7 @@
           <template v-if="isDayRank">
             <span class="soft-badge rank-meta-badge">Rank Date</span>
             <span class="total-pill rank-date-pill">{{ rankDate || "-" }}</span>
-            <form class="rank-date-form" method="get" action="/moviecarddayrank">
+            <form class="rank-date-form" method="get" action="/listcarddayrank">
               <input
                 class="rank-date-input"
                 type="text"
@@ -35,22 +35,26 @@
         <div class="toolbar-line cards-toolbar-bottom rank-toolbar-line">
           <div class="owned-line cards-toolbar-filters rank-toolbar-filters">
             <template v-if="isDayRank">
-              <a :href="dayPrevHref" class="button-secondary rank-toolbar-action" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">前一天</a>
-              <a :href="dayNextHref" class="button-secondary rank-toolbar-action" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">后一天</a>
-              <a :href="dayRandHref" class="button-secondary rank-toolbar-action">随机</a>
+              <div class="rank-navigation-group">
+                <a :href="dayPrevHref" class="button-secondary rank-toolbar-action" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">前一天</a>
+                <a :href="dayNextHref" class="button-secondary rank-toolbar-action" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">后一天</a>
+                <a :href="dayRandHref" class="button-secondary rank-toolbar-action">随机</a>
+              </div>
             </template>
 
             <template v-else>
               <span class="soft-badge rank-range-badge">{{ rangeStart || "-" }} ~ {{ rangeEnd || "-" }}</span>
-              <a :href="prevHref || '#'" class="button-secondary rank-toolbar-action" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">上一期</a>
-              <a :href="nextHref || '#'" class="button-secondary rank-toolbar-action" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">下一期</a>
-              <a :href="latestHref || '/moviecardperiodrank'" class="button-secondary rank-toolbar-action">最新</a>
+              <div class="rank-navigation-group">
+                <a :href="prevHref || '#'" class="button-secondary rank-toolbar-action" :class="{ disabled: prevDisabled }" :aria-disabled="prevDisabled ? 'true' : 'false'">上一期</a>
+                <a :href="nextHref || '#'" class="button-secondary rank-toolbar-action" :class="{ disabled: nextDisabled }" :aria-disabled="nextDisabled ? 'true' : 'false'">下一期</a>
+                <a :href="latestHref || '/listcardperiodrank'" class="button-secondary rank-toolbar-action">最新</a>
+              </div>
             </template>
           </div>
           <div class="next02-pink-cards-toolbar-status">
             <div class="next02-pink-cards-metrics" aria-label="排名页面摘要">
-              <span><strong>{{ total }}</strong> Total</span>
-              <span><strong>{{ cards.length }}</strong> Current Page</span>
+              <span :title="`总数 ${total}`" :aria-label="`总数 ${total}`"><strong>{{ total }}</strong></span>
+              <span :title="`当前页 ${cards.length}`" :aria-label="`当前页 ${cards.length}`"><strong>{{ cards.length }}</strong></span>
             </div>
             <div class="cards-toolbar-pagination next02-pink-cards-pagination">
               <PaginationBar :page-info="pageInfo" />
@@ -116,9 +120,9 @@ const nextDisabled = computed(() => Boolean(payload.value.nextDisabled));
 const prevHref = computed(() => text(payload.value, "prevHref"));
 const nextHref = computed(() => text(payload.value, "nextHref"));
 const latestHref = computed(() => text(payload.value, "latestHref"));
-const dayPrevHref = computed(() => `/moviecarddayrank?date=${encodeURIComponent(text(payload.value, "prevDate"))}`);
-const dayNextHref = computed(() => `/moviecarddayrank?date=${encodeURIComponent(text(payload.value, "nextDate"))}`);
-const dayRandHref = computed(() => `/moviecarddayrank?date=${encodeURIComponent(text(payload.value, "randDate"))}`);
+const dayPrevHref = computed(() => `/listcarddayrank?date=${encodeURIComponent(text(payload.value, "prevDate"))}`);
+const dayNextHref = computed(() => `/listcarddayrank?date=${encodeURIComponent(text(payload.value, "nextDate"))}`);
+const dayRandHref = computed(() => `/listcarddayrank?date=${encodeURIComponent(text(payload.value, "randDate"))}`);
 const rankNote = computed(() => {
   if (isDayRank.value) {
     return `日期 ${rankDate.value || "-"}`;

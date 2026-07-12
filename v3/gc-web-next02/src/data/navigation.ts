@@ -5,26 +5,26 @@ export const sidebarGroups: NavGroup[] = [
     label: "MovieCard",
     icon: "MC",
     links: [
-      { href: "/cardstoday", label: "Today" },
-      { href: "/cardsmediamowned", label: "MediaOwned" },
-      { href: "/cardshasrank", label: "HasRank" },
-      { href: "/moviecarddayrank", label: "DayRank" },
-      { href: "/moviecardperiodrank", label: "PeriodRank" },
-      { href: "/cardsneeddownload", label: "NeedDownload" },
-      { href: "/cardsrandom", label: "Random" },
-      { href: "/cardsagg", label: "Agg" }
+      { href: "/listcardtoday", label: "Today" },
+      { href: "/listcardowned", label: "MediaOwned" },
+      { href: "/listcardrank", label: "HasRank" },
+      { href: "/listcarddayrank", label: "DayRank" },
+      { href: "/listcardperiodrank", label: "PeriodRank" },
+      { href: "/listcardneed", label: "NeedDownload" },
+      { href: "/listcardrandom", label: "Random" },
+      { href: "/listcardagg", label: "Agg" }
     ]
   },
   {
     label: "MovieAgg",
     icon: "AG",
     links: [
-      { href: "/movie-agg-all/release", label: "Agg-All-Release" },
-      { href: "/movie-agg-all/release-bucket-list", label: "Agg-All-Release-Bucket" },
-      { href: "/w-media-agg/bucket-list", label: "Agg-WMedia-Bucket" },
-      { href: "/w-media-agg/birth", label: "Agg-WMedia-Birth" },
-      { href: "/triggers/agg", label: "AggTriggers" },
-      { href: "/wdir", label: "WDirectory" }
+      { href: "/aggbackfill", label: "AggBackfill" },
+      { href: "/mediadir", label: "MediaDirectory" },
+      { href: "/aggbirth", label: "Agg-WMedia-Birth" },
+      { href: "/bucketsbirth", label: "Agg-WMedia-Bucket" },
+      { href: "/aggrelease", label: "Agg-All-Release" },
+      { href: "/bucketsrelease", label: "Agg-All-Release-Bucket" }
     ]
   },
   {
@@ -79,10 +79,11 @@ export const sidebarGroups: NavGroup[] = [
     label: "色花堂SH",
     icon: "SH",
     links: [
-      { href: "/triggers/fetch-sehuatang-sh", label: "SH一体抓取" },
-      { href: "/triggers/fetch-sehuatang-sh-thread-list", label: "SH列表建池" },
-      { href: "/triggers/fetch-sehuatang-sh-thread-detail", label: "SH详情补全" },
-      { href: "/fetch-site-sehuatang-sh-list", label: "SH帖子池" }
+      { href: "/shfetchall", label: "SH一体抓取" },
+      { href: "/shfetch", label: "SH列表建池" },
+      { href: "/shfill", label: "SH详情补全" },
+      { href: "/shpool", label: "SH帖子池" },
+      { href: "/bucketssh", label: "SH聚合桶" }
     ]
   },
   {
@@ -100,7 +101,7 @@ export const topNavGroups: { label: string; links: NavLink[] }[] = [
   {
     label: "常用",
     links: [
-      { href: "/cardstoday", label: "今日卡片" },
+      { href: "/listcardtoday", label: "今日卡片" },
       { href: "/crawler/tasks", label: "任务列表" },
       { href: "/triggers/dailybest", label: "每日榜" }
     ]
@@ -116,15 +117,16 @@ export const topNavGroups: { label: string; links: NavLink[] }[] = [
     label: "抓取",
     links: [
       { href: "/triggers/fetch-sehuatang", label: "色花堂" },
-      { href: "/triggers/fetch-sehuatang-sh", label: "SH一体" }
+      { href: "/shfetchall", label: "SH一体" }
     ]
   },
   {
     label: "色花堂SH",
     links: [
-      { href: "/triggers/fetch-sehuatang-sh-thread-list", label: "列表建池" },
-      { href: "/triggers/fetch-sehuatang-sh-thread-detail", label: "详情补全" },
-      { href: "/fetch-site-sehuatang-sh-list", label: "帖子池" }
+      { href: "/shfetch", label: "列表建池" },
+      { href: "/shfill", label: "详情补全" },
+      { href: "/shpool", label: "帖子池" },
+      { href: "/bucketssh", label: "聚合桶" }
     ]
   }
 ];

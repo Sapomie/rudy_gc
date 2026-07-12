@@ -31,7 +31,8 @@ async function parseResponse(response: Response): Promise<unknown> {
 }
 
 export function apiPathForRoute(route: RouteLocationNormalizedLoaded): string {
-  const explicit = typeof route.meta.apiPath === "string" ? route.meta.apiPath : route.path;
+  const configured = typeof route.meta.apiPath === "string" ? route.meta.apiPath : route.path;
+  const explicit = configured.replace(/:([a-zA-Z0-9_]+)/g, (_, key: string) => encodeURIComponent(String(route.params[key] || "")));
   return `/api${explicit}${queryPart(route.fullPath)}`;
 }
 

@@ -23,6 +23,9 @@ func MustAutoMigrate(db *gorm.DB) {
 }
 
 func AutoMigrate(db *gorm.DB) error {
+	if err := migrateRenameSHSehuatangTables(db); err != nil {
+		return err
+	}
 	if err := migrateLegacySehuatangTable(db); err != nil {
 		return err
 	}
@@ -104,13 +107,26 @@ func AutoMigrate(db *gorm.DB) error {
 		new(CMovieAlbumItem),
 		new(JavbusMagnet),
 		new(SehuatangMagnet),
+		new(ShForum),
 		new(SehuatangThread),
+		new(ShThreadBucketStat),
 		new(SehuatangFetchRun),
 		new(SehuatangFetchItem),
+		new(ShSehuatangThreadListFetchRun),
+		new(ShSehuatangThreadDetailFetchRun),
 		new(JavbusMagnetFetch),
 		new(SukebeiTorrent),
 		new(SukebeiTorrentFetch),
 	); err != nil {
+		return err
+	}
+	if err := ensureSHForums(db); err != nil {
+		return err
+	}
+	if err := migrateSHItemRunSourceIndex(db); err != nil {
+		return err
+	}
+	if err := backfillSehuatangThreadFirstSeenTime(db); err != nil {
 		return err
 	}
 	if err := migrateAddAmCastOwnedWMediaNumber(db); err != nil {
@@ -163,6 +179,27 @@ func AutoMigrate(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+func ensureSHForums(db *gorm.DB) error {
+	now := time.Now().Unix()
+	return db.Exec(`
+INSERT INTO sh_forum (forum_id, forum_name, sort_order, is_enabled, created_on, updated_on)
+VALUES
+	('36', '亚洲视频原创', 10, 1, ?, ?),
+	('103', '高清中文字幕', 20, 1, ?, ?)
+ON DUPLICATE KEY UPDATE
+	forum_name = VALUES(forum_name),
+	sort_order = VALUES(sort_order),
+	is_enabled = VALUES(is_enabled),
+	updated_on = VALUES(updated_on)`, now, now, now, now).Error
+}
+
+func backfillSehuatangThreadFirstSeenTime(db *gorm.DB) error {
+	return db.Exec(`
+UPDATE sh_thread
+SET first_seen_time = created_on
+WHERE first_seen_time = 0`).Error
 }
 
 func migrateAddAmCastOwnedWMediaNumber(db *gorm.DB) error {
@@ -1820,6 +1857,64 @@ func migrateLegacySehuatangTable(db *gorm.DB) error {
 
 	sql := fmt.Sprintf("RENAME TABLE `%s` TO `%s`", oldTable, newTable)
 	return db.Exec(sql).Error
+}
+
+func migrateRenameSHSehuatangTables(db *gorm.DB) error {
+	renames := []struct {
+		oldTable string
+		newTable string
+	}{
+		{oldTable: "sh_sehuatang_fetch_item", newTable: "sh_item"},
+		{oldTable: "sh_sehuatang_fetch_run", newTable: "sh_fetch_run"},
+		{oldTable: "sh_sehuatang_thread", newTable: "sh_thread"},
+		{oldTable: "sh_sehuatang_thread_detail_fetch_run", newTable: "sh_detail_run"},
+		{oldTable: "sh_sehuatang_thread_list_fetch_run", newTable: "sh_list_run"},
+	}
+
+	for _, rename := range renames {
+		hasOld, err := hasTable(db, rename.oldTable)
+		if err != nil {
+			return err
+		}
+		hasNew, err := hasTable(db, rename.newTable)
+		if err != nil {
+			return err
+		}
+		if hasOld && hasNew {
+			return fmt.Errorf("表重命名冲突：%s 和 %s 同时存在", rename.oldTable, rename.newTable)
+		}
+		if !hasOld {
+			continue
+		}
+		if err := db.Exec(fmt.Sprintf("RENAME TABLE `%s` TO `%s`", rename.oldTable, rename.newTable)).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateSHItemRunSourceIndex(db *gorm.DB) error {
+	const tableName = "sh_item"
+	const indexName = "uk_run_thread"
+	desiredColumns := []string{"run_source", "run_id", "thread_tid"}
+
+	hasDesiredIndex, err := hasIndexColumns(db, tableName, indexName, desiredColumns)
+	if err != nil {
+		return err
+	}
+	if hasDesiredIndex {
+		return nil
+	}
+	hasCurrentIndex, err := hasIndex(db, tableName, indexName)
+	if err != nil {
+		return err
+	}
+	if hasCurrentIndex {
+		if err := db.Exec("ALTER TABLE `sh_item` DROP INDEX `uk_run_thread`").Error; err != nil {
+			return err
+		}
+	}
+	return db.Exec("ALTER TABLE `sh_item` ADD UNIQUE INDEX `uk_run_thread` (`run_source`, `run_id`, `thread_tid`)").Error
 }
 
 func migrateLegacyMovieNameColumns(db *gorm.DB) error {

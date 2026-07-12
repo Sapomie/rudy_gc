@@ -25,7 +25,7 @@
               >{{ linkLabel(item) }}</a>
             </template>
             <a :href="aggPageHref" class="bucket-list-action" target="_blank" rel="noopener noreferrer">返回聚合页</a>
-            <a href="/triggers/agg" class="bucket-list-action" target="_blank" rel="noopener noreferrer">回填入口</a>
+            <a href="/aggbackfill" class="bucket-list-action" target="_blank" rel="noopener noreferrer">回填入口</a>
           </div>
         </header>
 
@@ -188,10 +188,10 @@ const sortLinks = computed(() => asArray<AnyRecord>(pick(payload.value, "SortLin
 const levelLinks = computed(() => asArray<AnyRecord>(pick(payload.value, "LevelLinks")));
 const headerLinks = computed(() => asRecord(pick(payload.value, "HeaderLinks")));
 const aggMode = computed(() => text(payload.value, "AggMode"));
-const isWMediaBucket = computed(() => text(payload.value, "ViewType") === "w-media-bucket-list" || route.path === "/w-media-agg/bucket-list");
-const listPath = computed(() => text(payload.value, "ListPath") || (isWMediaBucket.value ? "/w-media-agg/bucket-list" : "/movie-agg-all/release-bucket-list"));
+const isWMediaBucket = computed(() => text(payload.value, "ViewType") === "w-media-bucket-list" || route.path === "/bucketsbirth");
+const listPath = computed(() => text(payload.value, "ListPath") || (isWMediaBucket.value ? "/bucketsbirth" : "/bucketsrelease"));
 const clearHref = computed(() => text(payload.value, "ClearHref") || listPath.value);
-const aggPageHref = computed(() => text(payload.value, "AggPageHref") || (isWMediaBucket.value ? "/w-media-agg/birth" : "/movie-agg-all/release"));
+const aggPageHref = computed(() => text(payload.value, "AggPageHref") || (isWMediaBucket.value ? "/aggbirth" : "/aggrelease"));
 const metricHeaderKeys = computed(() => isWMediaBucket.value ? ["Media", "Removed"] : ["CountAll", "CountOwned"]);
 const metricValueKeys = computed(() => isWMediaBucket.value ? ["MediaCount", "RemovedCount"] : ["CountAll", "CountOwned"]);
 const latestHeaderKey = computed(() => isWMediaBucket.value ? "LatestBirth" : "LatestRelease");

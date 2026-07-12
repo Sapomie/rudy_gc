@@ -147,7 +147,7 @@ const skipMeta = computed(() => {
     ? `当前命中 ${total} 部，上限 ${limit} 部。`
     : "";
 });
-const cardsHref = computed(() => `/cards${route.fullPath.includes("?") ? route.fullPath.slice(route.fullPath.indexOf("?")) : ""}`);
+const cardsHref = computed(() => `/listcard${route.fullPath.includes("?") ? route.fullPath.slice(route.fullPath.indexOf("?")) : ""}`);
 const ownedQuery = computed(() => asRecord(pick(payload.value, "ownedQuery", "OwnedQuery")));
 const summary = computed(() => asRecord(pick(payload.value, "Summary")));
 const groups = computed(() => asRecord(pick(payload.value, "Groups")));
@@ -201,7 +201,7 @@ function itemHref(item: AnyRecord): string {
 }
 
 function topMovieHref(item: AnyRecord): string {
-  return text(item, "Href", "href") || `/movie/${encodeURIComponent(text(item, "Name", "JavID"))}`;
+  return text(item, "Href", "href") || `/moviedetail/${encodeURIComponent(text(item, "Name", "JavID"))}`;
 }
 
 const AggItemTable = defineComponent({

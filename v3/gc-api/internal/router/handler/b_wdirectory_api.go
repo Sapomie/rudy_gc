@@ -30,7 +30,7 @@ func NewWDirectoryAPI(deps *dep.Dep) *WDirectoryAPI {
 
 func (h *WDirectoryAPI) RootList(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/wdir"
+	c.Request.URL.Path = "/mediadir"
 	defer func() { c.Request.URL.Path = originalPath }()
 
 	if rawID := strings.TrimSpace(c.Query("id")); rawID != "" && rawID != "root" {
@@ -80,7 +80,7 @@ func (h *WDirectoryAPI) RootList(c *gin.Context) {
 func (h *WDirectoryAPI) dirDetail(c *gin.Context) {
 	rawID := strings.TrimSpace(c.Query("id"))
 	if rawID == "" || rawID == "root" {
-		c.JSON(http.StatusOK, gin.H{"redirect": "/wdir"})
+		c.JSON(http.StatusOK, gin.H{"redirect": "/mediadir"})
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *WDirectoryAPI) dirDetail(c *gin.Context) {
 }
 
 func buildWDirFilterAction(dirID int64, recursive bool) string {
-	path := "/wdir?id=" + strconv.FormatInt(dirID, 10)
+	path := "/mediadir?id=" + strconv.FormatInt(dirID, 10)
 	if recursive {
 		return path + "&recursive=1"
 	}

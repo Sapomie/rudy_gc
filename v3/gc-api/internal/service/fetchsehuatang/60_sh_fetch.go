@@ -24,6 +24,11 @@ type shPageJob struct {
 	Body     []byte
 }
 
+type shRunRef struct {
+	ID     int64
+	Source string
+}
+
 func BuildSHProgressStats(result *SHFetchResult) map[string]int64 {
 	stats := map[string]int64{
 		"total_page_count":       0,
@@ -152,6 +157,9 @@ func (s *Service) FetchSHThreads(ctx context.Context, req SHFetchRequest) (*SHFe
 	})
 
 	fetchErr := s.fetchSHPages(ctx, cfg, state, req, jobs, run, result)
+	if aggErr := s.flushSHThreadAgg(context.Background(), "sh_fetch", result); aggErr != nil {
+		fetchErr = errors.Join(fetchErr, aggErr)
+	}
 	finishTime := time.Now().Unix()
 	run.FinishedOn = finishTime
 	run.UpdatedOn = finishTime
@@ -306,14 +314,15 @@ func (s *Service) fetchSHPages(ctx context.Context, cfg fetchsite.SiteConfig, st
 	return nil
 }
 
-func (s *Service) saveSHListTopic(ctx context.Context, req SHFetchRequest, run *moviex.ShSehuatangFetchRun, topic *topicLink) error {
-	if run == nil || topic == nil || topic.ThreadTID == "" {
+func (s *Service) saveSHListTopic(ctx context.Context, req SHFetchRequest, run shRunRef, result *SHFetchResult, topic *topicLink) error {
+	if run.ID <= 0 || strings.TrimSpace(run.Source) == "" || topic == nil || topic.ThreadTID == "" {
 		return fmt.Errorf("帖子基础信息为空")
 	}
 
 	now := time.Now().Unix()
 	item := &moviex.ShSehuatangFetchItem{
-		RunID:         run.Id,
+		RunSource:     run.Source,
+		RunID:         run.ID,
 		FetchMode:     req.FetchMode,
 		SourceForumID: topic.SourceForumID,
 		SourcePage:    topic.SourcePage,
@@ -344,12 +353,13 @@ func (s *Service) saveSHListTopic(ctx context.Context, req SHFetchRequest, run *
 		MagnetText:     "",
 		InfoHashText:   "",
 		ContentHash:    "",
+		FirstSeenTime:  now,
 		LastSeenTime:   now,
 		CreatedOn:      now,
 		UpdatedOn:      now,
 	})
 	if err != nil {
-		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
 			return updateErr
 		}
 		return err
@@ -359,20 +369,22 @@ func (s *Service) saveSHListTopic(ctx context.Context, req SHFetchRequest, run *
 	if threadRow != nil {
 		threadRowID = threadRow.Id
 	}
-	if _, err = s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusDiscovered, threadRowID, "", time.Now().Unix()); err != nil {
+	markSHThreadAggRow(result, threadRow)
+	if _, err = s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusDiscovered, threadRowID, "", time.Now().Unix()); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *Service) fetchSHTopicDetail(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, req SHFetchRequest, run *moviex.ShSehuatangFetchRun, result *SHFetchResult, topic *topicLink) error {
-	return s.fetchSHTopicDetailWithOptions(ctx, cfg, state, req, run, result, topic, true)
+	return s.fetchSHTopicDetailWithOptions(ctx, cfg, state, req, shRunRef{ID: run.Id, Source: SHRunSourceFetch}, result, topic, true)
 }
 
-func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, req SHFetchRequest, run *moviex.ShSehuatangFetchRun, result *SHFetchResult, topic *topicLink, skipExisting bool) error {
+func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, req SHFetchRequest, run shRunRef, result *SHFetchResult, topic *topicLink, skipExisting bool) error {
 	now := time.Now().Unix()
 	item := &moviex.ShSehuatangFetchItem{
-		RunID:         run.Id,
+		RunSource:     run.Source,
+		RunID:         run.ID,
 		FetchMode:     req.FetchMode,
 		SourceForumID: topic.SourceForumID,
 		SourcePage:    topic.SourcePage,
@@ -393,7 +405,7 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
 		result.FailedCount++
 		result.LastError = err.Error()
-		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
 			return updateErr
 		}
 		return nil
@@ -403,7 +415,7 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 		if updateErr != nil {
 			result.FailedCount++
 			result.LastError = updateErr.Error()
-			if _, itemErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFailed, oldThread.Id, updateErr.Error(), time.Now().Unix()); itemErr != nil {
+			if _, itemErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, oldThread.Id, updateErr.Error(), time.Now().Unix()); itemErr != nil {
 				return itemErr
 			}
 			return nil
@@ -412,11 +424,11 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 		if updatedThread != nil {
 			threadRowID = updatedThread.Id
 		}
-		if _, err = s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusSkippedExisting, threadRowID, "", time.Now().Unix()); err != nil {
+		if _, err = s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusSkippedExisting, threadRowID, "", time.Now().Unix()); err != nil {
 			return err
 		}
 		result.SkippedExistingCount++
-		reportInfoLog(ctx, fmt.Sprintf("跳过已存在帖子: run_id=%d | tid=%s | %s", run.Id, topic.ThreadTID, topic.Title))
+		reportInfoLog(ctx, fmt.Sprintf("跳过已存在帖子: run_id=%d | tid=%s | %s", run.ID, topic.ThreadTID, topic.Title))
 		reportSHProgress(ctx, result, taskctx.Progress{
 			Stage:        "fetch_sehuatang_sh_skip_existing",
 			Message:      fmt.Sprintf("跳过已存在帖子：%s", topic.Title),
@@ -426,18 +438,21 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 		})
 		return nil
 	}
+	markSHThreadAggRow(result, oldThread)
 
-	reportInfoLog(ctx, fmt.Sprintf("色花堂新流程详情抓取: run_id=%d | tid=%s | %s", run.Id, topic.ThreadTID, topic.Title))
+	reportInfoLog(ctx, fmt.Sprintf("色花堂新流程详情抓取: run_id=%d | tid=%s | %s", run.ID, topic.ThreadTID, topic.Title))
 	body, err := s.fetchWithSafeWithOptions(ctx, cfg, state, topic.DetailURL, true)
 	if err != nil {
 		result.FailedCount++
 		result.LastError = err.Error()
-		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
 			return updateErr
 		}
-		if _, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, err.Error(), time.Now().Unix()); updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
+		updatedThread, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, err.Error(), time.Now().Unix())
+		if updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
 			return updateErr
 		}
+		markSHThreadAggRow(result, updatedThread)
 		reportErrorLog(ctx, fmt.Sprintf("详情抓取失败: tid=%s | %s | err=%v", topic.ThreadTID, topic.Title, err))
 		reportSHProgress(ctx, result, taskctx.Progress{
 			Stage:        "fetch_sehuatang_sh_detail_failed",
@@ -453,12 +468,14 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	if err != nil {
 		result.FailedCount++
 		result.LastError = err.Error()
-		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
 			return updateErr
 		}
-		if _, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, err.Error(), time.Now().Unix()); updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
+		updatedThread, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, err.Error(), time.Now().Unix())
+		if updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
 			return updateErr
 		}
+		markSHThreadAggRow(result, updatedThread)
 		reportErrorLog(ctx, fmt.Sprintf("详情解析失败: tid=%s | %s | err=%v", topic.ThreadTID, topic.Title, err))
 		reportSHProgress(ctx, result, taskctx.Progress{
 			Stage:        "fetch_sehuatang_sh_detail_failed",
@@ -500,6 +517,7 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 		MagnetText:      detail.MagnetText,
 		InfoHashText:    detail.InfoHashText,
 		ContentHash:     contentHash(detail.RawContentText),
+		FirstSeenTime:   now,
 		LastSeenTime:    detailFetchedOn,
 		CreatedOn:       now,
 		UpdatedOn:       detailFetchedOn,
@@ -507,12 +525,14 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	if err != nil {
 		result.FailedCount++
 		result.LastError = err.Error()
-		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, 0, err.Error(), time.Now().Unix()); updateErr != nil {
 			return updateErr
 		}
-		if _, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, err.Error(), time.Now().Unix()); updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
+		updatedThread, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, err.Error(), time.Now().Unix())
+		if updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
 			return updateErr
 		}
+		markSHThreadAggRow(result, updatedThread)
 		reportErrorLog(ctx, fmt.Sprintf("帖子入库失败: tid=%s | %s | err=%v", topic.ThreadTID, topic.Title, err))
 		reportSHProgress(ctx, result, taskctx.Progress{
 			Stage:        "fetch_sehuatang_sh_detail_failed",
@@ -528,12 +548,13 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	if threadRow != nil {
 		threadRowID = threadRow.Id
 	}
-	if _, err = s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Id, topic.ThreadTID, SHFetchItemStatusFetched, threadRowID, "", time.Now().Unix()); err != nil {
+	markSHThreadAggRow(result, threadRow)
+	if _, err = s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFetched, threadRowID, "", time.Now().Unix()); err != nil {
 		return err
 	}
 
 	result.FetchedCount++
-	reportInfoLog(ctx, fmt.Sprintf("帖子详情入库完成: run_id=%d | tid=%s | title=%s | post_time=%d | magnets=%d", run.Id, detail.ThreadTID, detail.ThreadTitle, detail.PostTime, countLines(detail.InfoHashText)))
+	reportInfoLog(ctx, fmt.Sprintf("帖子详情入库完成: run_id=%d | tid=%s | title=%s | post_time=%d | magnets=%d", run.ID, detail.ThreadTID, detail.ThreadTitle, detail.PostTime, countLines(detail.InfoHashText)))
 	reportSHProgress(ctx, result, taskctx.Progress{
 		Stage:        "fetch_sehuatang_sh_detail_done",
 		Message:      fmt.Sprintf("帖子详情入库完成：%s", detail.ThreadTitle),

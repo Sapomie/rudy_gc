@@ -149,13 +149,9 @@
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHForumsFieldWrap" :class="{ 'is-hidden': !showSHForumsField }">
                         <label class="d-block mb-2">目标版块</label>
                         <div class="status-check-grid">
-                          <div class="form-check">
-                            <input id="task_sehuatang_sh_forum_36" v-model="targetForumIDs" name="target_forum_ids" class="form-check-input" type="checkbox" value="36">
-                            <label class="form-check-label" for="task_sehuatang_sh_forum_36">亚洲无码原创</label>
-                          </div>
-                          <div class="form-check">
-                            <input id="task_sehuatang_sh_forum_103" v-model="targetForumIDs" name="target_forum_ids" class="form-check-input" type="checkbox" value="103">
-                            <label class="form-check-label" for="task_sehuatang_sh_forum_103">高清中文字幕</label>
+                          <div v-for="forum in shForums" :key="forum.forumID" class="form-check">
+                            <input :id="`task_sehuatang_sh_forum_${forum.forumID}`" v-model="targetForumIDs" name="target_forum_ids" class="form-check-input" type="checkbox" :value="forum.forumID">
+                            <label class="form-check-label" :for="`task_sehuatang_sh_forum_${forum.forumID}`">{{ forum.forumName }}</label>
                           </div>
                         </div>
                       </div>
@@ -275,7 +271,7 @@
                     <div class="d-flex align-items-center flex-wrap action-row next02-action-dock" :class="{ 'next02-seeds-action-dock next02-pink-trigger-action-dock': isPinkTriggerRewritePage }">
                       <button v-if="showFetchSitePanel" type="button" id="previewFetchSiteBtn" class="btn btn-outline-info mr-2" :disabled="fetchSitePreviewLoading" @click="previewFetchSite(1, false)">预览筛选结果</button>
                       <button v-if="showSHDetailFields" type="button" id="previewSHDetailBtn" class="btn btn-outline-info mr-2" :disabled="shDetailPreviewLoading" @click="previewSHDetail">筛选帖子预览</button>
-                      <button type="submit" id="submitBtn" class="btn btn-primary">{{ showSHDetailFields ? "抓取选中详情" : "开始执行" }}</button>
+                      <button type="submit" id="submitBtn" class="btn btn-primary" :disabled="shDetailSubmitDisabled">{{ showSHDetailFields ? "抓取选中详情" : "开始执行" }}</button>
                       <button type="button" id="pauseBtn" class="btn btn-outline-warning ml-2" :disabled="pauseDisabled" @click="controlSelected('pause')">暂停</button>
                       <button type="button" id="resumeBtn" class="btn btn-outline-success ml-2" :disabled="resumeDisabled" @click="controlSelected('resume')">继续</button>
                       <button type="button" id="stopBtn" class="btn btn-outline-danger ml-2" :disabled="stopDisabled" @click="controlSelected('stop')">停止</button>
@@ -321,7 +317,7 @@
                             <div class="queue-item-top">
                               <div class="queue-item-left">
                                 <span class="queue-item-index">{{ queueItemIndex(item, index) }}</span>
-                                <a v-if="queueItemMovieName(item)" class="queue-item-name" :href="`/movie/${encodeURIComponent(queueItemMovieName(item))}`">{{ queueItemMovieName(item) }}</a>
+                                <a v-if="queueItemMovieName(item)" class="queue-item-name" :href="`/moviedetail/${encodeURIComponent(queueItemMovieName(item))}`">{{ queueItemMovieName(item) }}</a>
                                 <span v-else class="queue-item-name">-</span>
                               </div>
                               <span class="queue-badge" :class="queueBadgeClass(item)">{{ queueBadgeText(item) }}</span>
@@ -338,7 +334,7 @@
                             <div class="queue-item-top">
                               <div class="queue-item-left">
                                 <span class="queue-item-index">{{ queueItemIndex(item, index) }}</span>
-                                <a v-if="queueItemMovieName(item)" class="queue-item-name" :href="`/movie/${encodeURIComponent(queueItemMovieName(item))}`">{{ queueItemMovieName(item) }}</a>
+                                <a v-if="queueItemMovieName(item)" class="queue-item-name" :href="`/moviedetail/${encodeURIComponent(queueItemMovieName(item))}`">{{ queueItemMovieName(item) }}</a>
                                 <span v-else class="queue-item-name">-</span>
                               </div>
                               <span class="queue-badge" :class="queueBadgeClass(item)">{{ queueBadgeText(item) }}</span>
@@ -437,52 +433,96 @@
             </div>
           </div>
 
-          <div v-if="showSHDetailFields" class="row">
+          <div v-if="showSHDetailFields" class="row next02-sh-detail-preview-row">
             <div class="col-12">
-              <div class="card next02-panel next02-preview-panel" id="shDetailPreviewPanel" :class="{ 'is-hidden': !shDetailPreviewOpen, 'next02-pink-trigger-panel next02-pink-trigger-preview-panel': isPinkTriggerRewritePage }">
-                <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div>
-                      <h4 class="card-title mb-1">帖子预览</h4>
-                      <div class="text-muted small" id="shDetailPreviewSummary">{{ shDetailPreviewSummary }}</div>
+              <div class="next02-sh-detail-preview-standard next02-sc-events-rewrite">
+                <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card" id="shDetailPreviewPanel" :class="{ 'is-hidden': !shDetailPreviewOpen }">
+                  <div class="card-body">
+                    <div class="next02-sc-panel-head next02-sh-detail-preview-toolbar">
+                      <div>
+                        <span class="next02-sc-panel-kicker">THREAD PREVIEW</span>
+                        <h5 class="mb-0">帖子预览</h5>
+                        <div class="next02-sh-detail-preview-summary" id="shDetailPreviewSummary">{{ shDetailPreviewSummary }}</div>
+                      </div>
+                      <div class="next02-sh-detail-preview-controls">
+                        <div class="next02-sh-detail-preview-actions">
+                          <button
+                            type="button"
+                            id="selectAllSHDetailPreviewBtn"
+                            class="btn btn-outline-secondary btn-sm"
+                            :disabled="shDetailPreviewLoading || !shDetailPreviewRows.length || allSHDetailPreviewSelected"
+                            @click="selectAllSHDetailPreview"
+                          >全选当前页</button>
+                          <button
+                            type="button"
+                            id="clearSHDetailPreviewBtn"
+                            class="btn btn-outline-secondary btn-sm"
+                            :disabled="shDetailPreviewLoading || !selectedSHDetailThreadIDs.length"
+                            @click="clearSHDetailPreviewSelection"
+                          >取消选择</button>
+                          <button type="button" id="hideSHDetailPreviewBtn" class="btn btn-outline-secondary btn-sm" @click="collapseSHDetailPreview">收起</button>
+                        </div>
+                        <div class="next02-sc-hero-metrics sc-event-list-metrics" id="shDetailPreviewMetaText" aria-label="帖子预览选择统计">
+                          <span><strong>{{ shDetailPreviewRows.length }}</strong> Preview</span>
+                          <span><strong>{{ selectedSHDetailThreadIDs.length }}</strong> Selected</span>
+                        </div>
+                      </div>
                     </div>
-                    <div class="d-flex align-items-center">
-                      <span class="badge bg-light text-dark mr-2" id="shDetailPreviewMetaText">{{ shDetailPreviewMetaText }}</span>
-                      <button type="button" id="selectAllSHDetailPreviewBtn" class="btn btn-outline-secondary btn-sm mr-2" @click="selectAllSHDetailPreview">全选</button>
-                      <button type="button" id="clearSHDetailPreviewBtn" class="btn btn-outline-secondary btn-sm mr-2" @click="clearSHDetailPreviewSelection">取消选择</button>
-                      <button type="button" id="hideSHDetailPreviewBtn" class="btn btn-outline-secondary btn-sm" @click="hideSHDetailPreview">收起</button>
+                    <div v-if="shDetailPreviewError" class="alert alert-danger next02-sh-detail-preview-error" role="alert">
+                      {{ shDetailPreviewError }}
                     </div>
-                  </div>
-                  <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                      <thead>
-                        <tr>
-                          <th class="text-nowrap">选择</th>
-                          <th class="text-nowrap">TID</th>
-                          <th>标题</th>
-                          <th class="text-nowrap">版块</th>
-                          <th class="text-nowrap">发布时间</th>
-                          <th class="text-nowrap">详情状态</th>
-                          <th class="text-nowrap">作者</th>
-                        </tr>
-                      </thead>
-                      <tbody id="shDetailPreviewTableBody">
-                        <tr v-if="!shDetailPreviewRows.length">
-                          <td colspan="7" class="text-center text-muted py-4">{{ shDetailPreviewEmptyText }}</td>
-                        </tr>
-                        <tr v-for="(item, index) in shDetailPreviewRows" v-else :key="`${shPreviewThreadTID(item)}-${index}`">
-                          <td class="text-nowrap">
-                            <input :id="`sh_detail_preview_${index}`" v-model="selectedSHDetailThreadIDs" class="form-check-input sh-detail-preview-check" type="checkbox" name="sh_detail_thread_tid" :value="shPreviewThreadTID(item)">
-                          </td>
-                          <td class="text-nowrap">{{ shPreviewThreadTID(item) || "-" }}</td>
-                          <td><label class="mb-0" :for="`sh_detail_preview_${index}`">{{ shPreviewTitle(item) || "-" }}</label></td>
-                          <td class="text-nowrap">{{ shPreviewForum(item) || "-" }}</td>
-                          <td class="text-nowrap">{{ formatUnix(pick(item, "PostTime", "post_time")) }}</td>
-                          <td class="text-nowrap">{{ shPreviewStatus(item) || "-" }}</td>
-                          <td class="text-nowrap">{{ shPreviewAuthor(item) || "-" }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div class="table-responsive">
+                      <table class="table table-hover align-middle mb-0 sc-events-table next02-sh-detail-preview-table">
+                        <colgroup>
+                          <col class="next02-sh-preview-col-select">
+                          <col class="next02-sh-preview-col-tid">
+                          <col class="next02-sh-preview-col-title">
+                          <col class="next02-sh-preview-col-forum">
+                          <col class="next02-sh-preview-col-time">
+                          <col class="next02-sh-preview-col-status">
+                          <col class="next02-sh-preview-col-author">
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th>选择</th>
+                            <th>TID</th>
+                            <th>标题</th>
+                            <th>版块</th>
+                            <th>发布时间</th>
+                            <th>详情状态</th>
+                            <th>作者</th>
+                          </tr>
+                        </thead>
+                        <tbody id="shDetailPreviewTableBody">
+                          <tr v-if="!shDetailPreviewRows.length">
+                            <td colspan="7"><div class="sc-empty-state">{{ shDetailPreviewEmptyText }}</div></td>
+                          </tr>
+                          <tr v-for="(item, index) in shDetailPreviewRows" v-else :key="`${shPreviewThreadTID(item)}-${index}`" class="next02-sc-event-row">
+                            <td>
+                              <input
+                                :id="`sh_detail_preview_${index}`"
+                                v-model="selectedSHDetailThreadIDs"
+                                class="form-check-input sh-detail-preview-check"
+                                type="checkbox"
+                                name="sh_detail_thread_tid"
+                                :value="shPreviewThreadTID(item)"
+                                :aria-label="`选择帖子 ${shPreviewThreadTID(item)}`"
+                              >
+                            </td>
+                            <td :title="shPreviewThreadTID(item)">
+                              <a class="sc-event-link" :href="shPreviewDetailHref(item)">{{ shPreviewThreadTID(item) || "-" }}</a>
+                            </td>
+                            <td class="sc-content-cell" :title="shPreviewTitle(item)">
+                              <label :for="`sh_detail_preview_${index}`">{{ shPreviewTitle(item) || "-" }}</label>
+                            </td>
+                            <td :title="shPreviewForum(item)">{{ shPreviewForum(item) || "-" }}</td>
+                            <td :title="formatUnix(pick(item, 'PostTime', 'post_time'))">{{ formatUnix(pick(item, "PostTime", "post_time")) }}</td>
+                            <td><span :class="shPreviewStatusClass(item)">{{ shPreviewStatus(item) || "-" }}</span></td>
+                            <td :title="shPreviewAuthor(item)">{{ shPreviewAuthor(item) || "-" }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -504,9 +544,11 @@ import MovieCardFilterForm from "@/components/MovieCardFilterForm.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, pick, text } from "@/utils/format";
+import { loadSHForumOptions, shForumName, type SHForumOption } from "@/utils/shForums";
 
 const route = useRoute();
 const payload = ref<AnyRecord>({});
+const shForums = ref<SHForumOption[]>([]);
 const jobs = ref<AnyRecord[]>([]);
 const loading = ref(false);
 const error = ref("");
@@ -530,6 +572,8 @@ const shDetailPreviewOpen = ref(false);
 const shDetailPreviewLoading = ref(false);
 const shDetailPreviewRows = ref<AnyRecord[]>([]);
 const shDetailPreviewTotal = ref(0);
+const shDetailPreviewError = ref("");
+const shDetailPreviewSignature = ref("");
 const selectedSHDetailThreadIDs = ref<string[]>([]);
 const jobEventHistorySize = 300;
 const rawJobEvents = ref<AnyRecord[]>([]);
@@ -628,7 +672,13 @@ async function load() {
   error.value = "";
   message.value = "";
   try {
-    payload.value = asRecord(await getJSON(apiPathForRoute(route)));
+    const needsSHForums = ["/shfetchall", "/shfetch", "/shfill"].includes(route.path);
+    const [pagePayload, forumOptions] = await Promise.all([
+      getJSON(apiPathForRoute(route)),
+      needsSHForums ? loadSHForumOptions() : Promise.resolve([])
+    ]);
+    payload.value = asRecord(pagePayload);
+    shForums.value = forumOptions;
     selectedTaskType.value = text(payload.value, "DefaultTaskType");
     const configuredJobID = normalizeJobID(text(payload.value, "JobID") || String(route.query.job_id || ""));
     const storedJobID = storedSelectedJobID();
@@ -713,9 +763,9 @@ const pinkTriggerPaths = new Set([
   "/triggers/backfill",
   "/triggers/fetch-site",
   "/triggers/fetch-sehuatang",
-  "/triggers/fetch-sehuatang-sh",
-  "/triggers/fetch-sehuatang-sh-thread-list",
-  "/triggers/fetch-sehuatang-sh-thread-detail",
+  "/shfetchall",
+  "/shfetch",
+  "/shfill",
   "/triggers/fetch-site-javbus-filtered",
   "/triggers/fetch-site-sukebei-filtered"
 ]);
@@ -857,12 +907,40 @@ const shDetailPreviewSummary = computed(() => {
   }
   return `筛选命中 ${shDetailPreviewTotal.value} 条，当前预览 ${shDetailPreviewRows.value.length} 条`;
 });
-const shDetailPreviewMetaText = computed(() => `共 ${shDetailPreviewRows.value.length} 条，已选 ${selectedSHDetailThreadIDs.value.length} 条`);
 const shDetailPreviewEmptyText = computed(() => {
   if (shDetailPreviewLoading.value) {
     return "加载中...";
   }
   return shDetailPreviewOpen.value ? "当前筛选没有命中帖子" : "等待预览";
+});
+const shDetailFilterSignature = computed(() => JSON.stringify({
+  targetForumIDs: [...targetForumIDs.value].sort(),
+  detailStatuses: [...shDetailStatusValues.value].sort(),
+  keyword: form.detailKeyword.trim(),
+  postTimeFrom: form.postTimeFrom.trim(),
+  postTimeTo: form.postTimeTo.trim(),
+  limit: form.detailLimit ?? ""
+}));
+const allSHDetailPreviewSelected = computed(() => {
+  if (!shDetailPreviewRows.value.length) {
+    return false;
+  }
+  const selected = new Set(selectedSHDetailThreadIDs.value);
+  return shDetailPreviewRows.value.every((item) => selected.has(shPreviewThreadTID(item)));
+});
+const shDetailSubmitDisabled = computed(() => {
+  if (!showSHDetailFields.value) {
+    return false;
+  }
+  return shDetailPreviewLoading.value
+    || !selectedSHDetailThreadIDs.value.length
+    || shDetailPreviewSignature.value !== shDetailFilterSignature.value;
+});
+
+watch(shDetailFilterSignature, (signature) => {
+  if (shDetailPreviewSignature.value && shDetailPreviewSignature.value !== signature) {
+    hideSHDetailPreview();
+  }
 });
 const shHeroMetrics = computed(() => [
   { label: "目标版块", value: String(targetForumIDs.value.length || 0) },
@@ -1239,7 +1317,7 @@ function escapeEventHTML(value: unknown): string {
 function formatEventLineHTML(value: string): string {
   const parts = value.split(" | ");
   const linkMovieCodes = (source: string) => escapeEventHTML(source).replace(/\b([A-Za-z][A-Za-z0-9]*-\d{2,})\b/g, (_match, code: string) => {
-    return `<a href="/movie/${encodeURIComponent(code)}">${escapeEventHTML(code)}</a>`;
+    return `<a href="/moviedetail/${encodeURIComponent(code)}">${escapeEventHTML(code)}</a>`;
   });
   if (parts.length < 5 || !/^\[[^\]]+\]$/.test(parts[0] || "")) {
     return linkMovieCodes(value);
@@ -1248,7 +1326,7 @@ function formatEventLineHTML(value: string): string {
   if (!/^\d+$/.test(subjectID) || !String(parts[3] || "").startsWith("new_items=")) {
     return linkMovieCodes(value);
   }
-  const localHref = `/movie/${encodeURIComponent(subjectID)}`;
+  const localHref = `/moviedetail/${encodeURIComponent(subjectID)}`;
   const doubanHref = `https://movie.douban.com/subject/${encodeURIComponent(subjectID)}/`;
   const suffix = parts.slice(3).map(escapeEventHTML).join(" | ");
   return `${escapeEventHTML(parts[0])} | <a href="${localHref}" target="_blank" rel="noopener noreferrer">${escapeEventHTML(parts[1])}</a> | <a href="${doubanHref}" target="_blank" rel="noopener noreferrer">${escapeEventHTML(subjectID)}</a> | ${suffix}`;
@@ -1297,7 +1375,9 @@ function eventKey(event: AnyRecord): string {
 
 function initialTargetForumIDs(): string[] {
   const values = asArray<string>(pick(payload.value, "FetchSehuatangSHTargetForums")).map((item) => String(item || "").trim()).filter(Boolean);
-  return values.length ? values : ["36", "103"];
+  const available = new Set(shForums.value.map((item) => item.forumID));
+  const selected = values.filter((item) => available.has(item));
+  return selected.length ? selected : shForums.value.map((item) => item.forumID);
 }
 
 function initialSHDetailStatusValues(): string[] {
@@ -1696,11 +1776,20 @@ function buildTaskPayload(type: string): Record<string, unknown> {
     body.target_forum_ids = targetForumIDs.value;
   }
   if (type === "spider_fetch_sehuatang_sh_thread_detail") {
+    if (!shDetailPreviewSignature.value || shDetailPreviewSignature.value !== shDetailFilterSignature.value) {
+      throw new Error("筛选条件已变化，请重新执行帖子预览");
+    }
     const tids = selectedSHDetailThreadIDs.value.map((item) => item.trim()).filter(Boolean);
     if (!tids.length) {
       throw new Error("请先筛选帖子预览并选择要抓取详情的帖子");
     }
     body.thread_tids = tids;
+    body.trigger_source = "shfill";
+    body.target_forum_ids = targetForumIDs.value;
+    body.detail_statuses = shDetailStatusValues.value;
+    body.keyword = form.detailKeyword.trim();
+    body.post_time_from = form.postTimeFrom.trim();
+    body.post_time_to = form.postTimeTo.trim();
   }
   return body;
 }
@@ -1745,7 +1834,13 @@ function hideSHDetailPreview() {
   shDetailPreviewLoading.value = false;
   shDetailPreviewRows.value = [];
   shDetailPreviewTotal.value = 0;
+  shDetailPreviewError.value = "";
+  shDetailPreviewSignature.value = "";
   selectedSHDetailThreadIDs.value = [];
+}
+
+function collapseSHDetailPreview() {
+  shDetailPreviewOpen.value = false;
 }
 
 function currentSHDetailFilterPayload(): Record<string, unknown> {
@@ -1778,23 +1873,32 @@ async function previewSHDetail() {
     message.value = err instanceof Error ? err.message : String(err);
     return;
   }
+  message.value = "";
   shDetailPreviewLoading.value = true;
   shDetailPreviewOpen.value = true;
+  shDetailPreviewError.value = "";
+  shDetailPreviewSignature.value = "";
+  shDetailPreviewRows.value = [];
+  shDetailPreviewTotal.value = 0;
+  selectedSHDetailThreadIDs.value = [];
   try {
     const data = asRecord(await sendJSON("/api/crawler/jobs/sehuatang-sh-thread-detail/preview", "POST", body));
     const rows = asArray<AnyRecord>(pick(data, "rows", "Rows", "items", "Items"));
     shDetailPreviewRows.value = rows;
     shDetailPreviewTotal.value = Number(pick(data, "total", "Total") || rows.length);
     selectedSHDetailThreadIDs.value = rows.map((item) => shPreviewThreadTID(item)).filter(Boolean);
+    shDetailPreviewSignature.value = shDetailFilterSignature.value;
   } catch (err) {
-    message.value = err instanceof Error ? err.message : String(err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    shDetailPreviewError.value = errorMessage;
+    message.value = errorMessage;
   } finally {
     shDetailPreviewLoading.value = false;
   }
 }
 
 function selectAllSHDetailPreview() {
-  selectedSHDetailThreadIDs.value = shDetailPreviewRows.value.map((item) => shPreviewThreadTID(item)).filter(Boolean);
+  selectedSHDetailThreadIDs.value = Array.from(new Set(shDetailPreviewRows.value.map((item) => shPreviewThreadTID(item)).filter(Boolean)));
 }
 
 function clearSHDetailPreviewSelection() {
@@ -1869,16 +1973,32 @@ function shPreviewThreadTID(item: AnyRecord): string {
   return text(item, "ThreadTID", "thread_tid");
 }
 
+function shPreviewDetailHref(item: AnyRecord): string {
+  const tid = shPreviewThreadTID(item);
+  return tid ? `/shthread/${encodeURIComponent(tid)}` : "#";
+}
+
 function shPreviewTitle(item: AnyRecord): string {
   return text(item, "ThreadTitle", "thread_title");
 }
 
 function shPreviewForum(item: AnyRecord): string {
-  return text(item, "SourceForumID", "source_forum_id");
+  return shForumName(shForums.value, text(item, "SourceForumID", "source_forum_id"));
 }
 
 function shPreviewStatus(item: AnyRecord): string {
   return text(item, "DetailStatus", "detail_status");
+}
+
+function shPreviewStatusClass(item: AnyRecord): string {
+  const status = shPreviewStatus(item);
+  if (status === "fetched") {
+    return "next02-sh-preview-status is-fetched";
+  }
+  if (status === "failed") {
+    return "next02-sh-preview-status is-failed";
+  }
+  return "next02-sh-preview-status is-pending";
 }
 
 function shPreviewAuthor(item: AnyRecord): string {

@@ -90,6 +90,17 @@ const route = useRoute();
 const sidebarCollapsed = ref(false);
 const expandedGroupLabels = ref<string[]>([]);
 const collapsedGroupLabels = ref<string[]>([]);
+const legacyListCardRouteClasses: Record<string, string> = {
+  "/listcard": "route-cards",
+  "/listcardtoday": "route-cardstoday",
+  "/listcardrank": "route-cardshasrank",
+  "/listcardowned": "route-cardsmediamowned",
+  "/listcardneed": "route-cardsneeddownload",
+  "/listcardrandom": "route-cardsrandom",
+  "/listcardagg": "route-cardsagg",
+  "/listcarddayrank": "route-moviecarddayrank",
+  "/listcardperiodrank": "route-moviecardperiodrank"
+};
 
 const currentTitle = computed(() => String(route.meta.title || routeTitle(route.path)));
 const sidebarToggleLabel = computed(() => (sidebarCollapsed.value ? "展开侧边导航" : "收起侧边导航"));
@@ -97,18 +108,24 @@ const activePath = computed(() => (route.path === "/records" ? "/crawl-records" 
 const routeClass = computed(() => {
   const slug = route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]+/g, "-") || "home";
   return [
+    legacyListCardRouteClasses[route.path] || "",
     route.path === "/crawl-records" ? "route-records" : "",
-    route.path.startsWith("/movie/") ? "route-movie-detail" : "",
-    route.path === "/cast" || route.path.startsWith("/cast/") ? "route-cast-detail" : "",
+    route.path.startsWith("/moviedetail/") ? "route-movie-detail" : "",
+    route.path === "/cast" || route.path.startsWith("/castdetail/") ? "route-cast-detail" : "",
+    route.path === "/shfetchall" ? "route-triggers-fetch-sehuatang-sh" : "",
+    route.path === "/shfetch" ? "route-triggers-fetch-sehuatang-sh-thread-list" : "",
+    route.path === "/shfill" ? "route-triggers-fetch-sehuatang-sh-thread-detail" : "",
+    route.path === "/shpool" ? "route-fetch-site-sehuatang-sh-list" : "",
+    route.path.startsWith("/shthread/") ? "route-fetch-site-sehuatang-sh-detail" : "",
     `route-${slug}`
   ].filter(Boolean).join(" ");
 });
 const showLegacyTopActions = computed(() => (
-  route.path === "/moviecarddayrank"
-  || route.path === "/moviecardperiodrank"
-  || route.path.startsWith("/movie/")
+  route.path === "/listcarddayrank"
+  || route.path === "/listcardperiodrank"
+  || route.path.startsWith("/moviedetail/")
   || route.path === "/cast"
-  || route.path.startsWith("/cast/")
+  || route.path.startsWith("/castdetail/")
 ));
 
 function isActive(href: string): boolean {

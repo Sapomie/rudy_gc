@@ -3,10 +3,13 @@ package moviex
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+
+	"rudy_gc/internal/consts"
 )
 
 var _ GScModel = (*customGScModel)(nil)
@@ -23,6 +26,7 @@ type (
 		FindNearest(ctx context.Context, t int64) (*GSc, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string) ([]*GSc, error)
 		ListPageByScTimeRange(ctx context.Context, offset, limit int64, orderBy string, startTime, endTime int64) ([]*GSc, error)
+		ListPageByScTimeRangeWithMovieStats(ctx context.Context, offset, limit int64, sortField, sortOrder string, startTime, endTime int64) ([]*GSc, error)
 		CountAll(ctx context.Context) (int64, error)
 		CountByScTimeRange(ctx context.Context, startTime, endTime int64) (int64, error)
 	}
@@ -176,6 +180,62 @@ func (m *customGScModel) ListPageByScTimeRange(ctx context.Context, offset, limi
 	if err != nil {
 		return nil, err
 	}
+
+	var rows []*GSc
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GSc{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGScModel) ListPageByScTimeRangeWithMovieStats(ctx context.Context, offset, limit int64, sortField, sortOrder string, startTime, endTime int64) ([]*GSc, error) {
+	direction := "DESC"
+	if strings.EqualFold(strings.TrimSpace(sortOrder), "asc") {
+		direction = "ASC"
+	}
+
+	column := "COALESCE(sc_stats.sc_movie_count, 0)"
+	if strings.EqualFold(strings.TrimSpace(sortField), "total_movie_count") {
+		column = "COALESCE(sc_stats.total_movie_count, 0)"
+	}
+
+	statsSQL, statsArgs, err := squirrel.
+		Select(
+			"sc_name",
+			"COUNT(*) AS total_movie_count",
+			"SUM(CASE WHEN is_sc = ? THEN 1 ELSE 0 END) AS sc_movie_count",
+		).
+		From("`g_list`").
+		GroupBy("sc_name").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	statsArgs = append([]any{consts.GListIsSc}, statsArgs...)
+
+	query := squirrel.
+		Select("g_sc.*").
+		From(m.table + " AS g_sc").
+		LeftJoin("(" + statsSQL + ") AS sc_stats ON sc_stats.sc_name = g_sc.name")
+	if startTime > 0 {
+		query = query.Where(squirrel.GtOrEq{"g_sc.sc_time": startTime})
+	}
+	if endTime > 0 {
+		query = query.Where(squirrel.Lt{"g_sc.sc_time": endTime})
+	}
+
+	sqlStr, args, err := query.
+		OrderBy(column+" "+direction, "g_sc.sc_time DESC", "g_sc.id DESC").
+		Offset(uint64(offset)).
+		Limit(uint64(limit)).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	args = append(statsArgs, args...)
 
 	var rows []*GSc
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {

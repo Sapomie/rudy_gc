@@ -86,21 +86,22 @@ type sehuatangMagnetSortQuery struct {
 }
 
 type shSehuatangThreadPageQuery struct {
-	Page             int64  `form:"p"`
-	PageSize         int64  `form:"ps"`
-	Sort             string `form:"sort"`
-	Order            string `form:"order"`
-	Keyword          string `form:"keyword"`
-	ThreadTID        string `form:"thread_tid"`
-	AuthorName       string `form:"author_name"`
-	InfoHash         string `form:"info_hash"`
-	SourceForumID    string `form:"source_forum_id"`
-	DetailStatus     string `form:"detail_status"`
-	HasMagnet        string `form:"has_magnet"`
-	PostTimeFrom     string `form:"post_time_from"`
-	PostTimeTo       string `form:"post_time_to"`
-	LastSeenTimeFrom string `form:"last_seen_time_from"`
-	LastSeenTimeTo   string `form:"last_seen_time_to"`
+	Page             int64    `form:"p"`
+	PageSize         int64    `form:"ps"`
+	Sort             string   `form:"sort"`
+	Order            string   `form:"order"`
+	Keyword          string   `form:"keyword"`
+	ThreadTID        string   `form:"thread_tid"`
+	AuthorName       string   `form:"author_name"`
+	InfoHash         string   `form:"info_hash"`
+	SourceForumID    string   `form:"source_forum_id"`
+	SourceForumIDs   []string `form:"source_forum_ids"`
+	DetailStatus     string   `form:"detail_status"`
+	DetailStatuses   []string `form:"detail_statuses"`
+	PostTimeFrom     string   `form:"post_time_from"`
+	PostTimeTo       string   `form:"post_time_to"`
+	LastSeenTimeFrom string   `form:"last_seen_time_from"`
+	LastSeenTimeTo   string   `form:"last_seen_time_to"`
 }
 
 type shSehuatangThreadSortQuery struct {
@@ -342,7 +343,7 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangListPageMain(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
-	defer withFrontendPath(c, "/fetch-site-sehuatang-sh-list")()
+	defer withFrontendPath(c, "/shpool")()
 
 	var q shSehuatangThreadPageQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -357,21 +358,16 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 	}
 	q.Sort = normalizeSHSehuatangThreadSortField(q.Sort)
 	q.Order = normalizeSehuatangMagnetSortOrder(q.Order)
+	q.SourceForumIDs = normalizeSHMultiQueryValues(q.SourceForumIDs, q.SourceForumID)
+	q.DetailStatuses = normalizeSHMultiQueryValues(q.DetailStatuses, q.DetailStatus)
 
 	filter := moviex.ShSehuatangThreadListFilter{
-		Keyword:       strings.TrimSpace(q.Keyword),
-		ThreadTID:     strings.TrimSpace(q.ThreadTID),
-		AuthorName:    strings.TrimSpace(q.AuthorName),
-		InfoHash:      strings.TrimSpace(q.InfoHash),
-		SourceForumID: strings.TrimSpace(q.SourceForumID),
-		DetailStatus:  strings.TrimSpace(q.DetailStatus),
-	}
-	if v, ok, err := parseSHHasMagnet(q.HasMagnet); err != nil {
-		jsonBadRequest(c, "磁力筛选参数错误", err)
-		return
-	} else if ok {
-		filter.HasMagnet = v
-		filter.HasMagnetSet = true
+		Keyword:        strings.TrimSpace(q.Keyword),
+		ThreadTID:      strings.TrimSpace(q.ThreadTID),
+		AuthorName:     strings.TrimSpace(q.AuthorName),
+		InfoHash:       strings.TrimSpace(q.InfoHash),
+		SourceForumIDs: q.SourceForumIDs,
+		DetailStatuses: q.DetailStatuses,
 	}
 	if ts, ok, err := parseOptionalDateStart(q.PostTimeFrom); err != nil {
 		jsonBadRequest(c, "发帖时间开始日期错误", err)
@@ -402,11 +398,12 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		filter.HasLastSeenTimeTo = true
 	}
 
-	total, err := h.deps.ShSehuatangThreadModel.CountAll(c.Request.Context(), filter)
+	aggregate, err := h.deps.ShSehuatangThreadModel.Aggregate(c.Request.Context(), filter)
 	if err != nil {
-		jsonServerError(c, "Sehuatang SH 列表统计失败", err)
+		jsonServerError(c, "Sehuatang SH 列表聚合失败", err)
 		return
 	}
+	total := aggregate.Total
 	offset := (q.Page - 1) * q.PageSize
 	rows, err := h.deps.ShSehuatangThreadModel.ListPage(c.Request.Context(), offset, q.PageSize, buildSHSehuatangThreadOrderBy(q.Sort, q.Order), filter)
 	if err != nil {
@@ -423,22 +420,23 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		"Title":             "Sehuatang SH 帖子列表",
 		"ViewType":          "fetch-site-sehuatang-sh-list",
 		"PageTitle":         "Sehuatang SH 帖子列表",
-		"PageNote":          "展示 sh_sehuatang_thread 帖子池基础信息、详情状态，并保留最近抓取记录。",
+		"PageNote":          "展示 sh_thread 帖子池基础信息、详情状态，并保留最近抓取记录。",
 		"Query":             q,
 		"Rows":              rows,
 		"RecentRuns":        runs,
 		"Total":             total,
+		"Aggregate":         aggregate,
 		"PageInfo":          buildFetchSitePageInfo(c, total, q.Page, q.PageSize),
 		"SortQuery":         buildSHSehuatangThreadSortQuery(c, q.Sort, q.Order),
-		"TaskPageURL":       "/triggers/fetch-sehuatang-sh-thread-list",
-		"DetailTaskPageURL": "/triggers/fetch-sehuatang-sh-thread-detail",
+		"TaskPageURL":       "/shfetch",
+		"DetailTaskPageURL": "/shfill",
 		"TasksPageURL":      "/crawler/tasks",
 		"OldListURL":        "/fetch-site-sehuatang-list",
 	})
 }
 
 func (h *CrawlerPagesAPI) FetchSiteSehuatangSHDetailPageMain(c *gin.Context) {
-	defer withFrontendPath(c, "/fetch-site-sehuatang-sh-detail/"+c.Param("thread_tid"))()
+	defer withFrontendPath(c, "/shthread/"+c.Param("thread_tid"))()
 
 	threadTID := strings.TrimSpace(c.Param("thread_tid"))
 	if threadTID == "" {
@@ -467,9 +465,9 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHDetailPageMain(c *gin.Context) {
 		"PageTitle":       "Sehuatang SH 帖子详情",
 		"Thread":          thread,
 		"FetchItems":      items,
-		"ListPageURL":     "/fetch-site-sehuatang-sh-list",
-		"TaskPageURL":     "/triggers/fetch-sehuatang-sh-thread-detail",
-		"ListTaskPageURL": "/triggers/fetch-sehuatang-sh-thread-list",
+		"ListPageURL":     "/shpool",
+		"TaskPageURL":     "/shfill",
+		"ListTaskPageURL": "/shfetch",
 		"TasksPageURL":    "/crawler/tasks",
 	})
 }
@@ -691,19 +689,25 @@ func buildSHSehuatangThreadOrderBy(sortField string, sortOrder string) string {
 	return fmt.Sprintf("`%s` %s, `id` DESC", field, strings.ToUpper(order))
 }
 
-func parseSHHasMagnet(raw string) (bool, bool, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return false, false, nil
+func normalizeSHMultiQueryValues(values []string, legacy string) []string {
+	out := make([]string, 0, len(values)+1)
+	seen := make(map[string]struct{}, len(values)+1)
+	appendValue := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		if _, ok := seen[value]; ok {
+			return
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
 	}
-	switch raw {
-	case "1", "true", "yes":
-		return true, true, nil
-	case "0", "false", "no":
-		return false, true, nil
-	default:
-		return false, false, fmt.Errorf("must be 1 or 0")
+	for _, value := range values {
+		appendValue(value)
 	}
+	appendValue(legacy)
+	return out
 }
 
 func buildSehuatangTagQuickFilters(c *gin.Context, currentTag string) []*sehuatangTagQuickFilter {

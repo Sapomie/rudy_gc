@@ -28,7 +28,7 @@ func NewWMediaAggAPI(deps *dep.Dep) *WMediaAggAPI {
 
 func (h *WMediaAggAPI) Birth(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/w-media-agg/birth"
+	c.Request.URL.Path = "/aggbirth"
 	defer func() { c.Request.URL.Path = originalPath }()
 
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
@@ -136,7 +136,7 @@ type wMediaBirthBucketHeaderLinks struct {
 
 func (h *WMediaAggAPI) BucketList(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/w-media-agg/bucket-list"
+	c.Request.URL.Path = "/bucketsbirth"
 	defer func() { c.Request.URL.Path = originalPath }()
 
 	page := atoiDef(c.DefaultQuery("p", "1"), 1)
@@ -180,8 +180,8 @@ func (h *WMediaAggAPI) BucketList(c *gin.Context) {
 		"SortLinks":   buildBucketListSortLinks(c, curSort, curDir),
 		"HeaderLinks": buildBucketListHeaderLinks(c, curSort, curDir),
 		"LevelLinks":  buildBucketListLevelLinks(c, level),
-		"ClearHref":   "/w-media-agg/bucket-list",
-		"AggPageHref": "/w-media-agg/birth",
+		"ClearHref":   "/bucketsbirth",
+		"AggPageHref": "/aggbirth",
 		"Query": wMediaBirthBucketListQuery{
 			Level:    level,
 			ScopeKey: scopeKey,

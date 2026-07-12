@@ -148,7 +148,7 @@
                         <span v-else :title="rowText(row, 'jav_id', 'JavId', 'JavID')">{{ rowText(row, "jav_id", "JavId", "JavID") }}</span>
                       </td>
                       <td class="sc-content-cell">
-                        <a :href="'/movie/' + encodeURIComponent(rowText(row, 'name', 'Name'))" target="_blank" rel="noopener noreferrer" :title="rowText(row, 'name', 'Name')">{{ rowText(row, "name", "Name") }}</a>
+                        <a :href="'/moviedetail/' + encodeURIComponent(rowText(row, 'name', 'Name'))" target="_blank" rel="noopener noreferrer" :title="rowText(row, 'name', 'Name')">{{ rowText(row, "name", "Name") }}</a>
                       </td>
                       <td><span class="e-items-status-text" :title="rowText(row, 'has_detail_text', 'HasDetailText') || '-'">{{ rowText(row, "has_detail_text", "HasDetailText") || "-" }}</span></td>
                       <td><span class="e-items-status-text" :title="rowText(row, 'has_download_cover_text', 'HasDownloadCoverText') || '-'">{{ rowText(row, "has_download_cover_text", "HasDownloadCoverText") || "-" }}</span></td>

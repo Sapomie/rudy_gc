@@ -1,6 +1,6 @@
 <template>
-  <PageShell class="next02-pink-list-page-shell casts-page-shell" :title="pageTitle" note="" eyebrow="">
-    <div id="page-root" class="container-fluid next02-pink-list-page casts-page-root">
+  <PageShell class="next02-pink-list-page-shell sc-events-page-shell casts-page-shell" :title="pageTitle" note="" eyebrow="">
+    <div id="page-root" class="container-fluid next02-pink-list-page next02-sc-pink-theme next02-sc-events-rewrite casts-page-root">
       <div v-if="loading" class="alert alert-info py-2 next02-pink-list-state">加载中...</div>
       <div v-else-if="error" class="alert alert-danger next02-pink-list-state">{{ error }}</div>
       <template v-else>
@@ -12,7 +12,7 @@
           </div>
         </section>
 
-        <div class="card next02-pink-list-panel casts-list-panel">
+        <div class="card next02-pink-list-panel next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card casts-list-panel">
           <div class="card-body">
             <div class="next02-pink-list-toolbar casts-list-toolbar">
               <form class="casts-filter-form" method="get" action="/casts" id="castsFilterForm">
@@ -71,8 +71,8 @@
               </div>
             </div>
 
-            <div class="next02-pink-list-table-wrap">
-              <table class="table table-hover align-middle mb-0 next02-pink-list-table casts-table">
+            <div class="table-responsive next02-pink-list-table-wrap">
+              <table class="table table-hover align-middle mb-0 next02-pink-list-table sc-events-table casts-table">
                 <colgroup>
                   <col class="casts-col-name">
                   <col class="casts-col-chinese">
@@ -87,16 +87,16 @@
                 </colgroup>
                 <thead>
                   <tr>
-                    <th class="next02-pink-list-sortable"><SortLink :link="sortLink('ByName')" label="Name" /></th>
-                    <th class="next02-pink-list-sortable"><SortLink :link="sortLink('ByChinese')" label="Chinese" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByAge')" label="Age" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByHeight')" label="Height" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByMovieNumber')" label="Movies" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByWOwned')" label="WOwned" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByScTimes')" label="SC Times" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByComeTimes')" label="Come Times" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByLastSc')" label="Last SC" /></th>
-                    <th class="next02-pink-list-sortable casts-number"><SortLink :link="sortLink('ByHighestRank')" label="Highest Rank" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head"><SortLink :link="sortLink('ByName')" label="Name" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head"><SortLink :link="sortLink('ByChinese')" label="Chinese" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByAge')" label="Age" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByHeight')" label="Height" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByMovieNumber')" label="Movies" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByWOwned')" label="WOwned" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByScTimes')" label="SC Times" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByComeTimes')" label="Come Times" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByLastSc')" label="Last SC" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByHighestRank')" label="Highest Rank" /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -104,16 +104,16 @@
                     <td colspan="10"><div class="sc-empty-state">还没有可展示的演员。</div></td>
                   </tr>
                   <tr v-for="row in rows" v-else :key="rowKey(row)">
-                    <td class="casts-content-cell"><a class="next02-pink-list-link" :href="`/cast/${value(row, 'Id')}`" :title="value(row, 'Name')" target="_blank" rel="noopener noreferrer">{{ value(row, "Name") }}</a></td>
-                    <td class="casts-content-cell" :title="value(row, 'Chinese') || undefined">{{ value(row, "Chinese") || "-" }}</td>
-                    <td class="casts-number">{{ formatAgeFromBirth(value(row, "BirthDay")) }}</td>
-                    <td class="casts-number">{{ formatHeightCm(value(row, "Height")) }}</td>
-                    <td class="casts-number">{{ value(row, "MovieNumber") || 0 }}</td>
-                    <td class="casts-number">{{ value(row, "OwnedWMediaNumber") || 0 }}</td>
-                    <td class="casts-number">{{ value(row, "ScTimes") || 0 }}</td>
-                    <td class="casts-number">{{ value(row, "ComeTimes") || 0 }}</td>
-                    <td class="casts-number">{{ formatUnixDate(value(row, "LastScTime")) }}</td>
-                    <td class="casts-number">{{ formatRank(value(row, "HighestRank")) }}</td>
+                    <td class="sc-content-cell casts-content-cell"><a class="next02-pink-list-link" :href="`/castdetail/${value(row, 'Id')}`" :title="value(row, 'Name')" target="_blank" rel="noopener noreferrer">{{ value(row, "Name") }}</a></td>
+                    <td class="sc-content-cell casts-content-cell" :title="value(row, 'Chinese') || undefined">{{ value(row, "Chinese") || "-" }}</td>
+                    <td class="sc-number casts-number">{{ formatAgeFromBirth(value(row, "BirthDay")) }}</td>
+                    <td class="sc-number casts-number">{{ formatHeightCm(value(row, "Height")) }}</td>
+                    <td class="sc-number casts-number">{{ value(row, "MovieNumber") || 0 }}</td>
+                    <td class="sc-number casts-number">{{ value(row, "OwnedWMediaNumber") || 0 }}</td>
+                    <td class="sc-number casts-number">{{ value(row, "ScTimes") || 0 }}</td>
+                    <td class="sc-number casts-number">{{ value(row, "ComeTimes") || 0 }}</td>
+                    <td class="sc-number casts-number">{{ formatUnixDate(value(row, "LastScTime")) }}</td>
+                    <td class="sc-number casts-number">{{ formatRank(value(row, "HighestRank")) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -223,7 +223,7 @@ const SortLink = defineComponent({
       const desc = Boolean(props.link.Desc || props.link.desc);
       const suffix = active ? (desc ? " ↓" : " ↑") : "";
       return h("a", {
-        class: ["next02-pink-list-sort-link", "sort-link", { active }],
+        class: ["next02-pink-list-sort-link", "sc-sort-link", "sort-link", { active }],
         href: normalizeHref(text(props.link, "Href", "href") || "#")
       }, `${props.label}${suffix}`);
     };

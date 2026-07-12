@@ -23,11 +23,12 @@ type SehuatangThread struct {
 	InfoHashText   string `gorm:"column:info_hash_text;type:text;not null"`
 	ContentHash    string `gorm:"column:content_hash;type:char(64);not null;index"`
 
-	LastSeenTime int64 `gorm:"column:last_seen_time;not null;index"`
-	CreatedOn    int64 `gorm:"column:created_on;not null;default:0"`
-	UpdatedOn    int64 `gorm:"column:updated_on;not null;default:0"`
+	FirstSeenTime int64 `gorm:"column:first_seen_time;not null;default:0"`
+	LastSeenTime  int64 `gorm:"column:last_seen_time;not null;index"`
+	CreatedOn     int64 `gorm:"column:created_on;not null;default:0"`
+	UpdatedOn     int64 `gorm:"column:updated_on;not null;default:0"`
 }
 
-const sehuatangThreadTableName = "sh_sehuatang_thread"
+const sehuatangThreadTableName = "sh_thread"
 
 func (SehuatangThread) TableName() string { return sehuatangThreadTableName }

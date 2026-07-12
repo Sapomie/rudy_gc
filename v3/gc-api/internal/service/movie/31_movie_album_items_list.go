@@ -8,12 +8,16 @@ import (
 )
 
 type MovieAlbumItemsPageQuery struct {
-	AlbumName string
-	Page      int64
-	PageSize  int64
-	Sort      string
-	Order     string
-	Keyword   string
+	AlbumName            string
+	Page                 int64
+	PageSize             int64
+	Sort                 string
+	Order                string
+	Keyword              string
+	ReleasingDateFrom    int64
+	HasReleasingDateFrom bool
+	ReleasingDateTo      int64
+	HasReleasingDateTo   bool
 }
 
 type MovieAlbumItemsPageResult struct {
@@ -71,12 +75,19 @@ func (s *Service) BuildMovieAlbumItemsPage(ctx context.Context, query MovieAlbum
 		return result, nil
 	}
 
-	total, err := s.deps.MovieAlbumItemModel.CountPageRows(ctx, selectedAlbumID, strings.TrimSpace(query.Keyword))
+	filter := moviex.CMovieAlbumItemPageFilter{
+		Keyword:              strings.TrimSpace(query.Keyword),
+		ReleasingDateFrom:    query.ReleasingDateFrom,
+		HasReleasingDateFrom: query.HasReleasingDateFrom,
+		ReleasingDateTo:      query.ReleasingDateTo,
+		HasReleasingDateTo:   query.HasReleasingDateTo,
+	}
+	total, err := s.deps.MovieAlbumItemModel.CountPageRows(ctx, selectedAlbumID, filter)
 	if err != nil {
 		return nil, err
 	}
 	offset := (page - 1) * pageSize
-	rows, err := s.deps.MovieAlbumItemModel.ListPageRows(ctx, selectedAlbumID, offset, pageSize, movieAlbumItemPageOrderBy(query.Sort, query.Order), strings.TrimSpace(query.Keyword))
+	rows, err := s.deps.MovieAlbumItemModel.ListPageRows(ctx, selectedAlbumID, offset, pageSize, movieAlbumItemPageOrderBy(query.Sort, query.Order), filter)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +150,8 @@ func mapMovieAlbumItemSortColumn(sortField string) string {
 		return "`movie_jav_id`"
 	case "sort_no":
 		return "`sort_no`"
+	case "releasing_date":
+		return "`releasing_date`"
 	case "created_on":
 		return "`created_on`"
 	default:

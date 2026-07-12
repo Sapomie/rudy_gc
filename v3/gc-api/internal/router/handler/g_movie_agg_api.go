@@ -51,7 +51,7 @@ func clampPageSize(size int) int {
 
 func (h *MovieAggAPI) MovieAggAllRelease(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/movie-agg-all/release"
+	c.Request.URL.Path = "/aggrelease"
 	defer func() { c.Request.URL.Path = originalPath }()
 
 	aggMode := moviereleaseagg.NormalizeAggMode(c.Query("agg_mode"))
@@ -176,7 +176,7 @@ type movieReleaseBucketHeaderLinks struct {
 
 func (h *MovieAggAPI) MovieAggAllReleaseBucketList(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/movie-agg-all/release-bucket-list"
+	c.Request.URL.Path = "/bucketsrelease"
 	defer func() { c.Request.URL.Path = originalPath }()
 
 	aggMode := moviereleaseagg.NormalizeAggMode(c.Query("agg_mode"))
@@ -215,13 +215,13 @@ func (h *MovieAggAPI) MovieAggAllReleaseBucketList(c *gin.Context) {
 
 	pageTitle := "上映日时间桶落库列表"
 	pageNote := "直接查看 movie_release_bucket_stat 原始落库结果，不做二次聚合。"
-	clearHref := "/movie-agg-all/release-bucket-list"
-	aggPageHref := "/movie-agg-all/release"
+	clearHref := "/bucketsrelease"
+	aggPageHref := "/aggrelease"
 	if aggMode == moviereleaseagg.AggModeOwned {
 		pageTitle = "上映日时间桶落库列表（已拥有）"
 		pageNote = "直接查看 movie_release_bucket_stat 的 owned 口径原始落库结果，只统计 native w_media。"
-		clearHref = "/movie-agg-all/release-bucket-list?agg_mode=owned"
-		aggPageHref = "/movie-agg-all/release?agg_mode=owned"
+		clearHref = "/bucketsrelease?agg_mode=owned"
+		aggPageHref = "/aggrelease?agg_mode=owned"
 	}
 
 	c.JSON(http.StatusOK, gin.H{

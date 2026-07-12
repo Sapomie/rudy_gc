@@ -1,6 +1,6 @@
 <template>
-  <PageShell class="torrent-albums-page-shell" title="TorrentAlbums" note="" eyebrow="">
-    <div id="page-root" class="container-fluid torrent-albums-page-root albums-list-standard torrent-albums-list-standard">
+  <PageShell class="torrent-albums-page-shell sc-events-page-shell" title="TorrentAlbums" note="" eyebrow="">
+    <div id="page-root" class="container-fluid torrent-albums-page-root albums-list-standard torrent-albums-list-standard next02-sc-pink-theme next02-sc-events-rewrite">
       <div v-if="loading" class="alert albums-list-feedback is-loading">加载中...</div>
       <div v-else-if="error" class="alert albums-list-feedback is-error">{{ error }}</div>
       <div v-else id="torrentAlbumsPage" class="torrent-albums-page" :data-album-id="selectedAlbumID">
@@ -17,7 +17,7 @@
           {{ messageText }}
         </div>
 
-        <section class="albums-list-panel">
+        <section class="albums-list-panel next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="albums-list-controls">
             <form ref="filterForm" class="albums-filter-form torrent-albums-filter-form" id="torrentAlbumsFilterForm" method="get" action="/torrent-albums">
               <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
@@ -121,8 +121,8 @@
             </div>
           </div>
 
-          <div class="albums-table-wrap">
-              <table class="table table-hover align-middle mb-0 torrent-album-table">
+          <div class="table-responsive albums-table-wrap">
+              <table class="table table-hover align-middle mb-0 sc-events-table torrent-album-table">
                 <colgroup>
                   <col class="torrent-album-col-select">
                   <col class="torrent-album-col-movie">
@@ -146,12 +146,12 @@
                         @change="toggleAll(($event.target as HTMLInputElement).checked)"
                       >
                     </th>
-                    <th><SortLink :link="sortLink('ByMovieName')" label="影片" /></th>
-                    <th><SortLink :link="sortLink('BySourceType')" label="来源" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('ByMovieName')" label="影片" /></th>
+                    <th class="sc-sortable-head"><SortLink :link="sortLink('BySourceType')" label="来源" /></th>
                     <th>Info Hash</th>
-                    <th>大小</th>
-                    <th><SortLink :link="sortLink('ByPublish')" label="发布日期" /></th>
-                    <th><SortLink :link="sortLink('ByCreated')" label="下载中时间" /></th>
+                    <th class="sc-number">大小</th>
+                    <th class="sc-sortable-head sc-number"><SortLink :link="sortLink('ByPublish')" label="发布日期" /></th>
+                    <th class="sc-sortable-head sc-number"><SortLink :link="sortLink('ByCreated')" label="下载中时间" /></th>
                     <th class="text-nowrap">操作</th>
                   </tr>
                 </thead>
@@ -170,14 +170,14 @@
                         @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
                       >
                     </td>
-                    <td class="text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
+                    <td class="sc-content-cell text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
                       <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
                     </td>
                     <td class="text-nowrap"><span class="badge" :class="sourceBadgeClass(row)">{{ sourceBadgeText(row) }}</span></td>
                     <td class="album-hash-cell"><code class="album-hash">{{ value(row, "InfoHash") }}</code></td>
-                    <td class="text-nowrap">{{ value(row, "Size") || "-" }}</td>
-                    <td class="text-nowrap">{{ formatUnixDate(value(row, "PublishTime")) }}</td>
-                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
+                    <td class="sc-number text-nowrap">{{ value(row, "Size") || "-" }}</td>
+                    <td class="sc-number text-nowrap">{{ formatUnixDate(value(row, "PublishTime")) }}</td>
+                    <td class="sc-number text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
                     <td class="text-nowrap">
                       <button type="button" class="btn btn-sm btn-outline-secondary js-copy-hash" :data-hash="value(row, 'InfoHash')" @click="copyHash(value(row, 'InfoHash'))">复制 Hash</button>
                       <button type="button" class="btn btn-sm btn-outline-danger js-remove-torrent-album-item ms-1" :data-item-id="value(row, 'ID')" @click="removeOne(row)">移除</button>
@@ -293,7 +293,7 @@ function sortLink(key: string): AnyRecord {
 }
 
 function movieHref(row: AnyRecord): string {
-  return `/movie/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
+  return `/moviedetail/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
 }
 
 function sourceBadgeText(row: AnyRecord): string {
@@ -507,7 +507,7 @@ const SortLink = defineComponent({
       const active = Boolean(link.Active);
       const desc = Boolean(link.Desc);
       return h("a", {
-        class: ["album-sort-link", active ? "active" : ""],
+        class: ["album-sort-link", "sc-sort-link", active ? "active" : ""],
         href: normalizeHref(text(link, "Href") || "#")
       }, `${props.label}${active ? (desc ? " ↓" : " ↑") : ""}`);
     };

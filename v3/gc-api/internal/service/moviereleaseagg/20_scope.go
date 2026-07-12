@@ -36,11 +36,11 @@ func NormalizeAggMode(mode string) string {
 }
 
 func rootPathForMode(mode string) string {
-	return "/movie-agg-all/release"
+	return "/aggrelease"
 }
 
 func bucketListPathForMode(mode string) string {
-	return "/movie-agg-all/release-bucket-list"
+	return "/bucketsrelease"
 }
 
 func pathWithAggMode(path, mode string) string {
