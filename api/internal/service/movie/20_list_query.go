@@ -1,0 +1,23 @@
+package movie
+
+import "rudy_gc/internal/repository/moviex"
+
+func (s *Service) movieListQuery() *moviex.MovieListRepoSqlx {
+	return moviex.NewMovieListRepoSqlx(
+		s.deps.MovieModel,
+		s.deps.MinfoModel,
+		s.deps.WMediaModel,
+		s.deps.GScStatModel,
+		s.deps.MovieAlbumModel,
+		s.deps.MovieAlbumItemModel,
+		s.deps.LabelModel,
+		s.deps.MakerModel,
+		s.deps.DirectorModel,
+		s.deps.PrefixModel,
+		s.deps.CastModel,
+		s.deps.GenreModel,
+		s.deps.MovieCastModel,
+		s.deps.MovieGenreModel,
+		s.deps.WFolderModel,
+	)
+}
