@@ -97,7 +97,6 @@ function routeDefaults(path: string, query: QueryInput): QueryDefaults {
     case "/javbuslist":
     case "/sukebeilist":
       return listDefaults("50", "last_fetch_time");
-    case "/sehuatanglist":
     case "/shpool":
       return listDefaults("50", "post_time");
     default:

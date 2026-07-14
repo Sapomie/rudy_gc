@@ -3,7 +3,6 @@ package wkv
 import "rudy_gc/internal/svc"
 
 const (
-	ItemKeySHTTime = "sht_time"
 	ItemKeyHRKTime = "hrk_time"
 )
 

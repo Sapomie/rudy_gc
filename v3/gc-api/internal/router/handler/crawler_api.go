@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -41,31 +40,12 @@ func (h *CrawlerAPI) Start(c *gin.Context) {
 		writeCrawlerError(c, http.StatusBadRequest, "invalid request")
 		return
 	}
-	if strings.TrimSpace(req.TaskType) == loop.TaskSpiderFetchSehuatang {
-		if err := h.prepareFetchSehuatangTaskRequest(c.Request.Context(), &req); err != nil {
-			writeCrawlerError(c, http.StatusBadRequest, err.Error())
-			return
-		}
-	}
-
 	jobID, err := h.runtime.StartTask(req)
 	if err != nil {
 		writeCrawlerError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	writeCrawlerJobStarted(c, jobID, strings.TrimSpace(req.TaskType))
-}
-
-func (h *CrawlerAPI) prepareFetchSehuatangTaskRequest(ctx context.Context, req *loop.StartTaskRequest) error {
-	if req == nil {
-		return nil
-	}
-	req.ListURL = strings.TrimSpace(req.ListURL)
-	if req.ListURL == "" {
-		req.ListURL = sehuatangListURLFromFetchSiteConfig(h.deps)
-		return nil
-	}
-	return syncSehuatangFetchSiteBaseURL(ctx, h.deps, req.ListURL)
 }
 
 func (h *CrawlerAPI) PreviewFetchSite(c *gin.Context) {

@@ -13,12 +13,8 @@ import (
 
 	"rudy_gc/internal/dep"
 	"rudy_gc/internal/model/modelx/moviex"
-	"rudy_gc/internal/service/fetchsehuatang"
-	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/svc"
 )
-
-const sehuatangDefaultForumPath = "/forum-103-1.html"
 
 type FetchSiteConfigAPI struct {
 	deps *dep.Dep
@@ -273,45 +269,4 @@ func fetchSiteConfigResponseFromConfig(cfg svc.FetchSiteConfig, persisted bool) 
 		Status:         cfg.Status,
 		Persisted:      persisted,
 	}
-}
-
-func sehuatangListURLFromFetchSiteConfig(deps *dep.Dep) string {
-	if deps != nil {
-		if cfg, ok := deps.GetFetchSiteConfig(fetchsite.FetchSiteCodeSehuatang); ok {
-			baseURL := svc.NormalizeFetchSiteBaseURL(cfg.BaseURL)
-			if baseURL != "" {
-				return baseURL + sehuatangDefaultForumPath
-			}
-		}
-	}
-	return fetchsehuatang.DefaultListURL
-}
-
-func fetchSiteBaseURLFromListURL(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", errors.New("list_url 不能为空")
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "", errors.New("list_url 必须是完整 URL")
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "", errors.New("list_url 只支持 http 或 https")
-	}
-	return svc.NormalizeFetchSiteBaseURL(parsed.Scheme + "://" + parsed.Host), nil
-}
-
-func syncSehuatangFetchSiteBaseURL(ctx context.Context, deps *dep.Dep, listURL string) error {
-	baseURL, err := fetchSiteBaseURLFromListURL(listURL)
-	if err != nil {
-		return err
-	}
-	cfg, ok := deps.GetFetchSiteConfig(fetchsite.FetchSiteCodeSehuatang)
-	if !ok {
-		return errors.New("fetch site config not found: sehuatang")
-	}
-	cfg.BaseURL = baseURL
-	_, err = upsertFetchSiteConfig(ctx, deps, cfg)
-	return err
 }

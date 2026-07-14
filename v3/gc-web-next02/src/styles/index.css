@@ -17775,50 +17775,50 @@ input {
   }
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) {
   --nav-side-width: 240px;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .brand-block {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .brand-block {
   height: 51px;
   background: linear-gradient(180deg, var(--side-bg) 0%, #223246 100%);
   border-bottom: 0;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .brand-mark,
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .brand-text {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .brand-mark,
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .brand-text {
   display: none;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .side-panel {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .side-panel {
   inset: 51px auto 0 0;
   width: 240px;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-bar {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-bar {
   height: 51px;
   min-height: 51px;
   padding: 0 12px;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-title {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-title {
   display: none;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-links {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-links {
   gap: 0;
   padding: 0;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-link-group {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-link-group {
   gap: 0;
   border-radius: 0;
   padding: 0;
   background: transparent;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-link-label,
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-link {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-link-label,
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .top-link {
   min-height: 51px;
   border: 0;
   border-radius: 0;
@@ -17830,39 +17830,39 @@ input {
   line-height: 19px;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .main-content {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .main-content {
   margin-left: 240px;
   padding-top: 51px;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .page-shell {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .page-shell {
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 43px 0 0;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .page-heading {
+.app-shell:is(.route-triggers-fetch-site, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .page-heading {
   display: none;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .main-content {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .main-content {
   overflow-x: hidden;
   background:
     radial-gradient(circle at 88% 2%, rgba(217, 79, 138, .1), transparent 28rem),
     linear-gradient(180deg, #fff3f8 0%, #fffafd 48%, #fceff5 100%);
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-list-content {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-list-content {
   width: 100%;
   max-width: 100%;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-form {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-form {
   display: contents;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .next02-sc-panel-head {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .next02-sc-panel-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   grid-template-rows: auto auto;
@@ -17870,7 +17870,7 @@ input {
   gap: 10px 12px;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster {
   display: flex;
   min-width: 0;
   min-height: 42px;
@@ -17884,7 +17884,7 @@ input {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster-label {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster-label {
   flex: 0 0 auto;
   padding-right: 2px;
   color: var(--sc-movie-primary-dark);
@@ -17894,42 +17894,42 @@ input {
   white-space: nowrap;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query {
   grid-row: 1;
   grid-column: 1 / 4;
   width: 100%;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range {
   grid-row: 1;
   grid-column: 4;
   justify-self: end;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-quick-actions {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-quick-actions {
   grid-row: 2;
   grid-column: 1;
   justify-self: start;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sc-event-list-metrics {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sc-event-list-metrics {
   grid-row: 2;
   grid-column: 3;
   justify-self: end;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .next02-sc-movie-pager {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .next02-sc-movie-pager {
   grid-row: 2;
   grid-column: 4;
   justify-self: end;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-quick-actions {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-quick-actions {
   background: linear-gradient(135deg, #fffafd 0%, #fff3f8 100%);
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-range-separator {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-range-separator {
   flex: 0 0 auto;
   color: #c895ad;
   font-size: 11px;
@@ -17937,57 +17937,57 @@ input {
   line-height: 1;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field {
   min-width: 0;
   flex-basis: 0;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-keyword {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-keyword {
   flex-grow: 2.2;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-movie-id {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-movie-id {
   flex-grow: 1.4;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-hash {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-hash {
   flex-grow: 2;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-tag {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-tag {
   flex-grow: 1;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field input {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field input {
   width: 100%;
   min-width: 0;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range .sehuatang-filter-field input {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range .sehuatang-filter-field input {
   width: 102px;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field input {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field input {
   min-height: 30px;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-field.is-quick-tag {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-field.is-quick-tag {
   align-items: center;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field {
   gap: 4px;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field > span {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field > span {
   color: var(--sc-movie-muted);
   font-size: 10px;
   font-weight: 850;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-actions,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-album-inline {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-actions,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-album-inline {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -17995,12 +17995,12 @@ input {
   gap: 3px;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group {
   flex-wrap: wrap;
   justify-content: flex-start;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group .btn {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group .btn {
   display: inline-flex;
   height: 30px;
   align-items: center;
@@ -18016,60 +18016,60 @@ input {
   box-shadow: none;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group .btn.btn-primary,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group .btn:hover {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group .btn.btn-primary,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .album-quick-filter-group .btn:hover {
   border-color: var(--sc-movie-primary);
   background: var(--sc-movie-primary);
   color: #fff;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-actions {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-actions {
   justify-content: flex-start;
   gap: 6px;
   border-left: 1px solid var(--sc-movie-line-soft);
   padding-left: 8px;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-post-time { width: 12%; }
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-title { width: 31.5%; }
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-movie { width: 10.5%; }
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-album { width: 12%; }
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-hash { width: 22%; }
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-last-seen { width: 12%; }
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-post-time { width: 12%; }
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-title { width: 31.5%; }
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-movie { width: 10.5%; }
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-album { width: 12%; }
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-hash { width: 22%; }
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-col-last-seen { width: 12%; }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-neutral td,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-group-1 td {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-neutral td,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-group-1 td {
   background: #fff8fb;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-group-2 td {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-group-2 td {
   background: #f6d6e5;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-start td:first-child {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr.sehuatang-day-start td:first-child {
   box-shadow: inset 4px 0 0 #d94f8a;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr:hover td {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr:hover td {
   background: #fde8f2;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr:hover td:first-child {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table tbody tr:hover td:first-child {
   box-shadow: inset 3px 0 0 #d94f8a;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-title-ellipsis,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .sehuatang-movie-link,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-hash-text {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-title-ellipsis,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .sehuatang-movie-link,
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-hash-text {
   width: auto;
   max-width: 100%;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline {
   flex-wrap: nowrap;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline .btn {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline .btn {
   display: inline-flex;
   height: 22px;
   min-height: 22px;
@@ -18088,8 +18088,8 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline :is(.btn-warning, .btn-info),
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline .btn:hover:not(:disabled) {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline :is(.btn-warning, .btn-info),
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline .btn:hover:not(:disabled) {
   border-color: var(--sc-movie-primary);
   background: var(--sc-movie-primary);
   color: #fff;
@@ -18097,14 +18097,14 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline .btn:disabled {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-album-inline .btn:disabled {
   border-color: #eadde3;
   background: #f7f1f4;
   color: #b79eaa;
   opacity: .72;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-hash-text {
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-magnet-table .fetch-site-hash-text {
   display: inline-block;
   overflow: hidden;
   color: #8b6577;
@@ -18115,335 +18115,6 @@ input {
   white-space: nowrap;
 }
 
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) #sehuatangMagnetListMsg:not(.d-none) {
-  border: 1px solid var(--sc-movie-line);
-  border-radius: 7px;
-  background: var(--sc-movie-row-alt);
-  color: var(--sc-movie-ink);
-  font-size: 12px;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal).show {
-  position: fixed;
-  inset: 0;
-  z-index: 1050;
-  display: block;
-  overflow-x: hidden;
-  overflow-y: auto;
-  background: rgba(75, 41, 57, .34);
-  backdrop-filter: blur(4px);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .modal-dialog {
-  width: 500px;
-  max-width: 500px;
-  margin: 7vh auto;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .modal-content {
-  overflow: hidden;
-  border: 1px solid var(--sc-movie-line);
-  border-radius: 10px;
-  background: #fffafd;
-  color: var(--sc-movie-ink);
-  box-shadow: 0 20px 54px rgba(75, 41, 57, .2);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) :is(.modal-header, .modal-footer) {
-  border-color: var(--sc-movie-line);
-  background: var(--sc-movie-row-alt);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .modal-title {
-  color: var(--sc-movie-ink);
-  font-size: 16px;
-  font-weight: 900;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .form-control {
-  border-color: var(--sc-movie-line);
-  background: #fffafd;
-  color: var(--sc-movie-ink);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .form-control:focus {
-  border-color: var(--sc-movie-primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(217, 79, 138, .12);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .btn-primary {
-  border-color: var(--sc-movie-primary);
-  background: var(--sc-movie-primary);
-  color: #fff;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) :is(.btn-outline-secondary, .btn-light) {
-  border-color: var(--sc-movie-line);
-  background: var(--sc-movie-primary-soft);
-  color: var(--sc-movie-primary-dark);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(#sehuatangOtherAlbumModal, #sehuatangDateModal) .btn:hover:not(:disabled) {
-  border-color: #bf386f;
-  background: #bf386f;
-  color: #fff;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateModal.show {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateModal .sehuatang-date-dialog {
-  width: 420px;
-  max-width: 420px;
-  margin: 0;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateModal .sehuatang-date-content {
-  border: 1px solid var(--sc-movie-line);
-  border-radius: 12px;
-  background: #fffafd;
-  box-shadow: 0 22px 58px rgba(75, 41, 57, .24);
-  animation: sehuatangDateDialogOpen 180ms cubic-bezier(.2, .72, .2, 1) both;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-form {
-  width: 100%;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-header {
-  display: flex;
-  min-height: 66px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--sc-movie-line);
-  padding: 12px 16px 11px;
-  background: linear-gradient(135deg, #fffafd 0%, #fff1f6 100%);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-heading {
-  min-width: 0;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-eyebrow {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--sc-movie-primary);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .13em;
-  line-height: 1.2;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-heading h5 {
-  overflow: hidden;
-  margin: 0;
-  color: var(--sc-movie-ink);
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: -.02em;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-close {
-  display: inline-flex;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(217, 79, 138, .24);
-  border-radius: 50%;
-  padding: 0 0 2px;
-  background: #fff;
-  color: var(--sc-movie-primary-dark);
-  font-family: Arial, sans-serif;
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1;
-  box-shadow: 0 4px 10px rgba(132, 52, 88, .08);
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-close:hover,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-close:focus-visible {
-  border-color: var(--sc-movie-primary);
-  background: var(--sc-movie-primary);
-  color: #fff;
-  box-shadow: 0 5px 12px rgba(217, 79, 138, .2);
-  outline: 0;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-body {
-  padding: 16px;
-  background: #fffafd;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 6px;
-  color: var(--sc-movie-ink);
-  font-size: 12px;
-  font-weight: 850;
-  line-height: 1.2;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-label small {
-  color: var(--sc-movie-muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .08em;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-control-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateInput {
-  width: 100%;
-  height: 40px;
-  min-width: 0;
-  flex: 1 1 auto;
-  border: 1px solid var(--sc-movie-line);
-  border-radius: 7px;
-  padding: 0 11px;
-  background: #fff;
-  color: var(--sc-movie-ink);
-  font-size: 14px;
-  font-weight: 780;
-  line-height: 1;
-  outline: 0;
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateInput:focus {
-  border-color: var(--sc-movie-primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(217, 79, 138, .12);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-today {
-  display: inline-flex;
-  height: 40px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(217, 79, 138, .3);
-  border-radius: 7px;
-  padding: 0 13px;
-  background: var(--sc-movie-primary-soft);
-  color: var(--sc-movie-primary-dark);
-  font-size: 12px;
-  font-weight: 850;
-  line-height: 1;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-today:hover,
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-today:focus-visible {
-  border-color: var(--sc-movie-primary);
-  background: var(--sc-movie-primary);
-  color: #fff;
-  box-shadow: 0 5px 12px rgba(217, 79, 138, .16);
-  outline: 0;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateMsg:not(.d-none) {
-  margin-top: 10px !important;
-  border: 1px solid var(--sc-movie-line);
-  border-radius: 7px;
-  padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 750;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  border-top: 1px solid var(--sc-movie-line);
-  padding: 11px 16px 12px;
-  background: var(--sc-movie-row-alt);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(.sehuatang-date-cancel, .sehuatang-date-save) {
-  display: inline-flex;
-  min-width: 72px;
-  height: 34px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--sc-movie-line);
-  border-radius: 7px;
-  padding: 0 13px;
-  font-size: 12px;
-  font-weight: 850;
-  line-height: 1;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-cancel {
-  background: #fff;
-  color: var(--sc-movie-primary-dark);
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-save {
-  border-color: var(--sc-movie-primary);
-  background: var(--sc-movie-primary);
-  color: #fff;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(.sehuatang-date-cancel, .sehuatang-date-save):hover:not(:disabled),
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root :is(.sehuatang-date-cancel, .sehuatang-date-save):focus-visible {
-  border-color: #bf386f;
-  background: #bf386f;
-  color: #fff;
-  box-shadow: 0 5px 12px rgba(217, 79, 138, .16);
-  outline: 0;
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .sehuatang-date-save:disabled {
-  border-color: #e6cbd8;
-  background: #eadde3;
-  color: #a88897;
-  cursor: wait;
-}
-
-@keyframes sehuatangDateDialogOpen {
-  from {
-    opacity: 0;
-    transform: translateY(5px) scale(.99);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root #sehuatangDateModal .sehuatang-date-content {
-    animation: none;
-  }
-}
-
-.app-shell:is(.route-fetch-site-sehuatang-list, .route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-site-list-page-root .fetch-site-other-album-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 .app-shell:is(.route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-fetch-site-sehuatang-sh-list, .route-fetch-site-sehuatang-sh-detail) {
   --nav-side-width: 240px;
 }
@@ -18706,6 +18377,9 @@ input {
   box-shadow: 0 8px 18px rgba(28, 45, 68, 0.07);
   transform: translateY(-1px);
 }
+
+
+
 
 .app-shell.route-triggers-fetch-sehuatang-sh-thread-detail .crawler-jobs-page-root .status-check-grid {
   gap: 0.45rem 0.9rem;
@@ -20577,342 +20251,8 @@ input {
   }
 }
 
-.app-shell.route-triggers-fetch-sehuatang {
-  --rewrite-ink: #223146;
-  --rewrite-muted: #647184;
-  --rewrite-line: rgba(158, 174, 194, 0.72);
-  --rewrite-panel: rgba(255, 255, 255, 0.94);
-  --rewrite-blue: #3c6fa8;
-  --rewrite-teal: #238b7d;
-  --rewrite-violet: #6258b8;
-  --rewrite-amber: #7b6dcc;
-  --rewrite-rose: #b85264;
-  --rewrite-shadow: 0 16px 32px rgba(25, 44, 66, 0.1);
-  background: #f4f4f4;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .main-content {
-  background: #f4f4f4;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-trigger-rewrite {
-  padding: 0 12px 36px;
-  color: var(--rewrite-ink);
-  animation: next02RewriteRise 320ms ease both;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-command-hero {
-  position: relative;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 22px;
-  align-items: center;
-  overflow: hidden;
-  margin-bottom: 14px;
-  border: 0;
-  border-radius: 8px;
-  padding: 2px 0 8px;
-  background: transparent;
-  box-shadow: none;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-command-hero::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 0;
-  width: 3px;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(180deg, var(--rewrite-amber), var(--rewrite-teal));
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-command-hero-main {
-  padding-left: 0;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-command-hero h4 {
-  margin-top: 4px;
-  color: var(--rewrite-ink);
-  font-size: 22px !important;
-  font-weight: 900 !important;
-  line-height: 1.18;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-command-actions {
-  grid-template-columns: repeat(5, minmax(86px, 1fr));
-  gap: 7px !important;
-  min-width: 470px;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-command-actions .btn {
-  min-height: 33px;
-  padding: 7px 10px;
-  font-size: 12px;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-hero-note {
-  margin-top: 3px !important;
-  font-size: 12px !important;
-}
-
-.app-shell.route-triggers-fetch-sehuatang .next02-hero-kicker,
-.app-shell.route-triggers-fetch-sehuatang .next02-hero-metrics,
-.next02-old-sehuatang-command-page .next02-panel-eyebrow,
-.next02-old-sehuatang-command-page .next02-panel-status,
-.next02-old-sehuatang-command-page .next02-live-dot {
-  display: none;
-}
-
-.next02-old-sehuatang-command-page .next02-panel {
-  overflow: hidden;
-  border: 1px solid var(--rewrite-line) !important;
-  border-radius: 8px !important;
-  background: var(--rewrite-panel) !important;
-  box-shadow: 0 6px 18px rgba(25, 44, 66, 0.06) !important;
-  animation: next02RewriteRise 340ms ease both !important;
-  transition: border-color 170ms ease, box-shadow 180ms ease, transform 180ms ease;
-}
-
-.next02-old-sehuatang-command-page .next02-panel:hover {
-  border-color: rgba(123, 109, 204, 0.38) !important;
-  box-shadow: 0 10px 24px rgba(25, 44, 66, 0.09) !important;
-  transform: translateY(-1px);
-}
-
-.next02-old-sehuatang-command-page .next02-panel .card-body {
-  padding: 16px 18px;
-}
-
-.next02-old-sehuatang-command-page .next02-panel-head {
-  margin-bottom: 12px !important;
-}
-
-.next02-old-sehuatang-command-page .next02-control-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.next02-old-sehuatang-command-page .next02-control-grid .grid-span-2 {
-  grid-column: span 6;
-}
-
-.next02-old-sehuatang-command-page .next02-control-grid .compact-field:not(.grid-span-2) {
-  grid-column: span 3;
-}
-
-.next02-old-sehuatang-command-page .compact-field > label,
-.next02-old-sehuatang-command-page .form-label {
-  margin-bottom: 6px !important;
-  color: var(--rewrite-muted) !important;
-  font-size: 12px !important;
-  font-weight: 850 !important;
-}
-
-.next02-old-sehuatang-command-page :is(.form-control, .form-select) {
-  min-height: 38px;
-  border: 1px solid var(--rewrite-line);
-  border-radius: 7px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
-  color: var(--rewrite-ink);
-  font-weight: 740;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
-}
-
-.next02-old-sehuatang-command-page :is(.form-control, .form-select):focus {
-  border-color: rgba(178, 120, 33, 0.72);
-  box-shadow: 0 0 0 4px rgba(178, 120, 33, 0.12);
-}
-
-.next02-old-sehuatang-command-page .task-type-toggle {
-  display: grid !important;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 8px !important;
-}
-
-.next02-old-sehuatang-command-page .task-type-toggle .btn {
-  min-height: 38px;
-  margin: 0 !important;
-  border-color: rgba(123, 109, 204, 0.36);
-  background: #fff;
-  color: var(--rewrite-amber);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.next02-old-sehuatang-command-page .task-type-toggle .btn.active,
-.next02-old-sehuatang-command-page .task-type-toggle .btn:hover {
-  border-color: rgba(123, 109, 204, 0.62);
-  background: var(--rewrite-amber);
-  color: #fff;
-  box-shadow: 0 8px 18px rgba(123, 109, 204, 0.16);
-}
-
-.next02-old-sehuatang-command-page .form-check {
-  display: flex;
-  align-items: center;
-  min-height: 42px;
-  border: 1px solid rgba(158, 174, 194, 0.62);
-  border-radius: 7px;
-  padding: 8px 10px 8px 36px;
-  background: linear-gradient(180deg, #fff 0%, #f9fbfd 100%);
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-}
-
-.next02-old-sehuatang-command-page .form-check:hover {
-  border-color: rgba(35, 139, 125, 0.44);
-  box-shadow: 0 8px 18px rgba(35, 139, 125, 0.08);
-  transform: translateY(-1px);
-}
-
-.next02-old-sehuatang-command-page .form-check-input {
-  margin-top: 0;
-  margin-left: -24px;
-  border-color: rgba(94, 112, 135, 0.54);
-}
-
-.next02-old-sehuatang-command-page .form-check-label {
-  color: var(--rewrite-ink);
-  font-size: 12px;
-  font-weight: 820;
-}
-
-.next02-old-sehuatang-command-page #fetchSehuatangListURLFieldWrap .form-control {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-.next02-old-sehuatang-command-page #fetchSehuatangPersistModeFieldWrap .form-select {
-  border-color: rgba(35, 139, 125, 0.42);
-  background:
-    linear-gradient(180deg, #ffffff 0%, #f3fbf8 100%);
-}
-
-.next02-old-sehuatang-command-page .next02-action-dock {
-  position: static;
-  gap: 8px !important;
-  margin-top: 18px !important;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.next02-old-sehuatang-command-page .next02-action-dock .btn {
-  min-height: 38px;
-  margin: 0 !important;
-  padding-right: 14px;
-  padding-left: 14px;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.next02-old-sehuatang-command-page .next02-action-dock #submitBtn {
-  border-color: transparent;
-  background: var(--rewrite-amber);
-  color: #fff;
-  box-shadow: 0 8px 18px rgba(123, 109, 204, 0.16);
-}
-
-.next02-old-sehuatang-command-page .next02-action-dock #submitBtn::after {
-  content: "";
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-left: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  vertical-align: middle;
-}
-
-.next02-old-sehuatang-command-page .status-grid.sehuatang-progress-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-  gap: 8px;
-}
-
-.next02-old-sehuatang-command-page .overview-item {
-  min-height: 56px;
-  border: 1px solid rgba(158, 174, 194, 0.7) !important;
-  border-radius: 8px !important;
-  padding: 8px 10px 8px 13px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%) !important;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-}
-
-.next02-old-sehuatang-command-page .overview-item:hover {
-  border-color: rgba(178, 120, 33, 0.42) !important;
-  box-shadow: 0 9px 18px rgba(178, 120, 33, 0.08);
-  transform: translateY(-1px);
-}
-
-.next02-old-sehuatang-command-page .overview-item .label {
-  color: var(--rewrite-muted);
-  font-size: 10.5px;
-  font-weight: 850;
-}
-
-.next02-old-sehuatang-command-page .overview-item .value {
-  margin-top: 2px;
-  color: var(--rewrite-ink);
-  font-size: 16px;
-  font-weight: 950;
-  line-height: 1.1;
-}
-
-.next02-old-sehuatang-command-page .progress {
-  height: 18px;
-  border: 1px solid rgba(158, 174, 194, 0.72);
-  background: #e9f0f4;
-}
-
-.next02-old-sehuatang-command-page .progress-bar {
-  background:
-    linear-gradient(90deg, var(--rewrite-amber), var(--rewrite-teal)),
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0.28) 9px, transparent 9px, transparent 18px);
-  background-size: auto, 34px 34px;
-  animation: next02RewriteScan 1s linear infinite;
-}
-
-.next02-old-sehuatang-command-page .next02-event-card .result-box {
-  min-height: 420px;
-  border-color: rgba(158, 174, 194, 0.74);
-  background:
-    linear-gradient(180deg, rgba(249, 251, 253, 0.96) 0%, rgba(244, 248, 250, 0.96) 100%),
-    repeating-linear-gradient(0deg, rgba(94, 115, 141, 0.04) 0, rgba(94, 115, 141, 0.04) 1px, transparent 1px, transparent 26px);
-}
-
-.next02-old-sehuatang-command-page .next02-event-card .result-box::before {
-  background: var(--rewrite-amber);
-  box-shadow: 13px 0 0 rgba(35, 139, 125, 0.72), 26px 0 0 rgba(184, 82, 100, 0.7);
-}
-
-@media (max-width: 1180px) {
-  .app-shell.route-triggers-fetch-sehuatang .next02-command-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .app-shell.route-triggers-fetch-sehuatang .next02-command-actions {
-    min-width: 0;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 760px) {
-  .next02-old-sehuatang-command-page .next02-control-grid,
-  .next02-old-sehuatang-command-page .task-type-toggle,
-  .next02-old-sehuatang-command-page .status-grid.sehuatang-progress-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .app-shell.route-triggers-fetch-sehuatang .next02-command-actions {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* DailyBest and legacy Sehuatang use the completed Seeds console language. */
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) {
+/* Trigger pages use the completed Seeds console language. */
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) {
   --seeds-primary: #d94f8a;
   --seeds-primary-dark: #9f2f63;
   --seeds-ink: #4b2939;
@@ -20928,65 +20268,65 @@ input {
   background: #fff8fb;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .brand-block {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .brand-block {
   display: flex;
   width: 220px;
   height: 64px;
   padding: 0 16px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.brand-mark, .brand-text) {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.brand-mark, .brand-text) {
   display: flex;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .side-panel {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .side-panel {
   inset: 0 auto 0 0;
   width: 220px;
   padding-top: 64px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .top-bar {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .top-bar {
   min-height: 64px;
   height: 64px;
   padding: 0 18px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .top-title {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .top-title {
   display: flex;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .main-content {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .main-content {
   overflow-x: hidden;
   margin-left: 220px;
   padding: 82px 12px 60px;
   background: linear-gradient(180deg, #fff7fb 0%, #fffdfd 50%, #fff6fa 100%);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .page-shell {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .page-shell {
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 0;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .page-heading {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .page-heading {
   display: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.crawler-jobs-page-shell, .next02-pink-trigger-page-root) {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.crawler-jobs-page-shell, .next02-pink-trigger-page-root) {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite {
   width: 100%;
   padding: 18px 16px 36px;
   color: var(--seeds-ink);
   animation: next02RewriteRise 280ms ease both;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-hero {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-hero {
   position: relative;
   display: flex !important;
   align-items: center;
@@ -21002,7 +20342,7 @@ input {
   box-shadow: 0 12px 30px rgba(132, 52, 88, .086) !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-hero::before {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-hero::before {
   content: "";
   position: absolute;
   top: 0;
@@ -21015,7 +20355,7 @@ input {
   box-shadow: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero .next02-command-hero-main {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero .next02-command-hero-main {
   display: flex;
   min-width: 0;
   align-items: baseline;
@@ -21023,8 +20363,8 @@ input {
   padding-left: 0;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero .next02-hero-kicker,
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .next02-panel-eyebrow {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero .next02-hero-kicker,
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .next02-panel-eyebrow {
   display: block;
   color: var(--seeds-primary-dark);
   font-size: 10px;
@@ -21033,7 +20373,7 @@ input {
   text-transform: uppercase;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero h4 {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero h4 {
   flex: 0 0 auto;
   margin-top: 0;
   color: var(--seeds-ink);
@@ -21041,7 +20381,7 @@ input {
   line-height: 22px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero .next02-hero-note {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero .next02-hero-note {
   min-width: 0;
   overflow: hidden;
   margin-top: 0 !important;
@@ -21052,11 +20392,11 @@ input {
   white-space: nowrap;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-hero-metrics {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-hero-metrics {
   display: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions {
   display: flex !important;
   min-width: 0;
   flex: 0 0 auto;
@@ -21065,7 +20405,7 @@ input {
   gap: 6px !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions .btn {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions .btn {
   min-width: auto;
   min-height: 30px;
   margin: 0 !important;
@@ -21079,15 +20419,15 @@ input {
   line-height: 18px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions .btn:hover,
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions .btn:focus-visible {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions .btn:hover,
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-hero-actions .btn:focus-visible {
   border-color: var(--seeds-primary);
   background: var(--seeds-hover);
   color: var(--seeds-primary-dark);
   box-shadow: 0 0 0 3px rgba(217, 79, 138, .12);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-workspace {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-workspace {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   align-items: stretch;
@@ -21095,27 +20435,27 @@ input {
   margin: 0;
 }
 
-.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-workspace-form-heavy {
+.app-shell:is(.route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-workspace-form-heavy {
   grid-template-columns: minmax(0, 6fr) minmax(0, 7fr);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-pink-trigger-control-column, .next02-pink-trigger-event-column) {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-pink-trigger-control-column, .next02-pink-trigger-event-column) {
   width: auto;
   max-width: none;
   padding: 0;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-control-column {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-control-column {
   display: grid;
   align-content: start;
   gap: 10px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-event-column {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-event-column {
   display: flex;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel {
   overflow: hidden;
   margin-bottom: 0;
   border: 1px solid var(--seeds-line) !important;
@@ -21127,17 +20467,17 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel:hover {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel:hover {
   border-color: #e7bfd1 !important;
   box-shadow: 0 18px 38px rgba(132, 52, 88, .11) !important;
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel > .card-body {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel > .card-body {
   padding: 0 !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel-head {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel-head {
   min-height: 46px;
   margin-bottom: 0 !important;
   border-bottom: 1px solid var(--seeds-line-soft);
@@ -21145,7 +20485,7 @@ input {
   background: linear-gradient(90deg, #fff2f7 0%, #fffafd 100%);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel-head h4 {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel-head h4 {
   position: relative;
   padding-left: 9px;
   color: var(--seeds-ink) !important;
@@ -21154,7 +20494,7 @@ input {
   line-height: 17px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel-head h4::before {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel-head h4::before {
   content: "";
   position: absolute;
   top: 2px;
@@ -21165,7 +20505,7 @@ input {
   background: var(--seeds-primary);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-panel-status, .next02-live-dot) {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-panel-status, .next02-live-dot) {
   display: inline-flex;
   min-height: 24px;
   align-items: center;
@@ -21179,15 +20519,15 @@ input {
   line-height: 16px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel #crawlerTaskForm {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel #crawlerTaskForm {
   padding: 10px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .compact-field {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .compact-field {
   margin-bottom: 10px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .compact-field > label {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .compact-field > label {
   margin-bottom: 5px !important;
   color: var(--seeds-muted) !important;
   font-size: 10px !important;
@@ -21195,25 +20535,11 @@ input {
   line-height: 14px;
 }
 
-.app-shell.route-triggers-fetch-sehuatang .next02-pink-trigger-panel .next02-control-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 10px;
-}
 
-.app-shell.route-triggers-fetch-sehuatang .next02-pink-trigger-panel .next02-control-grid .grid-span-2 {
-  grid-column: 1 / -1;
-}
 
-.app-shell.route-triggers-fetch-sehuatang .next02-pink-trigger-panel .next02-control-grid .compact-field:not(.grid-span-2) {
-  grid-column: span 1;
-}
 
-.app-shell.route-triggers-fetch-sehuatang .next02-pink-trigger-panel #fetchSehuatangPersistModeFieldWrap .form-select {
-  border-color: var(--seeds-line) !important;
-  background: linear-gradient(180deg, #fff 0%, #fffafd 100%) !important;
-}
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented {
   display: flex !important;
   flex-wrap: wrap;
   align-items: center;
@@ -21224,7 +20550,7 @@ input {
   background: var(--seeds-soft-alt);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn {
   min-width: 0;
   min-height: 30px;
   flex: 0 1 auto !important;
@@ -21242,9 +20568,9 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn.active,
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn:hover,
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn:focus-visible {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn.active,
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn:hover,
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-task-segmented .btn:focus-visible {
   border-color: transparent !important;
   background: linear-gradient(135deg, #e8679f, var(--seeds-primary)) !important;
   color: #fff !important;
@@ -21252,7 +20578,7 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel :is(.form-control, .form-select) {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel :is(.form-control, .form-select) {
   min-height: 30px;
   border: 1px solid var(--seeds-line);
   border-radius: 6px;
@@ -21263,13 +20589,13 @@ input {
   box-shadow: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel :is(.form-control, .form-select):focus {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-panel :is(.form-control, .form-select):focus {
   border-color: var(--seeds-primary);
   background: #fff;
   box-shadow: 0 0 0 3px rgba(217, 79, 138, .12);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .form-check {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .form-check {
   min-height: 34px;
   margin: 0;
   border: 1px solid var(--seeds-line-soft);
@@ -21282,18 +20608,18 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .form-check:hover {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .form-check:hover {
   border-color: #e7bfd1;
   background: var(--seeds-hover);
   box-shadow: none;
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .form-check-input {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-panel .form-check-input {
   accent-color: var(--seeds-primary);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-action-dock {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-action-dock {
   position: static;
   gap: 6px !important;
   margin: 10px -10px -10px !important;
@@ -21305,7 +20631,7 @@ input {
   box-shadow: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-action-dock .btn {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-action-dock .btn {
   min-height: 30px;
   margin: 0 !important;
   border-radius: 6px;
@@ -21316,14 +20642,14 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-action-dock #submitBtn {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-action-dock #submitBtn {
   border-color: transparent;
   background: linear-gradient(135deg, #e8679f, var(--seeds-primary));
   color: #fff;
   box-shadow: 0 6px 14px rgba(217, 79, 138, .2);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-panel .crawl-overview {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-panel .crawl-overview {
   padding: 10px;
 }
 
@@ -21585,13 +20911,13 @@ input {
   background: var(--seeds-hover) !important;
 }
 
-.app-shell:is(.route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .status-grid.sehuatang-progress-grid {
+.app-shell:is(.route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .status-grid.sehuatang-progress-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 6px;
   margin: 0;
 }
 
-.app-shell:is(.route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .sehuatang-progress-grid .overview-item {
+.app-shell:is(.route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .sehuatang-progress-grid .overview-item {
   grid-column: auto;
   min-height: 46px;
   border: 1px solid var(--seeds-line-soft) !important;
@@ -21602,14 +20928,14 @@ input {
   transform: none;
 }
 
-.app-shell:is(.route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .sehuatang-progress-grid .overview-item .label {
+.app-shell:is(.route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .sehuatang-progress-grid .overview-item .label {
   color: var(--seeds-muted);
   font-size: 9.5px;
   font-weight: 760;
   line-height: 14px;
 }
 
-.app-shell:is(.route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .sehuatang-progress-grid .overview-item .value {
+.app-shell:is(.route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail) .next02-pink-trigger-runtime-panel .sehuatang-progress-grid .overview-item .value {
   margin-top: 0;
   color: var(--seeds-ink);
   font-size: 13px;
@@ -21682,7 +21008,7 @@ input {
   animation: none !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-progress {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-progress {
   overflow: hidden;
   height: 10px;
   margin-top: 10px !important;
@@ -21691,24 +21017,24 @@ input {
   background: #f4dfe9;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-progress .progress-bar {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-progress .progress-bar {
   background: linear-gradient(90deg, #ed77aa, var(--seeds-primary), #bc3d75);
   background-size: 180% 100%;
   animation: next02RewriteScan 1.4s linear infinite;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-footer {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-footer {
   gap: 8px;
   margin-top: 8px !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-footer #statusMsg {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-footer #statusMsg {
   color: var(--seeds-muted) !important;
   font-size: 10px;
   font-weight: 760;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-footer #eventCountText {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-runtime-footer #eventCountText {
   border: 1px solid #ecc7d8;
   border-radius: 999px;
   padding: 3px 8px;
@@ -21718,24 +21044,24 @@ input {
   font-weight: 850;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-pink-trigger-event-panel, .next02-pink-trigger-event-panel > .card-body) {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-pink-trigger-event-panel, .next02-pink-trigger-event-panel > .card-body) {
   width: 100%;
   height: 100%;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-seeds, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-event-panel {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-seeds, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-event-panel {
   height: 72vh;
   min-height: 72vh;
   max-height: 72vh;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-event-panel > .card-body {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-event-panel > .card-body {
   display: flex;
   min-height: 0;
   flex-direction: column;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-raw-toggle {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-raw-toggle {
   display: inline-flex;
   min-height: 28px;
   align-items: center;
@@ -21746,19 +21072,19 @@ input {
   background: #fffafd;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-raw-toggle .custom-control-label {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-raw-toggle .custom-control-label {
   color: var(--seeds-muted);
   font-size: 10px;
   font-weight: 780;
   line-height: 18px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-raw-toggle .custom-control-input:checked ~ .custom-control-label::before {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-raw-toggle .custom-control-input:checked ~ .custom-control-label::before {
   border-color: var(--seeds-primary);
   background: var(--seeds-primary);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-event-panel .next02-pink-trigger-result-box {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-event-panel .next02-pink-trigger-result-box {
   position: relative;
   flex: 1 1 auto;
   min-height: 318px;
@@ -21771,7 +21097,7 @@ input {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .92) !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-event-panel .next02-pink-trigger-result-box::before {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-rewrite .next02-pink-trigger-event-panel .next02-pink-trigger-result-box::before {
   content: "";
   position: absolute;
   top: 10px;
@@ -21784,7 +21110,7 @@ input {
   box-shadow: none !important;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box pre {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box pre {
   margin: 0;
   padding: 10px 12px 10px 16px;
   color: var(--seeds-ink);
@@ -21792,7 +21118,7 @@ input {
   line-height: 1.55;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line {
   position: relative;
   display: block;
   min-width: 0;
@@ -21804,7 +21130,7 @@ input {
   word-break: break-word;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line::before {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line::before {
   content: "";
   position: absolute;
   top: 12px;
@@ -21815,24 +21141,24 @@ input {
   background: var(--seeds-primary);
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line.log-warn {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line.log-warn {
   background: #fff9ed;
   color: #8a5a13;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line.log-error {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line.log-error {
   background: #fff3f5;
   color: #a33352;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line a {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-line a {
   color: var(--seeds-primary-dark);
   font-weight: 800;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-empty {
+.app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) .next02-pink-trigger-result-box .event-empty {
   display: block;
   padding: 10px 8px 10px 14px;
   color: var(--seeds-muted);
@@ -21954,7 +21280,7 @@ input {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-pink-trigger-rewrite, .next02-pink-trigger-panel, .next02-pink-trigger-progress .progress-bar) {
+  .app-shell:is(.route-triggers-dailybest, .route-triggers-post-process, .route-triggers-backfill, .route-triggers-fetch-site, .route-triggers-fetch-sehuatang-sh, .route-triggers-fetch-sehuatang-sh-thread-list, .route-triggers-fetch-sehuatang-sh-thread-detail, .route-triggers-fetch-site-javbus-filtered, .route-triggers-fetch-site-sukebei-filtered) :is(.next02-pink-trigger-rewrite, .next02-pink-trigger-panel, .next02-pink-trigger-progress .progress-bar) {
     animation: none !important;
     transition: none !important;
   }
@@ -27308,6 +26634,30 @@ input {
 }
 
 /* SH thread detail preview: use the SC Events table standard verbatim. */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Shared pink list baseline and /casts implementation. */
 .app-shell.route-triggers-fetch-sehuatang-sh-thread-detail .next02-sh-detail-preview-row {
   margin-top: 16px;
 }
@@ -27475,7 +26825,6 @@ input {
   color: #a52450;
 }
 
-/* Shared pink list baseline and /casts implementation. */
 .app-shell.route-casts .main-content {
   overflow-x: hidden;
   background:
@@ -36742,7 +36091,7 @@ input {
 .app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-pool-col-error { width: 13%; }
 .app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .fetch-pool-col-action { width: 11%; }
 
-/* Crawl records aligned with /fetch-site-sehuatang-list. */
+/* Crawl records use the shared fetch-site list layout. */
 .app-shell.route-records {
   background: #fff8fb;
 }
@@ -37067,7 +36416,7 @@ input {
   }
 }
 
-/* W aggregate events aligned with /fetch-site-sehuatang-list. */
+/* W aggregate events use the shared fetch-site list layout. */
 .app-shell.route-w-agg-events {
   background: #fff8fb;
 }
@@ -38605,6 +37954,10 @@ input {
   gap: 5px 8px;
 }
 
+
+
+
+
 .app-shell.route-triggers-fetch-sehuatang-sh-thread-detail .next02-pink-trigger-panel .next02-control-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 5px 8px;
@@ -38704,6 +38057,8 @@ input {
   padding: 6px 8px;
 }
 
+
+
 .app-shell.route-triggers-fetch-sehuatang-sh-thread-detail .next02-pink-trigger-action-dock {
   display: flex !important;
   grid-template-columns: none;
@@ -38724,6 +38079,24 @@ input {
   font-size: 11px;
   line-height: 16px;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .app-shell.route-triggers-fetch-sehuatang-sh-thread-detail .next02-pink-trigger-panel #crawlerTaskForm {
   padding: 6px 8px;
@@ -38903,4 +38276,604 @@ input {
   font-weight: 900;
   line-height: 18px;
   white-space: nowrap;
+}
+
+/* /fcdetail/:fc2Key follows the Movie Detail information hierarchy. */
+.app-shell.route-fc2-detail .main-content {
+  background:
+    radial-gradient(circle at 88% 2%, rgba(217, 79, 138, .1), transparent 28rem),
+    linear-gradient(180deg, #fff3f8 0%, #fffafd 48%, #fceff5 100%);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout {
+  --fc2-detail-ink: #4b2939;
+  --fc2-detail-muted: #8b6577;
+  --fc2-detail-line: #eed5e1;
+  --fc2-detail-line-soft: #f1dce6;
+  --fc2-detail-head: #fcecf4;
+  --fc2-detail-row: #fff;
+  --fc2-detail-row-alt: #fffafd;
+  --fc2-detail-hover: #fde8f2;
+  --fc2-detail-primary: #d94f8a;
+  --fc2-detail-primary-soft: #fff0f6;
+  --fc2-detail-green: #2f8f83;
+  --fc2-detail-green-soft: #e9f7f4;
+  display: block;
+  color: var(--fc2-detail-ink);
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-top-shell {
+  border: 1px solid var(--fc2-detail-line);
+  border-radius: 10px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .98) 0%, rgba(255, 250, 253, .96) 100%);
+  box-shadow: 0 18px 42px rgba(132, 52, 88, .08);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-titlebar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 13px;
+  border-bottom: 1px solid var(--fc2-detail-line-soft);
+  padding: 0 2px 12px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-title-main {
+  min-width: 0;
+  flex: 1 1 58%;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  border-left: 3px solid rgba(217, 79, 138, .28);
+  padding-left: 10px;
+  color: var(--fc2-detail-ink);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-title-meta {
+  display: flex;
+  max-width: 46%;
+  min-width: 0;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding-top: 2px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-title-meta-chip {
+  display: inline-flex;
+  min-height: 22px;
+  max-width: 150px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(217, 79, 138, .16);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--fc2-detail-primary-soft);
+  color: #9f2f63;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-title-meta-mask {
+  border-color: rgba(47, 143, 131, .18);
+  background: var(--fc2-detail-green-soft);
+  color: #25776e;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-title-meta-resource {
+  border-color: rgba(100, 116, 139, .16);
+  background: #f8fafc;
+  color: #667085;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-original-top-row {
+  align-items: flex-start;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-section-card {
+  overflow: hidden;
+  border: 1px solid var(--fc2-detail-line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff 0%, #fffafd 100%);
+  box-shadow: 0 12px 28px rgba(132, 52, 88, .07);
+  transition: border-color 160ms ease, box-shadow 180ms ease;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-section-card:hover {
+  border-color: rgba(217, 79, 138, .36);
+  box-shadow: 0 16px 34px rgba(132, 52, 88, .095);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-card,
+.route-fc2-detail .fc2-detail-movie-layout .fc2-info-card {
+  min-height: 690px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-detail-cover-frame {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 620px;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(180deg, #21161b 0%, #17131a 100%);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-detail-cover-image {
+  display: block;
+  width: 100%;
+  height: 620px;
+  object-fit: contain;
+  object-position: center;
+  transition: filter 180ms ease, transform 200ms ease;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-detail-cover-frame:hover .fc2-detail-cover-image {
+  filter: saturate(1.04) contrast(1.02);
+  transform: scale(1.006);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-detail-cover-frame .badge-stack {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(.badge-come, .badge-times, .fc2-cover-current-badge) {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 16px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .18);
+  backdrop-filter: blur(8px);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .badge-come { background: rgba(217, 79, 138, .86); }
+.route-fc2-detail .fc2-detail-movie-layout .badge-times { background: rgba(47, 143, 131, .86); }
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-current-badge {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  background: rgba(42, 20, 32, .82);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-toolbar {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--fc2-detail-line-soft);
+  padding: 9px 12px;
+  background: #fffafd;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-file {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--fc2-detail-muted);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-file > span:first-child {
+  color: var(--fc2-detail-ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-file > a {
+  max-width: 330px;
+  overflow: hidden;
+  color: #9f2f63;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-empty {
+  display: grid;
+  min-height: 688px;
+  place-items: center;
+  background: linear-gradient(180deg, #fff8fb 0%, #f8eef3 100%);
+  color: var(--fc2-detail-muted);
+  font-weight: 900;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-cover-feedback {
+  margin: 0;
+  border-top: 1px solid var(--fc2-detail-line-soft);
+  padding: 8px 12px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-info-card .card-body {
+  height: 100%;
+  padding: 16px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--fc2-detail-line-soft);
+  padding: 0;
+  background: transparent;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-tabs .nav-item {
+  flex: 1 1 0;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-tab {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--fc2-detail-muted);
+  font-weight: 900;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-detail-tab:is(.active, :hover) {
+  border-bottom-color: var(--fc2-detail-primary);
+  background: transparent;
+  color: var(--fc2-detail-primary);
+  box-shadow: none;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table {
+  margin: 0;
+  border-color: var(--fc2-detail-line);
+  color: var(--fc2-detail-ink);
+  font-size: 12px;
+  table-layout: fixed;
+  box-shadow: 0 12px 26px rgba(132, 52, 88, .055);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table th,
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table td {
+  border-color: var(--fc2-detail-line-soft);
+  vertical-align: middle;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table th {
+  width: 92px;
+  padding: 9px 10px;
+  background: var(--fc2-detail-head) !important;
+  color: #6d3b53 !important;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: inset 3px 0 rgba(217, 79, 138, .22);
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table td {
+  min-width: 0;
+  padding: 8px 10px;
+  background: var(--fc2-detail-row);
+  color: var(--fc2-detail-ink);
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table tr:nth-child(even) td {
+  background: var(--fc2-detail-row-alt);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-table tr:hover :is(th, td) {
+  background: var(--fc2-detail-hover) !important;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(.movie-info-code-line, .movie-info-tag-group, .movie-info-links) {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-info-code {
+  color: var(--fc2-detail-primary);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(.movie-tag-code, .movie-tag-person, .movie-tag-date, .movie-tag-link, .fc2-state-badge) {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  border: 1px solid rgba(217, 79, 138, .18);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--fc2-detail-primary-soft);
+  color: #9f2f63;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 16px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-info-title,
+.route-fc2-detail .fc2-detail-movie-layout .fc2-info-file {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--fc2-detail-ink);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-sc-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-sc-detail-grid > div {
+  display: flex;
+  min-height: 104px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--fc2-detail-line);
+  border-radius: 8px;
+  padding: 12px;
+  background: linear-gradient(180deg, #fff 0%, #fff5fa 100%);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-sc-detail-grid span {
+  color: var(--fc2-detail-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-sc-detail-grid strong,
+.route-fc2-detail .fc2-detail-movie-layout .fc2-sc-detail-grid a {
+  max-width: 100%;
+  overflow: hidden;
+  color: #9f2f63;
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(.movie-film-card, .movie-resource-card) .card-body {
+  padding: 16px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-head,
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--fc2-detail-line-soft);
+  padding-bottom: 12px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-heading-row {
+  margin-bottom: 12px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-section-title {
+  margin: 0;
+  color: var(--fc2-detail-ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-section-title::before {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: var(--fc2-detail-primary);
+  content: "";
+  vertical-align: middle;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-source,
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-count {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(217, 79, 138, .2);
+  border-radius: 999px;
+  padding: 2px 9px;
+  background: var(--fc2-detail-primary-soft);
+  color: #9f2f63;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-film-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--fc2-detail-line);
+  border-radius: 7px;
+  background: var(--fc2-detail-line-soft);
+  box-shadow: 0 12px 26px rgba(132, 52, 88, .055);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-film-grid .movie-film-item {
+  display: grid;
+  min-width: 0;
+  min-height: 42px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  padding: 5px 10px;
+  background: linear-gradient(180deg, #fff 0%, #fffafd 100%);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-film-grid .movie-film-item:hover {
+  background: var(--fc2-detail-hover);
+  box-shadow: inset 3px 0 var(--fc2-detail-primary);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-film-grid .movie-film-hash {
+  grid-column: span 2;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .fc2-film-grid .movie-film-dir {
+  grid-column: 1 / -1;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-label {
+  color: var(--fc2-detail-muted);
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(.movie-film-value, .movie-film-path) {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fc2-detail-ink);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-value-line {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-value-line .movie-film-value {
+  flex: 1 1 auto;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-film-value-line .btn {
+  min-height: 22px;
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--fc2-detail-line);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 12px 26px rgba(132, 52, 88, .055);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table {
+  width: 100%;
+  min-width: 900px;
+  margin: 0;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--fc2-detail-ink);
+  font-size: 11px;
+  table-layout: fixed;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table th,
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table td {
+  height: 32px;
+  overflow: hidden;
+  border-right: 1px solid var(--fc2-detail-line-soft);
+  border-bottom: 1px solid var(--fc2-detail-line-soft);
+  padding: 3px 9px;
+  color: var(--fc2-detail-ink);
+  text-align: center;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table thead th {
+  background: var(--fc2-detail-head);
+  color: #6d3b53;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: inset 3px 0 rgba(217, 79, 138, .16);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table tbody td {
+  background: var(--fc2-detail-row);
+  font-weight: 700;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table tbody tr:hover > td {
+  background: var(--fc2-detail-hover);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table th:last-child,
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table td:last-child {
+  border-right: 0;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout .movie-resource-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(a, button, select, input):focus-visible {
+  outline: 2px solid rgba(217, 79, 138, .55);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(217, 79, 138, .12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-fc2-detail .fc2-detail-movie-layout .movie-section-card,
+  .route-fc2-detail .fc2-detail-movie-layout .fc2-detail-cover-image {
+    transition: none !important;
+  }
 }

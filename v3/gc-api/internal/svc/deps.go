@@ -68,7 +68,6 @@ type Deps struct {
 	MovieAlbumModel                      moviex.CMovieAlbumModel
 	MovieAlbumItemModel                  moviex.CMovieAlbumItemModel
 	JavbusMagnetModel                    moviex.TJavbusMagnetModel
-	SehuatangMagnetModel                 moviex.TSehuatangMagnetModel
 	ShMagnetModel                        moviex.ShMagnetModel
 	ShForumModel                         moviex.ShForumModel
 	FC2MovieModel                        moviex.FC2MovieModel
@@ -124,7 +123,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieAlbumModel                      = moviex.NewCMovieAlbumModel(conn, c)
 		movieAlbumItemModel                  = moviex.NewCMovieAlbumItemModel(conn, c)
 		javbusMagnetModel                    = moviex.NewTJavbusMagnetModel(conn, c)
-		sehuatangMagnetModel                 = moviex.NewTSehuatangMagnetModel(conn, c)
 		shMagnetModel                        = moviex.NewShMagnetModel(conn)
 		shForumModel                         = moviex.NewShForumModel(conn)
 		fc2MovieModel                        = moviex.NewFC2MovieModel(conn)
@@ -242,7 +240,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		MovieAlbumModel:                      movieAlbumModel,
 		MovieAlbumItemModel:                  movieAlbumItemModel,
 		JavbusMagnetModel:                    javbusMagnetModel,
-		SehuatangMagnetModel:                 sehuatangMagnetModel,
 		ShMagnetModel:                        shMagnetModel,
 		ShForumModel:                         shForumModel,
 		FC2MovieModel:                        fc2MovieModel,

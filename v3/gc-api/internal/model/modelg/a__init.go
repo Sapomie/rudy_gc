@@ -28,22 +28,7 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateRenameSHSehuatangTables(db); err != nil {
 		return err
 	}
-	if err := migrateLegacySehuatangTable(db); err != nil {
-		return err
-	}
 	if err := migrateLegacyMovieNameColumns(db); err != nil {
-		return err
-	}
-	if err := migrateSehuatangInfoHashUniqueIndex(db); err != nil {
-		return err
-	}
-	if err := migrateDropSehuatangRedundantColumns(db); err != nil {
-		return err
-	}
-	if err := migrateAddSehuatangTagColumn(db); err != nil {
-		return err
-	}
-	if err := backfillSehuatangTags(db); err != nil {
 		return err
 	}
 	if err := migrateDropJavbusRedundantColumns(db); err != nil {
@@ -108,7 +93,6 @@ func AutoMigrate(db *gorm.DB) error {
 		new(CMovieAlbum),
 		new(CMovieAlbumItem),
 		new(JavbusMagnet),
-		new(SehuatangMagnet),
 		new(ShForum),
 		new(SehuatangThread),
 		new(ShMagnet),
@@ -2164,92 +2148,6 @@ func ensureBaiduFanyiFetchSite(db *gorm.DB) error {
 	return db.Create(row).Error
 }
 
-func migrateDropSehuatangRedundantColumns(db *gorm.DB) error {
-	tableName := "t_sehuatang_magnet"
-
-	hasSehuatangTable, err := hasTable(db, tableName)
-	if err != nil {
-		return err
-	}
-	if !hasSehuatangTable {
-		return nil
-	}
-
-	hasCol, err := hasColumn(db, tableName, "magnet_url")
-	if err != nil {
-		return err
-	}
-	if !hasCol {
-		return nil
-	}
-
-	sql := fmt.Sprintf("ALTER TABLE `%s` DROP COLUMN `magnet_url`", tableName)
-	return db.Exec(sql).Error
-}
-
-func migrateAddSehuatangTagColumn(db *gorm.DB) error {
-	tableName := "t_sehuatang_magnet"
-
-	hasSehuatangTable, err := hasTable(db, tableName)
-	if err != nil {
-		return err
-	}
-	if !hasSehuatangTable {
-		return nil
-	}
-
-	hasCol, err := hasColumn(db, tableName, "tag")
-	if err != nil {
-		return err
-	}
-	if hasCol {
-		return nil
-	}
-
-	sql := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `tag` varchar(100) NOT NULL DEFAULT '' AFTER `movie_name`", tableName)
-	return db.Exec(sql).Error
-}
-
-func backfillSehuatangTags(db *gorm.DB) error {
-	tableName := "t_sehuatang_magnet"
-
-	hasSehuatangTable, err := hasTable(db, tableName)
-	if err != nil {
-		return err
-	}
-	if !hasSehuatangTable {
-		return nil
-	}
-
-	hasCol, err := hasColumn(db, tableName, "tag")
-	if err != nil {
-		return err
-	}
-	if !hasCol {
-		return nil
-	}
-
-	if err := db.Exec(
-		fmt.Sprintf(
-			"UPDATE `%s` SET `tag` = 'FC2PPV' WHERE (`tag` = '' OR `tag` IS NULL) AND UPPER(`thread_title`) LIKE '%%FC2PPV%%'",
-			tableName,
-		),
-	).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(
-		fmt.Sprintf(
-			"UPDATE `%s` SET `tag` = '自提征用' WHERE (`tag` = '' OR `tag` IS NULL) AND (`thread_title` LIKE '%%[自译征用]%%' OR `thread_title` LIKE '%%[自提征用]%%')",
-			tableName,
-		),
-	).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func migrateDropJavbusRedundantColumns(db *gorm.DB) error {
 	tableName := "t_javbus_magnet"
 
@@ -2316,94 +2214,6 @@ func migrateDropSukebeiRedundantColumns(db *gorm.DB) error {
 		}
 	}
 	return nil
-}
-
-func migrateSehuatangInfoHashUniqueIndex(db *gorm.DB) error {
-	tableName := "t_sehuatang_magnet"
-
-	hasSehuatangTable, err := hasTable(db, tableName)
-	if err != nil {
-		return err
-	}
-	if !hasSehuatangTable {
-		return nil
-	}
-
-	type duplicateInfoHash struct {
-		InfoHash string `gorm:"column:info_hash"`
-	}
-
-	var duplicates []duplicateInfoHash
-	if err := db.Raw(
-		"SELECT info_hash FROM `t_sehuatang_magnet` GROUP BY info_hash HAVING COUNT(1) > 1",
-	).Scan(&duplicates).Error; err != nil {
-		return err
-	}
-
-	for _, item := range duplicates {
-		var keepID int64
-		if err := db.Raw(
-			"SELECT id FROM `t_sehuatang_magnet` WHERE info_hash = ? ORDER BY last_seen_time DESC, updated_on DESC, id DESC LIMIT 1",
-			item.InfoHash,
-		).Scan(&keepID).Error; err != nil {
-			return err
-		}
-		if keepID <= 0 {
-			continue
-		}
-		if err := db.Exec(
-			"DELETE FROM `t_sehuatang_magnet` WHERE info_hash = ? AND id <> ?",
-			item.InfoHash,
-			keepID,
-		).Error; err != nil {
-			return err
-		}
-	}
-
-	hasOldUnique, err := hasIndex(db, tableName, "uk_movie_hash")
-	if err != nil {
-		return err
-	}
-	if hasOldUnique {
-		if err := db.Exec("ALTER TABLE `t_sehuatang_magnet` DROP INDEX `uk_movie_hash`").Error; err != nil {
-			return err
-		}
-	}
-
-	hasInfoHashUnique, err := hasIndex(db, tableName, "uk_info_hash")
-	if err != nil {
-		return err
-	}
-	if !hasInfoHashUnique {
-		if err := db.Exec("ALTER TABLE `t_sehuatang_magnet` ADD UNIQUE INDEX `uk_info_hash` (`info_hash`)").Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func migrateLegacySehuatangTable(db *gorm.DB) error {
-	oldTable := "t_98tang_magnet"
-	newTable := "t_sehuatang_magnet"
-
-	hasOld, err := hasTable(db, oldTable)
-	if err != nil {
-		return err
-	}
-	if !hasOld {
-		return nil
-	}
-	hasNew, err := hasTable(db, newTable)
-	if err != nil {
-		return err
-	}
-	if hasNew {
-		return nil
-	}
-
-	sql := fmt.Sprintf("RENAME TABLE `%s` TO `%s`", oldTable, newTable)
-	return db.Exec(sql).Error
 }
 
 func migrateRenameSHSehuatangTables(db *gorm.DB) error {

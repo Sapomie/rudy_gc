@@ -54,8 +54,7 @@ const fc2CardRoutes = [
 
 const listRoutes = [
   { path: "/javbuslist", apiPath: "/fetch-site-javbus-list", title: "JavBus List" },
-  { path: "/sukebeilist", apiPath: "/fetch-site-sukebei-list", title: "Sukebei List" },
-  { path: "/sehuatanglist", apiPath: "/fetch-site-sehuatang-list", title: "Sehuatang List" }
+  { path: "/sukebeilist", apiPath: "/fetch-site-sukebei-list", title: "Sukebei List" }
 ].map(({ path, apiPath, title }) => ({ path, component: ListPage, meta: { title, apiPath } }));
 
 const triggerRoutes = [
@@ -64,7 +63,6 @@ const triggerRoutes = [
   { path: "/postprocess", apiPath: "/triggers/post-process", title: "PostProcess" },
   { path: "/databackfill", apiPath: "/triggers/backfill", title: "Backfill" },
   { path: "/sitefetch", apiPath: "/triggers/fetch-site", title: "FetchSite" },
-  { path: "/sehuatangfetch", apiPath: "/triggers/fetch-sehuatang", title: "FetchSehuatang" },
   { path: "/javbusfetch", apiPath: "/triggers/fetch-site-javbus-filtered", title: "JavBus Filtered" },
   { path: "/sukebeifetch", apiPath: "/triggers/fetch-site-sukebei-filtered", title: "Sukebei Filtered" }
 ].map(({ path, apiPath, title }) => ({ path, component: TriggerPage, meta: { title, apiPath } }));

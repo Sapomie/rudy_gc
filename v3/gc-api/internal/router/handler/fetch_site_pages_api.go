@@ -12,8 +12,6 @@ import (
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
-	"rudy_gc/internal/service/sehuatang"
-	"rudy_gc/internal/service/wkv"
 )
 
 type fetchSitePageQuery struct {
@@ -51,39 +49,10 @@ type fetchSiteSortQuery struct {
 	ByMediaBirthTime fetchSiteSortLink
 }
 
-type sehuatangMagnetPageQuery struct {
-	Page         int64  `form:"p"`
-	PageSize     int64  `form:"ps"`
-	Sort         string `form:"sort"`
-	Order        string `form:"order"`
-	Keyword      string `form:"keyword"`
-	MovieJavID   string `form:"movie_jav_id"`
-	InfoHash     string `form:"info_hash"`
-	Tag          string `form:"tag"`
-	PostTimeFrom string `form:"post_time_from"`
-	PostTimeTo   string `form:"post_time_to"`
-}
-
-type sehuatangMagnetSortLink struct {
+type shSehuatangSortLink struct {
 	Href   string
 	Active bool
 	Desc   bool
-}
-
-type sehuatangTagQuickFilter struct {
-	Label  string
-	Href   string
-	Active bool
-}
-
-type sehuatangMagnetSortQuery struct {
-	ByMovieJavID   sehuatangMagnetSortLink
-	ByMovieName    sehuatangMagnetSortLink
-	ByPostTime     sehuatangMagnetSortLink
-	ByPostDate     sehuatangMagnetSortLink
-	ByLastSeenTime sehuatangMagnetSortLink
-	ByCreatedOn    sehuatangMagnetSortLink
-	ByUpdatedOn    sehuatangMagnetSortLink
 }
 
 type shSehuatangThreadPageQuery struct {
@@ -108,13 +77,13 @@ type shSehuatangThreadPageQuery struct {
 }
 
 type shSehuatangThreadSortQuery struct {
-	ByThreadTID    sehuatangMagnetSortLink
-	ByMovieName    sehuatangMagnetSortLink
-	ByPostTime     sehuatangMagnetSortLink
-	ByDetailStatus sehuatangMagnetSortLink
-	ByLastSeenTime sehuatangMagnetSortLink
-	ByCreatedOn    sehuatangMagnetSortLink
-	ByUpdatedOn    sehuatangMagnetSortLink
+	ByThreadTID    shSehuatangSortLink
+	ByMovieName    shSehuatangSortLink
+	ByPostTime     shSehuatangSortLink
+	ByDetailStatus shSehuatangSortLink
+	ByLastSeenTime shSehuatangSortLink
+	ByCreatedOn    shSehuatangSortLink
+	ByUpdatedOn    shSehuatangSortLink
 }
 
 func (h *CrawlerPagesAPI) FetchSiteJavbusListPageMain(c *gin.Context) {
@@ -275,78 +244,6 @@ func (h *CrawlerPagesAPI) parseFetchSitePageQuery(c *gin.Context, label string) 
 	return q, pageQuery, buildFetchSiteStatusSelected(q.Statuses, q.Status), true
 }
 
-func (h *CrawlerPagesAPI) FetchSiteSehuatangListPageMain(c *gin.Context) {
-	defer withFrontendPath(c, "/sehuatanglist")()
-
-	var q sehuatangMagnetPageQuery
-	if err := c.ShouldBindQuery(&q); err != nil {
-		jsonBadRequest(c, "参数解析错误", err)
-		return
-	}
-
-	if q.Page <= 0 {
-		q.Page = 1
-	}
-	if q.PageSize <= 0 {
-		q.PageSize = 50
-	}
-	q.Sort = normalizeSehuatangMagnetSortField(q.Sort)
-	q.Order = normalizeSehuatangMagnetSortOrder(q.Order)
-
-	request := sehuatang.ListRequest{
-		Page:       q.Page,
-		PageSize:   q.PageSize,
-		Sort:       q.Sort,
-		Order:      q.Order,
-		Keyword:    strings.TrimSpace(q.Keyword),
-		MovieJavID: strings.TrimSpace(q.MovieJavID),
-		InfoHash:   strings.TrimSpace(q.InfoHash),
-		Tag:        strings.TrimSpace(q.Tag),
-	}
-	if ts, ok, err := parseOptionalDateStart(q.PostTimeFrom); err != nil {
-		jsonBadRequest(c, "发帖时间开始日期错误", err)
-		return
-	} else if ok {
-		request.PostTimeFrom = ts
-		request.HasPostTimeFrom = true
-	}
-	if ts, ok, err := parseOptionalDateEnd(q.PostTimeTo); err != nil {
-		jsonBadRequest(c, "发帖时间结束日期错误", err)
-		return
-	} else if ok {
-		request.PostTimeTo = ts
-		request.HasPostTimeTo = true
-	}
-
-	result, err := h.sehuatang.ListPage(c.Request.Context(), request)
-	if err != nil {
-		jsonServerError(c, "Sehuatang 列表加载失败", err)
-		return
-	}
-	shtTimeValue, err := h.wkvSvc.GetValue(c.Request.Context(), wkv.ItemKeySHTTime)
-	if err != nil {
-		shtTimeValue = ""
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"Title":          "Sehuatang Magnet 列表",
-		"ViewType":       "fetch-site-sehuatang-list",
-		"PageTitle":      "Sehuatang Magnet 列表",
-		"PageNote":       "展示 t_sehuatang_magnet 已入库的数据，支持关键词、movie_jav_id、tag、info_hash 筛选以及分页排序。",
-		"Query":          q,
-		"Rows":           result.Items,
-		"Albums":         result.Albums,
-		"Total":          result.Total,
-		"PageInfo":       buildFetchSitePageInfo(c, result.Total, result.Page, result.PageSize),
-		"SortQuery":      buildSehuatangMagnetSortQuery(c, q.Sort, q.Order),
-		"QuickTags":      buildSehuatangTagQuickFilters(c, q.Tag),
-		"TaskPageURL":    "/sehuatangfetch",
-		"TasksPageURL":   "/crawltasklist",
-		"ShtTimeValue":   shtTimeValue,
-		"ShtTimeDisplay": displayWKvDateValue(shtTimeValue),
-	})
-}
-
 func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 	defer withFrontendPath(c, "/shpool")()
 
@@ -362,7 +259,7 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		q.PageSize = 50
 	}
 	q.Sort = normalizeSHSehuatangThreadSortField(q.Sort)
-	q.Order = normalizeSehuatangMagnetSortOrder(q.Order)
+	q.Order = normalizeSHSehuatangSortOrder(q.Order)
 	q.SourceForumIDs = normalizeSHMultiQueryValues(q.SourceForumIDs, q.SourceForumID)
 	q.DetailStatuses = normalizeSHMultiQueryValues(q.DetailStatuses, q.DetailStatus)
 	q.MovieTypes = moviedomain.NormalizeSehuatangThreadMovieTypes(normalizeSHMultiQueryValues(q.MovieTypes, q.MovieType)...)
@@ -438,7 +335,6 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		"TaskPageURL":       "/shfetch",
 		"DetailTaskPageURL": "/shfill",
 		"TasksPageURL":      "/crawltasklist",
-		"OldListURL":        "/sehuatanglist",
 	})
 }
 
@@ -603,40 +499,8 @@ func buildFetchSiteStatusSelected(raws []string, legacy string) map[string]bool 
 	return selected
 }
 
-func buildSehuatangMagnetSortQuery(c *gin.Context, currentField string, currentOrder string) *sehuatangMagnetSortQuery {
-	makeHref := func(field string) sehuatangMagnetSortLink {
-		q := cloneValues(c)
-		q.Set("p", "1")
-		q.Set("sort", field)
-		if currentField == field && currentOrder == "desc" {
-			q.Set("order", "asc")
-		} else {
-			q.Set("order", "desc")
-		}
-		href := c.Request.URL.Path
-		if enc := q.Encode(); enc != "" {
-			href += "?" + enc
-		}
-		return sehuatangMagnetSortLink{
-			Href:   href,
-			Active: currentField == field,
-			Desc:   currentField == field && currentOrder == "desc",
-		}
-	}
-
-	return &sehuatangMagnetSortQuery{
-		ByMovieJavID:   makeHref("movie_jav_id"),
-		ByMovieName:    makeHref("movie_name"),
-		ByPostTime:     makeHref("post_time"),
-		ByPostDate:     makeHref("post_date"),
-		ByLastSeenTime: makeHref("last_seen_time"),
-		ByCreatedOn:    makeHref("created_on"),
-		ByUpdatedOn:    makeHref("updated_on"),
-	}
-}
-
 func buildSHSehuatangThreadSortQuery(c *gin.Context, currentField string, currentOrder string) *shSehuatangThreadSortQuery {
-	makeHref := func(field string) sehuatangMagnetSortLink {
+	makeHref := func(field string) shSehuatangSortLink {
 		q := cloneValues(c)
 		q.Set("p", "1")
 		q.Set("sort", field)
@@ -649,7 +513,7 @@ func buildSHSehuatangThreadSortQuery(c *gin.Context, currentField string, curren
 		if enc := q.Encode(); enc != "" {
 			href += "?" + enc
 		}
-		return sehuatangMagnetSortLink{
+		return shSehuatangSortLink{
 			Href:   href,
 			Active: currentField == field,
 			Desc:   currentField == field && currentOrder == "desc",
@@ -667,15 +531,6 @@ func buildSHSehuatangThreadSortQuery(c *gin.Context, currentField string, curren
 	}
 }
 
-func normalizeSehuatangMagnetSortField(raw string) string {
-	switch strings.TrimSpace(raw) {
-	case "movie_jav_id", "movie_name", "post_time", "post_date", "last_seen_time", "created_on", "updated_on":
-		return strings.TrimSpace(raw)
-	default:
-		return "post_time"
-	}
-}
-
 func normalizeSHSehuatangThreadSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
 	case "thread_tid", "movie_name", "post_time", "detail_status", "last_seen_time", "created_on", "updated_on":
@@ -685,7 +540,7 @@ func normalizeSHSehuatangThreadSortField(raw string) string {
 	}
 }
 
-func normalizeSehuatangMagnetSortOrder(raw string) string {
+func normalizeSHSehuatangSortOrder(raw string) string {
 	if strings.EqualFold(strings.TrimSpace(raw), "asc") {
 		return "asc"
 	}
@@ -694,7 +549,7 @@ func normalizeSehuatangMagnetSortOrder(raw string) string {
 
 func buildSHSehuatangThreadOrderBy(sortField string, sortOrder string) string {
 	field := normalizeSHSehuatangThreadSortField(sortField)
-	order := normalizeSehuatangMagnetSortOrder(sortOrder)
+	order := normalizeSHSehuatangSortOrder(sortOrder)
 	return fmt.Sprintf("`%s` %s, `id` DESC", field, strings.ToUpper(order))
 }
 
@@ -717,40 +572,4 @@ func normalizeSHMultiQueryValues(values []string, legacy string) []string {
 	}
 	appendValue(legacy)
 	return out
-}
-
-func buildSehuatangTagQuickFilters(c *gin.Context, currentTag string) []*sehuatangTagQuickFilter {
-	current := strings.TrimSpace(currentTag)
-	return []*sehuatangTagQuickFilter{
-		{
-			Label:  "全部",
-			Href:   buildSehuatangTagFilterHref(c, ""),
-			Active: current == "",
-		},
-		{
-			Label:  "自提征用",
-			Href:   buildSehuatangTagFilterHref(c, "自提征用"),
-			Active: current == "自提征用",
-		},
-		{
-			Label:  "FC2PPV",
-			Href:   buildSehuatangTagFilterHref(c, "FC2PPV"),
-			Active: strings.EqualFold(current, "FC2PPV"),
-		},
-	}
-}
-
-func buildSehuatangTagFilterHref(c *gin.Context, tag string) string {
-	q := cloneValues(c)
-	q.Set("p", "1")
-	if strings.TrimSpace(tag) == "" {
-		q.Del("tag")
-	} else {
-		q.Set("tag", strings.TrimSpace(tag))
-	}
-	href := c.Request.URL.Path
-	if enc := q.Encode(); enc != "" {
-		href += "?" + enc
-	}
-	return href
 }

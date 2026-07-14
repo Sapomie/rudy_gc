@@ -10,7 +10,6 @@
           :class="{
             'next02-sh-command-page': isSehuatangSHPage,
             'next02-fetch-site-command-page': isFetchSiteCommandPage,
-            'next02-old-sehuatang-command-page': isOldSehuatangCommandPage,
             'next02-dailybest-command-page': isDailyBestCommandPage,
             'next02-seeds-command-page': isSeedsCommandPage,
             'next02-seeds-rewrite next02-pink-trigger-rewrite': isPinkTriggerRewritePage,
@@ -128,14 +127,9 @@
                         </div>
                       </div>
 
-                      <div class="form-group compact-field grid-span-2" id="fetchSehuatangListURLFieldWrap" :class="{ 'is-hidden': !showListUrlField }">
-                        <label for="task_sehuatang_list_url">列表页 URL</label>
-                        <input id="task_sehuatang_list_url" v-model="form.listURL" name="list_url" class="form-control" type="text" placeholder="输入 色花堂列表页 URL">
-                      </div>
-
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangKeywordFieldWrap" :class="{ 'is-hidden': !showKeywordField }">
-                        <label for="task_sehuatang_keyword">{{ isOldSehuatangCommandPage ? "关键词" : "标题关键词" }}</label>
-                        <input id="task_sehuatang_keyword" v-model="form.keyword" name="keyword" class="form-control" type="text" :placeholder="isOldSehuatangCommandPage ? '输入关键词' : '可选，留空表示抓取全部普通帖'">
+                        <label for="task_sehuatang_keyword">标题关键词</label>
+                        <input id="task_sehuatang_keyword" v-model="form.keyword" name="keyword" class="form-control" type="text" placeholder="可选，留空表示抓取全部普通帖">
                       </div>
 
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHModeFieldWrap" :class="{ 'is-hidden': !showSHModeField }">
@@ -210,17 +204,9 @@
                         <input id="task_sehuatang_sh_detail_limit" v-model.number="form.detailLimit" name="limit" class="form-control" type="number" min="1" placeholder="留空不限制">
                       </div>
 
-                      <div class="form-group compact-field grid-span-2" id="fetchSehuatangStopOnExistingFieldWrap" :class="{ 'is-hidden': !showOldSehuatangFields }">
-                        <label class="d-block mb-2">抓取范围</label>
-                        <div class="form-check">
-                          <input id="task_sehuatang_stop_on_existing" v-model="form.stopOnExisting" name="stop_on_existing" class="form-check-input" type="checkbox" value="1">
-                          <label class="form-check-label" for="task_sehuatang_stop_on_existing">从第一页开始，抓到已存在帖子停止</label>
-                        </div>
-                      </div>
-
                       <div class="form-group compact-field" id="fetchSehuatangStartPageFieldWrap" :class="{ 'is-hidden': !showPagingFields }">
                         <label for="task_sehuatang_start_page">起始页</label>
-                        <input id="task_sehuatang_start_page" v-model.number="form.startPage" name="start_page" class="form-control" type="number" :disabled="showOldSehuatangFields && form.stopOnExisting" placeholder="输入起始页">
+                        <input id="task_sehuatang_start_page" v-model.number="form.startPage" name="start_page" class="form-control" type="number" placeholder="输入起始页">
                       </div>
 
                       <div class="form-group compact-field" id="fetchSehuatangEndPageFieldWrap" :class="{ 'is-hidden': !showPagingFields }">
@@ -228,13 +214,6 @@
                         <input id="task_sehuatang_end_page" v-model.number="form.endPage" name="end_page" class="form-control" type="number" placeholder="输入结束页">
                       </div>
 
-                      <div class="form-group compact-field grid-span-2" id="fetchSehuatangPersistModeFieldWrap" :class="{ 'is-hidden': !showOldSehuatangFields }">
-                        <label for="task_sehuatang_persist_mode">入库模式</label>
-                        <select id="task_sehuatang_persist_mode" v-model="form.persistMode" name="persist_mode" class="form-select">
-                          <option value="upsert_all">upsert 所有帖子</option>
-                          <option value="skip_existing">跳过数据库中已存在的帖子</option>
-                        </select>
-                      </div>
                     </div>
 
                     <div v-if="showFetchSitePanel" id="fetchSiteFilterPanel" class="mt-3">
@@ -336,7 +315,6 @@
                       v-else-if="showRuntimeOverviewMetrics"
                       class="status-grid"
                       :class="{
-                        'sehuatang-progress-grid': overviewMode === 'sehuatang_progress',
                         'sehuatang-list-progress-grid': isSHRuntimeOverview
                       }"
                     >
@@ -598,10 +576,7 @@ const form = reactive({
   startPage: 0,
   endPage: 0,
   keyword: "",
-  listURL: "",
   fetchMode: "search",
-  persistMode: "skip_existing",
-  stopOnExisting: false,
   postTimeFrom: "",
   postTimeTo: "",
   detailLimit: undefined as number | undefined
@@ -689,13 +664,10 @@ async function load() {
     fetchSiteFilterOpen.value = false;
     fetchSiteOrderBy.value = text(asRecord(pick(payload.value, "MovieCardFilter")), "OrderBy") || "rd";
     hideFetchSitePreview();
-    form.keyword = text(payload.value, "FetchSehuatangKey");
-    form.listURL = text(payload.value, "FetchSehuatangList");
+    form.keyword = "";
     form.startPage = Number(text(payload.value, "FetchSehuatangStartPage") || 0);
     form.endPage = Number(text(payload.value, "FetchSehuatangEndPage") || 0);
     form.fetchMode = text(payload.value, "FetchSehuatangSHMode") === "forum" ? "forum" : "search";
-    form.persistMode = text(payload.value, "FetchSehuatangPersistMode") === "upsert_all" ? "upsert_all" : "skip_existing";
-    form.stopOnExisting = Boolean(pick(payload.value, "FetchSehuatangStopOnExisting"));
     targetForumIDs.value = initialTargetForumIDs();
     shDetailStatusValues.value = initialSHDetailStatusValues();
     form.number = 1000000;
@@ -745,14 +717,12 @@ const showMovieFilter = computed(() => Boolean(payload.value.ShowMovieFilters));
 const emptyStateText = computed(() => text(payload.value, "EmptyStateText") || "等待任务触发");
 const currentTaskType = computed(() => selectedTaskType.value || text(payload.value, "DefaultTaskType"));
 const isFetchSiteTask = computed(() => fetchSiteTaskTypes.has(currentTaskType.value));
-const isOldSehuatangTask = computed(() => currentTaskType.value === "spider_fetch_sehuatang_magnets");
 const isSehuatangSHTask = computed(() => currentTaskType.value === "spider_fetch_sehuatang_sh_threads");
 const isSehuatangSHListTask = computed(() => currentTaskType.value === "spider_fetch_sehuatang_sh_thread_list");
 const isSehuatangSHDetailTask = computed(() => currentTaskType.value === "spider_fetch_sehuatang_sh_thread_detail");
 const isSehuatangSHPage = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value || isSehuatangSHDetailTask.value);
 const isSHSingleForumPage = computed(() => ["/shfetchall", "/shfetch", "/shfill"].includes(route.path));
 const isFetchSiteCommandPage = computed(() => route.path === "/sitefetch" && isFetchSiteTask.value);
-const isOldSehuatangCommandPage = computed(() => route.path === "/sehuatangfetch" && isOldSehuatangTask.value);
 const isDailyBestCommandPage = computed(() => route.path === "/dailybestfetch");
 const isSeedsCommandPage = computed(() => route.path === "/seedfetch");
 const isPostProcessCommandPage = computed(() => route.path === "/postprocess");
@@ -764,7 +734,6 @@ const pinkTriggerPaths = new Set([
   "/postprocess",
   "/databackfill",
   "/sitefetch",
-  "/sehuatangfetch",
   "/shfetchall",
   "/shfetch",
   "/shfill",
@@ -772,7 +741,7 @@ const pinkTriggerPaths = new Set([
   "/sukebeifetch"
 ]);
 const isPinkTriggerRewritePage = computed(() => pinkTriggerPaths.has(route.path));
-const isFormHeavyTriggerPage = computed(() => isFetchSiteCommandPage.value || isOldSehuatangCommandPage.value || isSehuatangSHPage.value);
+const isFormHeavyTriggerPage = computed(() => isFetchSiteCommandPage.value || isSehuatangSHPage.value);
 const isCommandVisualPage = computed(() => isPinkTriggerRewritePage.value);
 const showFetchSitePanel = computed(() => isFetchSiteTask.value && showMovieFilter.value);
 const showNameField = computed(() => currentTaskType.value === "spider_seed_by_name");
@@ -783,13 +752,11 @@ const showNumberField = computed(() => [
   "spider_fetch_site_both_resources"
 ].includes(currentTaskType.value));
 const showActorNameField = computed(() => currentTaskType.value === "spider_rebuild_actor_rank");
-const showOldSehuatangFields = computed(() => isOldSehuatangTask.value);
 const showSHModeField = computed(() => isSehuatangSHTask.value && route.path !== "/shfetchall");
 const showSHForumsField = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value || isSehuatangSHDetailTask.value);
 const showSHDetailFields = computed(() => isSehuatangSHDetailTask.value);
-const showPagingFields = computed(() => isOldSehuatangTask.value || isSehuatangSHTask.value || isSehuatangSHListTask.value);
-const showKeywordField = computed(() => isOldSehuatangTask.value || (isSehuatangSHTask.value && route.path !== "/shfetchall" && form.fetchMode === "search"));
-const showListUrlField = computed(() => isOldSehuatangTask.value);
+const showPagingFields = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value);
+const showKeywordField = computed(() => isSehuatangSHTask.value && route.path !== "/shfetchall" && form.fetchMode === "search");
 const showAutoFetchSiteField = computed(() => autoFetchSiteTaskTypes.has(currentTaskType.value));
 const showTranslateStatusesField = computed(() => currentTaskType.value === "spider_translate_title" || currentTaskType.value === "spider_post_process");
 const overviewMode = computed(() => text(payload.value, "OverviewExtraMode"));
@@ -868,7 +835,7 @@ const stopDisabled = computed(() => {
 });
 const currentProgressPercent = computed(() => {
   const job = currentJob.value || {};
-  if (overviewMode.value === "sehuatang_progress" || isSHRuntimeOverview.value) {
+  if (isSHRuntimeOverview.value) {
     const page = sehuatangPageCounts(job);
     return page.total > 0 ? Math.max(0, Math.min(100, Math.round(page.completed * 100 / page.total))) : 0;
   }
@@ -1029,12 +996,6 @@ const fetchSiteHeroMetrics = computed(() => [
   { label: "排序", value: fetchSiteOrderBy.value || "rd" },
   { label: "预览命中", value: String(fetchSitePreviewTotal.value || 0) }
 ]);
-const oldSehuatangHeroMetrics = computed(() => [
-  { label: "列表页", value: form.listURL.trim() ? "已配置" : "未配置" },
-  { label: "关键词", value: form.keyword.trim() || "-" },
-  { label: "页码", value: `${form.startPage || "-"}-${form.endPage || "-"}` },
-  { label: "入库模式", value: form.persistMode === "upsert_all" ? "upsert" : "skip" }
-]);
 const dailybestHeroMetrics = computed(() => [
   { label: "当前任务", value: taskLabelByType(currentTaskType.value) },
   { label: "任务按钮", value: String(taskButtons.value.length || 0) },
@@ -1075,17 +1036,14 @@ const commandHeroKicker = computed(() => {
   if (isFetchSiteCommandPage.value) {
     return "FetchSite Command";
   }
-  if (isOldSehuatangCommandPage.value) {
-    return "Sehuatang Magnet Command";
-  }
   if (isFilteredFetchSitePage.value) {
     return route.path.includes("javbus") ? "JavBus Filter Queue" : "Sukebei Filter Queue";
   }
   return "Sehuatang SH Command";
 });
-const commandTaskEyebrow = computed(() => isDailyBestCommandPage.value ? "Rank Console" : isSeedsCommandPage.value ? "Seeds Console" : isPostProcessCommandPage.value ? "Post Console" : isBackfillCommandPage.value ? "Backfill Console" : isFetchSiteCommandPage.value ? "Fetch Console" : isOldSehuatangCommandPage.value ? "Magnet Console" : isFilteredFetchSitePage.value ? "Filter Queue" : "Task Console");
-const commandRuntimeEyebrow = computed(() => isDailyBestCommandPage.value ? "Rank Runtime" : isSeedsCommandPage.value ? "Seeds Runtime" : isPostProcessCommandPage.value ? "Post Runtime" : isBackfillCommandPage.value ? "Backfill Runtime" : isFetchSiteCommandPage.value ? "Site Runtime" : isOldSehuatangCommandPage.value ? "Magnet Runtime" : isFilteredFetchSitePage.value ? "Queue Runtime" : "Runtime");
-const commandEventEyebrow = computed(() => isDailyBestCommandPage.value ? "Rank Event Stream" : isSeedsCommandPage.value ? "Seeds Event Stream" : isPostProcessCommandPage.value ? "Post Event Stream" : isBackfillCommandPage.value ? "Backfill Event Stream" : isFetchSiteCommandPage.value ? "Fetch Event Stream" : isOldSehuatangCommandPage.value ? "Magnet Event Stream" : isFilteredFetchSitePage.value ? "Queue Event Stream" : "Event Stream");
+const commandTaskEyebrow = computed(() => isDailyBestCommandPage.value ? "Rank Console" : isSeedsCommandPage.value ? "Seeds Console" : isPostProcessCommandPage.value ? "Post Console" : isBackfillCommandPage.value ? "Backfill Console" : isFetchSiteCommandPage.value ? "Fetch Console" : isFilteredFetchSitePage.value ? "Filter Queue" : "Task Console");
+const commandRuntimeEyebrow = computed(() => isDailyBestCommandPage.value ? "Rank Runtime" : isSeedsCommandPage.value ? "Seeds Runtime" : isPostProcessCommandPage.value ? "Post Runtime" : isBackfillCommandPage.value ? "Backfill Runtime" : isFetchSiteCommandPage.value ? "Site Runtime" : isFilteredFetchSitePage.value ? "Queue Runtime" : "Runtime");
+const commandEventEyebrow = computed(() => isDailyBestCommandPage.value ? "Rank Event Stream" : isSeedsCommandPage.value ? "Seeds Event Stream" : isPostProcessCommandPage.value ? "Post Event Stream" : isBackfillCommandPage.value ? "Backfill Event Stream" : isFetchSiteCommandPage.value ? "Fetch Event Stream" : isFilteredFetchSitePage.value ? "Queue Event Stream" : "Event Stream");
 const commandHeroMetrics = computed(() => {
   if (isDailyBestCommandPage.value) {
     return dailybestHeroMetrics.value;
@@ -1101,9 +1059,6 @@ const commandHeroMetrics = computed(() => {
   }
   if (isFetchSiteCommandPage.value) {
     return fetchSiteHeroMetrics.value;
-  }
-  if (isOldSehuatangCommandPage.value) {
-    return oldSehuatangHeroMetrics.value;
   }
   return shHeroMetrics.value;
 });
@@ -1128,26 +1083,6 @@ const overviewItems = computed(() => {
       { label: "已处理", value: String(page.completed) },
       { label: "抓取成功", value: String(jobStatNumber(job, "fetched_count")) },
       { label: "抓取失败", value: String(jobStatNumber(job, "failed_count")) }
-    ];
-  }
-  if (mode === "sehuatang_progress") {
-    const job = currentJob.value || {};
-    const page = sehuatangPageCounts(job);
-    const currentPageText = jobStatText(job, "current_page_text");
-    const currentPage = jobStatNumber(job, "current_page");
-    const matched = hasJobStat(job, "matched_count") ? jobStatNumber(job, "matched_count") : Number(pick(job, "handled_count", "HandledCount") || 0);
-    const fetched = hasJobStat(job, "fetched_count") ? jobStatNumber(job, "fetched_count") : Number(pick(job, "success_count", "SuccessCount") || 0);
-    const failed = hasJobStat(job, "failed_count") ? jobStatNumber(job, "failed_count") : Number(pick(job, "failed_count", "FailedCount") || 0);
-    return [
-      { label: "页面进度（完成/总）", value: `${page.completed} / ${page.total}` },
-      { label: "当前页面", value: currentPageText || (currentPage > 0 ? `第 ${currentPage} 页` : "-") },
-      { label: "已运行时长", value: formatElapsed(pick(job, "started_at", "StartedAt")) },
-      { label: "发现帖子", value: String(jobStatNumber(job, "seen_count")) },
-      { label: "目标命中", value: String(matched) },
-      { label: "跳过版块", value: String(jobStatNumber(job, "skipped_forum_count")) },
-      { label: "跳过已存在", value: String(jobStatNumber(job, "skipped_existing_count")) },
-      { label: "入库", value: String(fetched) },
-      { label: "失败", value: String(failed) }
     ];
   }
   if (mode === "sehuatang_list_progress") {
@@ -1905,14 +1840,6 @@ function buildTaskPayload(type: string): Record<string, unknown> {
   }
   if (autoFetchSiteTaskTypes.has(type)) {
     body.auto_fetch_site = autoFetchSiteChecked() ? "1" : "0";
-  }
-  if (type === "spider_fetch_sehuatang_magnets") {
-    body.list_url = form.listURL;
-    body.keyword = form.keyword;
-    body.stop_on_existing = form.stopOnExisting;
-    body.start_page = form.stopOnExisting ? 1 : form.startPage;
-    body.end_page = form.endPage;
-    body.persist_mode = form.persistMode;
   }
   if (type === "spider_fetch_sehuatang_sh_threads") {
     if (!targetForumIDs.value.length) {

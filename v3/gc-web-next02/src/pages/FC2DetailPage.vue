@@ -1,176 +1,176 @@
 <template>
-  <PageShell class="sc-events-page-shell fc2-page-shell fc2-detail-page-shell" :title="pageTitle" :note="pageNote" eyebrow="">
-    <div id="page-root" class="container-fluid sc-events-page-root next02-sc-pink-theme next02-sc-events-rewrite bucket-list-standard sh-bucket-list-page fc2-page fc2-detail-page">
+  <PageShell class="movie-detail-shell fc2-page-shell fc2-detail-page-shell" :title="pageTitle" :note="pageNote" eyebrow="FC2 Movie Detail">
+    <div id="page-root" class="movie-detail-v2 movie-detail-page movie-detail-original-page fc2-page fc2-detail-page fc2-detail-movie-layout">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
       <template v-else>
-        <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell sh-bucket-hero fc2-hero fc2-detail-hero">
-          <div class="next02-sc-hero-copy">
-            <span class="next02-sc-eyebrow">FC2 / MOVIE DETAIL</span>
-            <h4>{{ movieText("FC2Key") || pageTitle }}</h4>
-            <p>{{ movieText("Title") || pageNote }}</p>
-            <div class="fc2-hero-facts">
-              <span :title="movieText('PerformerText')">出演：{{ movieText("PerformerText") || "-" }}</span>
-              <span class="fc2-state-badge" :class="statusClass(movieText('DataStatus'))">{{ movieText("DataStatus") || "-" }}</span>
-              <span>资源 {{ resources.length }}</span>
+        <div class="movie-detail-top-shell fc2-detail-top-shell">
+          <div class="movie-detail-titlebar fc2-detail-titlebar">
+            <div class="movie-detail-title-main">
+              <h4 class="mb-0 movie-detail-title" :title="movieText('Title')">{{ movieText("Title") || movieText("FC2Key") || pageTitle }}</h4>
+            </div>
+            <div class="movie-detail-title-meta">
+              <span class="movie-title-meta-chip movie-title-meta-code">{{ movieText("FC2Key") || "-" }}</span>
+              <span v-if="movieText('PerformerText')" class="movie-title-meta-chip movie-title-meta-cast" :title="movieText('PerformerText')">{{ movieText("PerformerText") }}</span>
+              <span class="movie-title-meta-chip movie-title-meta-mask">{{ movieText("MaskType") || "未知" }}</span>
+              <span class="movie-title-meta-chip movie-title-meta-resource">资源 {{ resources.length }}</span>
             </div>
           </div>
-          <div class="next02-sc-hero-actions">
-            <a class="btn btn-outline-secondary" href="/fclist">返回 FC2 列表</a>
-            <a class="btn btn-outline-secondary" href="/shpool" target="_blank" rel="noopener noreferrer">SH 帖子池</a>
-          </div>
-        </section>
 
-        <section id="fc2-metadata" class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card fc2-detail-panel fc2-metadata-panel">
-          <div class="card-body">
-            <div class="fc2-panel-heading">
-              <div><span class="next02-sc-eyebrow">MOVIE PROFILE</span><h5>影片资料</h5></div>
-              <div class="sh-bucket-toolbar-metrics" aria-label="影片资料摘要">
-                <span :title="`资源数 ${resources.length}`"><strong>{{ resources.length }}</strong></span>
-              </div>
-            </div>
-            <div class="fc2-sc-summary" aria-label="SC 统计">
-              <span><small>SC 次数</small><strong>{{ scStatText("ScTimes") || "0" }}</strong></span>
-              <span><small>Come 次数</small><strong>{{ scStatText("ComeTimes") || "0" }}</strong></span>
-              <span><small>最近 SC</small><strong><ScDateTime v-if="scStatValue('LastScTime')" :value="scStatValue('LastScTime')" unix /><template v-else>-</template></strong></span>
-              <span><small>最近事件</small><strong><a v-if="lastScEventHref" :href="lastScEventHref">{{ lastScEventName }}</a><template v-else>-</template></strong></span>
-            </div>
-            <div class="table-responsive fc2-table-wrap">
-              <table class="table align-middle mb-0 sc-events-table sh-bucket-table fc2-table fc2-profile-table">
-                <thead><tr><th>影片标识</th><th>影片名称</th><th>出演信息</th><th>有码状态</th><th>数据状态</th><th>资料来源帖子</th></tr></thead>
-                <tbody><tr>
-                  <td><strong>{{ movieText("FC2Key") || "-" }}</strong></td>
-                  <td class="fc2-title-cell" :title="movieText('Title')">{{ movieText("Title") || "-" }}</td>
-                  <td class="fc2-performer-cell" :title="movieText('PerformerText')">{{ movieText("PerformerText") || "-" }}</td>
-                  <td><span class="fc2-state-badge is-mask">{{ movieText("MaskType") || "未知" }}</span></td>
-                  <td><span class="fc2-state-badge" :class="statusClass(movieText('DataStatus'))">{{ movieText("DataStatus") || "-" }}</span></td>
-                  <td><a v-if="metadataResource" class="fc2-thread-link" :href="`/shthread/${encodeURIComponent(rowText(metadataResource, 'ThreadTID'))}`">{{ rowText(metadataResource, "ThreadTID") }}</a><span v-else>-</span></td>
-                </tr></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <section v-if="hasMedia" id="fc2-media" class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card fc2-detail-panel fc2-media-panel">
-          <div class="card-body">
-            <div class="fc2-panel-heading">
-              <div><span class="next02-sc-eyebrow">MEDIA PROFILE</span><h5>媒体资料</h5></div>
-              <div class="fc2-panel-actions">
-                <button v-if="mediaText('SourceTorrentHash')" class="bucket-list-action" type="button" @click="copyText(mediaText('SourceTorrentHash'), '来源 Hash')">复制 Hash</button>
-                <button v-if="mediaPath" class="bucket-list-action" type="button" @click="copyText(mediaPath, '媒体路径')">复制路径</button>
-              </div>
-            </div>
-            <div class="table-responsive fc2-table-wrap">
-              <table class="table align-middle mb-0 sc-events-table sh-bucket-table fc2-table fc2-media-table">
-                <colgroup><col class="fc2-media-play"><col class="fc2-media-file"><col class="fc2-media-time"><col class="fc2-media-size"><col class="fc2-media-resolution"><col class="fc2-media-duration"><col class="fc2-media-bitrate"><col class="fc2-media-frame"><col class="fc2-media-state"><col class="fc2-media-state"><col class="fc2-media-state"></colgroup>
-                <thead><tr><th>播放</th><th>文件名</th><th>下载时间</th><th>大小</th><th>分辨率</th><th>时长</th><th>码率</th><th>平均帧率</th><th>字幕</th><th>自制</th><th>遮罩</th></tr></thead>
-                <tbody><tr>
-                  <td><a v-if="mediaValue('ShowPlayButton')" class="btn btn-sm fc2-play-button" :class="mediaText('PlayButtonClass')" :href="mediaText('VideoURL')" target="_blank" rel="noopener noreferrer">{{ mediaText("PlayButtonText") || "Play" }}</a><span v-else>-</span></td>
-                  <td class="fc2-media-file-cell" :title="mediaText('FileName')">{{ mediaText("FileName") || "-" }}</td>
-                  <td><ScDateTime :value="mediaValue('BirthTime')" unix /></td>
-                  <td>{{ formatMediaSize(mediaValue("Size")) }}</td>
-                  <td>{{ mediaResolution }}</td>
-                  <td>{{ formatMediaDuration(mediaValue("Duration")) }}</td>
-                  <td>{{ formatMediaBitRate(mediaValue("BitRate")) }}</td>
-                  <td>{{ formatMediaFrame(mediaValue("FrameAverage")) }}</td>
-                  <td><span class="fc2-state-badge" :class="mediaStateClass(mediaText('HasSub'), '2')">{{ mediaText("HasSub") === "2" ? "有" : "无" }}</span></td>
-                  <td><span class="fc2-state-badge" :class="mediaStateClass(mediaText('SelfMake'), '2')">{{ mediaText("SelfMake") === "2" ? "是" : "否" }}</span></td>
-                  <td><span class="fc2-state-badge is-mask">{{ mediaMaskText }}</span></td>
-                </tr></tbody>
-              </table>
-            </div>
-            <div class="fc2-media-source-row">
-              <span><strong>来源 Hash</strong><code :title="mediaText('SourceTorrentHash')">{{ mediaText("SourceTorrentHash") || "-" }}</code></span>
-              <span><strong>媒体路径</strong><code :title="mediaPath">{{ mediaPath || "-" }}</code></span>
-            </div>
-          </div>
-        </section>
-
-        <section v-if="hasMedia" id="fc2-media-images" class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card fc2-detail-panel fc2-capture-panel">
-          <div class="card-body">
-            <div class="fc2-panel-heading">
-              <div><span class="next02-sc-eyebrow">DEFAULT COVER</span><h5>默认联系表封面</h5></div>
-              <div class="fc2-panel-actions">
-                <span v-if="captureFeedback" class="fc2-copy-feedback" role="status">{{ captureFeedback }}</span>
+          <div class="row movie-original-top-row fc2-original-top-row">
+            <div class="col-lg-7 mb-3 mb-lg-0">
+              <div class="card shadow-sm movie-section-card movie-poster-card fc2-cover-card">
+                <template v-if="primaryCoverImageID">
+                  <a class="movie-poster-frame fc2-detail-cover-frame" :href="rowText(primaryCoverImage, 'ImageURL')" target="_blank" rel="noopener noreferrer">
+                    <img class="card-img-bottom img-fluid movie-poster-image fc2-detail-cover-image" :src="rowText(primaryCoverImage, 'ImageURL')" alt="默认联系表封面">
+                    <div class="badge-stack">
+                      <span class="badge-come">❤ {{ scStatText("ComeTimes") || "0" }}</span>
+                      <span class="badge-times">× {{ scStatText("ScTimes") || "0" }}</span>
+                    </div>
+                    <span v-if="imageIsCover(primaryCoverImage)" class="badge-score fc2-cover-current-badge">当前封面</span>
+                  </a>
+                  <div class="fc2-cover-toolbar">
+                    <div class="fc2-cover-file">
+                      <span>默认联系表封面</span>
+                      <a :href="rowText(primaryCoverImage, 'ImageURL')" target="_blank" rel="noopener noreferrer" :title="rowText(primaryCoverImage, 'FilePath')">{{ imageFileName(primaryCoverImage) }}</a>
+                      <ScDateTime :value="rowValue(primaryCoverImage, 'CreatedOn')" unix />
+                    </div>
+                    <div class="fc2-capture-card-actions">
+                      <button
+                        v-if="imageCanBeCover(primaryCoverImage) && !imageIsCover(primaryCoverImage)"
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID)"
+                        @click="setCoverImage(primaryCoverImage)"
+                      >{{ coverBusyImageID === primaryCoverImageID ? "设置中" : "设为封面" }}</button>
+                      <template v-if="deleteConfirmImageID === primaryCoverImageID">
+                        <button type="button" class="btn btn-sm btn-danger" :disabled="Boolean(coverBusyImageID) || deleteBusyImageID === primaryCoverImageID" @click="deleteMediaImage(primaryCoverImage)">{{ deleteBusyImageID === primaryCoverImageID ? "正在删除" : "确认删除" }}</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="Boolean(coverBusyImageID) || deleteBusyImageID === primaryCoverImageID" @click="cancelDeleteMediaImage(primaryCoverImage)">取消</button>
+                      </template>
+                      <button v-else type="button" class="btn btn-sm btn-outline-danger" :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID)" @click="requestDeleteMediaImage(primaryCoverImage)">删除</button>
+                    </div>
+                  </div>
+                </template>
+                <div v-else class="detail-poster-empty fc2-cover-empty">默认联系表封面尚未生成</div>
+                <div v-if="captureFeedback || captureError" class="movie-action-feedback fc2-cover-feedback">
+                  <span v-if="captureFeedback" class="movie-action-feedback-ok" role="status">{{ captureFeedback }}</span>
+                  <span v-if="captureError" class="movie-action-feedback-error" role="alert">{{ captureError }}</span>
+                </div>
               </div>
             </div>
 
-            <div v-if="captureError" class="alert alert-danger fc2-capture-alert" role="alert">{{ captureError }}</div>
+            <div class="col-lg-5">
+              <div class="card shadow-sm movie-section-card movie-info-card fc2-info-card">
+                <div class="card-body">
+                  <ul class="nav nav-tabs nav-tabs-custom nav-justified movie-detail-tabs" role="tablist">
+                    <li class="nav-item" role="presentation"><button type="button" class="nav-link movie-detail-tab" :class="{ active: activeDetailTab === 'info' }" role="tab" @click="activeDetailTab = 'info'">Info</button></li>
+                    <li class="nav-item" role="presentation"><button type="button" class="nav-link movie-detail-tab" :class="{ active: activeDetailTab === 'sc' }" role="tab" @click="activeDetailTab = 'sc'">SC</button></li>
+                  </ul>
 
-            <div v-if="mediaImages.length" class="fc2-capture-gallery">
-              <article v-for="image in mediaImages" :key="rowText(image, 'ID')" class="fc2-capture-card" :class="{ 'is-cover': imageIsCover(image) }">
-                <a class="fc2-capture-preview" :href="rowText(image, 'ImageURL')" target="_blank" rel="noopener noreferrer">
-                  <img :src="rowText(image, 'ImageURL')" :alt="imageTypeText(image)" loading="lazy">
-                </a>
-                <div class="fc2-capture-card-meta">
-                  <span class="fc2-state-badge is-mask">{{ imageTypeText(image) }}</span>
-                  <span v-if="imageIsCover(image)" class="fc2-cover-badge">当前封面</span>
-                  <ScDateTime :value="rowValue(image, 'CreatedOn')" unix />
-                  <a :href="rowText(image, 'ImageURL')" target="_blank" rel="noopener noreferrer" :title="rowText(image, 'FilePath')">{{ imageFileName(image) }}</a>
-                  <div class="fc2-capture-card-actions">
-                    <button
-                      v-if="imageCanBeCover(image) && !imageIsCover(image)"
-                      type="button"
-                      class="btn btn-sm btn-outline-primary"
-                      :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID)"
-                      @click="setCoverImage(image)"
-                    >
-                      {{ coverBusyImageID === imageID(image) ? "设置中" : "设为封面" }}
-                    </button>
-                    <template v-if="deleteConfirmImageID === imageID(image)">
-                      <button type="button" class="btn btn-sm btn-danger" :disabled="Boolean(coverBusyImageID) || deleteBusyImageID === imageID(image)" @click="deleteMediaImage(image)">
-                        {{ deleteBusyImageID === imageID(image) ? "正在删除" : "确认删除" }}
-                      </button>
-                      <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="Boolean(coverBusyImageID) || deleteBusyImageID === imageID(image)" @click="cancelDeleteMediaImage(image)">取消</button>
-                    </template>
-                    <button v-else type="button" class="btn btn-sm btn-outline-danger" :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID)" @click="requestDeleteMediaImage(image)">删除</button>
+                  <div class="tab-content movie-detail-tab-content">
+                    <div v-show="activeDetailTab === 'info'" class="tab-pane p-3 active movie-info-pane" role="tabpanel">
+                      <table class="table table-bordered dt-responsive nowrap movie-info-table fc2-info-table" style="width:100%">
+                        <tbody>
+                          <tr class="table-light">
+                            <th>识别码</th>
+                            <td><div class="movie-info-code-line"><span class="movie-info-code movie-tag-code">{{ movieText("FC2Key") || "-" }}</span><a v-if="mediaValue('ShowPlayButton')" class="btn btn-sm movie-action-button movie-action-button-play" :class="mediaText('PlayButtonClass')" :href="mediaText('VideoURL')" target="_blank" rel="noopener noreferrer">{{ mediaText("PlayButtonText") || "Play" }}</a></div></td>
+                          </tr>
+                          <tr class="table-light"><th>FC2 编码</th><td><span class="movie-info-value">{{ movieText("Code") || "-" }}</span></td></tr>
+                          <tr class="table-light"><th>影片名称</th><td><span class="fc2-info-title" :title="movieText('Title')">{{ movieText("Title") || "-" }}</span></td></tr>
+                          <tr class="table-light"><th>出演</th><td><span class="tag movie-tag-person">{{ movieText("PerformerText") || "-" }}</span></td></tr>
+                          <tr class="table-light"><th>有码状态</th><td><span class="fc2-state-badge is-mask">{{ movieText("MaskType") || "未知" }}</span></td></tr>
+                          <tr class="table-light"><th>数据状态</th><td><span class="fc2-state-badge" :class="statusClass(movieText('DataStatus'))">{{ movieText("DataStatus") || "-" }}</span></td></tr>
+                          <tr class="table-light"><th>发布时间</th><td><span class="movie-info-value movie-tag-date"><ScDateTime v-if="movieText('PostTime')" :value="movieText('PostTime')" unix /><template v-else>-</template></span></td></tr>
+                          <tr class="table-light"><th>资料来源</th><td><a v-if="metadataResource" class="movie-tag-link fc2-thread-link" :href="`/shthread/${encodeURIComponent(rowText(metadataResource, 'ThreadTID'))}`">帖子 {{ rowText(metadataResource, "ThreadTID") }}</a><span v-else>-</span></td></tr>
+                          <tr class="table-light"><th>媒体文件</th><td><span class="fc2-info-file" :title="mediaText('FileName')">{{ mediaText("FileName") || "-" }}</span></td></tr>
+                          <tr class="table-light"><th>导航</th><td><div class="movie-info-tag-group movie-info-links"><a class="movie-tag-link" href="/fclist">FC2 列表</a><a class="movie-tag-link" href="/shpool" target="_blank" rel="noopener noreferrer">SH 帖子池</a></div></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div v-show="activeDetailTab === 'sc'" class="tab-pane p-3 active movie-rank-panel fc2-sc-panel" role="tabpanel">
+                      <div class="fc2-sc-detail-grid">
+                        <div><span>SC 次数</span><strong>{{ scStatText("ScTimes") || "0" }}</strong></div>
+                        <div><span>Come 次数</span><strong>{{ scStatText("ComeTimes") || "0" }}</strong></div>
+                        <div><span>最近 SC</span><strong><ScDateTime v-if="scStatValue('LastScTime')" :value="scStatValue('LastScTime')" unix /><template v-else>-</template></strong></div>
+                        <div><span>最近事件</span><strong><a v-if="lastScEventHref" :href="lastScEventHref">{{ lastScEventName }}</a><template v-else>-</template></strong></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </article>
-            </div>
-            <div v-else class="sc-empty-state fc2-empty-state">默认联系表封面尚未生成。</div>
-          </div>
-        </section>
-
-        <section class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card fc2-detail-panel fc2-resource-panel">
-          <div class="card-body">
-            <div class="fc2-panel-heading">
-              <div><span class="next02-sc-eyebrow">SH THREAD RESOURCES</span><h5>帖子资源</h5></div>
-              <div class="fc2-panel-actions">
-                <span v-if="copyFeedback" class="fc2-copy-feedback" role="status">{{ copyFeedback }}</span>
-                <button class="bucket-list-action" type="button" :disabled="!allHashes.length" @click="copyText(allHashes.join('\n'), '全部 Info Hash')">复制全部 Hash</button>
-                <button class="bucket-list-action" type="button" :disabled="!allMagnets.length" @click="copyText(allMagnets.join('\n'), '全部 Magnet')">复制全部 Magnet</button>
               </div>
             </div>
-            <div class="table-responsive fc2-table-wrap">
-              <table class="table table-hover align-middle mb-0 sc-events-table sh-bucket-table fc2-table fc2-resource-table">
-                <colgroup><col class="fc2-resource-time"><col class="fc2-resource-size"><col class="fc2-resource-hash"><col class="fc2-resource-magnet"><col class="fc2-resource-attachment"><col class="fc2-resource-action"></colgroup>
-                <thead><tr><th>发布时间</th><th>容量</th><th>Info Hash</th><th>Magnet</th><th>附件数</th><th>操作</th></tr></thead>
-                <tbody>
-                  <template v-for="resource in resources" :key="rowText(resource, 'ThreadTID')">
-                    <tr>
-                      <td><ScDateTime :value="rowValue(resource, 'PostTime')" unix /></td>
-                      <td>{{ metaText(resource, "size_text") || "-" }}</td>
-                      <td><div class="fc2-copy-cell"><span class="fc2-mono" :title="rowText(resource, 'InfoHashText')">{{ compactLines(rowText(resource, "InfoHashText")) || "-" }}</span><button v-if="rowText(resource, 'InfoHashText')" type="button" class="fc2-copy-button" @click="copyText(rowText(resource, 'InfoHashText'), `Info Hash ${rowText(resource, 'ThreadTID')}`)">复制</button></div></td>
-                      <td><div class="fc2-copy-cell"><span class="fc2-mono" :title="rowText(resource, 'MagnetText')">{{ compactLines(rowText(resource, "MagnetText")) || "-" }}</span><button v-if="rowText(resource, 'MagnetText')" type="button" class="fc2-copy-button" @click="copyText(rowText(resource, 'MagnetText'), `Magnet ${rowText(resource, 'ThreadTID')}`)">复制</button></div></td>
-                      <td><button v-if="attachments(resource).length" type="button" class="fc2-attachment-toggle" :aria-expanded="expandedThreadTID === rowText(resource, 'ThreadTID')" @click="toggleAttachments(resource)">{{ attachments(resource).length }} {{ expandedThreadTID === rowText(resource, "ThreadTID") ? "收起" : "展开" }}</button><span v-else>0</span></td>
-                      <td><div class="fc2-row-actions"><a class="bucket-list-action" :href="`/shthread/${encodeURIComponent(rowText(resource, 'ThreadTID'))}`">帖子详情</a><a class="bucket-list-action" :href="rowText(resource, 'ThreadURL')" target="_blank" rel="noopener noreferrer">原帖</a></div></td>
-                    </tr>
-                    <tr v-if="expandedThreadTID === rowText(resource, 'ThreadTID')" class="fc2-attachment-row">
-                      <td colspan="6">
-                        <table class="fc2-attachment-table">
-                          <thead><tr><th>文件名</th><th>类型</th><th>容量</th><th>下载次数</th><th>上传时间</th></tr></thead>
-                          <tbody><tr v-for="(attachment, index) in attachments(resource)" :key="`${rowText(attachment, 'file_name')}-${index}`"><td :title="rowText(attachment, 'file_name')">{{ rowText(attachment, "file_name") }}</td><td>{{ rowText(attachment, "media_type") || "-" }}</td><td>{{ rowText(attachment, "size_text") || "-" }}</td><td>{{ rowText(attachment, "download_count") || "0" }}</td><td>{{ rowText(attachment, "upload_time_text") || "-" }}</td></tr></tbody>
-                        </table>
-                      </td>
-                    </tr>
-                  </template>
-                  <tr v-if="!resources.length"><td colspan="6"><div class="sc-empty-state fc2-empty-state">当前影片没有帖子资源。</div></td></tr>
-                </tbody>
-              </table>
+          </div>
+        </div>
+
+        <div v-if="hasMedia" class="row mt-3 movie-film-row">
+          <div class="col-12">
+            <div class="card shadow-sm movie-section-card movie-film-card fc2-film-card">
+              <div class="card-body">
+                <div class="movie-film-panel">
+                  <div class="movie-film-head">
+                    <h5 class="card-title movie-section-title">视频信息</h5>
+                    <span class="movie-film-source">FC2Media</span>
+                  </div>
+                  <div class="movie-film-grid fc2-film-grid">
+                    <div class="movie-film-item"><span class="movie-film-label">Source</span><strong class="movie-film-value">FC2Media</strong></div>
+                    <div class="movie-film-item movie-film-item-wide movie-film-hash"><span class="movie-film-label">TorrentHash</span><div class="movie-film-value-line"><strong class="text-monospace movie-film-value" :title="mediaText('SourceTorrentHash')">{{ mediaText("SourceTorrentHash") || "-" }}</strong><button v-if="mediaText('SourceTorrentHash')" class="btn btn-sm btn-outline-secondary" type="button" @click="copyText(mediaText('SourceTorrentHash'), '来源 Hash')">复制</button></div></div>
+                    <div class="movie-film-item"><span class="movie-film-label">BirthTime</span><strong class="movie-film-value"><ScDateTime :value="mediaValue('BirthTime')" unix /></strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">Size</span><strong class="movie-film-value">{{ formatMediaSize(mediaValue("Size")) }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">Resolution</span><strong class="movie-film-value">{{ mediaResolution }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">Duration</span><strong class="movie-film-value">{{ formatMediaDuration(mediaValue("Duration")) }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">BitRate</span><strong class="movie-film-value">{{ formatMediaBitRate(mediaValue("BitRate")) }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">Frame</span><strong class="movie-film-value">{{ formatMediaFrame(mediaValue("FrameAverage")) }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">字幕</span><strong class="movie-film-value">{{ mediaText("HasSub") === "2" ? "有" : "无" }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">自制</span><strong class="movie-film-value">{{ mediaText("SelfMake") === "2" ? "是" : "否" }}</strong></div>
+                    <div class="movie-film-item"><span class="movie-film-label">遮罩</span><strong class="movie-film-value">{{ mediaMaskText }}</strong></div>
+                    <div class="movie-film-item movie-film-item-wide movie-film-dir"><span class="movie-film-label">Dir</span><div class="movie-film-value-line"><strong class="movie-film-value movie-film-path" :title="mediaPath">{{ mediaPath || "-" }}</strong><button v-if="mediaPath" class="btn btn-sm btn-outline-secondary" type="button" @click="copyText(mediaPath, '媒体路径')">复制</button></div></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
+
+        <div class="row mt-3 movie-resource-row">
+          <div class="col-12 mb-3">
+            <div class="card shadow-sm movie-section-card movie-resource-card fc2-resource-panel">
+              <div class="card-body">
+                <div class="movie-resource-heading-row fc2-resource-heading">
+                  <h5 class="card-title mb-0 movie-section-title">帖子资源</h5>
+                  <div class="fc2-panel-actions">
+                    <span v-if="copyFeedback" class="fc2-copy-feedback" role="status">{{ copyFeedback }}</span>
+                    <span class="movie-resource-count">{{ resources.length }}</span>
+                    <button class="bucket-list-action" type="button" :disabled="!allHashes.length" @click="copyText(allHashes.join('\n'), '全部 Info Hash')">复制全部 Hash</button>
+                    <button class="bucket-list-action" type="button" :disabled="!allMagnets.length" @click="copyText(allMagnets.join('\n'), '全部 Magnet')">复制全部 Magnet</button>
+                  </div>
+                </div>
+                <div class="table-responsive movie-resource-table-wrap fc2-table-wrap">
+                  <table class="table table-hover align-middle mb-0 movie-resource-table fc2-table fc2-resource-table">
+                    <colgroup><col class="fc2-resource-time"><col class="fc2-resource-size"><col class="fc2-resource-hash"><col class="fc2-resource-magnet"><col class="fc2-resource-attachment"><col class="fc2-resource-action"></colgroup>
+                    <thead><tr><th>发布时间</th><th>容量</th><th>Info Hash</th><th>Magnet</th><th>附件数</th><th>操作</th></tr></thead>
+                    <tbody>
+                      <template v-for="resource in resources" :key="rowText(resource, 'ThreadTID')">
+                        <tr>
+                          <td><ScDateTime :value="rowValue(resource, 'PostTime')" unix /></td>
+                          <td>{{ metaText(resource, "size_text") || "-" }}</td>
+                          <td><div class="fc2-copy-cell"><span class="fc2-mono" :title="rowText(resource, 'InfoHashText')">{{ compactLines(rowText(resource, "InfoHashText")) || "-" }}</span><button v-if="rowText(resource, 'InfoHashText')" type="button" class="fc2-copy-button" @click="copyText(rowText(resource, 'InfoHashText'), `Info Hash ${rowText(resource, 'ThreadTID')}`)">复制</button></div></td>
+                          <td><div class="fc2-copy-cell"><span class="fc2-mono" :title="rowText(resource, 'MagnetText')">{{ compactLines(rowText(resource, "MagnetText")) || "-" }}</span><button v-if="rowText(resource, 'MagnetText')" type="button" class="fc2-copy-button" @click="copyText(rowText(resource, 'MagnetText'), `Magnet ${rowText(resource, 'ThreadTID')}`)">复制</button></div></td>
+                          <td><button v-if="attachments(resource).length" type="button" class="fc2-attachment-toggle" :aria-expanded="expandedThreadTID === rowText(resource, 'ThreadTID')" @click="toggleAttachments(resource)">{{ attachments(resource).length }} {{ expandedThreadTID === rowText(resource, "ThreadTID") ? "收起" : "展开" }}</button><span v-else>0</span></td>
+                          <td><div class="fc2-row-actions"><a class="bucket-list-action" :href="`/shthread/${encodeURIComponent(rowText(resource, 'ThreadTID'))}`">帖子详情</a><a class="bucket-list-action" :href="rowText(resource, 'ThreadURL')" target="_blank" rel="noopener noreferrer">原帖</a></div></td>
+                        </tr>
+                        <tr v-if="expandedThreadTID === rowText(resource, 'ThreadTID')" class="fc2-attachment-row">
+                          <td colspan="6"><table class="fc2-attachment-table"><thead><tr><th>文件名</th><th>类型</th><th>容量</th><th>下载次数</th><th>上传时间</th></tr></thead><tbody><tr v-for="(attachment, index) in attachments(resource)" :key="`${rowText(attachment, 'file_name')}-${index}`"><td :title="rowText(attachment, 'file_name')">{{ rowText(attachment, "file_name") }}</td><td>{{ rowText(attachment, "media_type") || "-" }}</td><td>{{ rowText(attachment, "size_text") || "-" }}</td><td>{{ rowText(attachment, "download_count") || "0" }}</td><td>{{ rowText(attachment, "upload_time_text") || "-" }}</td></tr></tbody></table></td>
+                        </tr>
+                      </template>
+                      <tr v-if="!resources.length"><td colspan="6"><div class="sc-empty-state fc2-empty-state">当前影片没有帖子资源。</div></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </template>
     </div>
   </PageShell>
@@ -189,6 +189,7 @@ const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
+const activeDetailTab = ref("info");
 const expandedThreadTID = ref("");
 const copyFeedback = ref("");
 const captureFeedback = ref("");
@@ -202,6 +203,7 @@ watch(() => route.fullPath, load, { immediate: true });
 async function load() {
   loading.value = true;
   error.value = "";
+  activeDetailTab.value = "info";
   expandedThreadTID.value = "";
   copyFeedback.value = "";
   captureFeedback.value = "";
@@ -231,6 +233,8 @@ const lastScEventName = computed(() => text(payload.value, "LastScEventName"));
 const lastScEventHref = computed(() => text(payload.value, "LastScEventHref"));
 const hasMedia = computed(() => Boolean(mediaText("ID")));
 const mediaImages = computed(() => asArray<AnyRecord>(pick(payload.value, "MediaImages", "mediaImages")));
+const primaryCoverImage = computed<AnyRecord>(() => mediaImages.value.find((image) => imageIsCover(image)) || mediaImages.value[0] || {});
+const primaryCoverImageID = computed(() => imageID(primaryCoverImage.value));
 const resources = computed(() => asArray<AnyRecord>(pick(payload.value, "Resources", "resources")));
 const metadataResource = computed(() => resources.value.find((resource) => rowText(resource, "ID") === movieText("MetadataThreadID")));
 const allHashes = computed(() => uniqueLines(resources.value.flatMap((resource) => lines(rowText(resource, "InfoHashText")))));

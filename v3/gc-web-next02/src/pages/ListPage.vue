@@ -1,7 +1,7 @@
 <template>
   <PageShell
     class="fetch-site-list-page-shell"
-    :class="{ 'sc-events-page-shell': viewType === 'fetch-site-javbus-list' || viewType === 'fetch-site-sukebei-list' || viewType === 'fetch-site-sehuatang-list' || viewType === 'fetch-site-sehuatang-sh-list' || viewType === 'fetch-site-sehuatang-sh-detail' }"
+    :class="{ 'sc-events-page-shell': viewType === 'fetch-site-javbus-list' || viewType === 'fetch-site-sukebei-list' || viewType === 'fetch-site-sehuatang-sh-list' || viewType === 'fetch-site-sehuatang-sh-detail' }"
     :title="title"
     eyebrow=""
   >
@@ -14,7 +14,6 @@
       :class="listRewriteClass"
       @click="handlePageClick"
       @change="handlePageChange"
-      @submit="handlePageSubmit"
       v-html="pageHTML"
     ></div>
   </PageShell>
@@ -36,7 +35,6 @@ const payload = ref<AnyRecord>({});
 const shForums = ref<SHForumOption[]>([]);
 const loading = ref(false);
 const error = ref("");
-const otherAlbumTarget = ref<{ movieJavID: string; sourceType: string; sourceRowID: number } | null>(null);
 
 watch(() => route.fullPath, load, { immediate: true });
 
@@ -67,9 +65,6 @@ const listRewriteClass = computed(() => {
   if (viewType.value === "fetch-site-sukebei-list") {
     return "next02-fetch-site-sukebei-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
   }
-  if (viewType.value === "fetch-site-sehuatang-list") {
-    return "next02-fetch-site-sehuatang-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite";
-  }
   if (viewType.value === "fetch-site-sehuatang-sh-list") {
     return "next02-fetch-site-sehuatang-sh-list-rewrite container-fluid next02-sc-pink-theme next02-sc-events-rewrite bucket-list-standard sh-bucket-list-page";
   }
@@ -84,9 +79,6 @@ const pageHTML = computed(() => {
   }
   if (viewType.value === "fetch-site-sukebei-list") {
     return renderSukebeiPage(payload.value);
-  }
-  if (viewType.value === "fetch-site-sehuatang-list") {
-    return renderSehuatangPage(payload.value);
   }
   if (viewType.value === "fetch-site-sehuatang-sh-list") {
     return renderSHPage(payload.value);
@@ -112,7 +104,6 @@ function attr(value: unknown): string {
 
 function showMsg(message: string, ok: boolean) {
   const msgEl = document.getElementById("fetchSiteListMsg")
-    || document.getElementById("sehuatangMagnetListMsg")
     || document.getElementById("sehuatangSHListMsg")
     || document.getElementById("shDetailMsg");
   if (!msgEl) {
@@ -612,242 +603,13 @@ function renderSukebeiPage(data: AnyRecord): string {
   </div>`;
 }
 
-function renderQuickTags(data: AnyRecord): string {
-  return asArray<AnyRecord>(pick(data, "QuickTags")).map((item) =>
-    `<a class="btn btn-sm ${pick(item, "Active") ? "btn-primary" : "btn-outline-primary"}" href="${attr(normalizeHref(readText(item, "Href") || "#"))}">${escapeHtml(readText(item, "Label"))}</a>`
-  ).join("");
-}
-
-function renderSehuatangFilterForm(data: AnyRecord): string {
-  const q = asRecord(pick(data, "Query"));
-  return `<form class="sc-event-filter-form sehuatang-filter-form" id="sehuatangMagnetFilterForm" method="get" action="/sehuatanglist">
-        <input type="hidden" name="ps" value="${attr(pick(q, "PageSize") || "")}">
-        ${pick(q, "Sort") ? `<input type="hidden" name="sort" value="${attr(pick(q, "Sort"))}">` : ""}
-        ${pick(q, "Order") ? `<input type="hidden" name="order" value="${attr(pick(q, "Order"))}">` : ""}
-        <div class="sehuatang-filter-cluster sehuatang-filter-query" aria-label="检索条件">
-          <label class="sc-event-filter-field sehuatang-filter-field is-keyword" for="sehuatangMagnetKeywordInput">
-            <span>关键词</span>
-            <input class="form-control" id="sehuatangMagnetKeywordInput" type="text" name="keyword" value="${attr(pick(q, "Keyword") || "")}" placeholder="影片名 / 编号 / 帖子标题">
-          </label>
-          <label class="sc-event-filter-field sehuatang-filter-field is-movie-id" for="sehuatangMagnetMovieIDInput">
-            <span>影片编号</span>
-            <input class="form-control" id="sehuatangMagnetMovieIDInput" type="text" name="movie_jav_id" value="${attr(pick(q, "MovieJavID") || "")}" placeholder="JavLib 编号">
-          </label>
-          <label class="sc-event-filter-field sehuatang-filter-field is-hash" for="sehuatangMagnetHashInput">
-            <span>Info Hash</span>
-            <input class="form-control" id="sehuatangMagnetHashInput" type="text" name="info_hash" value="${attr(pick(q, "InfoHash") || "")}" placeholder="BTIH">
-          </label>
-          <label class="sc-event-filter-field sehuatang-filter-field is-tag" for="sehuatangMagnetTagInput">
-            <span>标签</span>
-            <input class="form-control" id="sehuatangMagnetTagInput" type="text" name="tag" value="${attr(pick(q, "Tag") || "")}" placeholder="标签">
-          </label>
-        </div>
-        <div class="sehuatang-filter-cluster sehuatang-filter-date-range" aria-label="发帖日期范围">
-          <span class="sehuatang-filter-cluster-label">发帖日期</span>
-          <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sehuatangMagnetPostFromInput">
-            <span>开始</span>
-            <input class="form-control smart-pick-date-input" id="sehuatangMagnetPostFromInput" type="text" name="post_time_from" value="${attr(pick(q, "PostTimeFrom") || "")}" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
-          </label>
-          <span class="sehuatang-filter-range-separator" aria-hidden="true">—</span>
-          <label class="sc-event-filter-field sehuatang-filter-field is-date" for="sehuatangMagnetPostToInput">
-            <span>结束</span>
-            <input class="form-control smart-pick-date-input" id="sehuatangMagnetPostToInput" type="text" name="post_time_to" value="${attr(pick(q, "PostTimeTo") || "")}" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
-          </label>
-        </div>
-        <div class="sehuatang-filter-cluster sehuatang-filter-quick-actions" aria-label="快捷筛选与操作">
-          <div class="sc-event-filter-field sehuatang-filter-field is-quick-tag">
-            <span>快捷标签</span>
-            <div class="album-quick-filter-group">${renderQuickTags(data)}</div>
-          </div>
-          <div class="sehuatang-filter-actions">
-            <button class="sc-event-filter-submit" type="submit">筛选</button>
-            <a class="sc-event-filter-clear" href="/sehuatanglist">清空</a>
-          </div>
-        </div>
-      </form>`;
-}
-
-function renderFavoriteButton(row: AnyRecord, albumName: string, active: boolean, className: string, outlineClass: string): string {
-  const canFavorite = Boolean(pick(row, "CanFavorite"));
-  return `<button type="button"
-    class="btn btn-sm ${active ? className : outlineClass} js-add-favorite"
-    data-source-type="sehuatang_magnet"
-    data-source-row-id="${attr(pick(row, "Id") || 0)}"
-    data-favorited="${active ? "1" : "0"}"
-    data-album-name="${attr(albumName)}"
-    ${canFavorite ? "" : `disabled title="缺少影片标识，暂不可加入相册"`}>${escapeHtml(albumName)}</button>`;
-}
-
-function sehuatangTimeParts(value: unknown): { date: string; time: string } {
+function renderSehuatangTime(value: unknown): string {
   const formatted = formatUnix(value);
   if (formatted === "-") {
-    return { date: "-", time: "" };
+    return `<span class="sc-event-time"><span class="sc-event-date">-</span></span>`;
   }
   const [date, time = ""] = formatted.split(" ", 2);
-  return { date, time };
-}
-
-function sehuatangDayKey(row: AnyRecord): string {
-  const date = formatUnix(pick(row, "PostTime"), "date");
-  return date === "-" ? "" : date;
-}
-
-function sehuatangDayClass(rows: AnyRecord[], index: number): string {
-  const day = sehuatangDayKey(rows[index]);
-  if (!day) {
-    return "sehuatang-day-neutral";
-  }
-  let groupIndex = 0;
-  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
-    const currentDay = sehuatangDayKey(rows[rowIndex]);
-    const previousDay = sehuatangDayKey(rows[rowIndex - 1]);
-    if (currentDay && previousDay && currentDay !== previousDay) {
-      groupIndex += 1;
-    }
-  }
-  return `sehuatang-day-group-${(groupIndex % 2) + 1}`;
-}
-
-function isSehuatangDayStart(rows: AnyRecord[], index: number): boolean {
-  if (index <= 0) {
-    return false;
-  }
-  const currentDay = sehuatangDayKey(rows[index]);
-  const previousDay = sehuatangDayKey(rows[index - 1]);
-  return Boolean(currentDay && previousDay && currentDay !== previousDay);
-}
-
-function renderSehuatangTime(value: unknown): string {
-  const { date, time } = sehuatangTimeParts(value);
   return `<span class="sc-event-time"><span class="sc-event-date">${escapeHtml(date)}</span>${time ? `<small class="sc-event-hour">${escapeHtml(time)}</small>` : ""}</span>`;
-}
-
-function renderSehuatangRow(row: AnyRecord, index: number, rows: AnyRecord[]): string {
-  const threadTitle = readText(row, "ThreadTitle");
-  const titleHTML = readText(row, "ThreadURL")
-    ? `<a class="fetch-site-title-ellipsis" href="${attr(readText(row, "ThreadURL"))}" target="_blank" rel="noopener noreferrer" title="${attr(threadTitle)}">${escapeHtml(threadTitle)}</a>`
-    : `<span class="fetch-site-title-ellipsis" title="${attr(threadTitle)}">${escapeHtml(threadTitle)}</span>`;
-  const movieName = readText(row, "MovieName");
-  const movieHTML = movieName ? `<a class="sehuatang-movie-link" href="/moviedetail/${attr(encodeURIComponent(movieName))}" target="_blank" rel="noopener noreferrer" title="${attr(movieName)}">${escapeHtml(movieName)}</a>` : "-";
-  const dayStartClass = isSehuatangDayStart(rows, index) ? " sehuatang-day-start" : "";
-  return `<tr class="js-sehuatang-row next02-sc-event-row ${sehuatangDayClass(rows, index)}${dayStartClass}"
-    data-movie-route-key="${attr(readText(row, "MovieRouteKey"))}"
-    data-movie-jav-id="${attr(readText(row, "MovieJavID"))}"
-    data-movie-name="${attr(movieName)}"
-    data-post-day="${attr(formatUnix(pick(row, "PostTime"), "date"))}">
-    <td title="${attr(formatUnix(pick(row, "PostTime")))}">${renderSehuatangTime(pick(row, "PostTime"))}</td>
-    <td class="sc-content-cell">${titleHTML}</td>
-    <td class="sc-content-cell">${movieHTML}</td>
-    <td class="sehuatang-album-cell">
-      <div class="fetch-site-album-inline">
-        ${renderFavoriteButton(row, "下载中", Boolean(pick(row, "IsInDownload")), "btn-warning", "btn-outline-warning")}
-        ${renderFavoriteButton(row, "待下载", Boolean(pick(row, "IsInPending")), "btn-info", "btn-outline-info")}
-        <button type="button" class="btn btn-sm btn-outline-secondary js-open-other-album-modal" data-source-type="sehuatang_magnet" data-source-row-id="${attr(pick(row, "Id") || 0)}" ${pick(row, "CanFavorite") ? "" : `disabled title="缺少影片标识，暂不可加入相册"`}>其他相册</button>
-      </div>
-    </td>
-    <td class="sc-content-cell sehuatang-hash-cell"><span class="fetch-site-hash-text" title="${attr(readText(row, "InfoHash"))}">${escapeHtml(readText(row, "InfoHash"))}</span></td>
-    <td>${renderSehuatangTime(pick(row, "LastSeenTime"))}</td>
-  </tr>`;
-}
-
-function renderSehuatangTable(data: AnyRecord): string {
-  const rows = asArray<AnyRecord>(pick(data, "Rows"));
-  const sort = asRecord(pick(data, "SortQuery"));
-  return `<div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 sc-events-table sehuatang-magnet-table">
-          <colgroup>
-            <col class="sehuatang-col-post-time">
-            <col class="sehuatang-col-title">
-            <col class="sehuatang-col-movie">
-            <col class="sehuatang-col-album">
-            <col class="sehuatang-col-hash">
-            <col class="sehuatang-col-last-seen">
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByPostTime"), "发帖时间")}</th>
-              <th>帖子标题</th>
-              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByMovieName"), "影片名")}</th>
-              <th>相册</th>
-              <th>info_hash</th>
-              <th class="sc-sortable-head">${sortLabel(pick(sort, "ByLastSeenTime"), "最近抓到")}</th>
-            </tr>
-          </thead>
-          <tbody>${rows.length ? rows.map((row, index) => renderSehuatangRow(row, index, rows)).join("") : `<tr><td colspan="6"><div class="sc-empty-state">当前筛选下没有 Sehuatang 磁力数据。</div></td></tr>`}</tbody>
-        </table>
-      </div>`;
-}
-
-function renderOtherAlbumModal(data: AnyRecord): string {
-  const albums = asArray<string>(pick(data, "Albums"));
-  return `<div class="modal fade" id="sehuatangOtherAlbumModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">选择其他相册</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button></div>
-      <div class="modal-body">${albums.length ? `<div class="fetch-site-other-album-list" id="sehuatangOtherAlbumList">${albums.map((name) => `<button type="button" class="btn btn-outline-secondary js-other-album-option" data-album-name="${attr(name)}">${escapeHtml(name)}</button>`).join("")}</div>` : `<div class="text-muted small">当前没有可选的其他相册。</div>`}</div>
-    </div></div>
-  </div>`;
-}
-
-function renderDateModal(): string {
-  return `<div class="modal fade sehuatang-date-modal" id="sehuatangDateModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="sehuatangDateModalTitle" aria-hidden="true">
-    <div class="modal-dialog sehuatang-date-dialog"><div class="modal-content sehuatang-date-content">
-      <form class="sehuatang-date-form" id="sehuatangDateForm">
-        <header class="sehuatang-date-header">
-          <div class="sehuatang-date-heading">
-            <span class="sehuatang-date-eyebrow">SEHUATANG</span>
-            <h5 id="sehuatangDateModalTitle">修改日期</h5>
-          </div>
-          <button type="button" class="sehuatang-date-close" data-bs-dismiss="modal" aria-label="关闭"><span aria-hidden="true">×</span></button>
-        </header>
-        <div class="sehuatang-date-body">
-          <input type="hidden" id="sehuatangDateItemKey" value="">
-          <label class="sehuatang-date-label" for="sehuatangDateInput"><span>日期</span><small>YYYY-MM-DD</small></label>
-          <div class="sehuatang-date-control-row">
-            <input id="sehuatangDateInput" class="smart-pick-date-input" type="text" value="" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" autocomplete="off">
-            <button type="button" class="sehuatang-date-today" id="sehuatangDateTodayBtn">今天</button>
-          </div>
-          <div class="alert d-none mb-0 sehuatang-date-message" id="sehuatangDateMsg" role="alert"></div>
-        </div>
-        <footer class="sehuatang-date-footer">
-          <button type="button" class="sehuatang-date-cancel" data-bs-dismiss="modal">取消</button>
-          <button type="submit" class="sehuatang-date-save" id="sehuatangDateSubmit">保存日期</button>
-        </footer>
-      </form>
-    </div></div>
-  </div>`;
-}
-
-function renderSehuatangPage(data: AnyRecord): string {
-  const rows = asArray<AnyRecord>(pick(data, "Rows"));
-  return `<div id="sehuatangMagnetListPage" class="sehuatang-list-content">
-    <section class="next02-sc-hero next02-sc-events-hero next02-sc-movie-top-shell">
-      <div class="next02-sc-hero-copy">
-        <span class="next02-sc-eyebrow">SEHUATANG / MAGNET POOL</span>
-        <h4>${escapeHtml(pick(data, "PageTitle") || "Sehuatang Magnet 列表")}</h4>
-        <p>${escapeHtml(pick(data, "PageNote") || "")}</p>
-      </div>
-      <div class="next02-sc-hero-actions">
-        <div class="btn-group" role="group" aria-label="Sehuatang 页面操作">
-          <button type="button" class="btn btn-outline-primary" id="btnEditShtTime" data-item-key="sht_time" data-item-label="SHT时间" data-item-value="${attr(pick(data, "ShtTimeValue") || "")}">SHT时间：${escapeHtml(pick(data, "ShtTimeDisplay") || "未设置")}</button>
-          <a class="btn btn-outline-secondary" href="${attr(pick(data, "TaskPageURL") || "/sehuatangfetch")}" target="_blank" rel="noopener noreferrer">抓取任务页</a>
-          <a class="btn btn-outline-secondary" href="${attr(pick(data, "TasksPageURL") || "/crawltasklist")}" target="_blank" rel="noopener noreferrer">任务列表</a>
-        </div>
-      </div>
-    </section>
-    <div id="sehuatangMagnetListMsg" class="alert d-none mb-3" role="alert"></div>
-    <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
-      <div class="card-body">
-        <div class="next02-sc-panel-head">
-          ${renderSehuatangFilterForm(data)}
-          ${rows.length ? `<div class="next02-sc-hero-metrics sc-event-list-metrics" aria-label="Sehuatang 磁力摘要"><span><strong>${escapeHtml(valueOf(pick(data, "Total"), 0))}</strong> Records</span><span><strong>${escapeHtml(rows.length)}</strong> Current Page</span></div>` : ""}
-          ${rows.length ? `<div class="next02-sc-movie-pager">${pageLinks(pick(data, "PageInfo"), "Sehuatang")}</div>` : ""}
-        </div>
-        ${renderSehuatangTable(data)}
-      </div>
-    </div>
-  </div>
-  ${renderOtherAlbumModal(data)}
-  ${renderDateModal()}`;
 }
 
 function lineCount(value: unknown): number {
@@ -1124,7 +886,6 @@ function renderSHPage(data: AnyRecord): string {
       </div>
       <div class="next02-sc-hero-actions next02-sh-list-actions">
         <a class="btn btn-outline-primary btn-sm" href="/shpool">SehuatangSH 列表</a>
-        <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "OldListURL") || "/sehuatanglist")}" target="_blank" rel="noopener noreferrer">旧磁力列表</a>
         <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TaskPageURL") || "/shfetch")}" target="_blank" rel="noopener noreferrer">列表抓取</a>
         <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "DetailTaskPageURL") || "/shfill")}" target="_blank" rel="noopener noreferrer">详情补全</a>
         <a class="btn btn-outline-secondary btn-sm" href="${attr(pick(data, "TasksPageURL") || "/crawltasklist")}" target="_blank" rel="noopener noreferrer">任务列表</a>
@@ -1556,14 +1317,7 @@ function closeModal(modal: HTMLElement | null) {
   }
   const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   if (activeElement && modal.contains(activeElement)) {
-    const returnFocus = modal.id === "sehuatangDateModal"
-      ? document.getElementById("btnEditShtTime") as HTMLElement | null
-      : null;
-    if (returnFocus) {
-      returnFocus.focus();
-    } else {
-      activeElement.blur();
-    }
+    activeElement.blur();
   }
   modal.classList.remove("show");
   modal.style.display = "none";
@@ -1577,158 +1331,6 @@ function openModal(modal: HTMLElement | null) {
   modal.classList.add("show");
   modal.style.display = "block";
   modal.removeAttribute("aria-hidden");
-}
-
-function showInlineMsg(el: HTMLElement | null, message: string, ok: boolean) {
-  if (!el) {
-    return;
-  }
-  el.textContent = message;
-  el.className = `alert mb-0 ${ok ? "alert-success" : "alert-danger"}`;
-}
-
-function hideInlineMsg(el: HTMLElement | null) {
-  if (!el) {
-    return;
-  }
-  el.textContent = "";
-  el.className = "alert d-none mb-0";
-}
-
-function normalizeDateInputValue(raw: unknown): string {
-  const digits = String(raw || "").replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 4) {
-    return digits;
-  }
-  if (digits.length <= 6) {
-    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  }
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
-}
-
-function isValidDateValue(raw: unknown): boolean {
-  return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(raw || "").trim());
-}
-
-function todayDateString(): string {
-  const now = new Date();
-  const year = String(now.getFullYear());
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function openSehuatangDateModal(button: Element) {
-  const modal = document.getElementById("sehuatangDateModal");
-  const title = document.getElementById("sehuatangDateModalTitle");
-  const keyInput = document.getElementById("sehuatangDateItemKey") as HTMLInputElement | null;
-  const dateInput = document.getElementById("sehuatangDateInput") as HTMLInputElement | null;
-  const dateMsg = document.getElementById("sehuatangDateMsg");
-  const label = String(button.getAttribute("data-item-label") || "日期").trim();
-  const key = String(button.getAttribute("data-item-key") || "").trim();
-  const value = String(button.getAttribute("data-item-value") || "").trim();
-  if (title) {
-    title.textContent = `修改${label}`;
-  }
-  if (keyInput) {
-    keyInput.value = key;
-  }
-  if (dateInput) {
-    dateInput.value = value;
-  }
-  hideInlineMsg(dateMsg);
-  openModal(modal);
-}
-
-async function submitSehuatangDate(form: HTMLFormElement) {
-  const keyInput = form.querySelector<HTMLInputElement>("#sehuatangDateItemKey");
-  const dateInput = form.querySelector<HTMLInputElement>("#sehuatangDateInput");
-  const submitButton = form.querySelector<HTMLButtonElement>("#sehuatangDateSubmit");
-  const dateMsg = form.querySelector<HTMLElement>("#sehuatangDateMsg");
-  const itemKey = String(keyInput?.value || "").trim();
-  const itemValue = normalizeDateInputValue(dateInput?.value || "");
-  if (dateInput) {
-    dateInput.value = itemValue;
-  }
-  if (!itemKey) {
-    showInlineMsg(dateMsg, "缺少日期 key", false);
-    return;
-  }
-  if (!itemValue) {
-    showInlineMsg(dateMsg, "请选择日期", false);
-    return;
-  }
-  if (!isValidDateValue(itemValue)) {
-    showInlineMsg(dateMsg, "日期格式必须为 YYYY-MM-DD", false);
-    return;
-  }
-  if (submitButton) {
-    submitButton.disabled = true;
-  }
-  try {
-    const data = asRecord(await sendJSON("/api/w-kv/date", "POST", {
-      item_key: itemKey,
-      item_value: itemValue
-    }));
-    const savedValue = readText(data, "item_value", "ItemValue") || itemValue;
-    const editButton = document.getElementById("btnEditShtTime");
-    if (editButton) {
-      editButton.setAttribute("data-item-value", savedValue);
-      editButton.textContent = `SHT时间：${savedValue}`;
-    }
-    showMsg("SHT时间已更新", true);
-    hideInlineMsg(dateMsg);
-    closeModal(document.getElementById("sehuatangDateModal"));
-  } catch (err) {
-    showInlineMsg(dateMsg, err instanceof Error ? err.message : "保存失败", false);
-  } finally {
-    if (submitButton) {
-      submitButton.disabled = false;
-    }
-  }
-}
-
-function favoriteButtonTarget(button: Element, albumName?: string): { movieJavID: string; sourceType: string; sourceRowID: number; favorited: boolean; albumName: string } {
-  const target = readMovieTarget(button);
-  return {
-    movieJavID: target.movieJavID || String(button.getAttribute("data-movie-jav-id") || "").trim(),
-    sourceType: String(button.getAttribute("data-source-type") || "").trim(),
-    sourceRowID: Number(button.getAttribute("data-source-row-id") || 0),
-    favorited: String(button.getAttribute("data-favorited") || "") === "1",
-    albumName: albumName || String(button.getAttribute("data-album-name") || "").trim() || "下载中"
-  };
-}
-
-async function switchFavorite(button: Element, albumName?: string) {
-  const target = favoriteButtonTarget(button, albumName);
-  if (!target.movieJavID || !target.sourceType || !target.sourceRowID) {
-    showMsg(`缺少${target.albumName}参数，无法执行`, false);
-    return;
-  }
-  const htmlButton = button instanceof HTMLButtonElement ? button : null;
-  if (htmlButton) {
-    htmlButton.disabled = true;
-  }
-  try {
-    const data = asRecord(await sendJSON(`/api/movie/${encodeURIComponent(target.movieJavID)}/album-item`, target.favorited ? "DELETE" : "POST", {
-      movie_jav_id: target.movieJavID,
-      source_type: target.sourceType,
-      source_row_id: target.sourceRowID,
-      album_name: target.albumName
-    }));
-    const favorited = typeof pick(data, "favorited", "Favorited") === "boolean" ? Boolean(pick(data, "favorited", "Favorited")) : !target.favorited;
-    const nextAlbum = readText(data, "album_name", "AlbumName") || target.albumName;
-    button.setAttribute("data-favorited", favorited ? "1" : "0");
-    button.setAttribute("data-album-name", nextAlbum);
-    button.textContent = favorited ? `已在${nextAlbum}` : nextAlbum;
-    showMsg(readText(data, "message", "Message") || "操作成功", true);
-  } catch (err) {
-    showMsg(err instanceof Error ? err.message : `${target.albumName}操作失败`, false);
-  } finally {
-    if (htmlButton) {
-      htmlButton.disabled = false;
-    }
-  }
 }
 
 async function copyToClipboard(value: string) {
@@ -1830,20 +1432,6 @@ function handlePageClick(event: MouseEvent) {
     void startSHDetailTask([String(startSHDetailButton.getAttribute("data-thread-tid") || "")]);
     return;
   }
-  const openDateButton = target.closest("#btnEditShtTime");
-  if (openDateButton) {
-    openSehuatangDateModal(openDateButton);
-    return;
-  }
-  const todayButton = target.closest("#sehuatangDateTodayBtn");
-  if (todayButton) {
-    const input = document.getElementById("sehuatangDateInput") as HTMLInputElement | null;
-    if (input) {
-      input.value = todayDateString();
-    }
-    hideInlineMsg(document.getElementById("sehuatangDateMsg"));
-    return;
-  }
   const javbusButton = target.closest(".js-trigger-javbus");
   const sukebeiButton = target.closest(".js-trigger-sukebei");
   if (javbusButton || sukebeiButton) {
@@ -1854,11 +1442,6 @@ function handlePageClick(event: MouseEvent) {
       return;
     }
     void startSiteTask(javbusButton ? "spider_fetch_javbus_resources" : "spider_fetch_sukebei_resources", movie.movieJavID, movie.movieName);
-    return;
-  }
-  const favoriteButton = target.closest(".js-add-favorite");
-  if (favoriteButton) {
-    void switchFavorite(favoriteButton);
     return;
   }
   const shCopyButton = target.closest(".js-sh-copy");
@@ -1873,36 +1456,5 @@ function handlePageClick(event: MouseEvent) {
     void copyValue(String(copyButton.getAttribute("data-copy-value") || ""));
     return;
   }
-  const otherAlbumButton = target.closest(".js-open-other-album-modal");
-  if (otherAlbumButton) {
-    const movie = readMovieTarget(otherAlbumButton);
-    otherAlbumTarget.value = {
-      movieJavID: movie.movieJavID,
-      sourceType: String(otherAlbumButton.getAttribute("data-source-type") || "").trim(),
-      sourceRowID: Number(otherAlbumButton.getAttribute("data-source-row-id") || 0)
-    };
-    openModal(document.getElementById("sehuatangOtherAlbumModal"));
-    return;
-  }
-  const albumOption = target.closest(".js-other-album-option");
-  if (albumOption && otherAlbumTarget.value) {
-    const albumName = String(albumOption.getAttribute("data-album-name") || "").trim();
-    const fakeButton = document.createElement("button");
-    fakeButton.setAttribute("data-source-type", otherAlbumTarget.value.sourceType);
-    fakeButton.setAttribute("data-source-row-id", String(otherAlbumTarget.value.sourceRowID));
-    fakeButton.setAttribute("data-album-name", albumName);
-    fakeButton.setAttribute("data-movie-jav-id", otherAlbumTarget.value.movieJavID);
-    void switchFavorite(fakeButton, albumName);
-    closeModal(document.getElementById("sehuatangOtherAlbumModal"));
-  }
-}
-
-function handlePageSubmit(event: SubmitEvent) {
-  const form = event.target instanceof HTMLFormElement ? event.target : null;
-  if (!form || form.id !== "sehuatangDateForm") {
-    return;
-  }
-  event.preventDefault();
-  void submitSehuatangDate(form);
 }
 </script>

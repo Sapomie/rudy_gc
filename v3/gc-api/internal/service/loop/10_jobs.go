@@ -33,7 +33,6 @@ const (
 	TaskSpiderFetchSukebei           = "spider_fetch_sukebei_resources"
 	TaskSpiderFetchSukebeiFilter     = "spider_fetch_sukebei_filtered_resources"
 	TaskSpiderFetchSiteBoth          = "spider_fetch_site_both_resources"
-	TaskSpiderFetchSehuatang         = "spider_fetch_sehuatang_magnets"
 	TaskSpiderFetchSehuatangSH       = "spider_fetch_sehuatang_sh_threads"
 	TaskSpiderFetchSehuatangSHList   = "spider_fetch_sehuatang_sh_thread_list"
 	TaskSpiderFetchSehuatangSHDetail = "spider_fetch_sehuatang_sh_thread_detail"
@@ -52,7 +51,6 @@ type StartTaskRequest struct {
 	Name            string               `json:"name"`
 	ActorName       string               `json:"actor_name"`
 	AutoFetchSite   string               `json:"auto_fetch_site"`
-	ListURL         string               `json:"list_url"`
 	Keyword         string               `json:"keyword"`
 	FetchMode       string               `json:"fetch_mode"`
 	TargetForumIDs  []string             `json:"target_forum_ids"`
@@ -76,8 +74,6 @@ type StartTaskRequest struct {
 	MediaBirthTo    string               `json:"media_birth_to"`
 	StartPage       int64                `json:"start_page"`
 	EndPage         int64                `json:"end_page"`
-	PersistMode     string               `json:"persist_mode"`
-	StopOnExisting  bool                 `json:"stop_on_existing"`
 	Number          int64                `json:"number"`
 	Limit           int64                `json:"limit"`
 	MovieJavID      string               `json:"movie_jav_id"`
@@ -332,8 +328,6 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		return l.StartFetchSukebeiFilteredResources(req)
 	case TaskSpiderFetchSiteBoth:
 		return l.StartFetchSiteBothResources(req)
-	case TaskSpiderFetchSehuatang:
-		return l.StartFetchSehuatangMagnets(req)
 	case TaskSpiderFetchSehuatangSH:
 		return l.StartFetchSehuatangSHThreads(req)
 	case TaskSpiderFetchSehuatangSHList:
@@ -725,67 +719,6 @@ func (l *FetchLoopService) StartFetchSukebeiFilteredResources(req StartTaskReque
 			return err
 		}
 		return l.runSukebeiFilteredQueue(ctx, tasks)
-	})
-}
-
-func (l *FetchLoopService) StartFetchSehuatangMagnets(req StartTaskRequest) (string, error) {
-	return l.startManagedTask(TaskSpiderFetchSehuatang, taskRuntimePolicy{}, func(ctx context.Context) error {
-		listURL := strings.TrimSpace(req.ListURL)
-		keyword := strings.TrimSpace(req.Keyword)
-		startPage := req.StartPage
-		endPage := req.EndPage
-		persistMode := fetchsehuatang.NormalizePersistMode(req.PersistMode)
-		stopOnExisting := req.StopOnExisting
-		if listURL == "" {
-			listURL = fetchsehuatang.DefaultListURL
-		}
-		if stopOnExisting {
-			startPage = fetchsehuatang.DefaultStartPage
-		}
-		if startPage <= 0 {
-			startPage = fetchsehuatang.DefaultStartPage
-		}
-		if endPage <= 0 {
-			endPage = fetchsehuatang.DefaultEndPage
-		}
-
-		msg := fmt.Sprintf("开始抓取 色花堂 磁力链接，页码=%d-%d，模式=%s", startPage, endPage, persistMode)
-		if keyword != "" {
-			msg = fmt.Sprintf("开始抓取 色花堂 磁力链接，页码=%d-%d，模式=%s，关键词=%s", startPage, endPage, persistMode, keyword)
-		}
-		if stopOnExisting {
-			msg += "，遇到已存在帖子停止"
-		}
-		taskctx.ReportProgress(ctx, taskctx.Progress{
-			Stage:   "pipeline_pre",
-			Message: msg,
-		})
-
-		result, err := l.fetchSehuatangSvc.FetchMagnetsFromList(ctx, fetchsehuatang.FetchRequest{
-			ListURL:        listURL,
-			Keyword:        keyword,
-			StartPage:      startPage,
-			EndPage:        endPage,
-			PersistMode:    persistMode,
-			StopOnExisting: stopOnExisting,
-		})
-		if err != nil {
-			return err
-		}
-
-		doneMessage := fmt.Sprintf("色花堂抓取完成：页码=%d-%d，模式=%s，处理页数=%d，跳过置顶=%d，跳过已存在=%d，匹配=%d，成功=%d，失败=%d，新增=%d，更新=%d，入库失败=%d", result.StartPage, result.EndPage, persistMode, result.HandledPageCount, result.SkippedTopCount, result.SkippedExisting, result.MatchedCount, result.SuccessCount, result.FailedCount, result.InsertedCount, result.UpdatedCount, result.PersistFailCount)
-		if result.StoppedOnExisting {
-			doneMessage += fmt.Sprintf("，重合停止页=%d", result.StopExistingPage)
-		}
-		taskctx.ReportProgress(ctx, taskctx.Progress{
-			Stage:        "fetch_sehuatang_done",
-			Message:      doneMessage,
-			HandledCount: result.SuccessCount + result.FailedCount + result.SkippedExisting,
-			SuccessCount: result.SuccessCount,
-			FailedCount:  result.FailedCount,
-			QueuedCount:  result.MatchedCount - result.SuccessCount - result.FailedCount - result.SkippedExisting,
-		})
-		return nil
 	})
 }
 

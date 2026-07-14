@@ -68,11 +68,9 @@ export const sidebarGroups: NavGroup[] = [
     icon: "FS",
     links: [
       { href: "/sitefetch", label: "FetchSite" },
-      { href: "/sehuatangfetch", label: "FetchSehuatang" },
       { href: "/siteconfiglist", label: "FetchSitesConfig" },
       { href: "/javbuslist", label: "JavbusList" },
-      { href: "/sukebeilist", label: "SukebeiList" },
-      { href: "/sehuatanglist", label: "SehuatangList" }
+      { href: "/sukebeilist", label: "SukebeiList" }
     ]
   },
   {
@@ -128,7 +126,6 @@ export const topNavGroups: { label: string; links: NavLink[] }[] = [
   {
     label: "抓取",
     links: [
-      { href: "/sehuatangfetch", label: "色花堂" },
       { href: "/shfetchall", label: "SH一体" }
     ]
   },

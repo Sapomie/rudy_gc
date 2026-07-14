@@ -11,16 +11,12 @@ import (
 	"rudy_gc/internal/service/fetchsehuatang"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
-	"rudy_gc/internal/service/sehuatang"
-	"rudy_gc/internal/service/wkv"
 	"rudy_gc/internal/types"
 )
 
 type CrawlerPagesAPI struct {
 	deps      *dep.Dep
 	fetchSite *fetchsite.Service
-	sehuatang *sehuatang.Service
-	wkvSvc    *wkv.Service
 	scRootDir string
 }
 
@@ -44,8 +40,6 @@ func NewCrawlerPagesAPI(deps *dep.Dep) *CrawlerPagesAPI {
 	return &CrawlerPagesAPI{
 		deps:      deps,
 		fetchSite: fetchsite.NewService(deps),
-		sehuatang: sehuatang.NewService(deps),
-		wkvSvc:    wkv.NewService(deps),
 		scRootDir: deps.Config.Film.ScRootDir,
 	}
 }
@@ -80,16 +74,13 @@ func (h *CrawlerPagesAPI) DailyBestPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              false,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            false,
+		"ShowMovieFilters":        false,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -124,16 +115,13 @@ func (h *CrawlerPagesAPI) SeedsPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              false,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            false,
+		"ShowMovieFilters":        false,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -168,16 +156,13 @@ func (h *CrawlerPagesAPI) PostProcessPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              false,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            false,
+		"ShowMovieFilters":        false,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -218,16 +203,13 @@ func (h *CrawlerPagesAPI) BackfillPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              false,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            false,
+		"ShowMovieFilters":        false,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -298,63 +280,14 @@ func (h *CrawlerPagesAPI) FetchSitePage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              false,
-		"MovieCardFilter":           filterView,
-		"ShowMovieFilters":          true,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
-	})
-}
-
-func (h *CrawlerPagesAPI) FetchSehuatangPage(c *gin.Context) {
-	defer withFrontendPath(c, "/sehuatangfetch")()
-
-	c.JSON(http.StatusOK, gin.H{
-		"Title":             "色花堂抓取任务",
-		"ViewType":          "crawler-jobs",
-		"PageTitle":         "色花堂磁力抓取（日志流）",
-		"QuickNavCurrent":   "fetch_sehuatang",
-		"TaskPanelTitle":    "色花堂抓取任务",
-		"PageNote":          "抓取列表普通帖子并直接入库，自动跳过置顶/公告帖；支持按起始页到结束页范围抓取。",
-		"TaskTableTitle":    "色花堂抓取任务",
-		"EventTitle":        "色花堂抓取事件流",
-		"StorageKey":        "crawler_jobs_fetch_sehuatang_selected_job",
-		"DefaultTaskType":   loop.TaskSpiderFetchSehuatang,
-		"OverviewExtraMode": "sehuatang_progress",
-		"EmptyStateText":    "等待 色花堂抓取任务触发",
-		"AllowedTaskTypes": []string{
-			loop.TaskSpiderFetchSehuatang,
-		},
-		"TaskButtons": []crawlerJobsPageTask{
-			{TaskType: loop.TaskSpiderFetchSehuatang, Label: "色花堂磁力抓取"},
-		},
-		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/sitefetch", Label: "FetchSite"},
-			{Href: "/siteconfiglist", Label: "FetchSites 配置"},
-			{Href: "/sehuatanglist", Label: "Sehuatang 列表"},
-		},
-		"Labels": crawlerJobsPageLabels{
-			Extra:   "任务类型",
-			Result:  "成功/失败",
-			Elapsed: "已运行时长",
-		},
-		"HideTaskForm":                 false,
-		"ShowMovieFilters":             false,
-		"ShowFavoriteAlbum":            false,
-		"FetchSehuatangList":           sehuatangListURLFromFetchSiteConfig(h.deps),
-		"FetchSehuatangKey":            fetchsehuatang.DefaultKeyword,
-		"FetchSehuatangStartPage":      fetchsehuatang.DefaultStartPage,
-		"FetchSehuatangEndPage":        fetchsehuatang.DefaultEndPage,
-		"FetchSehuatangPersistMode":    fetchsehuatang.DefaultPersistMode,
-		"FetchSehuatangStopOnExisting": false,
-		"ScRootDir":                    h.scRootDir,
-		"JobID":                        strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            false,
+		"MovieCardFilter":         filterView,
+		"ShowMovieFilters":        true,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -516,16 +449,13 @@ func (h *CrawlerPagesAPI) FetchSiteSukebeiFilteredPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              true,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            true,
+		"ShowMovieFilters":        false,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
 
@@ -558,15 +488,12 @@ func (h *CrawlerPagesAPI) FetchSiteJavbusFilteredPage(c *gin.Context) {
 			Result:  "成功/失败",
 			Elapsed: "已运行时长",
 		},
-		"HideTaskForm":              true,
-		"ShowMovieFilters":          false,
-		"ShowFavoriteAlbum":         false,
-		"FetchSehuatangList":        "",
-		"FetchSehuatangKey":         "",
-		"FetchSehuatangStartPage":   int64(0),
-		"FetchSehuatangEndPage":     int64(0),
-		"FetchSehuatangPersistMode": "",
-		"ScRootDir":                 h.scRootDir,
-		"JobID":                     strings.TrimSpace(c.Query("job_id")),
+		"HideTaskForm":            true,
+		"ShowMovieFilters":        false,
+		"ShowFavoriteAlbum":       false,
+		"FetchSehuatangStartPage": int64(0),
+		"FetchSehuatangEndPage":   int64(0),
+		"ScRootDir":               h.scRootDir,
+		"JobID":                   strings.TrimSpace(c.Query("job_id")),
 	})
 }
