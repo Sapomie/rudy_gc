@@ -19,6 +19,7 @@ type fakeFC2MediaModel struct {
 	insertCount int
 	updateCount int
 	existing    *moviex.FC2Media
+	byID        *moviex.FC2Media
 	findErr     error
 }
 
@@ -30,7 +31,10 @@ func (m *fakeFC2MediaModel) Insert(_ context.Context, data *moviex.FC2Media) (*m
 	return data, nil
 }
 
-func (m *fakeFC2MediaModel) FindOne(context.Context, int64) (*moviex.FC2Media, error) {
+func (m *fakeFC2MediaModel) FindOne(_ context.Context, id int64) (*moviex.FC2Media, error) {
+	if m.byID != nil && m.byID.ID == id {
+		return m.byID, nil
+	}
 	return nil, moviex.ErrNotFound
 }
 
@@ -52,6 +56,10 @@ func (m *fakeFC2MediaModel) FindOneByFileName(context.Context, string) (*moviex.
 	return nil, moviex.ErrNotFound
 }
 
+func (m *fakeFC2MediaModel) ListAll(context.Context) ([]*moviex.FC2Media, error) {
+	return []*moviex.FC2Media{}, nil
+}
+
 func (m *fakeFC2MediaModel) ListByFileNames(context.Context, []string) ([]*moviex.FC2Media, error) {
 	return []*moviex.FC2Media{}, nil
 }
@@ -65,6 +73,10 @@ func (m *fakeFC2MediaModel) ListByMovieIDs(context.Context, []int64) ([]*moviex.
 }
 
 func (m *fakeFC2MediaModel) ListByFullDirPrefixes(context.Context, []string) ([]*moviex.FC2Media, error) {
+	return []*moviex.FC2Media{}, nil
+}
+
+func (m *fakeFC2MediaModel) ListSmartPickCandidates(context.Context, moviex.FC2SmartPickMediaFilter) ([]*moviex.FC2Media, error) {
 	return []*moviex.FC2Media{}, nil
 }
 
@@ -117,7 +129,7 @@ func TestInsertFC2MediaNeverUpdatesExistingRow(t *testing.T) {
 	duplicateErr := errors.New("Error 1062: Duplicate entry '72' for key 'uk_fc2_media_movie_id'")
 	model := &fakeFC2MediaModel{insertErr: duplicateErr}
 	service := NewService(&dep.Dep{FC2MediaModel: model})
-	err := service.insertFC2Media(context.Background(), &moviex.FC2Media{FC2MovieID: 72})
+	_, err := service.insertFC2Media(context.Background(), &moviex.FC2Media{FC2MovieID: 72})
 	if err == nil {
 		t.Fatal("duplicate insert returned nil error")
 	}

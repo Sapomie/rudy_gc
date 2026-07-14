@@ -25,12 +25,7 @@
         </div>
       </div>
 
-      <div class="movie-grid-v2 next02-pink-movie-grid fc2-movie-card-grid">
-        <div v-for="(card, index) in cards" :key="cardKey(card, index)" class="col movie-grid-col-v2">
-          <FC2MovieCard :movie="card" />
-        </div>
-        <div v-if="cards.length === 0" class="movie-empty">暂无 FC2 影片数据</div>
-      </div>
+      <FC2MovieGrid :cards="cards" />
     </template>
   </PageShell>
 </template>
@@ -40,7 +35,7 @@ import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
 import ErrorPanel from "@/components/ErrorPanel.vue";
-import FC2MovieCard from "@/components/FC2MovieCard.vue";
+import FC2MovieGrid from "@/components/FC2MovieGrid.vue";
 import LinkStrip from "@/components/LinkStrip.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
@@ -78,8 +73,8 @@ const cards = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "M
 const total = computed(() => text(payload.value, "total", "Total") || "0");
 const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
 const pageNote = computed(() => route.path === "/fclistcardrandom"
-  ? "随机展示 FC2 影片，卡片封面使用已生成截图。"
-  : "FC2 影片卡片，封面使用已生成截图。"
+  ? "随机展示 FC2 影片，卡片使用默认联系表封面。"
+  : "FC2 影片卡片使用默认联系表封面。"
 );
 const cardLinks = computed(() => [
   { label: "All", href: "/fclistcard", active: route.path === "/fclistcard" },
@@ -87,7 +82,4 @@ const cardLinks = computed(() => [
   { label: "Random", href: "/fclistcardrandom", active: route.path === "/fclistcardrandom" }
 ]);
 
-function cardKey(card: AnyRecord, index: number): string {
-  return text(card, "FC2Key") || String(index);
-}
 </script>

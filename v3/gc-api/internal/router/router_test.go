@@ -73,3 +73,23 @@ func TestSeedsTriggerRoutes(t *testing.T) {
 		t.Fatalf("TaskButtons length = %v, want 3", pageData["TaskButtons"])
 	}
 }
+
+func TestFC2ImageGenerationRoutesAreReducedToDefaultCoverTask(t *testing.T) {
+	engine := New(&dep.Dep{})
+	routes := make(map[string]struct{})
+	for _, route := range engine.Routes() {
+		routes[route.Method+" "+route.Path] = struct{}{}
+	}
+	for _, removed := range []string{
+		http.MethodPost + " /api/fc2/movies/:fc2_key/screenshot",
+		http.MethodPost + " /api/fc2/movies/:fc2_key/contact-sheet",
+	} {
+		if _, ok := routes[removed]; ok {
+			t.Fatalf("旧图片生成路由仍然存在: %s", removed)
+		}
+	}
+	defaultCoverRoute := http.MethodPost + " /api/triggers/fc2-media/default-covers"
+	if _, ok := routes[defaultCoverRoute]; !ok {
+		t.Fatalf("默认联系表封面任务路由缺失: %s", defaultCoverRoute)
+	}
+}

@@ -70,16 +70,6 @@ type fc2MediaImageView struct {
 	IsCover  bool   `json:"IsCover"`
 }
 
-type fc2ScreenshotRequest struct {
-	TimeSeconds *float64 `json:"time_seconds"`
-}
-
-type fc2ContactSheetRequest struct {
-	Columns   *int `json:"columns"`
-	Rows      *int `json:"rows"`
-	CellWidth *int `json:"cell_width"`
-}
-
 func NewFC2API(deps *dep.Dep) *FC2API {
 	return &FC2API{deps: deps, mediaSvc: media.NewService(deps)}
 }
@@ -245,7 +235,7 @@ func (h *FC2API) Detail(c *gin.Context) {
 		jsonServerError(c, "FC2影片详情加载失败", err)
 		return
 	}
-	media, err := h.deps.FC2MediaModel.FindOneByMovieID(c.Request.Context(), movie.ID)
+	mediaRow, err := h.deps.FC2MediaModel.FindOneByMovieID(c.Request.Context(), movie.ID)
 	if err != nil && err != moviex.ErrNotFound {
 		jsonServerError(c, "FC2媒体资料加载失败", err)
 		return
@@ -261,15 +251,19 @@ func (h *FC2API) Detail(c *gin.Context) {
 		return
 	}
 	mediaImages := make([]*fc2MediaImageView, 0)
-	if media != nil {
-		imageRows, imageErr := h.deps.FC2MediaImageModel.ListByMediaID(c.Request.Context(), media.ID)
+	effectiveCoverImageID := int64(0)
+	if mediaRow != nil {
+		imageRows, imageErr := h.deps.FC2MediaImageModel.ListByMediaID(c.Request.Context(), mediaRow.ID)
 		if imageErr != nil {
 			jsonServerError(c, "FC2媒体图片加载失败", imageErr)
 			return
 		}
+		if coverImage := media.ResolveFC2CoverImage(mediaRow.ID, movie.CoverImageID, imageRows); coverImage != nil {
+			effectiveCoverImageID = coverImage.ID
+		}
 		mediaImages = make([]*fc2MediaImageView, 0, len(imageRows))
 		for _, imageRow := range imageRows {
-			if imageView := buildFC2MediaImageView(imageRow, movie.CoverImageID); imageView != nil {
+			if imageView := buildFC2MediaImageView(imageRow, effectiveCoverImageID); imageView != nil {
 				mediaImages = append(mediaImages, imageView)
 			}
 		}
@@ -295,18 +289,19 @@ func (h *FC2API) Detail(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"Title":             fc2Key,
-		"PageTitle":         fc2Key,
-		"PageNote":          "FC2影片资料及其全部 SH 帖子资源版本。",
-		"Movie":             movie,
-		"Media":             buildFC2MediaView(media),
-		"MediaImages":       mediaImages,
-		"ScStat":            stat,
-		"LastScEventName":   lastScEventName,
-		"LastScEventHref":   buildScEventDetailHrefByName(lastScEventName),
-		"Resources":         resources,
-		"Total":             len(resources),
-		"ResourceCountText": strconv.Itoa(len(resources)),
+		"Title":                 fc2Key,
+		"PageTitle":             fc2Key,
+		"PageNote":              "FC2影片资料及其全部 SH 帖子资源版本。",
+		"Movie":                 movie,
+		"Media":                 buildFC2MediaView(mediaRow),
+		"MediaImages":           mediaImages,
+		"EffectiveCoverImageID": effectiveCoverImageID,
+		"ScStat":                stat,
+		"LastScEventName":       lastScEventName,
+		"LastScEventHref":       buildScEventDetailHrefByName(lastScEventName),
+		"Resources":             resources,
+		"Total":                 len(resources),
+		"ResourceCountText":     strconv.Itoa(len(resources)),
 	})
 }
 
@@ -342,64 +337,6 @@ func buildScEventDetailHrefByName(name string) string {
 		return ""
 	}
 	return "/scevent/" + url.PathEscape(name)
-}
-
-func (h *FC2API) GenerateScreenshot(c *gin.Context) {
-	var request fc2ScreenshotRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		jsonBadRequest(c, "截图参数无效", err)
-		return
-	}
-	if request.TimeSeconds == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "截图参数无效: time_seconds 必填"})
-		return
-	}
-	mediaRow, ok := h.loadFC2MediaForCapture(c)
-	if !ok {
-		return
-	}
-	imageRow, err := h.mediaSvc.GenerateFC2Screenshot(c.Request.Context(), mediaRow, media.FC2ScreenshotOptions{
-		TimeSeconds: *request.TimeSeconds,
-	})
-	if err != nil {
-		if errors.Is(err, media.ErrInvalidFC2CaptureRequest) {
-			jsonBadRequest(c, "截图参数无效", err)
-			return
-		}
-		jsonServerError(c, "FC2视频截图生成失败", err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"image": buildFC2MediaImageView(imageRow, imageRow.ID), "cover_image_id": imageRow.ID})
-}
-
-func (h *FC2API) GenerateContactSheet(c *gin.Context) {
-	var request fc2ContactSheetRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		jsonBadRequest(c, "联系表参数无效", err)
-		return
-	}
-	if request.Columns == nil || request.Rows == nil || request.CellWidth == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "联系表参数无效: columns、rows、cell_width 必填"})
-		return
-	}
-	mediaRow, ok := h.loadFC2MediaForCapture(c)
-	if !ok {
-		return
-	}
-	imageRow, err := h.mediaSvc.GenerateFC2ContactSheet(c.Request.Context(), mediaRow, media.FC2ContactSheetOptions{
-		Columns:   *request.Columns,
-		Rows:      *request.Rows,
-		CellWidth: *request.CellWidth,
-	})
-	if err != nil {
-		if errors.Is(err, media.ErrInvalidFC2CaptureRequest) {
-			jsonBadRequest(c, "联系表参数无效", err)
-			return
-		}
-		jsonServerError(c, "FC2视频联系表生成失败", err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"image": buildFC2MediaImageView(imageRow)})
 }
 
 func (h *FC2API) SetCoverImage(c *gin.Context) {

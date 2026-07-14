@@ -38,6 +38,32 @@ func (l *ScService) smartPickCopyFileName(movie *types.MovieType, srcFilePath, s
 	return movieName + "_" + castName + "_" + title + ext
 }
 
+func smartPickFC2CopyFileName(movie *FC2SmartPickMovie, srcFilePath string) string {
+	srcName := strings.TrimSpace(filepath.Base(srcFilePath))
+	if srcName == "" {
+		return ""
+	}
+	ext := filepath.Ext(srcName)
+	movieName := ""
+	performer := ""
+	title := ""
+	if movie != nil && movie.FC2Movie != nil {
+		movieName = cleanNameToken(movie.FC2Key)
+		performer = cleanNameToken(movie.PerformerText)
+		title = cleanNameToken(movie.Title)
+	}
+	if movieName == "" {
+		movieName = smartPickNameFallback
+	}
+	if performer == "" {
+		performer = smartPickNameFallback
+	}
+	if title == "" {
+		title = smartPickNameFallback
+	}
+	return movieName + "_" + performer + "_" + title + ext
+}
+
 func movieNameToken(movie *types.MovieType) string {
 	if movie == nil {
 		return ""

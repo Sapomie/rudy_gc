@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="Rudy-GC Next02" note="Vue 前端入口，视觉来源为 gc-web-v2，布局与旧 gc-web 对齐。">
+  <PageShell title="Rudy-GC Next02" note="当前 Vue 前端入口。">
     <div class="home-grid">
       <section v-for="group in sidebarGroups" :key="group.label" class="home-section">
         <h2>{{ group.label }}</h2>

@@ -35,6 +35,7 @@ type FC2IngestFileItem struct {
 	FC2Code           string `json:"fc2_code"`
 	FC2Key            string `json:"fc2_key"`
 	FC2MovieID        int64  `json:"fc2_movie_id"`
+	FC2MediaID        int64  `json:"fc2_media_id"`
 	SourceThreadID    int64  `json:"source_thread_id"`
 	SourceTorrentHash string `json:"source_torrent_hash"`
 	TargetFileName    string `json:"target_file_name"`

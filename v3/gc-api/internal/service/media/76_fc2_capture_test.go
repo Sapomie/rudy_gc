@@ -3,7 +3,8 @@ package media
 import (
 	"context"
 	"errors"
-	"math"
+	"image"
+	_ "image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,8 @@ import (
 	"rudy_gc/internal/dep"
 	"rudy_gc/internal/model/modelx/moviex"
 )
+
+const testFC2CaptureKey = "FC2PPV-1234567-1"
 
 type fc2MediaImageModelStub struct {
 	inserted  *moviex.FC2MediaImage
@@ -104,7 +107,7 @@ func (m *fc2MovieModelStub) UpdateCoverImage(_ context.Context, id, coverImageID
 	return nil
 }
 
-func (*fc2MediaImageModelStub) ListScreenshotsByMediaIDs(context.Context, []int64) ([]*moviex.FC2MediaImage, error) {
+func (*fc2MediaImageModelStub) ListByMediaIDs(context.Context, []int64) ([]*moviex.FC2MediaImage, error) {
 	return []*moviex.FC2MediaImage{}, nil
 }
 
@@ -120,31 +123,44 @@ func (m *fc2MediaImageModelStub) DeleteByMediaIDAndID(_ context.Context, mediaID
 }
 
 func TestBuildFC2ContactSheetTimestamps(t *testing.T) {
-	got := buildFC2ContactSheetTimestamps(120, 4)
-	want := []float64{15, 45, 75, 105}
+	got := buildFC2ContactSheetTimestamps(100, fc2DefaultCoverColumns*fc2DefaultCoverRows)
+	want := []float64{5, 15, 25, 35, 45, 55, 65, 75, 85, 95}
 	if len(got) != len(want) {
 		t.Fatalf("时间点数量 = %d，期望 %d", len(got), len(want))
 	}
 	for index := range want {
-		if math.Abs(got[index]-want[index]) > 0.000001 {
+		if got[index] != want[index] {
 			t.Fatalf("时间点[%d] = %f，期望 %f", index, got[index], want[index])
 		}
 	}
 }
 
-func TestValidateFC2ContactSheetOptions(t *testing.T) {
+func TestValidateFC2DefaultCoverMedia(t *testing.T) {
 	mediaRow := &moviex.FC2Media{ID: 1, Duration: 120}
-	count, err := validateFC2ContactSheetOptions(mediaRow, FC2ContactSheetOptions{Columns: 4, Rows: 3, CellWidth: 320})
-	if err != nil {
+	if err := validateFC2DefaultCoverMedia(mediaRow); err != nil {
 		t.Fatalf("校验失败: %v", err)
 	}
-	if count != 12 {
-		t.Fatalf("帧数 = %d，期望 12", count)
-	}
-
-	_, err = validateFC2ContactSheetOptions(mediaRow, FC2ContactSheetOptions{Columns: 0, Rows: 3, CellWidth: 320})
+	err := validateFC2DefaultCoverMedia(&moviex.FC2Media{ID: 1})
 	if !errors.Is(err, ErrInvalidFC2CaptureRequest) {
-		t.Fatalf("无效参数错误 = %v", err)
+		t.Fatalf("无效媒体错误 = %v", err)
+	}
+}
+
+func TestFC2CaptureDirNameUsesNormalizedFC2Key(t *testing.T) {
+	got, err := fc2CaptureDirName(&moviex.FC2Media{FC2Key: "fc2ppv-1234567-1"})
+	if err != nil {
+		t.Fatalf("生成图片目录名失败: %v", err)
+	}
+	if got != testFC2CaptureKey {
+		t.Fatalf("图片目录名 = %q，期望 %q", got, testFC2CaptureKey)
+	}
+}
+
+func TestFC2CaptureDirNameRejectsInvalidFC2Key(t *testing.T) {
+	for _, mediaRow := range []*moviex.FC2Media{nil, {}, {FC2Key: "../7"}} {
+		if _, err := fc2CaptureDirName(mediaRow); !errors.Is(err, ErrInvalidFC2CaptureRequest) {
+			t.Fatalf("无效 fc2_key 错误 = %v", err)
+		}
 	}
 }
 
@@ -169,26 +185,27 @@ func TestPrepareFC2CaptureUsesConfiguredLocalImageDir(t *testing.T) {
 	}}}
 	gotSourcePath, gotCaptureDir, err := service.prepareFC2Capture(&moviex.FC2Media{
 		ID:       7,
+		FC2Key:   testFC2CaptureKey,
 		RootDir:  mediaRoot,
 		FullDir:  sourceDir,
 		FileName: fileName,
 	})
 	if err != nil {
-		t.Fatalf("准备截图目录失败: %v", err)
+		t.Fatalf("准备图片目录失败: %v", err)
 	}
 	if gotSourcePath != sourcePath {
 		t.Fatalf("媒体路径 = %q，期望 %q", gotSourcePath, sourcePath)
 	}
-	wantCaptureDir := filepath.Join(localImageDir, "7")
+	wantCaptureDir := filepath.Join(localImageDir, testFC2CaptureKey)
 	if gotCaptureDir != wantCaptureDir {
-		t.Fatalf("截图目录 = %q，期望 %q", gotCaptureDir, wantCaptureDir)
+		t.Fatalf("图片目录 = %q，期望 %q", gotCaptureDir, wantCaptureDir)
 	}
 	if stat, statErr := os.Stat(gotCaptureDir); statErr != nil || !stat.IsDir() {
-		t.Fatalf("截图目录未创建: stat=%v err=%v", stat, statErr)
+		t.Fatalf("图片目录未创建: stat=%v err=%v", stat, statErr)
 	}
 }
 
-func TestGenerateFC2ScreenshotWritesToConfiguredLocalImageDir(t *testing.T) {
+func TestGenerateFC2DefaultCoverUsesFixedLayoutAndSetsCover(t *testing.T) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		t.Skip("ffmpeg 未安装")
 	}
@@ -215,35 +232,49 @@ func TestGenerateFC2ScreenshotWritesToConfiguredLocalImageDir(t *testing.T) {
 		FC2MediaImageModel: imageModel,
 		FC2MovieModel:      movieModel,
 	}}
-	image, err := service.GenerateFC2Screenshot(context.Background(), &moviex.FC2Media{
+	imageRow, err := service.GenerateFC2DefaultCover(context.Background(), &moviex.FC2Media{
 		ID:         7,
 		FC2MovieID: 28,
+		FC2Key:     testFC2CaptureKey,
 		RootDir:    mediaRoot,
 		FullDir:    sourceDir,
 		FileName:   fileName,
 		Duration:   2,
-	}, FC2ScreenshotOptions{TimeSeconds: 0.5})
+	})
 	if err != nil {
-		t.Fatalf("生成截图失败: %v", err)
+		t.Fatalf("生成默认联系表封面失败: %v", err)
 	}
-	wantDir := filepath.Join(localImageDir, "7")
-	if filepath.Dir(image.FilePath) != wantDir {
-		t.Fatalf("截图目录 = %q，期望 %q", filepath.Dir(image.FilePath), wantDir)
+	wantDir := filepath.Join(localImageDir, testFC2CaptureKey)
+	if filepath.Dir(imageRow.FilePath) != wantDir {
+		t.Fatalf("封面目录 = %q，期望 %q", filepath.Dir(imageRow.FilePath), wantDir)
 	}
-	if imageModel.inserted == nil || imageModel.inserted.FilePath != image.FilePath {
+	if imageModel.inserted == nil || imageModel.inserted.FilePath != imageRow.FilePath || imageModel.inserted.ImageType != FC2MediaImageTypeContactSheet {
 		t.Fatalf("图片记录未写入正确路径: %#v", imageModel.inserted)
 	}
-	if stat, statErr := os.Stat(image.FilePath); statErr != nil || !stat.Mode().IsRegular() {
-		t.Fatalf("截图文件未生成: stat=%v err=%v", stat, statErr)
+	file, err := os.Open(imageRow.FilePath)
+	if err != nil {
+		t.Fatalf("打开封面失败: %v", err)
 	}
-	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != image.ID {
-		t.Fatalf("新截图未自动设为封面: %#v", movieModel.coverUpdates)
+	defer file.Close()
+	config, _, err := image.DecodeConfig(file)
+	if err != nil {
+		t.Fatalf("读取封面尺寸失败: %v", err)
+	}
+	if config.Width != fc2DefaultCoverColumns*fc2DefaultCoverCellWidth {
+		t.Fatalf("封面宽度 = %d，期望 %d", config.Width, fc2DefaultCoverColumns*fc2DefaultCoverCellWidth)
+	}
+	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != imageRow.ID {
+		t.Fatalf("默认联系表未自动设为封面: %#v", movieModel.coverUpdates)
 	}
 }
 
-func TestSetFC2CoverImageAcceptsScreenshot(t *testing.T) {
+func TestSetFC2CoverImageAcceptsContactSheet(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "contact-sheet.png")
+	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
+		t.Fatalf("创建测试联系表失败: %v", err)
+	}
 	imageModel := &fc2MediaImageModelStub{row: &moviex.FC2MediaImage{
-		ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeScreenshot,
+		ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath,
 	}}
 	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28}}
 	service := &Service{deps: &dep.Dep{
@@ -253,19 +284,45 @@ func TestSetFC2CoverImageAcceptsScreenshot(t *testing.T) {
 
 	image, err := service.SetFC2CoverImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28}, 9)
 	if err != nil {
-		t.Fatalf("设置截图封面失败: %v", err)
+		t.Fatalf("设置联系表封面失败: %v", err)
 	}
 	if image.ID != 9 {
 		t.Fatalf("返回图片 ID = %d，期望 9", image.ID)
 	}
 	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != 9 {
-		t.Fatalf("封面更新记录 = %#v，期望 [9]", movieModel.coverUpdates)
+		t.Fatalf("联系表封面更新记录 = %#v，期望 [9]", movieModel.coverUpdates)
 	}
 }
 
-func TestSetFC2CoverImageRejectsContactSheet(t *testing.T) {
+func TestEnsureFC2DefaultCoverReusesExistingContactSheet(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "contact-sheet.png")
+	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
+		t.Fatalf("创建测试联系表失败: %v", err)
+	}
+	mediaRow := &moviex.FC2Media{ID: 7, FC2MovieID: 28}
+	mediaModel := &fakeFC2MediaModel{byID: mediaRow}
+	imageModel := &fc2MediaImageModelStub{rows: []*moviex.FC2MediaImage{{
+		ID: 9, FC2MediaID: mediaRow.ID, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath,
+	}}}
+	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: mediaRow.FC2MovieID}}
+	service := &Service{deps: &dep.Dep{
+		FC2MediaModel:      mediaModel,
+		FC2MediaImageModel: imageModel,
+		FC2MovieModel:      movieModel,
+	}}
+
+	if err := service.ensureFC2DefaultCover(context.Background(), mediaRow.ID); err != nil {
+		t.Fatalf("复用已有联系表失败: %v", err)
+	}
+	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != 9 {
+		t.Fatalf("已有联系表封面更新记录 = %#v，期望 [9]", movieModel.coverUpdates)
+	}
+}
+
+func TestSetFC2CoverImageRejectsMissingContactSheetFile(t *testing.T) {
 	imageModel := &fc2MediaImageModelStub{row: &moviex.FC2MediaImage{
 		ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet,
+		FilePath: filepath.Join(t.TempDir(), "missing.png"),
 	}}
 	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28}}
 	service := &Service{deps: &dep.Dep{
@@ -275,40 +332,43 @@ func TestSetFC2CoverImageRejectsContactSheet(t *testing.T) {
 
 	_, err := service.SetFC2CoverImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28}, 9)
 	if !errors.Is(err, ErrInvalidFC2CaptureRequest) {
-		t.Fatalf("联系表设置封面错误 = %v", err)
+		t.Fatalf("缺失文件的联系表设置封面错误 = %v", err)
 	}
 	if len(movieModel.coverUpdates) != 0 {
-		t.Fatalf("联系表不应更新封面: %#v", movieModel.coverUpdates)
+		t.Fatalf("缺失文件的联系表不应更新封面: %#v", movieModel.coverUpdates)
 	}
 }
 
 func TestDeleteFC2MediaImageMovesFileToDeletedDirectory(t *testing.T) {
 	localImageDir := t.TempDir()
-	activeDir := filepath.Join(localImageDir, "7")
+	activeDir := filepath.Join(localImageDir, testFC2CaptureKey)
 	if err := os.MkdirAll(activeDir, 0o755); err != nil {
-		t.Fatalf("创建截图目录失败: %v", err)
+		t.Fatalf("创建联系表目录失败: %v", err)
 	}
-	filePath := filepath.Join(activeDir, "screenshot-test.png")
+	filePath := filepath.Join(activeDir, "contact-sheet-test.png")
 	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
-		t.Fatalf("创建截图文件失败: %v", err)
+		t.Fatalf("创建联系表文件失败: %v", err)
 	}
-	imageModel := &fc2MediaImageModelStub{row: &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, FilePath: filePath}}
+	imageModel := &fc2MediaImageModelStub{
+		row:  &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath},
+		rows: []*moviex.FC2MediaImage{{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath}},
+	}
 	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28}}
 	service := &Service{deps: &dep.Dep{
 		Config:             config.Config{FC2Media: config.FC2MediaConfig{LocalImageDir: localImageDir}},
 		FC2MediaImageModel: imageModel,
 		FC2MovieModel:      movieModel,
 	}}
-	if _, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28}, 9); err != nil {
-		t.Fatalf("删除截图失败: %v", err)
+	if _, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28, FC2Key: testFC2CaptureKey}, 9); err != nil {
+		t.Fatalf("删除联系表失败: %v", err)
 	}
 	if !imageModel.deleted {
 		t.Fatal("图片记录未删除")
 	}
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-		t.Fatalf("原截图仍然存在: %v", err)
+		t.Fatalf("原联系表仍然存在: %v", err)
 	}
-	archivedPath := filepath.Join(localImageDir, "deleted", "7", filepath.Base(filePath))
+	archivedPath := filepath.Join(localImageDir, "deleted", testFC2CaptureKey, filepath.Base(filePath))
 	if content, err := os.ReadFile(archivedPath); err != nil || string(content) != "image" {
 		t.Fatalf("删除归档文件无效: content=%q err=%v", content, err)
 	}
@@ -316,16 +376,17 @@ func TestDeleteFC2MediaImageMovesFileToDeletedDirectory(t *testing.T) {
 
 func TestDeleteFC2MediaImageRestoresFileWhenRecordDeleteFails(t *testing.T) {
 	localImageDir := t.TempDir()
-	activeDir := filepath.Join(localImageDir, "7")
+	activeDir := filepath.Join(localImageDir, testFC2CaptureKey)
 	if err := os.MkdirAll(activeDir, 0o755); err != nil {
-		t.Fatalf("创建截图目录失败: %v", err)
+		t.Fatalf("创建联系表目录失败: %v", err)
 	}
-	filePath := filepath.Join(activeDir, "screenshot-test.png")
+	filePath := filepath.Join(activeDir, "contact-sheet-test.png")
 	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
-		t.Fatalf("创建截图文件失败: %v", err)
+		t.Fatalf("创建联系表文件失败: %v", err)
 	}
 	imageModel := &fc2MediaImageModelStub{
-		row:       &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, FilePath: filePath},
+		row:       &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath},
+		rows:      []*moviex.FC2MediaImage{{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath}},
 		deleteErr: errors.New("delete failed"),
 	}
 	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28}}
@@ -334,34 +395,82 @@ func TestDeleteFC2MediaImageRestoresFileWhenRecordDeleteFails(t *testing.T) {
 		FC2MediaImageModel: imageModel,
 		FC2MovieModel:      movieModel,
 	}}
-	if _, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28}, 9); err == nil {
+	if _, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28, FC2Key: testFC2CaptureKey}, 9); err == nil {
 		t.Fatal("数据库删除失败时应返回错误")
 	}
 	if _, err := os.Stat(filePath); err != nil {
-		t.Fatalf("原截图未恢复: %v", err)
+		t.Fatalf("原联系表未恢复: %v", err)
 	}
-	archivedPath := filepath.Join(localImageDir, "deleted", "7", filepath.Base(filePath))
+	archivedPath := filepath.Join(localImageDir, "deleted", testFC2CaptureKey, filepath.Base(filePath))
 	if _, err := os.Stat(archivedPath); !os.IsNotExist(err) {
 		t.Fatalf("失败后仍存在删除归档: %v", err)
 	}
 }
 
-func TestDeleteFC2MediaImageSelectsNewestRemainingScreenshotAsCover(t *testing.T) {
+func TestDeleteFC2MediaImageSelectsNewestRemainingContactSheetAsCover(t *testing.T) {
 	localImageDir := t.TempDir()
-	activeDir := filepath.Join(localImageDir, "7")
+	activeDir := filepath.Join(localImageDir, testFC2CaptureKey)
 	if err := os.MkdirAll(activeDir, 0o755); err != nil {
-		t.Fatalf("创建截图目录失败: %v", err)
+		t.Fatalf("创建联系表目录失败: %v", err)
 	}
-	filePath := filepath.Join(activeDir, "screenshot-current.png")
+	filePath := filepath.Join(activeDir, "contact-sheet-current.png")
 	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
-		t.Fatalf("创建截图文件失败: %v", err)
+		t.Fatalf("创建联系表文件失败: %v", err)
 	}
-	current := &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeScreenshot, FilePath: filePath, CreatedOn: 300}
-	newestRemaining := &moviex.FC2MediaImage{ID: 8, FC2MediaID: 7, ImageType: FC2MediaImageTypeScreenshot, CreatedOn: 200}
-	olderRemaining := &moviex.FC2MediaImage{ID: 6, FC2MediaID: 7, ImageType: FC2MediaImageTypeScreenshot, CreatedOn: 100}
+	current := &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath, CreatedOn: 300}
+	newestRemainingPath := filepath.Join(activeDir, "contact-sheet-newest-remaining.png")
+	olderRemainingPath := filepath.Join(activeDir, "contact-sheet-older-remaining.png")
+	for _, path := range []string{newestRemainingPath, olderRemainingPath} {
+		if err := os.WriteFile(path, []byte("image"), 0o644); err != nil {
+			t.Fatalf("创建剩余联系表失败: %v", err)
+		}
+	}
+	newestRemaining := &moviex.FC2MediaImage{ID: 8, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: newestRemainingPath, CreatedOn: 200}
+	olderRemaining := &moviex.FC2MediaImage{ID: 6, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: olderRemainingPath, CreatedOn: 100}
 	imageModel := &fc2MediaImageModelStub{
 		row:  current,
 		rows: []*moviex.FC2MediaImage{current, newestRemaining, olderRemaining},
+	}
+	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28, CoverImageID: 0}}
+	service := &Service{deps: &dep.Dep{
+		Config:             config.Config{FC2Media: config.FC2MediaConfig{LocalImageDir: localImageDir}},
+		FC2MediaImageModel: imageModel,
+		FC2MovieModel:      movieModel,
+	}}
+
+	coverImageID, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28, FC2Key: testFC2CaptureKey}, 9)
+	if err != nil {
+		t.Fatalf("删除当前封面失败: %v", err)
+	}
+	if coverImageID != 8 {
+		t.Fatalf("替补封面 ID = %d，期望 8", coverImageID)
+	}
+	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != 8 {
+		t.Fatalf("封面更新记录 = %#v，期望 [8]", movieModel.coverUpdates)
+	}
+}
+
+func TestDeleteFC2MediaImageFallsBackToRemainingContactSheet(t *testing.T) {
+	localImageDir := t.TempDir()
+	activeDir := filepath.Join(localImageDir, testFC2CaptureKey)
+	if err := os.MkdirAll(activeDir, 0o755); err != nil {
+		t.Fatalf("创建联系表目录失败: %v", err)
+	}
+	filePath := filepath.Join(activeDir, "contact-sheet-current.png")
+	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
+		t.Fatalf("创建联系表文件失败: %v", err)
+	}
+	current := &moviex.FC2MediaImage{ID: 9, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath}
+	contactSheetPath := filepath.Join(activeDir, "contact-sheet.png")
+	if err := os.WriteFile(contactSheetPath, []byte("image"), 0o644); err != nil {
+		t.Fatalf("创建联系表文件失败: %v", err)
+	}
+	imageModel := &fc2MediaImageModelStub{
+		row: current,
+		rows: []*moviex.FC2MediaImage{
+			current,
+			{ID: 8, FC2MediaID: 7, ImageType: FC2MediaImageTypeContactSheet, FilePath: contactSheetPath},
+		},
 	}
 	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28, CoverImageID: 9}}
 	service := &Service{deps: &dep.Dep{
@@ -370,12 +479,12 @@ func TestDeleteFC2MediaImageSelectsNewestRemainingScreenshotAsCover(t *testing.T
 		FC2MovieModel:      movieModel,
 	}}
 
-	coverImageID, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28}, 9)
+	coverImageID, err := service.DeleteFC2MediaImage(context.Background(), &moviex.FC2Media{ID: 7, FC2MovieID: 28, FC2Key: testFC2CaptureKey}, 9)
 	if err != nil {
-		t.Fatalf("删除当前封面失败: %v", err)
+		t.Fatalf("删除当前联系表失败: %v", err)
 	}
 	if coverImageID != 8 {
-		t.Fatalf("替补封面 ID = %d，期望 8", coverImageID)
+		t.Fatalf("删除联系表后的封面 ID = %d，期望联系表 8", coverImageID)
 	}
 	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != 8 {
 		t.Fatalf("封面更新记录 = %#v，期望 [8]", movieModel.coverUpdates)

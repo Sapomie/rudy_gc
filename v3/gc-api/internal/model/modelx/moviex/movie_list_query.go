@@ -1136,11 +1136,24 @@ func (r *MovieListRepoSqlx) pickFromGScStat(ctx context.Context, req *types.List
 		return nil, nil
 	}
 
-	sb, baseArgs, err := r.buildGScStatMediaBaseSelect(nil)
+	baseSQL, baseArgs, err := squirrel.
+		Select("DISTINCT movie_jav_id").
+		From(r.wm.TableName()).
+		Where(squirrel.Eq{"source_type": consts.WMediaSourceNative}).
+		ToSql()
 	if err != nil {
 		return nil, err
 	}
+	var baseIDs []string
+	if err := r.wm.QueryRowsNoCacheCtx(ctx, &baseIDs, baseSQL, baseArgs...); err != nil && !errors.Is(err, sqlx.ErrNotFound) {
+		return nil, err
+	}
+	baseSet := sliceToSet(baseIDs)
+	if len(baseSet) == 0 {
+		return map[string]struct{}{}, nil
+	}
 
+	sb := squirrel.Select("movie_jav_id").From(r.gss.TableName() + " gss")
 	if len(w) > 0 {
 		sb = sb.Where(w)
 	}
@@ -1148,15 +1161,46 @@ func (r *MovieListRepoSqlx) pickFromGScStat(ctx context.Context, req *types.List
 	if err != nil {
 		return nil, err
 	}
-	args = append(baseArgs, args...)
-	var ids []string
-	if err := r.wm.QueryRowsNoCacheCtx(ctx, &ids, sqlStr, args...); err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			return map[string]struct{}{}, nil
-		}
+	var matchedIDs []string
+	if err := r.gss.QueryRowsNoCacheCtx(ctx, &matchedIDs, sqlStr, args...); err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, err
 	}
-	return sliceToSet(ids), nil
+	matchedSet := intersectTwo(baseSet, sliceToSet(matchedIDs))
+	if !missingGScStatMatches(req) {
+		return matchedSet, nil
+	}
+
+	allStatSet := sliceToSet(matchedIDs)
+	if len(w) > 0 {
+		allStatIDs, err := r.gss.ListAllMovieJavIDs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		allStatSet = sliceToSet(allStatIDs)
+	}
+	for movieJavID := range baseSet {
+		if _, hasStat := allStatSet[movieJavID]; !hasStat {
+			matchedSet[movieJavID] = struct{}{}
+		}
+	}
+	return matchedSet, nil
+}
+
+func missingGScStatMatches(req *types.ListMovieFullRequest) bool {
+	if req == nil {
+		return true
+	}
+	if req.LastScTimeMin != "" || req.ScTimesMin > 0 || req.ComeTimesMin > 0 ||
+		req.ReleasingDateStart != "" || req.MediaBirthTimeStart != "" {
+		return false
+	}
+	if req.ScTimesMax != nil && *req.ScTimesMax < 0 {
+		return false
+	}
+	if req.ComeTimesMax != nil && *req.ComeTimesMax < 0 {
+		return false
+	}
+	return true
 }
 
 func (r *MovieListRepoSqlx) pickFromWMedia(ctx context.Context, req *types.ListMovieFullRequest) (map[string]struct{}, error) {

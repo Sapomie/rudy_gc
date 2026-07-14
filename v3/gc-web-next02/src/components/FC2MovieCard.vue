@@ -2,8 +2,8 @@
   <article class="card shadow-sm h-100 card-lift movie-card-v2 next02-pink-movie-card fc2-movie-card">
     <a class="d-block poster-link" :href="detailHref" :aria-label="`查看 ${fc2Key} 详情`" target="_blank" rel="noopener noreferrer">
       <div class="thumb-2x3">
-        <img v-if="screenshotURL" :src="screenshotURL" :alt="`${fc2Key} 截图`" loading="lazy" decoding="async">
-        <div v-else class="thumb-empty fc2-card-cover-empty" aria-label="暂无截图"></div>
+        <img v-if="coverImageURL" :src="coverImageURL" :alt="`${fc2Key} 联系表封面`" loading="lazy" decoding="async">
+        <div v-else class="thumb-empty fc2-card-cover-empty" aria-label="暂无联系表封面"></div>
         <div class="badge-top-left">
           <span v-if="comeTimes" class="badge-come">❤ {{ comeTimes }}</span>
           <span v-if="scTimes" class="badge-times">× {{ scTimes }}</span>
@@ -50,7 +50,7 @@ const props = defineProps<{ movie: AnyRecord }>();
 const fc2Key = computed(() => text(props.movie, "FC2Key"));
 const title = computed(() => text(props.movie, "Title"));
 const performerText = computed(() => text(props.movie, "PerformerText"));
-const screenshotURL = computed(() => text(props.movie, "ScreenshotURL"));
+const coverImageURL = computed(() => text(props.movie, "CoverImageURL"));
 const detailHref = computed(() => `/fcdetail/${encodeURIComponent(fc2Key.value)}`);
 const videoURL = computed(() => text(props.movie, "VideoURL"));
 const showPlayButton = computed(() => Boolean(pick(props.movie, "ShowPlayButton")) && Boolean(videoURL.value));

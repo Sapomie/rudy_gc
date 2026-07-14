@@ -2,17 +2,16 @@ package handler
 
 import (
 	"net/http"
-	"path/filepath"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/dep"
-	"rudy_gc/internal/model/modelx/moviex"
+	mediaservice "rudy_gc/internal/service/media"
 )
 
 type FC2CardsAPI struct {
-	deps *dep.Dep
+	deps     *dep.Dep
+	mediaSvc *mediaservice.Service
 }
 
 type fc2CardsQuery struct {
@@ -20,21 +19,8 @@ type fc2CardsQuery struct {
 	PageSize int64 `form:"ps"`
 }
 
-type fc2CardRow struct {
-	*moviex.FC2Movie
-	ScreenshotURL   string
-	VideoURL        string
-	PlayButtonClass string
-	PlayButtonText  string
-	ShowPlayButton  bool
-	DownloadTime    int64
-	ScTimes         int64
-	ComeTimes       int64
-	LastScTime      int64
-}
-
 func NewFC2CardsAPI(deps *dep.Dep) *FC2CardsAPI {
-	return &FC2CardsAPI{deps: deps}
+	return &FC2CardsAPI{deps: deps, mediaSvc: mediaservice.NewService(deps)}
 }
 
 func (h *FC2CardsAPI) List(c *gin.Context) {
@@ -79,35 +65,11 @@ func (h *FC2CardsAPI) list(c *gin.Context, frontendPath, title string, ownedOnly
 		return
 	}
 
-	movieIDs := make([]int64, 0, len(movieRows))
-	for _, row := range movieRows {
-		if row != nil && row.ID > 0 {
-			movieIDs = append(movieIDs, row.ID)
-		}
-	}
-	mediaRows, err := h.deps.FC2MediaModel.ListByMovieIDs(c.Request.Context(), movieIDs)
+	rows, err := h.mediaSvc.BuildFC2CardViews(c.Request.Context(), movieRows)
 	if err != nil {
-		jsonServerError(c, "FC2卡片媒体加载失败", err)
+		jsonServerError(c, "FC2卡片数据加载失败", err)
 		return
 	}
-	statRows, err := h.deps.FC2ScStatModel.ListByMovieIDs(c.Request.Context(), movieIDs)
-	if err != nil {
-		jsonServerError(c, "FC2卡片SC统计加载失败", err)
-		return
-	}
-	mediaIDs := make([]int64, 0, len(mediaRows))
-	for _, row := range mediaRows {
-		if row != nil && row.ID > 0 {
-			mediaIDs = append(mediaIDs, row.ID)
-		}
-	}
-	imageRows, err := h.deps.FC2MediaImageModel.ListScreenshotsByMediaIDs(c.Request.Context(), mediaIDs)
-	if err != nil {
-		jsonServerError(c, "FC2卡片截图加载失败", err)
-		return
-	}
-
-	rows := buildFC2CardRows(movieRows, mediaRows, statRows, imageRows)
 	pageInfo := BuildPageInfo(c, total, query.Page, query.PageSize, pageWindow)
 	c.JSON(http.StatusOK, gin.H{
 		"Title":       title,
@@ -118,52 +80,4 @@ func (h *FC2CardsAPI) list(c *gin.Context, frontendPath, title string, ownedOnly
 		"pageInfo":    pageInfo,
 		"RandomOrder": randomOrder,
 	})
-}
-
-func buildFC2CardRows(movieRows []*moviex.FC2Movie, mediaRows []*moviex.FC2Media, statRows []*moviex.FC2ScStat, imageRows []*moviex.FC2MediaImage) []*fc2CardRow {
-	mediaByMovieID := make(map[int64]*moviex.FC2Media, len(mediaRows))
-	for _, row := range mediaRows {
-		if row != nil && row.FC2MovieID > 0 {
-			mediaByMovieID[row.FC2MovieID] = row
-		}
-	}
-	statByMovieID := make(map[int64]*moviex.FC2ScStat, len(statRows))
-	for _, row := range statRows {
-		if row != nil && row.FC2MovieID > 0 {
-			statByMovieID[row.FC2MovieID] = row
-		}
-	}
-	screenshotByID := make(map[int64]*moviex.FC2MediaImage, len(imageRows))
-	for _, row := range imageRows {
-		if row == nil || row.FC2MediaID <= 0 || strings.TrimSpace(row.ImageType) != "screenshot" {
-			continue
-		}
-		screenshotByID[row.ID] = row
-	}
-
-	items := make([]*fc2CardRow, 0, len(movieRows))
-	for _, movieRow := range movieRows {
-		if movieRow == nil {
-			continue
-		}
-		item := &fc2CardRow{FC2Movie: movieRow}
-		if mediaRow := mediaByMovieID[movieRow.ID]; mediaRow != nil {
-			mediaView := buildFC2MediaView(mediaRow)
-			item.VideoURL = mediaView.VideoURL
-			item.PlayButtonClass = mediaView.PlayButtonClass
-			item.PlayButtonText = mediaView.PlayButtonText
-			item.ShowPlayButton = mediaView.ShowPlayButton
-			item.DownloadTime = mediaRow.BirthTime
-			if imageRow := screenshotByID[movieRow.CoverImageID]; imageRow != nil && imageRow.FC2MediaID == mediaRow.ID {
-				item.ScreenshotURL = filepath.ToSlash(strings.TrimSpace(imageRow.FilePath))
-			}
-		}
-		if statRow := statByMovieID[movieRow.ID]; statRow != nil {
-			item.ScTimes = statRow.ScTimes
-			item.ComeTimes = statRow.ComeTimes
-			item.LastScTime = statRow.LastScTime
-		}
-		items = append(items, item)
-	}
-	return items
 }

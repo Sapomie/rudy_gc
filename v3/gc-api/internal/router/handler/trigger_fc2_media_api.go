@@ -25,6 +25,7 @@ type fc2MediaIngestItemRow struct {
 	FC2Code           string `json:"fc2_code"`
 	FC2Key            string `json:"fc2_key"`
 	FC2MovieID        int64  `json:"fc2_movie_id"`
+	FC2MediaID        int64  `json:"fc2_media_id"`
 	SourceThreadID    int64  `json:"source_thread_id"`
 	SourcePath        string `json:"source_path"`
 	TargetFileName    string `json:"target_file_name"`
@@ -75,6 +76,25 @@ func (h *FC2MediaTriggerAPI) Commit(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+	h.mediaSvc.EnqueueFC2DefaultCovers(successfulFC2MediaIDs(result))
+}
+
+func (h *FC2MediaTriggerAPI) BackfillDefaultCovers(c *gin.Context) {
+	c.JSON(http.StatusAccepted, gin.H{"ok": true, "message": "FC2默认联系表封面补齐任务已启动"})
+	h.mediaSvc.EnqueueFC2DefaultCoverBackfill()
+}
+
+func successfulFC2MediaIDs(result *media.FC2IngestResult) []int64 {
+	if result == nil {
+		return nil
+	}
+	mediaIDs := make([]int64, 0, result.Success)
+	for _, item := range result.Items {
+		if item != nil && strings.TrimSpace(item.Error) == "" && item.FC2MediaID > 0 {
+			mediaIDs = append(mediaIDs, item.FC2MediaID)
+		}
+	}
+	return mediaIDs
 }
 
 func (h *FC2MediaTriggerAPI) Plan(c *gin.Context) {
@@ -243,6 +263,7 @@ func buildFC2MediaIngestRow(item *media.FC2IngestFileItem) fc2MediaIngestItemRow
 		FC2Code:           strings.TrimSpace(item.FC2Code),
 		FC2Key:            strings.TrimSpace(item.FC2Key),
 		FC2MovieID:        item.FC2MovieID,
+		FC2MediaID:        item.FC2MediaID,
 		SourceThreadID:    item.SourceThreadID,
 		SourcePath:        strings.TrimSpace(item.SourcePath),
 		TargetFileName:    strings.TrimSpace(item.TargetFileName),

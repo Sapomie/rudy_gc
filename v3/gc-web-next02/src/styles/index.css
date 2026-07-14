@@ -1051,7 +1051,7 @@ input {
   }
 }
 
-/* Legacy layout lock: only skin colors may differ from v3/gc-web. */
+/* Desktop application shell layout. */
 .brand-block {
   position: fixed;
   top: 0;
@@ -34536,6 +34536,8 @@ input {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  padding-right: 12px;
+  padding-left: 12px;
   color: var(--sc-movie-ink);
   animation: scEventsMoviePageOpen 280ms ease both;
 }
@@ -34634,13 +34636,84 @@ input {
 
 .next02-smart-pick-page-rewrite .smart-pick-strategy-row {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: 8px;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-groups-column {
+.next02-smart-pick-page-rewrite .smart-pick-mixed-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-type-options,
+.next02-smart-pick-page-rewrite .smart-pick-type-groups,
+.next02-smart-pick-page-rewrite .smart-pick-result-section {
   min-width: 0;
+  border: 1px solid var(--sc-movie-line-soft);
+  border-radius: 8px;
+  background: #fffafd;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-type-options {
+  padding: 8px;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-type-options > h6 {
+  margin: 0 0 6px;
+  color: var(--sc-movie-primary-dark);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-type-options .smart-pick-advanced-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-type-groups {
+  margin: 0;
+  padding: 7px;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-type-groups-head,
+.next02-smart-pick-page-rewrite .smart-pick-result-section-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--sc-movie-line-soft);
+  margin-bottom: 7px;
+  padding-bottom: 7px;
+}
+
+.next02-smart-pick-page-rewrite :is(.smart-pick-type-groups-head, .smart-pick-result-section-head) > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.next02-smart-pick-page-rewrite :is(.smart-pick-type-groups-head, .smart-pick-result-section-head) > div:first-child > span {
+  display: inline-flex;
+  min-width: 32px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 7px;
+  background: var(--sc-movie-primary-soft);
+  color: var(--sc-movie-primary-dark);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.next02-smart-pick-page-rewrite :is(.smart-pick-type-groups-head, .smart-pick-result-section-head) h5,
+.next02-smart-pick-page-rewrite :is(.smart-pick-type-groups-head, .smart-pick-result-section-head) h6 {
+  margin: 0;
+  color: var(--sc-movie-ink);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .next02-smart-pick-page-rewrite .smart-pick-global-panel > .card-body,
@@ -34652,11 +34725,11 @@ input {
   margin-bottom: 0;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-groups-column .smart-pick-group-panel {
+.next02-smart-pick-page-rewrite .smart-pick-type-groups .smart-pick-group-panel {
   margin-bottom: 6px;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-groups-column .smart-pick-group-panel:last-child {
+.next02-smart-pick-page-rewrite .smart-pick-type-groups .smart-pick-group-panel:last-child {
   margin-bottom: 0;
 }
 
@@ -34673,7 +34746,6 @@ input {
 }
 
 .next02-smart-pick-page-rewrite .smart-pick-section-title,
-.next02-smart-pick-page-rewrite .smart-pick-groups-head,
 .next02-smart-pick-page-rewrite .smart-pick-group-head,
 .next02-smart-pick-page-rewrite .smart-pick-actions,
 .next02-smart-pick-page-rewrite .smart-pick-sort-tools {
@@ -34710,21 +34782,11 @@ input {
   line-height: 18px;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-groups-head,
 .next02-smart-pick-page-rewrite .smart-pick-group-head,
 .next02-smart-pick-page-rewrite .smart-pick-actions,
 .next02-smart-pick-page-rewrite .smart-pick-sort-tools {
   justify-content: space-between;
   gap: 8px;
-}
-
-.next02-smart-pick-page-rewrite .smart-pick-groups-head {
-  min-height: 26px;
-  margin: 0 0 5px;
-}
-
-.next02-smart-pick-page-rewrite .smart-pick-groups-head .smart-pick-section-title {
-  margin: 0;
 }
 
 .next02-smart-pick-page-rewrite .smart-pick-group-head {
@@ -34785,7 +34847,7 @@ input {
   white-space: nowrap;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-field .form-control {
+.next02-smart-pick-page-rewrite .smart-pick-field :is(.form-control, .form-select) {
   width: 100%;
   height: 26px;
   min-height: 26px;
@@ -34800,7 +34862,7 @@ input {
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-field .form-control:focus {
+.next02-smart-pick-page-rewrite .smart-pick-field :is(.form-control, .form-select):focus {
   border-color: var(--sc-movie-primary);
   outline: none;
   background: #fff;
@@ -34813,10 +34875,11 @@ input {
 
 .next02-smart-pick-page-rewrite .smart-pick-global-panel .btn,
 .next02-smart-pick-page-rewrite .smart-pick-group-panel .btn,
-.next02-smart-pick-page-rewrite .smart-pick-groups-head .btn,
+.next02-smart-pick-page-rewrite .smart-pick-type-groups-head .btn,
 .next02-smart-pick-page-rewrite .smart-pick-actions .btn,
 .next02-smart-pick-page-rewrite .smart-pick-copy-panel .btn,
-.next02-smart-pick-page-rewrite .smart-pick-results-panel .btn {
+.next02-smart-pick-page-rewrite .smart-pick-results-panel .btn,
+.next02-smart-pick-page-rewrite .smart-pick-result-section-head .btn {
   display: inline-flex;
   min-height: 30px;
   align-items: center;
@@ -34847,7 +34910,7 @@ input {
   color: #fff;
 }
 
-.next02-smart-pick-page-rewrite :is(.smart-pick-global-panel, .smart-pick-group-panel, .smart-pick-groups-head, .smart-pick-actions, .smart-pick-copy-panel, .smart-pick-results-panel) .btn:hover:not(:disabled) {
+.next02-smart-pick-page-rewrite :is(.smart-pick-global-panel, .smart-pick-group-panel, .smart-pick-type-groups-head, .smart-pick-actions, .smart-pick-copy-panel, .smart-pick-results-panel, .smart-pick-result-section-head) .btn:hover:not(:disabled) {
   border-color: var(--sc-movie-primary);
   background: var(--sc-movie-hover);
   color: var(--sc-movie-primary);
@@ -34861,7 +34924,7 @@ input {
   color: #fff;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-strategy-row :is(.smart-pick-global-panel, .smart-pick-group-panel, .smart-pick-groups-head) .btn {
+.next02-smart-pick-page-rewrite .smart-pick-strategy-row :is(.smart-pick-global-panel, .smart-pick-group-panel) .btn {
   min-height: 26px;
   height: 26px;
   padding: 2px 7px;
@@ -34874,7 +34937,7 @@ input {
   color: #be123c !important;
 }
 
-.next02-smart-pick-page-rewrite .btn:disabled {
+.next02-smart-pick-page-rewrite :is(.next02-smart-pick-hero, .smart-pick-config-panel, .smart-pick-copy-panel, .smart-pick-results-panel, .smart-pick-result-section-head) .btn:disabled {
   opacity: .5;
   cursor: not-allowed;
 }
@@ -35007,12 +35070,38 @@ input {
   margin-top: 8px;
 }
 
-.next02-smart-pick-page-rewrite .smart-pick-cards-section .movie-grid-v2 {
+.next02-smart-pick-page-rewrite .smart-pick-result-section {
+  margin-top: 10px;
+  padding: 9px;
+  background: linear-gradient(180deg, #fff 0%, #fffafd 100%);
+  box-shadow: 0 8px 20px rgba(132, 52, 88, .05);
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-result-section-head {
+  margin-bottom: 0;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-result-section.is-jav .smart-pick-cards-section .movie-grid-v2 {
   grid-template-columns: repeat(8, minmax(0, 1fr));
   margin: 0;
 }
 
-.next02-smart-pick-page-rewrite :is(a, button, input):focus-visible {
+.next02-smart-pick-page-rewrite .smart-pick-result-section.is-fc2 {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-result-section.is-fc2 .smart-pick-result-section-head {
+  border: 1px solid var(--sc-movie-line-soft);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #fffafd;
+}
+
+.next02-smart-pick-page-rewrite :is(.next02-smart-pick-hero, .smart-pick-config-panel, .smart-pick-copy-panel, .smart-pick-results-panel, .smart-pick-result-section-head) :is(a, button, input, select):focus-visible {
   outline: 2px solid rgba(217, 79, 138, .55);
   outline-offset: 2px;
 }
@@ -35022,8 +35111,7 @@ input {
   .next02-smart-pick-page-rewrite .next02-smart-pick-hero,
   .next02-smart-pick-page-rewrite .smart-pick-config-panel,
   .next02-smart-pick-page-rewrite .smart-pick-group-panel,
-  .next02-smart-pick-page-rewrite .smart-pick-advanced-panel.show,
-  .next02-smart-pick-page-rewrite .movie-card-v2 {
+  .next02-smart-pick-page-rewrite .smart-pick-advanced-panel.show {
     animation: none !important;
     transition: none !important;
   }
@@ -38161,82 +38249,6 @@ input {
   cursor: default;
   opacity: .45;
   box-shadow: none;
-}
-
-.fc2-detail-page .fc2-capture-forms {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.fc2-detail-page .fc2-capture-form {
-  display: flex;
-  min-width: 0;
-  align-items: flex-end;
-  gap: 10px;
-  border: 1px solid var(--bucket-row-line);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--bucket-soft-alt);
-}
-
-.fc2-detail-page .fc2-capture-form-copy {
-  min-width: 150px;
-  flex: 1 1 auto;
-}
-
-.fc2-detail-page .fc2-capture-form-copy strong,
-.fc2-detail-page .fc2-capture-form-copy span {
-  display: block;
-}
-
-.fc2-detail-page .fc2-capture-form-copy strong {
-  color: var(--bucket-text);
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.fc2-detail-page .fc2-capture-form-copy span,
-.fc2-detail-page .fc2-capture-field > span {
-  color: var(--bucket-muted);
-  font-size: 10px;
-  font-weight: 750;
-}
-
-.fc2-detail-page .fc2-capture-field {
-  display: block;
-  min-width: 100px;
-  margin: 0;
-}
-
-.fc2-detail-page .fc2-capture-field > span {
-  display: block;
-  margin-bottom: 3px;
-}
-
-.fc2-detail-page .fc2-capture-field .form-control {
-  min-height: 34px;
-  border-color: var(--bucket-row-line);
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.fc2-detail-page .fc2-capture-field .form-control:focus {
-  border-color: var(--bucket-pink);
-  box-shadow: 0 0 0 3px rgba(217, 79, 138, 0.14);
-}
-
-.fc2-detail-page .fc2-contact-sheet-fields {
-  display: grid;
-  min-width: 300px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.fc2-detail-page .fc2-capture-form .bucket-list-apply {
-  min-height: 34px;
-  white-space: nowrap;
 }
 
 .fc2-detail-page .fc2-capture-alert {

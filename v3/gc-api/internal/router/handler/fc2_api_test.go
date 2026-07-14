@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/model/modelx/moviex"
+	mediaservice "rudy_gc/internal/service/media"
 )
 
 func TestApplyFC2PlayButton(t *testing.T) {
@@ -72,8 +75,8 @@ func TestBuildFC2MediaImageView(t *testing.T) {
 	image := &moviex.FC2MediaImage{
 		ID:         9,
 		FC2MediaID: 7,
-		ImageType:  "screenshot",
-		FilePath:   "/Volumes/Expansion/f1/captures/7/screenshot-test.png",
+		ImageType:  "contact_sheet",
+		FilePath:   "/Volumes/Expansion/f1/captures/7/contact-sheet-test.png",
 		CreatedOn:  1784016000,
 	}
 	view := buildFC2MediaImageView(image, image.ID)
@@ -103,26 +106,73 @@ func TestNormalizeFC2Sort(t *testing.T) {
 }
 
 func TestBuildFC2CardRowsUsesSelectedCover(t *testing.T) {
-	movieRows := []*moviex.FC2Movie{{ID: 28, FC2Key: "FC2PPV-4556413-1", CoverImageID: 9}, {ID: 29, FC2Key: "FC2PPV-4664062-1"}}
-	mediaRows := []*moviex.FC2Media{{ID: 7, FC2MovieID: 28, FullDir: "/media", FileName: "4556413.mp4", BirthTime: 100}}
+	dir := t.TempDir()
+	paths := map[int64]string{}
+	for _, id := range []int64{9, 10, 11, 12, 13} {
+		paths[id] = filepath.Join(dir, "contact-sheet-"+strconv.FormatInt(id, 10)+".png")
+		if err := os.WriteFile(paths[id], []byte("image"), 0o644); err != nil {
+			t.Fatalf("创建测试联系表失败: %v", err)
+		}
+	}
+	movieRows := []*moviex.FC2Movie{
+		{ID: 28, FC2Key: "FC2PPV-4556413-1", CoverImageID: 10},
+		{ID: 29, FC2Key: "FC2PPV-4664062-1"},
+		{ID: 30, FC2Key: "FC2PPV-4771711-1", CoverImageID: 999},
+		{ID: 31, FC2Key: "FC2PPV-4888888-1"},
+	}
+	mediaRows := []*moviex.FC2Media{
+		{ID: 7, FC2MovieID: 28, FullDir: "/media", FileName: "4556413.mp4", BirthTime: 100, HasSub: int64(consts.FilmHasSub)},
+		{ID: 8, FC2MovieID: 29, FullDir: "/removed", FileName: "4664062.mp4", BirthTime: 101, IsRemoved: int64(consts.FilmIsRemoved)},
+		{ID: 9, FC2MovieID: 30},
+	}
 	statRows := []*moviex.FC2ScStat{{FC2MovieID: 28, ScTimes: 3, ComeTimes: 2, LastScTime: 200}}
 	imageRows := []*moviex.FC2MediaImage{
-		{ID: 9, FC2MediaID: 7, ImageType: "screenshot", FilePath: "/capture/old.png", CreatedOn: 100},
-		{ID: 10, FC2MediaID: 7, ImageType: "contact_sheet", FilePath: "/capture/sheet.png", CreatedOn: 300},
-		{ID: 11, FC2MediaID: 7, ImageType: "screenshot", FilePath: "/capture/new.png", CreatedOn: 200},
+		{ID: 9, FC2MediaID: 7, ImageType: "legacy", FilePath: paths[9], CreatedOn: 100},
+		{ID: 10, FC2MediaID: 7, ImageType: "contact_sheet", FilePath: paths[10], CreatedOn: 300},
+		{ID: 11, FC2MediaID: 7, ImageType: "contact_sheet", FilePath: paths[11], CreatedOn: 200},
+		{ID: 12, FC2MediaID: 8, ImageType: "contact_sheet", FilePath: paths[12], CreatedOn: 300},
+		{ID: 13, FC2MediaID: 9, ImageType: "contact_sheet", FilePath: paths[13], CreatedOn: 400},
 	}
 
-	rows := buildFC2CardRows(movieRows, mediaRows, statRows, imageRows)
-	if len(rows) != 2 {
+	rows := mediaservice.AssembleFC2CardViews(movieRows, mediaRows, statRows, imageRows)
+	if len(rows) != 4 {
 		t.Fatalf("card rows = %d", len(rows))
 	}
-	if rows[0].ScreenshotURL != "/capture/old.png" {
-		t.Fatalf("screenshot url = %q", rows[0].ScreenshotURL)
+	if rows[0].CoverImageURL != filepath.ToSlash(paths[10]) || rows[0].EffectiveCoverImageID != 10 {
+		t.Fatalf("cover image url = %q", rows[0].CoverImageURL)
+	}
+	if rows[1].CoverImageURL != filepath.ToSlash(paths[12]) || rows[1].EffectiveCoverImageID != 12 {
+		t.Fatalf("默认封面 = %#v", rows[1])
+	}
+	if rows[2].CoverImageURL != filepath.ToSlash(paths[13]) || rows[2].EffectiveCoverImageID != 13 {
+		t.Fatalf("失效关联回退封面 = %#v", rows[2])
 	}
 	if rows[0].ScTimes != 3 || rows[0].ComeTimes != 2 || rows[0].LastScTime != 200 {
 		t.Fatalf("sc stats = %#v", rows[0])
 	}
-	if rows[1].ScreenshotURL != "" {
-		t.Fatalf("movie without media should have empty screenshot: %q", rows[1].ScreenshotURL)
+	if !rows[0].ShowPlayButton || rows[0].PlayButtonClass != "btn-success" || rows[0].DownloadTime != 100 {
+		t.Fatalf("字幕媒体播放状态 = %#v", rows[0])
+	}
+	if !rows[1].ShowPlayButton || rows[1].PlayButtonClass != "btn-secondary" || rows[1].PlayButtonText != "Removed" || rows[1].DownloadTime != 101 {
+		t.Fatalf("已移除媒体播放状态 = %#v", rows[1])
+	}
+	if rows[3].CoverImageURL != "" {
+		t.Fatalf("movie without media should have empty cover: %q", rows[3].CoverImageURL)
+	}
+}
+
+func TestSuccessfulFC2MediaIDsOnlyReturnsCommittedRows(t *testing.T) {
+	result := &mediaservice.FC2IngestResult{
+		Success: 2,
+		Items: []*mediaservice.FC2IngestFileItem{
+			{FC2MediaID: 7},
+			{FC2MediaID: 8, Error: "failed"},
+			{FC2MediaID: 9},
+			{FC2MediaID: 0},
+		},
+	}
+	ids := successfulFC2MediaIDs(result)
+	if len(ids) != 2 || ids[0] != 7 || ids[1] != 9 {
+		t.Fatalf("成功媒体 ID = %#v，期望 [7 9]", ids)
 	}
 }

@@ -11,8 +11,8 @@ include $(V3_VERIFY_MAKE_DIR)gc-apps.mk
 
 test-all: test-api
 
-build-all: build-api check-web
+build-all: build-api check-web-next02
 
-verify: test-api check-web
+verify: test-api check-web-next02
 
 endif

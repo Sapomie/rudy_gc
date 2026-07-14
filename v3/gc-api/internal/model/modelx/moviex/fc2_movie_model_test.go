@@ -66,6 +66,36 @@ func TestApplyFC2CardFilterOwned(t *testing.T) {
 	}
 }
 
+func TestBuildFC2SmartPickMediaQueryUsesSingleTableFilters(t *testing.T) {
+	hasSub := int64(2)
+	selfMake := int64(1)
+	hasMask := int64(3)
+	query, args, err := buildFC2SmartPickMediaQuery(FC2SmartPickMediaFilter{
+		BirthTimeStart: 100,
+		BirthTimeEnd:   200,
+		MediaDir1:      "FC2",
+		MediaDir2:      "sub",
+		HasSub:         &hasSub,
+		SelfMake:       &selfMake,
+		HasMask:        &hasMask,
+	}).ToSql()
+	if err != nil {
+		t.Fatalf("build query: %v", err)
+	}
+	lowerQuery := strings.ToLower(query)
+	if strings.Contains(lowerQuery, " join ") {
+		t.Fatalf("FC2 Smart Pick 查询禁止 JOIN: %s", query)
+	}
+	for _, fragment := range []string{"from `fc2_media`", "`is_removed` = ?", "`birth_time` >= ?", "`birth_time` <= ?", "`has_sub` = ?", "`self_make` = ?", "`has_mask` = ?"} {
+		if !strings.Contains(lowerQuery, strings.ToLower(fragment)) {
+			t.Fatalf("query missing %q: %s", fragment, query)
+		}
+	}
+	if len(args) != 8 {
+		t.Fatalf("args = %#v", args)
+	}
+}
+
 func TestNativeMediaBaseQueryHasNoJoin(t *testing.T) {
 	query, _, err := nativeMediaListBuilder("`w_media`", "wm").ToSql()
 	if err != nil {

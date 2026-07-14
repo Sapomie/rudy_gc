@@ -12,7 +12,7 @@ type FC2MediaImageModel interface {
 	Insert(ctx context.Context, data *FC2MediaImage) (*FC2MediaImage, error)
 	FindOneByMediaIDAndID(ctx context.Context, mediaID, id int64) (*FC2MediaImage, error)
 	ListByMediaID(ctx context.Context, mediaID int64) ([]*FC2MediaImage, error)
-	ListScreenshotsByMediaIDs(ctx context.Context, mediaIDs []int64) ([]*FC2MediaImage, error)
+	ListByMediaIDs(ctx context.Context, mediaIDs []int64) ([]*FC2MediaImage, error)
 	DeleteByMediaIDAndID(ctx context.Context, mediaID, id int64) error
 }
 
@@ -76,19 +76,18 @@ func (m *defaultFC2MediaImageModel) ListByMediaID(ctx context.Context, mediaID i
 	return rows, nil
 }
 
-func (m *defaultFC2MediaImageModel) ListScreenshotsByMediaIDs(ctx context.Context, mediaIDs []int64) ([]*FC2MediaImage, error) {
+func (m *defaultFC2MediaImageModel) ListByMediaIDs(ctx context.Context, mediaIDs []int64) ([]*FC2MediaImage, error) {
 	ids := uniquePositiveInt64s(mediaIDs)
 	if len(ids) == 0 {
 		return []*FC2MediaImage{}, nil
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
-	args := make([]any, 0, len(ids)+1)
+	args := make([]any, 0, len(ids))
 	for _, id := range ids {
 		args = append(args, id)
 	}
-	args = append(args, "screenshot")
 	rows := make([]*FC2MediaImage, 0)
-	query := "SELECT " + fc2MediaImageRows + " FROM `fc2_media_image` WHERE `fc2_media_id` IN (" + placeholders + ") AND `image_type` = ? ORDER BY `fc2_media_id` ASC, `created_on` DESC, `id` DESC"
+	query := "SELECT " + fc2MediaImageRows + " FROM `fc2_media_image` WHERE `fc2_media_id` IN (" + placeholders + ") ORDER BY `fc2_media_id` ASC, `created_on` DESC, `id` DESC"
 	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return []*FC2MediaImage{}, nil

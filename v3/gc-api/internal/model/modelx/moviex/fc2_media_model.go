@@ -6,7 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+
+	"rudy_gc/internal/consts"
 )
 
 type FC2MediaModel interface {
@@ -15,12 +18,26 @@ type FC2MediaModel interface {
 	FindOneByMovieID(ctx context.Context, movieID int64) (*FC2Media, error)
 	FindOneByKey(ctx context.Context, key string) (*FC2Media, error)
 	FindOneByFileName(ctx context.Context, fileName string) (*FC2Media, error)
+	ListAll(ctx context.Context) ([]*FC2Media, error)
 	ListByFileNames(ctx context.Context, fileNames []string) ([]*FC2Media, error)
 	ListByKeys(ctx context.Context, keys []string) ([]*FC2Media, error)
 	ListByMovieIDs(ctx context.Context, movieIDs []int64) ([]*FC2Media, error)
 	ListByFullDirPrefixes(ctx context.Context, prefixes []string) ([]*FC2Media, error)
+	ListSmartPickCandidates(ctx context.Context, filter FC2SmartPickMediaFilter) ([]*FC2Media, error)
 	Update(ctx context.Context, data *FC2Media) error
 	Delete(ctx context.Context, id int64) error
+}
+
+type FC2SmartPickMediaFilter struct {
+	BirthTimeStart int64
+	BirthTimeEnd   int64
+	MediaDir1      string
+	MediaDir2      string
+	MediaDir3      string
+	MediaDir4      string
+	HasSub         *int64
+	SelfMake       *int64
+	HasMask        *int64
 }
 
 type FC2Media struct {
@@ -124,6 +141,17 @@ func (m *defaultFC2MediaModel) FindOneByFileName(ctx context.Context, fileName s
 	return &row, nil
 }
 
+func (m *defaultFC2MediaModel) ListAll(ctx context.Context) ([]*FC2Media, error) {
+	rows := make([]*FC2Media, 0)
+	if err := m.conn.QueryRowsCtx(ctx, &rows, "SELECT "+fc2MediaRows+" FROM `fc2_media` ORDER BY `id` ASC"); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*FC2Media{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (m *defaultFC2MediaModel) ListByFileNames(ctx context.Context, fileNames []string) ([]*FC2Media, error) {
 	return m.listByStringValues(ctx, "file_name", fileNames)
 }
@@ -221,6 +249,54 @@ func (m *defaultFC2MediaModel) ListByFullDirPrefixes(ctx context.Context, prefix
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (m *defaultFC2MediaModel) ListSmartPickCandidates(ctx context.Context, filter FC2SmartPickMediaFilter) ([]*FC2Media, error) {
+	builder := buildFC2SmartPickMediaQuery(filter)
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]*FC2Media, 0)
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*FC2Media{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func buildFC2SmartPickMediaQuery(filter FC2SmartPickMediaFilter) squirrel.SelectBuilder {
+	builder := squirrel.
+		Select(fc2MediaRows).
+		From("`fc2_media`").
+		Where("`fc2_movie_id` > 0").
+		Where("`is_removed` = ?", consts.FilmIsNotRemoved).
+		Where("`full_dir` <> ''").
+		Where("`file_name` <> ''")
+	if filter.BirthTimeStart > 0 {
+		builder = builder.Where("`birth_time` >= ?", filter.BirthTimeStart)
+	}
+	if filter.BirthTimeEnd > 0 {
+		builder = builder.Where("`birth_time` <= ?", filter.BirthTimeEnd)
+	}
+	for _, mediaDir := range []string{filter.MediaDir1, filter.MediaDir2, filter.MediaDir3, filter.MediaDir4} {
+		mediaDir = strings.Trim(strings.TrimSpace(mediaDir), "/\\")
+		if mediaDir != "" {
+			builder = builder.Where("CONCAT('/', `full_dir`, '/') LIKE ?", "%/"+mediaDir+"/%")
+		}
+	}
+	if filter.HasSub != nil {
+		builder = builder.Where("`has_sub` = ?", *filter.HasSub)
+	}
+	if filter.SelfMake != nil {
+		builder = builder.Where("`self_make` = ?", *filter.SelfMake)
+	}
+	if filter.HasMask != nil {
+		builder = builder.Where("`has_mask` = ?", *filter.HasMask)
+	}
+	return builder.OrderBy("`birth_time` DESC", "`id` DESC")
 }
 
 func (m *defaultFC2MediaModel) Update(ctx context.Context, data *FC2Media) error {

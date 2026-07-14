@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,87 +11,21 @@ import (
 	"strings"
 	"time"
 
+	fc2domain "rudy_gc/internal/domain/fc2"
 	"rudy_gc/internal/model/modelx/moviex"
 )
 
 const (
-	FC2MediaImageTypeScreenshot   = "screenshot"
 	FC2MediaImageTypeContactSheet = "contact_sheet"
+	fc2DefaultCoverColumns        = 2
+	fc2DefaultCoverRows           = 5
+	fc2DefaultCoverCellWidth      = 400
 )
 
 var ErrInvalidFC2CaptureRequest = errors.New("FC2视频图片生成参数无效")
 
-type FC2ScreenshotOptions struct {
-	TimeSeconds float64
-}
-
-type FC2ContactSheetOptions struct {
-	Columns   int
-	Rows      int
-	CellWidth int
-}
-
-func (s *Service) GenerateFC2Screenshot(ctx context.Context, mediaRow *moviex.FC2Media, options FC2ScreenshotOptions) (*moviex.FC2MediaImage, error) {
-	if mediaRow == nil || mediaRow.ID <= 0 {
-		return nil, fmt.Errorf("%w: FC2媒体记录为空", ErrInvalidFC2CaptureRequest)
-	}
-	if math.IsNaN(options.TimeSeconds) || math.IsInf(options.TimeSeconds, 0) || options.TimeSeconds < 0 {
-		return nil, fmt.Errorf("%w: 截图时间必须是非负数", ErrInvalidFC2CaptureRequest)
-	}
-	if mediaRow.Duration <= 0 {
-		return nil, fmt.Errorf("%w: 视频时长无效", ErrInvalidFC2CaptureRequest)
-	}
-	if options.TimeSeconds >= float64(mediaRow.Duration) {
-		return nil, fmt.Errorf("%w: 截图时间必须小于视频时长", ErrInvalidFC2CaptureRequest)
-	}
-
-	sourcePath, captureDir, err := s.prepareFC2Capture(mediaRow)
-	if err != nil {
-		return nil, err
-	}
-	tempPath, finalPath, err := reserveFC2CaptureOutput(captureDir, FC2MediaImageTypeScreenshot)
-	if err != nil {
-		return nil, err
-	}
-	keepTemp := true
-	defer func() {
-		if keepTemp {
-			_ = os.Remove(tempPath)
-		}
-	}()
-
-	args := []string{
-		"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-		"-i", sourcePath,
-		"-ss", formatFFmpegSeconds(options.TimeSeconds),
-		"-map", "0:v:0", "-frames:v", "1", "-an",
-		tempPath,
-	}
-	if err := runFFmpeg(ctx, args...); err != nil {
-		return nil, err
-	}
-	if err := os.Rename(tempPath, finalPath); err != nil {
-		return nil, err
-	}
-	keepTemp = false
-	imageRow, err := s.persistFC2MediaImage(ctx, mediaRow.ID, FC2MediaImageTypeScreenshot, finalPath)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.updateFC2CoverImage(ctx, mediaRow.FC2MovieID, imageRow.ID); err != nil {
-		deleteErr := s.deps.FC2MediaImageModel.DeleteByMediaIDAndID(ctx, mediaRow.ID, imageRow.ID)
-		removeErr := os.Remove(imageRow.FilePath)
-		if deleteErr != nil || (removeErr != nil && !os.IsNotExist(removeErr)) {
-			return nil, fmt.Errorf("设置新截图为封面失败: %v；回滚图片记录失败: %v；回滚图片文件失败: %v", err, deleteErr, removeErr)
-		}
-		return nil, fmt.Errorf("设置新截图为封面失败: %w", err)
-	}
-	return imageRow, nil
-}
-
-func (s *Service) GenerateFC2ContactSheet(ctx context.Context, mediaRow *moviex.FC2Media, options FC2ContactSheetOptions) (*moviex.FC2MediaImage, error) {
-	frameCount, err := validateFC2ContactSheetOptions(mediaRow, options)
-	if err != nil {
+func (s *Service) GenerateFC2DefaultCover(ctx context.Context, mediaRow *moviex.FC2Media) (*moviex.FC2MediaImage, error) {
+	if err := validateFC2DefaultCoverMedia(mediaRow); err != nil {
 		return nil, err
 	}
 	sourcePath, captureDir, err := s.prepareFC2Capture(mediaRow)
@@ -105,6 +38,7 @@ func (s *Service) GenerateFC2ContactSheet(ctx context.Context, mediaRow *moviex.
 	}
 	defer os.RemoveAll(buildDir)
 
+	frameCount := fc2DefaultCoverColumns * fc2DefaultCoverRows
 	timestamps := buildFC2ContactSheetTimestamps(float64(mediaRow.Duration), frameCount)
 	for index, timestamp := range timestamps {
 		framePath := filepath.Join(buildDir, fmt.Sprintf("frame-%06d.png", index))
@@ -113,7 +47,7 @@ func (s *Service) GenerateFC2ContactSheet(ctx context.Context, mediaRow *moviex.
 			"-ss", formatFFmpegSeconds(timestamp),
 			"-i", sourcePath,
 			"-map", "0:v:0", "-frames:v", "1", "-an",
-			"-vf", fmt.Sprintf("scale=%d:-2", options.CellWidth),
+			"-vf", fmt.Sprintf("scale=%d:-2", fc2DefaultCoverCellWidth),
 			framePath,
 		}
 		if err := runFFmpeg(ctx, args...); err != nil {
@@ -121,7 +55,7 @@ func (s *Service) GenerateFC2ContactSheet(ctx context.Context, mediaRow *moviex.
 		}
 	}
 
-	tempPath, finalPath, err := reserveFC2CaptureOutput(captureDir, FC2MediaImageTypeContactSheet)
+	tempPath, finalPath, err := reserveFC2DefaultCoverOutput(captureDir)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +69,7 @@ func (s *Service) GenerateFC2ContactSheet(ctx context.Context, mediaRow *moviex.
 		"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
 		"-framerate", "1", "-start_number", "0",
 		"-i", filepath.Join(buildDir, "frame-%06d.png"),
-		"-vf", fmt.Sprintf("tile=%dx%d:nb_frames=%d", options.Columns, options.Rows, frameCount),
+		"-vf", fmt.Sprintf("tile=%dx%d:nb_frames=%d", fc2DefaultCoverColumns, fc2DefaultCoverRows, frameCount),
 		"-frames:v", "1", "-an",
 		tempPath,
 	}
@@ -146,23 +80,29 @@ func (s *Service) GenerateFC2ContactSheet(ctx context.Context, mediaRow *moviex.
 		return nil, err
 	}
 	keepTemp = false
-	return s.persistFC2MediaImage(ctx, mediaRow.ID, FC2MediaImageTypeContactSheet, finalPath)
+	imageRow, err := s.persistFC2DefaultCover(ctx, mediaRow.ID, finalPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, imageRow.ID); err != nil {
+		deleteErr := s.deps.FC2MediaImageModel.DeleteByMediaIDAndID(ctx, mediaRow.ID, imageRow.ID)
+		removeErr := os.Remove(imageRow.FilePath)
+		if deleteErr != nil || (removeErr != nil && !os.IsNotExist(removeErr)) {
+			return nil, fmt.Errorf("设置默认联系表封面失败: %v；回滚图片记录失败: %v；回滚图片文件失败: %v", err, deleteErr, removeErr)
+		}
+		return nil, fmt.Errorf("设置默认联系表封面失败: %w", err)
+	}
+	return imageRow, nil
 }
 
-func validateFC2ContactSheetOptions(mediaRow *moviex.FC2Media, options FC2ContactSheetOptions) (int, error) {
+func validateFC2DefaultCoverMedia(mediaRow *moviex.FC2Media) error {
 	if mediaRow == nil || mediaRow.ID <= 0 {
-		return 0, fmt.Errorf("%w: FC2媒体记录为空", ErrInvalidFC2CaptureRequest)
+		return fmt.Errorf("%w: FC2媒体记录为空", ErrInvalidFC2CaptureRequest)
 	}
 	if mediaRow.Duration <= 0 {
-		return 0, fmt.Errorf("%w: 视频时长无效", ErrInvalidFC2CaptureRequest)
+		return fmt.Errorf("%w: 视频时长无效", ErrInvalidFC2CaptureRequest)
 	}
-	if options.Columns <= 0 || options.Rows <= 0 || options.CellWidth <= 0 {
-		return 0, fmt.Errorf("%w: 行数、列数和单格宽度必须是正整数", ErrInvalidFC2CaptureRequest)
-	}
-	if options.Columns > math.MaxInt/options.Rows {
-		return 0, fmt.Errorf("%w: 行列乘积溢出", ErrInvalidFC2CaptureRequest)
-	}
-	return options.Columns * options.Rows, nil
+	return nil
 }
 
 func (s *Service) prepareFC2Capture(mediaRow *moviex.FC2Media) (string, string, error) {
@@ -199,15 +139,30 @@ func (s *Service) prepareFC2Capture(mediaRow *moviex.FC2Media) (string, string, 
 	if localImageDir == "" || localImageDir == "." {
 		return "", "", fmt.Errorf("FC2媒体图片 local_image_dir 未配置")
 	}
-	captureDir := filepath.Join(localImageDir, strconv.FormatInt(mediaRow.ID, 10))
+	captureDirName, err := fc2CaptureDirName(mediaRow)
+	if err != nil {
+		return "", "", err
+	}
+	captureDir := filepath.Join(localImageDir, captureDirName)
 	if err := os.MkdirAll(captureDir, defaultFilePerm); err != nil {
 		return "", "", err
 	}
 	return sourcePath, captureDir, nil
 }
 
-func reserveFC2CaptureOutput(captureDir, imageType string) (string, string, error) {
-	file, err := os.CreateTemp(captureDir, "."+imageType+"-*.png")
+func fc2CaptureDirName(mediaRow *moviex.FC2Media) (string, error) {
+	if mediaRow == nil {
+		return "", fmt.Errorf("%w: FC2媒体记录为空", ErrInvalidFC2CaptureRequest)
+	}
+	fc2Key, _, _, _, ok := fc2domain.NormalizeKey(mediaRow.FC2Key)
+	if !ok {
+		return "", fmt.Errorf("%w: FC2媒体 fc2_key 无效: %s", ErrInvalidFC2CaptureRequest, strings.TrimSpace(mediaRow.FC2Key))
+	}
+	return fc2Key, nil
+}
+
+func reserveFC2DefaultCoverOutput(captureDir string) (string, string, error) {
+	file, err := os.CreateTemp(captureDir, "."+FC2MediaImageTypeContactSheet+"-*.png")
 	if err != nil {
 		return "", "", err
 	}
@@ -220,14 +175,14 @@ func reserveFC2CaptureOutput(captureDir, imageType string) (string, string, erro
 	return tempPath, finalPath, nil
 }
 
-func (s *Service) persistFC2MediaImage(ctx context.Context, mediaID int64, imageType, filePath string) (*moviex.FC2MediaImage, error) {
+func (s *Service) persistFC2DefaultCover(ctx context.Context, mediaID int64, filePath string) (*moviex.FC2MediaImage, error) {
 	if s.deps.FC2MediaImageModel == nil {
 		_ = os.Remove(filePath)
 		return nil, fmt.Errorf("FC2媒体图片模型为空")
 	}
 	row, err := s.deps.FC2MediaImageModel.Insert(ctx, &moviex.FC2MediaImage{
 		FC2MediaID: mediaID,
-		ImageType:  imageType,
+		ImageType:  FC2MediaImageTypeContactSheet,
 		FilePath:   filepath.Clean(filePath),
 		CreatedOn:  time.Now().Unix(),
 	})
@@ -249,16 +204,17 @@ func (s *Service) SetFC2CoverImage(ctx context.Context, mediaRow *moviex.FC2Medi
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(imageRow.ImageType) != FC2MediaImageTypeScreenshot {
-		return nil, fmt.Errorf("%w: 只有截图可以设为封面", ErrInvalidFC2CaptureRequest)
+	coverImage := ResolveFC2CoverImage(mediaRow.ID, imageID, []*moviex.FC2MediaImage{imageRow})
+	if coverImage == nil || coverImage.ID != imageID {
+		return nil, fmt.Errorf("%w: 只有文件有效的默认联系表可以设为封面", ErrInvalidFC2CaptureRequest)
 	}
-	if err := s.updateFC2CoverImage(ctx, mediaRow.FC2MovieID, imageRow.ID); err != nil {
+	if err := s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, coverImage.ID); err != nil {
 		return nil, err
 	}
-	return imageRow, nil
+	return coverImage, nil
 }
 
-func (s *Service) updateFC2CoverImage(ctx context.Context, movieID, imageID int64) error {
+func (s *Service) saveFC2CoverImage(ctx context.Context, movieID, imageID int64) error {
 	if s == nil || s.deps == nil || s.deps.FC2MovieModel == nil {
 		return fmt.Errorf("FC2影片模型为空")
 	}
@@ -283,27 +239,38 @@ func (s *Service) DeleteFC2MediaImage(ctx context.Context, mediaRow *moviex.FC2M
 	if err != nil {
 		return 0, err
 	}
-	nextCoverImageID := movieRow.CoverImageID
-	coverChanged := movieRow.CoverImageID == imageID
+	imageRows, err := s.deps.FC2MediaImageModel.ListByMediaID(ctx, mediaRow.ID)
+	if err != nil {
+		return 0, err
+	}
+	currentCover := ResolveFC2CoverImage(mediaRow.ID, movieRow.CoverImageID, imageRows)
+	effectiveCoverImageID := int64(0)
+	if currentCover != nil {
+		effectiveCoverImageID = currentCover.ID
+	}
+	coverChanged := movieRow.CoverImageID == imageID || effectiveCoverImageID == imageID
+	nextCoverImageID := effectiveCoverImageID
 	if coverChanged {
-		nextCoverImageID = 0
-		imageRows, listErr := s.deps.FC2MediaImageModel.ListByMediaID(ctx, mediaRow.ID)
-		if listErr != nil {
-			return 0, listErr
-		}
+		remainingRows := make([]*moviex.FC2MediaImage, 0, len(imageRows))
 		for _, candidate := range imageRows {
-			if candidate == nil || candidate.ID == imageID || strings.TrimSpace(candidate.ImageType) != FC2MediaImageTypeScreenshot {
-				continue
+			if candidate != nil && candidate.ID != imageID {
+				remainingRows = append(remainingRows, candidate)
 			}
-			nextCoverImageID = candidate.ID
-			break
+		}
+		nextCoverImageID = 0
+		if nextCover := ResolveFC2CoverImage(mediaRow.ID, 0, remainingRows); nextCover != nil {
+			nextCoverImageID = nextCover.ID
 		}
 	}
 	localImageDir := filepath.Clean(strings.TrimSpace(s.deps.Config.FC2Media.LocalImageDir))
 	if localImageDir == "" || localImageDir == "." {
 		return 0, fmt.Errorf("FC2媒体图片 local_image_dir 未配置")
 	}
-	activeDir := filepath.Join(localImageDir, strconv.FormatInt(mediaRow.ID, 10))
+	captureDirName, err := fc2CaptureDirName(mediaRow)
+	if err != nil {
+		return 0, err
+	}
+	activeDir := filepath.Join(localImageDir, captureDirName)
 	filePath := filepath.Clean(strings.TrimSpace(imageRow.FilePath))
 	if filePath == "" || filePath == "." || filepath.Dir(filePath) != activeDir || !isPathWithin(filePath, activeDir) {
 		return 0, fmt.Errorf("FC2媒体图片路径无效: %s", filePath)
@@ -315,7 +282,7 @@ func (s *Service) DeleteFC2MediaImage(ctx context.Context, mediaRow *moviex.FC2M
 		if !fileInfo.Mode().IsRegular() {
 			return 0, fmt.Errorf("FC2媒体图片不是普通文件: %s", filePath)
 		}
-		deletedDir := filepath.Join(localImageDir, "deleted", strconv.FormatInt(mediaRow.ID, 10))
+		deletedDir := filepath.Join(localImageDir, "deleted", captureDirName)
 		if err := os.MkdirAll(deletedDir, defaultFilePerm); err != nil {
 			return 0, err
 		}
@@ -330,7 +297,7 @@ func (s *Service) DeleteFC2MediaImage(ctx context.Context, mediaRow *moviex.FC2M
 	}
 
 	if coverChanged {
-		if err := s.updateFC2CoverImage(ctx, mediaRow.FC2MovieID, nextCoverImageID); err != nil {
+		if err := s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, nextCoverImageID); err != nil {
 			return 0, err
 		}
 	}
@@ -338,7 +305,7 @@ func (s *Service) DeleteFC2MediaImage(ctx context.Context, mediaRow *moviex.FC2M
 		if !coverChanged {
 			return nil
 		}
-		return s.updateFC2CoverImage(ctx, mediaRow.FC2MovieID, imageID)
+		return s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, movieRow.CoverImageID)
 	}
 	if archivedPath != "" {
 		if err := os.Rename(filePath, archivedPath); err != nil {

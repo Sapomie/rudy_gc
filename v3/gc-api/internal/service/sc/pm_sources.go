@@ -17,9 +17,6 @@ import (
 //
 
 type PickConfig struct {
-	// 候选集请求参数
-	PageSize int64
-
 	// 多样性：减少演员重复（越大惩罚越强）
 	DiversityBeta float64
 
@@ -42,7 +39,6 @@ type PickConfig struct {
 
 func DefaultPickConfig() PickConfig {
 	return PickConfig{
-		PageSize:          100000,
 		DiversityBeta:     100, // 你当前使用的默认
 		ActorPenaltyAlpha: 0.6,
 		HalfLifeActorDays: 50,
@@ -104,7 +100,6 @@ func (l *ScService) PickFromSources(ctx context.Context, reqs []*requestWithWeig
 			rw.w = 1
 		}
 		req := rw.req
-		ensureReqDefaults(req)
 
 		cands, err := l.fetchCandidates(ctx, req)
 		if err != nil {
@@ -252,20 +247,11 @@ func (l *ScService) loadWatchMaps(ctx context.Context) (movieLast, actorLast map
 
 // 拉取候选集
 func (l *ScService) fetchCandidates(ctx context.Context, req *types.ListMovieFullRequest) ([]*types.MovieType, error) {
-	resp, err := l.movieSvc.ListMovieFull(ctx, req)
+	resp, err := l.movieSvc.ListMovieFullAll(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 	return resp.List, nil
-}
-
-func ensureReqDefaults(req *types.ListMovieFullRequest) {
-	if req.Page == 0 {
-		req.Page = 1
-	}
-	if req.PageSize == 0 {
-		req.PageSize = 100
-	}
 }
 
 // 计算基础权重

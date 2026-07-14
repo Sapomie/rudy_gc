@@ -1,7 +1,0 @@
-{
-  "scripts": {
-    "dev": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/top-nav.js && node --check src/sidebar.js && node --check src/cards.js && node --check src/movie-agg.js && node --check src/list.js && node --check src/sc.js && node --check src/movie-detail.js && node --check src/crawler-jobs.js && node --check src/crawler-tasks.js && node --check src/crawler-detail-loop.js && node --check src/fetch-site-list.js && node --check src/fetch-sites.js"
-  },
-  "dependencies": {}
-}

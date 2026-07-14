@@ -223,10 +223,12 @@ func (s *Service) processOneFC2IngestFile(ctx context.Context, layout rootLayout
 		CreatedOn:         nowUnix,
 		UpdatedOn:         nowUnix,
 	}
-	if err = s.insertFC2Media(ctx, row); err != nil {
+	insertedRow, err := s.insertFC2Media(ctx, row)
+	if err != nil {
 		processErr = err
 		return item
 	}
+	item.FC2MediaID = insertedRow.ID
 	holding = ""
 	if err = s.moveFC2SourceItemToMediaAlbum(ctx, prepared.favoriteSource); err != nil {
 		processErr = err
@@ -237,19 +239,22 @@ func (s *Service) processOneFC2IngestFile(ctx context.Context, layout rootLayout
 	return item
 }
 
-func (s *Service) insertFC2Media(ctx context.Context, row *moviex.FC2Media) error {
+func (s *Service) insertFC2Media(ctx context.Context, row *moviex.FC2Media) (*moviex.FC2Media, error) {
 	if row == nil {
-		return fmt.Errorf("nil fc2_media row")
+		return nil, fmt.Errorf("nil fc2_media row")
 	}
-	if _, err := s.deps.FC2MediaModel.Insert(ctx, row); err == nil {
-		if err := s.syncFC2MediaSnapshots(ctx, row.FC2MovieID); err != nil {
-			return err
+	if insertedRow, err := s.deps.FC2MediaModel.Insert(ctx, row); err == nil {
+		if err := s.syncFC2MediaSnapshots(ctx, insertedRow.FC2MovieID); err != nil {
+			return nil, err
 		}
-		return s.refreshSHMagnetDownloadStates(ctx, row.SourceTorrentHash)
+		if err := s.refreshSHMagnetDownloadStates(ctx, insertedRow.SourceTorrentHash); err != nil {
+			return nil, err
+		}
+		return insertedRow, nil
 	} else if isDuplicateEntryErr(err) {
-		return fmt.Errorf("FC2影片媒体已存在，拒绝覆盖: movie_id=%d: %w", row.FC2MovieID, err)
+		return nil, fmt.Errorf("FC2影片媒体已存在，拒绝覆盖: movie_id=%d: %w", row.FC2MovieID, err)
 	} else {
-		return err
+		return nil, err
 	}
 }
 

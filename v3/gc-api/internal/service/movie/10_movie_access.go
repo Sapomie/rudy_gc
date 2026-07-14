@@ -78,6 +78,22 @@ func (s *Service) ListMovieFull(ctx context.Context, r *types.ListMovieFullReque
 	}, nil
 }
 
+func (s *Service) ListMovieFullAll(ctx context.Context, r *types.ListMovieFullRequest) (*types.ListMovieResponse, error) {
+	javIDs, err := s.movieListQuery().ListFullIDs(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.MovieType, 0, len(javIDs))
+	for _, javID := range javIDs {
+		movie, err := s.GetMovieType(ctx, javID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, movie)
+	}
+	return &types.ListMovieResponse{List: out, Total: int64(len(javIDs)), JavIds: javIDs}, nil
+}
+
 func (s *Service) ListMovieFullRandom(ctx context.Context, r *types.ListMovieFullRequest, n int64) (*types.ListMovieResponse, error) {
 	candidateIDs, err := s.movieListQuery().ListFullIDs(ctx, r)
 	if err != nil {

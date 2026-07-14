@@ -1,5 +1,5 @@
 <template>
-  <PageShell class="sc-events-page-shell sc-pick-page-shell cards-page-shell next02-pink-cards-page" :title="title" eyebrow="">
+  <PageShell class="sc-events-page-shell sc-pick-page-shell cards-page-shell next02-pink-cards-page next02-pink-cards-page-shell" :title="title" eyebrow="">
     <div id="page-root" class="container-fluid sc-pick-page-root next02-sc-pink-theme next02-smart-pick-page-rewrite">
       <div v-if="loading" class="alert alert-info py-2">加载中...</div>
       <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
@@ -8,7 +8,7 @@
           <div class="next02-sc-hero-copy">
             <span class="next02-sc-eyebrow">SC / SMART PICK LAB</span>
             <h4>{{ pageTitle }}</h4>
-            <p>{{ pageNote || "组合多组条件、Rank 配额和 SC 阻断策略，完成抽片与 Copy。" }}</p>
+            <p>{{ effectivePageNote }}</p>
           </div>
           <div class="next02-sc-hero-actions">
             <a href="/scevents" class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer">SC Events</a>
@@ -25,11 +25,11 @@
 
         <div class="card next02-sc-panel next02-sc-movie-table-card smart-pick-config-panel">
           <div class="card-body">
-            <form ref="formEl" id="formPickSmart" class="needs-validation" novalidate :data-source="pageSource" @submit.prevent="runPick(true)">
+            <form ref="formEl" id="formPickSmart" class="needs-validation" novalidate :data-source="pageSource" data-movie-type="mixed" @submit.prevent="runPick(true)">
               <div class="smart-pick-strategy-row">
                 <div class="card border smart-pick-global-panel">
                   <div class="card-body">
-                    <div class="smart-pick-section-title"><span>01</span><h6>全局抽取策略</h6></div>
+                    <div class="smart-pick-section-title"><span>01</span><h6>混合抽取数量</h6></div>
                     <div class="row g-3 align-items-end smart-pick-global-grid">
                       <FieldInput v-for="field in globalBasicFields" :key="field.id" col-class="col-md-2" v-bind="field" />
                       <div class="col-md-2 d-flex align-items-end smart-pick-advanced-toggle-wrap">
@@ -45,33 +45,64 @@
                         >高级参数</button>
                       </div>
                       <div id="smartGlobalAdvancedPanel" class="col-12 collapse smart-pick-advanced-panel" :class="{ show: globalAdvancedExpanded }" data-role="global-adv-panel">
-                        <div class="row g-3 smart-pick-advanced-grid">
-                          <FieldInput v-for="field in globalAdvancedFields" :key="field.id" col-class="col-md-3" v-bind="field" />
+                        <div class="smart-pick-mixed-options-grid">
+                          <section class="smart-pick-type-options is-jav" aria-label="JAV 抽取策略">
+                            <h6>JAV 抽取策略</h6>
+                            <div class="row g-3 smart-pick-advanced-grid">
+                              <FieldInput v-for="field in javGlobalAdvancedFields" :key="field.id" col-class="col-md-6" v-bind="field" />
+                            </div>
+                          </section>
+                          <section class="smart-pick-type-options is-fc2" aria-label="FC2 抽取策略">
+                            <h6>FC2 抽取策略</h6>
+                            <div class="row g-3 smart-pick-advanced-grid">
+                              <FieldInput v-for="field in fc2GlobalAdvancedFields" :key="field.id" col-class="col-md-6" v-bind="field" />
+                            </div>
+                          </section>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="smart-pick-groups-column">
-                  <div class="smart-pick-groups-head">
-                    <div class="smart-pick-section-title"><span>02</span><h6>条件组</h6></div>
-                    <button type="button" id="btnAddGroup" class="btn btn-outline-secondary" :disabled="actionLoading" @click="addGroup">＋ 添加一组条件</button>
+                <section class="smart-pick-type-groups is-jav" aria-labelledby="javPickGroupsTitle">
+                  <div class="smart-pick-type-groups-head">
+                    <div><span>JAV</span><h6 id="javPickGroupsTitle">JAV 条件</h6></div>
+                    <button type="button" id="btnAddJAVGroup" class="btn btn-outline-secondary" :disabled="actionLoading" @click="addGroup('jav')">＋ 添加 JAV 条件</button>
                   </div>
-
-                  <div id="pickGroups">
+                  <div id="javPickGroups">
                     <PickGroup
-                      v-for="group in groups"
+                      v-for="group in javGroups"
                       :key="group.id"
                       :payload="payload"
+                      movie-type="jav"
                       :group-id="group.id"
-                      :can-remove="groups.length > 1"
+                      :can-remove="javGroups.length > 1"
                       :expanded="group.expanded"
-                      @remove="removeGroup(group.id)"
-                      @toggle="toggleGroup(group.id)"
+                      @remove="removeGroup('jav', group.id)"
+                      @toggle="toggleGroup('jav', group.id)"
                     />
                   </div>
-                </div>
+                </section>
+
+                <section class="smart-pick-type-groups is-fc2" aria-labelledby="fc2PickGroupsTitle">
+                  <div class="smart-pick-type-groups-head">
+                    <div><span>FC2</span><h6 id="fc2PickGroupsTitle">FC2 条件</h6></div>
+                    <button type="button" id="btnAddFC2Group" class="btn btn-outline-secondary" :disabled="actionLoading" @click="addGroup('fc2ppv')">＋ 添加 FC2 条件</button>
+                  </div>
+                  <div id="fc2PickGroups">
+                    <PickGroup
+                      v-for="group in fc2Groups"
+                      :key="group.id"
+                      :payload="payload"
+                      movie-type="fc2ppv"
+                      :group-id="group.id"
+                      :can-remove="fc2Groups.length > 1"
+                      :expanded="group.expanded"
+                      @remove="removeGroup('fc2ppv', group.id)"
+                      @toggle="toggleGroup('fc2ppv', group.id)"
+                    />
+                  </div>
+                </section>
               </div>
 
               <div class="smart-pick-actions">
@@ -97,22 +128,42 @@
           </div>
         </div>
 
-        <div v-if="pickedMovies.length" class="smart-pick-results" id="pickedCard">
+        <div v-if="totalPickedCount" class="smart-pick-results smart-pick-mixed-results" id="pickedCard">
           <div class="card next02-sc-panel smart-pick-results-panel">
             <div class="card-body">
               <div class="next02-sc-panel-head smart-pick-results-head">
-                <div><span class="next02-sc-panel-kicker">PICKED MOVIES</span><h5>抽取结果</h5></div>
-                <div class="smart-pick-sort-tools">
-                  <div class="btn-group btn-group-sm flex-wrap" id="pickedSortBar" role="group" aria-label="抽取结果排序">
-                    <button v-for="item in pickedSortButtons" :key="item.key" type="button" class="btn btn-outline-primary" :class="{ active: pickedSortBase === item.key }" :data-sort-base="item.key" :data-default-dir="item.dir" @click="selectSort(item)">{{ sortButtonLabel(item) }}</button>
-                  </div>
-                  <span class="next02-sc-result-count" id="pickedCount">共 {{ pickedMovies.length }} 部<span v-if="pickedTotalSizeGb"> · {{ pickedTotalSizeGb }} GB</span></span>
-                </div>
+                <div><span class="next02-sc-panel-kicker">MIXED PICKED MOVIES</span><h5>混合抽取结果</h5></div>
+                <span class="next02-sc-result-count" id="pickedCount">共 {{ totalPickedCount }} 部<span v-if="pickedTotalSizeGb"> · {{ pickedTotalSizeGb }} GB</span></span>
               </div>
             </div>
           </div>
-          <section class="smart-pick-cards-section" aria-label="Picked movies">
-            <MovieGrid :cards="sortedPickedMovies" />
+
+          <section v-if="pickedJAVMovies.length" class="smart-pick-result-section is-jav" aria-label="JAV 抽取结果">
+            <div class="smart-pick-result-section-head">
+              <div><span>JAV</span><h5>JAV 结果</h5></div>
+              <div class="smart-pick-sort-tools">
+                <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="JAV 结果排序">
+                  <button v-for="item in javSortButtons" :key="item.key" type="button" class="btn btn-outline-primary" :class="{ active: javSortBase === item.key }" @click="selectSort('jav', item)">{{ sortButtonLabel('jav', item) }}</button>
+                </div>
+                <span class="next02-sc-result-count">{{ pickedJAVMovies.length }} 部<span v-if="pickedJAVTotalSizeGb"> · {{ pickedJAVTotalSizeGb }} GB</span></span>
+              </div>
+            </div>
+            <section class="smart-pick-cards-section" aria-label="JAV cards">
+              <MovieGrid :cards="sortedPickedJAVMovies" />
+            </section>
+          </section>
+
+          <section v-if="pickedFC2Movies.length" class="smart-pick-result-section is-fc2" aria-label="FC2 抽取结果">
+            <div class="smart-pick-result-section-head">
+              <div><span>FC2</span><h5>FC2 结果</h5></div>
+              <div class="smart-pick-sort-tools">
+                <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="FC2 结果排序">
+                  <button v-for="item in fc2SortButtons" :key="item.key" type="button" class="btn btn-outline-primary" :class="{ active: fc2SortBase === item.key }" @click="selectSort('fc2ppv', item)">{{ sortButtonLabel('fc2ppv', item) }}</button>
+                </div>
+                <span class="next02-sc-result-count">{{ pickedFC2Movies.length }} 部<span v-if="pickedFC2TotalSizeGb"> · {{ pickedFC2TotalSizeGb }} GB</span></span>
+              </div>
+            </div>
+            <FC2MovieGrid :cards="sortedPickedFC2Movies" aria-label="FC2 cards" />
           </section>
         </div>
       </template>
@@ -124,13 +175,14 @@
 import { computed, defineComponent, h, onBeforeUnmount, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
+import FC2MovieGrid from "@/components/FC2MovieGrid.vue";
 import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, num, pick, text } from "@/utils/format";
 
 type FieldConfig = {
-  id: string;
+  id?: string;
   label: string;
   type?: string;
   min?: string;
@@ -141,6 +193,7 @@ type FieldConfig = {
   dataType?: string;
   role?: string;
   required?: boolean;
+  options?: Array<{ value: string; label: string }>;
 };
 
 type PickGroupState = {
@@ -149,25 +202,34 @@ type PickGroupState = {
 };
 
 type SortButton = { key: string; label: string; dir: "asc" | "desc" };
+type MovieType = "jav" | "fc2ppv";
 
 const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
-const groups = ref<PickGroupState[]>([{ id: 1, expanded: false }]);
+const javGroups = ref<PickGroupState[]>([{ id: 1, expanded: false }]);
+const fc2Groups = ref<PickGroupState[]>([{ id: 1, expanded: false }]);
 const globalAdvancedExpanded = ref(false);
-const nextGroupId = ref(2);
+const nextJAVGroupId = ref(2);
+const nextFC2GroupId = ref(2);
 const formEl = ref<HTMLFormElement | null>(null);
 const actionLoading = ref(false);
 const message = ref("");
 const messageOk = ref(true);
-const pickedMovies = ref<AnyRecord[]>([]);
+const pickedJAVMovies = ref<AnyRecord[]>([]);
+const pickedFC2Movies = ref<AnyRecord[]>([]);
 const pickedTotalSizeGb = ref("");
-const pickInfo = ref<AnyRecord>({});
+const pickedJAVTotalSizeGb = ref("");
+const pickedFC2TotalSizeGb = ref("");
+const javPickInfo = ref<AnyRecord>({});
+const fc2PickInfo = ref<AnyRecord>({});
 const copyStatus = ref<AnyRecord>({});
 const copyStartedInPage = ref(false);
-const pickedSortBase = ref("releasing");
-const pickedSortDir = ref<"asc" | "desc">("desc");
+const javSortBase = ref("releasing");
+const javSortDir = ref<"asc" | "desc">("desc");
+const fc2SortBase = ref("owned");
+const fc2SortDir = ref<"asc" | "desc">("desc");
 let copyTimer: number | undefined;
 
 watch(() => route.fullPath, load, { immediate: true });
@@ -191,9 +253,13 @@ const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value
 const pageNote = computed(() => text(payload.value, "PageNote"));
 const pageSource = computed(() => (text(payload.value, "PageSource").toLowerCase() === "wmedia" ? "wmedia" : "vfilm"));
 const castOwnedScRatioPenaltyAlpha = computed(() => pageSource.value === "wmedia" ? "0" : "0.7");
+const effectivePageNote = computed(() => pageNote.value || "分别配置 JAV 与 FC2 数量和条件，一次完成混合抽片与 Copy。");
 
-const globalFields = computed<FieldConfig[]>(() => [
-  { id: "pickCount", label: "抽取数量", type: "number", min: "1", value: "32", required: true },
+const globalBasicFields = computed<FieldConfig[]>(() => [
+  { id: "javPickCount", label: "JAV 数量", type: "number", min: "0", value: "32", placeholder: "输入数量", required: true },
+  { id: "fc2PickCount", label: "FC2 数量", type: "number", min: "0", value: "2", placeholder: "输入数量", required: true }
+]);
+const javGlobalAdvancedFields = computed<FieldConfig[]>(() => [
   { id: "castLastScBlockDays", label: "Cast LastSc 阻断天数", type: "number", min: "0", value: "60", required: true },
   { id: "lastScEventBlockDays", label: "LastSc Event 阻断天数", type: "number", min: "0", value: "30", required: true },
   { id: "rank20Min", label: "Rank20 至少", type: "number", min: "0", value: "0", required: true },
@@ -204,10 +270,13 @@ const globalFields = computed<FieldConfig[]>(() => [
   { id: "castOwnedScRatioPenaltyAlpha", label: "Cast SC Ratio 惩罚系数", type: "number", min: "0", step: "0.1", value: castOwnedScRatioPenaltyAlpha.value, required: true },
   { id: "movieHasScPenaltyAlpha", label: "Movie Has SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
 ]);
-const globalBasicFields = computed(() => globalFields.value.slice(0, 1));
-const globalAdvancedFields = computed(() => globalFields.value.slice(1));
+const fc2GlobalAdvancedFields: FieldConfig[] = [
+  { id: "fc2LastScBlockDays", label: "影片 Last SC 阻断天数", type: "number", min: "0", value: "30", required: true },
+  { id: "fc2LastScPenaltyAlpha", label: "影片 Last SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
+  { id: "fc2MovieHasScPenaltyAlpha", label: "影片已有 SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
+];
 
-const pickedSortButtons: SortButton[] = [
+const javSortButtons: SortButton[] = [
   { key: "picked", label: "抽取顺序", dir: "desc" },
   { key: "film_birth", label: "下载时间", dir: "desc" },
   { key: "releasing", label: "上映日期", dir: "desc" },
@@ -215,6 +284,14 @@ const pickedSortButtons: SortButton[] = [
   { key: "come", label: "CO次数", dir: "desc" },
   { key: "rank", label: "最高排名", dir: "asc" },
   { key: "score", label: "评分", dir: "desc" }
+];
+const fc2SortButtons: SortButton[] = [
+  { key: "owned", label: "Owned 排列", dir: "desc" },
+  { key: "picked", label: "抽取顺序", dir: "desc" },
+  { key: "film_birth", label: "下载时间", dir: "desc" },
+  { key: "post", label: "发布时间", dir: "desc" },
+  { key: "sc", label: "SC次数", dir: "desc" },
+  { key: "come", label: "CO次数", dir: "desc" }
 ];
 
 const copyRunning = computed(() => Boolean(pick(copyStatus.value, "running")));
@@ -228,28 +305,30 @@ const copyMeta = computed(() => {
 });
 const copyCurrent = computed(() => text(copyStatus.value, "current") ? `当前：${text(copyStatus.value, "current")}` : "");
 const copyError = computed(() => text(copyStatus.value, "last_error"));
-const pickInfoAfterMovies = computed(() => num(pickInfo.value, "after_block_movie_count"));
-const pickInfoAfterCasts = computed(() => num(pickInfo.value, "after_block_cast_count"));
-const pickInfoRows = computed(() => Object.keys(pickInfo.value).length ? [
-  { label: "原始候选电影", value: num(pickInfo.value, "raw_candidate_movie_count") },
-  { label: "阻断后剩余电影", value: pickInfoAfterMovies.value },
-  { label: "参与计算演员", value: num(pickInfo.value, "cast_count") },
-  { label: "阻断后剩余演员", value: pickInfoAfterCasts.value }
-] : []);
+const totalPickedCount = computed(() => pickedJAVMovies.value.length + pickedFC2Movies.value.length);
+const pickInfoRows = computed(() => {
+  if (!Object.keys(javPickInfo.value).length && !Object.keys(fc2PickInfo.value).length) return [];
+  return [
+    { label: "JAV 候选", value: num(javPickInfo.value, "raw_candidate_movie_count") },
+    { label: "JAV 抽取", value: pickedJAVMovies.value.length },
+    { label: "FC2 候选", value: num(fc2PickInfo.value, "raw_candidate_movie_count") },
+    { label: "FC2 抽取", value: pickedFC2Movies.value.length }
+  ];
+});
 
-const sortedPickedMovies = computed(() => {
-  const list = pickedMovies.value.slice();
-  const dir = pickedSortDir.value === "asc" ? 1 : -1;
+const sortedPickedJAVMovies = computed(() => {
+  const list = pickedJAVMovies.value.slice();
+  const dir = javSortDir.value === "asc" ? 1 : -1;
   const order = (row: AnyRecord) => num(row, "_pickedOrder");
   const numeric = (row: AnyRecord, ...keys: string[]) => Number(pick(row, ...keys) || 0);
   const dated = (row: AnyRecord, ...keys: string[]) => Date.parse(text(row, ...keys)) || 0;
   const compare = (a: AnyRecord, b: AnyRecord) => {
-    if (pickedSortBase.value === "picked") return order(a) - order(b);
-    if (pickedSortBase.value === "film_birth") return (dated(a, "film_birth_date", "FilmBirthDate") - dated(b, "film_birth_date", "FilmBirthDate")) * dir || order(a) - order(b);
-    if (pickedSortBase.value === "releasing") return (dated(a, "releasing_date", "ReleasingDate") - dated(b, "releasing_date", "ReleasingDate")) * dir || order(a) - order(b);
-    if (pickedSortBase.value === "sc") return (numeric(a, "sc_times", "ScTimes") - numeric(b, "sc_times", "ScTimes")) * dir || order(a) - order(b);
-    if (pickedSortBase.value === "come") return (numeric(a, "come_times", "ComeTimes") - numeric(b, "come_times", "ComeTimes")) * dir || order(a) - order(b);
-    if (pickedSortBase.value === "score") return (numeric(a, "score", "Score") - numeric(b, "score", "Score")) * dir || order(a) - order(b);
+    if (javSortBase.value === "picked") return order(a) - order(b);
+    if (javSortBase.value === "film_birth") return (dated(a, "film_birth_date", "FilmBirthDate") - dated(b, "film_birth_date", "FilmBirthDate")) * dir || order(a) - order(b);
+    if (javSortBase.value === "releasing") return (dated(a, "releasing_date", "ReleasingDate") - dated(b, "releasing_date", "ReleasingDate")) * dir || order(a) - order(b);
+    if (javSortBase.value === "sc") return (numeric(a, "sc_times", "ScTimes") - numeric(b, "sc_times", "ScTimes")) * dir || order(a) - order(b);
+    if (javSortBase.value === "come") return (numeric(a, "come_times", "ComeTimes") - numeric(b, "come_times", "ComeTimes")) * dir || order(a) - order(b);
+    if (javSortBase.value === "score") return (numeric(a, "score", "Score") - numeric(b, "score", "Score")) * dir || order(a) - order(b);
     const aRank = numeric(a, "highest_rank", "HighestRank") || Number.MAX_SAFE_INTEGER;
     const bRank = numeric(b, "highest_rank", "HighestRank") || Number.MAX_SAFE_INTEGER;
     return (aRank - bRank) * dir || order(a) - order(b);
@@ -257,18 +336,46 @@ const sortedPickedMovies = computed(() => {
   return list.sort(compare);
 });
 
-function addGroup() {
-  groups.value.push({ id: nextGroupId.value, expanded: false });
-  nextGroupId.value += 1;
+const sortedPickedFC2Movies = computed(() => {
+  const list = pickedFC2Movies.value.slice();
+  const dir = fc2SortDir.value === "asc" ? 1 : -1;
+  const order = (row: AnyRecord) => num(row, "_pickedOrder");
+  const numeric = (row: AnyRecord, ...keys: string[]) => Number(pick(row, ...keys) || 0);
+  const compareOwned = (a: AnyRecord, b: AnyRecord) =>
+    numeric(b, "PostTime") - numeric(a, "PostTime") ||
+    numeric(b, "PPVNo") - numeric(a, "PPVNo") ||
+    numeric(a, "CodeSeq") - numeric(b, "CodeSeq") ||
+    numeric(b, "ID") - numeric(a, "ID") ||
+    order(a) - order(b);
+  return list.sort((a, b) => {
+    if (fc2SortBase.value === "owned") return compareOwned(a, b);
+    if (fc2SortBase.value === "picked") return order(a) - order(b);
+    if (fc2SortBase.value === "film_birth") return (numeric(a, "DownloadTime") - numeric(b, "DownloadTime")) * dir || order(a) - order(b);
+    if (fc2SortBase.value === "post") return (numeric(a, "PostTime") - numeric(b, "PostTime")) * dir || order(a) - order(b);
+    if (fc2SortBase.value === "sc") return (numeric(a, "ScTimes") - numeric(b, "ScTimes")) * dir || order(a) - order(b);
+    return (numeric(a, "ComeTimes") - numeric(b, "ComeTimes")) * dir || order(a) - order(b);
+  });
+});
+
+function addGroup(movieType: MovieType) {
+  if (movieType === "jav") {
+    javGroups.value.push({ id: nextJAVGroupId.value, expanded: false });
+    nextJAVGroupId.value += 1;
+    return;
+  }
+  fc2Groups.value.push({ id: nextFC2GroupId.value, expanded: false });
+  nextFC2GroupId.value += 1;
 }
 
-function removeGroup(id: number) {
-  if (groups.value.length <= 1) return;
-  groups.value = groups.value.filter((group) => group.id !== id);
+function removeGroup(movieType: MovieType, id: number) {
+  const target = movieType === "jav" ? javGroups : fc2Groups;
+  if (target.value.length <= 1) return;
+  target.value = target.value.filter((group) => group.id !== id);
 }
 
-function toggleGroup(id: number) {
-  groups.value = groups.value.map((group) => group.id === id ? { ...group, expanded: !group.expanded } : group);
+function toggleGroup(movieType: MovieType, id: number) {
+  const target = movieType === "jav" ? javGroups : fc2Groups;
+  target.value = target.value.map((group) => group.id === id ? { ...group, expanded: !group.expanded } : group);
 }
 
 function inputValue(id: string): string {
@@ -285,9 +392,9 @@ function showMessage(value: string, ok = true) {
   messageOk.value = ok;
 }
 
-function buildReqFromGroup(group: Element): AnyRecord {
-  const req: AnyRecord = { Page: 1, PageSize: 100000, MediaOwned: 3 };
-  group.querySelectorAll<HTMLInputElement>("[data-req-field]").forEach((input) => {
+function buildReqFromGroup(group: Element, movieType: MovieType): AnyRecord {
+  const req: AnyRecord = movieType === "jav" ? { Page: 1, MediaOwned: 3 } : {};
+  group.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-req-field]").forEach((input) => {
     const key = input.dataset.reqField || "";
     const type = input.dataset.type || "string";
     const raw = input.value.trim();
@@ -307,7 +414,18 @@ function buildReqFromGroup(group: Element): AnyRecord {
   return req;
 }
 
-function buildOptions(n: number): AnyRecord | null {
+function buildFC2Options(): AnyRecord | null {
+  const lastScBlockDays = parseNumber(inputValue("fc2LastScBlockDays"));
+  const lastScPenaltyAlpha = parseNumber(inputValue("fc2LastScPenaltyAlpha"), true);
+  const movieHasScPenaltyAlpha = parseNumber(inputValue("fc2MovieHasScPenaltyAlpha"), true);
+  if ([lastScBlockDays, lastScPenaltyAlpha, movieHasScPenaltyAlpha].some((value) => value === null)) {
+    showMessage("FC2 全局抽取策略参数不完整", false);
+    return null;
+  }
+  return { lastScBlockDays, lastScPenaltyAlpha, movieHasScPenaltyAlpha };
+}
+
+function buildJAVOptions(n: number): AnyRecord | null {
   const castLastScBlockDays = parseNumber(inputValue("castLastScBlockDays"));
   const lastScEventBlockDays = parseNumber(inputValue("lastScEventBlockDays"));
   const rank20Min = parseNumber(inputValue("rank20Min") || "0");
@@ -340,34 +458,54 @@ function buildOptions(n: number): AnyRecord | null {
   };
 }
 
-function buildPayload(): AnyRecord | null {
-  if (!formEl.value?.checkValidity()) {
-    formEl.value?.classList.add("was-validated");
-    showMessage("请检查必填参数", false);
-    return null;
-  }
-  const pickN = parseNumber(inputValue("pickCount"));
-  if (pickN === null || pickN <= 0) {
-    showMessage("请输入大于 0 的数量", false);
-    return null;
-  }
-  const options = buildOptions(pickN);
-  if (!options) return null;
-  const groupElements = Array.from(document.querySelectorAll("#pickGroups .pick-group"));
+function buildGroupRequests(containerID: string, movieType: MovieType): AnyRecord[] | null {
+  const groupElements = Array.from(document.querySelectorAll(`#${containerID} .pick-group`));
   if (!groupElements.length) {
-    showMessage("请添加至少一组条件", false);
+    showMessage(`${movieType === "jav" ? "JAV" : "FC2"} 至少需要一组条件`, false);
     return null;
   }
   const reqs: AnyRecord[] = [];
   for (const group of groupElements) {
     const weight = parseNumber(String(group.querySelector<HTMLInputElement>('[data-role="weight"]')?.value || ""));
     if (weight === null || weight <= 0) {
-      showMessage("权重需为正数", false);
+      showMessage(`${movieType === "jav" ? "JAV" : "FC2"} 条件权重需为正数`, false);
       return null;
     }
-    reqs.push({ weight, req: buildReqFromGroup(group) });
+    const groupReq = buildReqFromGroup(group, movieType);
+    reqs.push(movieType === "jav" ? { weight, req: groupReq } : { weight, fc2Req: groupReq });
   }
-  return { pickN, source: pageSource.value, options, reqs };
+  return reqs;
+}
+
+function buildPayload(): AnyRecord | null {
+  if (!formEl.value?.checkValidity()) {
+    formEl.value?.classList.add("was-validated");
+    showMessage("请检查必填参数", false);
+    return null;
+  }
+  const javPickN = parseNumber(inputValue("javPickCount"));
+  const fc2PickN = parseNumber(inputValue("fc2PickCount"));
+  if (javPickN === null || fc2PickN === null || javPickN < 0 || fc2PickN < 0) {
+    showMessage("JAV 与 FC2 数量需要填写非负整数", false);
+    return null;
+  }
+  if (javPickN === 0 && fc2PickN === 0) {
+    showMessage("JAV 与 FC2 至少填写一个大于 0 的数量", false);
+    return null;
+  }
+  const javOptions = javPickN > 0 ? buildJAVOptions(javPickN) : {};
+  if (javOptions === null) return null;
+  const fc2Options = fc2PickN > 0 ? buildFC2Options() : {};
+  if (fc2Options === null) return null;
+  const javReqs = javPickN > 0 ? buildGroupRequests("javPickGroups", "jav") : [];
+  if (javReqs === null) return null;
+  const fc2Reqs = fc2PickN > 0 ? buildGroupRequests("fc2PickGroups", "fc2ppv") : [];
+  if (fc2Reqs === null) return null;
+  return {
+    source: pageSource.value,
+    jav: { pickN: javPickN, options: javOptions, reqs: javReqs },
+    fc2: { pickN: fc2PickN, options: fc2Options, reqs: fc2Reqs }
+  };
 }
 
 async function runPick(withCopy: boolean) {
@@ -375,12 +513,19 @@ async function runPick(withCopy: boolean) {
   if (!body) return;
   actionLoading.value = true;
   message.value = "";
-  pickInfo.value = {};
+  javPickInfo.value = {};
+  fc2PickInfo.value = {};
   try {
     const data = asRecord(await sendJSON(withCopy ? "/api/triggers/sc/pick-smart-copy" : "/api/triggers/sc/pick-smart-only", "POST", body));
-    pickInfo.value = asRecord(pick(data, "pick_info", "PickInfo"));
-    pickedMovies.value = asArray<AnyRecord>(pick(data, "movies", "Movies")).map((movie, index) => ({ ...movie, _pickedOrder: index }));
+    const javData = asRecord(pick(data, "jav", "JAV"));
+    const fc2Data = asRecord(pick(data, "fc2", "FC2"));
+    javPickInfo.value = asRecord(pick(javData, "pick_info", "PickInfo"));
+    fc2PickInfo.value = asRecord(pick(fc2Data, "pick_info", "PickInfo"));
+    pickedJAVMovies.value = asArray<AnyRecord>(pick(javData, "movies", "Movies")).map((movie, index) => ({ ...movie, _pickedOrder: index }));
+    pickedFC2Movies.value = asArray<AnyRecord>(pick(fc2Data, "movies", "Movies")).map((movie, index) => ({ ...movie, _pickedOrder: index }));
     pickedTotalSizeGb.value = text(data, "total_size_gb", "TotalSizeGB");
+    pickedJAVTotalSizeGb.value = text(javData, "total_size_gb", "TotalSizeGB");
+    pickedFC2TotalSizeGb.value = text(fc2Data, "total_size_gb", "TotalSizeGB");
     const nextCopyStatus = asRecord(pick(data, "copy_status", "CopyStatus"));
     if (Object.keys(nextCopyStatus).length) {
       copyStatus.value = nextCopyStatus;
@@ -391,7 +536,7 @@ async function runPick(withCopy: boolean) {
       showMessage("Copy 任务正在执行，本次不再启动", false);
       return;
     }
-    showMessage(`${withCopy ? "Smart Pick + Copy" : "Smart Pick"} 完成，已抽取 ${num(data, "picked", "Picked")} 部`);
+    showMessage(`${withCopy ? "Smart Pick + Copy" : "Smart Pick"} 完成：JAV ${pickedJAVMovies.value.length} 部，FC2 ${pickedFC2Movies.value.length} 部，共 ${num(data, "picked", "Picked")} 部`);
   } catch (err) {
     showMessage(`异常：${err instanceof Error ? err.message : String(err)}`, false);
   } finally {
@@ -437,18 +582,23 @@ async function stopCopy() {
   }
 }
 
-function selectSort(item: SortButton) {
-  if (pickedSortBase.value === item.key && item.key !== "picked") {
-    pickedSortDir.value = pickedSortDir.value === "asc" ? "desc" : "asc";
+function selectSort(movieType: MovieType, item: SortButton) {
+  const base = movieType === "jav" ? javSortBase : fc2SortBase;
+  const direction = movieType === "jav" ? javSortDir : fc2SortDir;
+  const fixedOrder = item.key === "picked" || item.key === "owned";
+  if (base.value === item.key && !fixedOrder) {
+    direction.value = direction.value === "asc" ? "desc" : "asc";
   } else {
-    pickedSortBase.value = item.key;
-    pickedSortDir.value = item.dir;
+    base.value = item.key;
+    direction.value = item.dir;
   }
 }
 
-function sortButtonLabel(item: SortButton): string {
-  if (pickedSortBase.value !== item.key || item.key === "picked") return item.label;
-  return `${item.label} ${pickedSortDir.value === "asc" ? "↑" : "↓"}`;
+function sortButtonLabel(movieType: MovieType, item: SortButton): string {
+  const base = movieType === "jav" ? javSortBase.value : fc2SortBase.value;
+  const direction = movieType === "jav" ? javSortDir.value : fc2SortDir.value;
+  if (base !== item.key || item.key === "picked" || item.key === "owned") return item.label;
+  return `${item.label} ${direction === "asc" ? "↑" : "↓"}`;
 }
 
 onBeforeUnmount(stopCopyPolling);
@@ -500,23 +650,51 @@ const FieldInput = defineComponent({
   }
 });
 
+const FieldSelect = defineComponent({
+  name: "SmartPickFieldSelect",
+  props: {
+    colClass: { type: String, default: "" },
+    id: { type: String, required: true },
+    label: { type: String, required: true },
+    reqField: { type: String, required: true },
+    dataType: { type: String, default: "int-opt" },
+    options: { type: Array as PropType<Array<{ value: string; label: string }>>, required: true }
+  },
+  setup(props) {
+    return () => h("div", { class: [props.colClass || "col-md-3", "smart-pick-field"] }, [
+      h("label", { class: "form-label", for: props.id }, props.label),
+      h("select", {
+        class: "form-select",
+        id: props.id,
+        "data-req-field": props.reqField,
+        "data-type": props.dataType
+      }, props.options.map((option) => h("option", { key: option.value, value: option.value }, option.label)))
+    ]);
+  }
+});
+
 const PickGroup = defineComponent({
   name: "SmartPickGroup",
   props: {
     payload: { type: Object as PropType<AnyRecord>, required: true },
+    movieType: { type: String as PropType<"jav" | "fc2ppv">, required: true },
     groupId: { type: Number, required: true },
     canRemove: { type: Boolean, default: true },
     expanded: { type: Boolean, default: false }
   },
   emits: ["remove", "toggle"],
   setup(props, { emit }) {
-    const fieldId = (name: string) => `smart-${props.groupId}-${name}`;
-    const advPanelId = () => `smart-adv-panel-${props.groupId}`;
-    const basicFields = () => [
+    const typeKey = () => props.movieType === "jav" ? "jav" : "fc2";
+    const fieldId = (name: string) => `smart-${typeKey()}-${props.groupId}-${name}`;
+    const advPanelId = () => `smart-${typeKey()}-adv-panel-${props.groupId}`;
+    const basicFields = (): FieldConfig[] => props.movieType === "jav" ? [
       { id: fieldId("rs"), label: "放映日期起 (rs)", reqField: "ReleasingDateStart", placeholder: "YYYY-MM-DD" },
       { id: fieldId("re"), label: "放映日期止 (re)", reqField: "ReleasingDateEnd", placeholder: "YYYY-MM-DD" }
+    ] : [
+      { id: fieldId("pts"), label: "发布时间起", reqField: "PostTimeStart", placeholder: "YYYY-MM-DD" },
+      { id: fieldId("pte"), label: "发布时间止", reqField: "PostTimeEnd", placeholder: "YYYY-MM-DD" }
     ];
-    const advFields = () => [
+    const javAdvancedFields = (): FieldConfig[] => [
       { reqField: dynamicField(props.payload, "BirthStartField", "MediaBirthTimeStart"), label: dynamicLabel(props.payload, "BirthStartLabel", "下载日期起 (mbs)"), placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
       { reqField: dynamicField(props.payload, "BirthEndField", "MediaBirthTimeEnd"), label: dynamicLabel(props.payload, "BirthEndLabel", "下载日期止 (mbe)"), placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
       { reqField: "ScTimesMin", label: "ScTimes 最小 (scmin)", type: "number", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
@@ -544,10 +722,34 @@ const PickGroup = defineComponent({
       { reqField: dynamicField(props.payload, "Dir3Field", "MediaDir3"), label: dynamicLabel(props.payload, "Dir3Label", "MediaDir3 (md3)"), colClass: "col-md-3" },
       { reqField: "OrderBy", label: "排序 (od)", placeholder: "sc/lsct/bt...", colClass: "col-md-3" }
     ];
+    const fc2AdvancedFields = (): FieldConfig[] => [
+      { reqField: "MediaBirthTimeStart", label: "下载日期起", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "MediaBirthTimeEnd", label: "下载日期止", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "ScTimesMin", label: "SC 次数最小", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "ScTimesMax", label: "SC 次数最大", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "ComeTimesMin", label: "Come 次数最小", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "ComeTimesMax", label: "Come 次数最大", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
+      { reqField: "LastScTimeMin", label: "最后 SC 起", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "LastScTimeMax", label: "最后 SC 止", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "FC2Key", label: "FC2 Key", placeholder: "支持包含匹配" },
+      { reqField: "Code", label: "FC2 Code", placeholder: "支持包含匹配" },
+      { reqField: "Title", label: "标题", placeholder: "支持包含匹配" },
+      { reqField: "PerformerText", label: "表演者", placeholder: "支持包含匹配" },
+      { reqField: "MaskType", label: "影片遮罩类型", placeholder: "精确匹配" },
+      { reqField: "Word", label: "综合关键字", placeholder: "编号/标题/表演者" },
+      { reqField: "MediaDir1", label: "媒体目录 1" },
+      { reqField: "MediaDir2", label: "媒体目录 2" },
+      { reqField: "MediaDir3", label: "媒体目录 3" },
+      { reqField: "MediaDir4", label: "媒体目录 4" },
+      { reqField: "HasSub", label: "字幕", dataType: "int-opt", options: [{ value: "", label: "全部" }, { value: "1", label: "无字幕" }, { value: "2", label: "有字幕" }] },
+      { reqField: "SelfMake", label: "自制", dataType: "int-opt", options: [{ value: "", label: "全部" }, { value: "1", label: "非自制" }, { value: "2", label: "自制" }] },
+      { reqField: "HasMask", label: "去码状态", dataType: "int-opt", options: [{ value: "", label: "全部" }, { value: "1", label: "未去码" }, { value: "2", label: "已去码" }, { value: "3", label: "无码" }] }
+    ];
+    const advFields = () => props.movieType === "jav" ? javAdvancedFields() : fc2AdvancedFields();
     return () => h("div", { class: "card border pick-group smart-pick-group-panel" }, [
       h("div", { class: "card-body" }, [
         h("div", { class: "smart-pick-group-head" }, [
-          h("h6", `条件组 ${props.groupId}`),
+          h("h6", `${props.movieType === "jav" ? "JAV" : "FC2"} 条件组 ${props.groupId}`),
           h("button", {
             type: "button",
             class: "btn btn-sm btn-outline-danger btn-remove-group smart-pick-remove-group",
@@ -572,16 +774,26 @@ const PickGroup = defineComponent({
           ]),
           h("div", { class: `col-12 collapse smart-pick-advanced-panel${props.expanded ? " show" : ""}`, id: advPanelId(), "data-role": "adv-panel" }, [
             h("div", { class: "row g-3 smart-pick-advanced-grid" }, [
-              ...advFields().map((field) => h(FieldInput, {
-                colClass: field.colClass || "col-md-4",
-                id: fieldId(field.reqField.toLowerCase()),
-                label: field.label,
-                type: field.type || "text",
-                step: field.step || "",
-                reqField: field.reqField,
-                dataType: field.dataType || "",
-                placeholder: field.placeholder || ""
-              }))
+              ...advFields().map((field) => field.options
+                ? h(FieldSelect, {
+                    colClass: field.colClass || "col-md-4",
+                    id: fieldId((field.reqField || "field").toLowerCase()),
+                    label: field.label,
+                    reqField: field.reqField || "",
+                    dataType: field.dataType || "int-opt",
+                    options: field.options
+                  })
+                : h(FieldInput, {
+                    colClass: field.colClass || "col-md-4",
+                    id: fieldId((field.reqField || "field").toLowerCase()),
+                    label: field.label,
+                    type: field.type || "text",
+                    min: field.min || "",
+                    step: field.step || "",
+                    reqField: field.reqField || "",
+                    dataType: field.dataType || "",
+                    placeholder: field.placeholder || ""
+                  }))
             ])
           ])
         ])

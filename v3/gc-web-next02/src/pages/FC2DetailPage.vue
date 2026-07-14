@@ -89,41 +89,10 @@
         <section v-if="hasMedia" id="fc2-media-images" class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card fc2-detail-panel fc2-capture-panel">
           <div class="card-body">
             <div class="fc2-panel-heading">
-              <div><span class="next02-sc-eyebrow">VIDEO CAPTURE</span><h5>视频图片</h5></div>
+              <div><span class="next02-sc-eyebrow">DEFAULT COVER</span><h5>默认联系表封面</h5></div>
               <div class="fc2-panel-actions">
                 <span v-if="captureFeedback" class="fc2-copy-feedback" role="status">{{ captureFeedback }}</span>
               </div>
-            </div>
-
-            <div class="fc2-capture-forms">
-              <form class="fc2-capture-form" @submit.prevent="generateScreenshot">
-                <div class="fc2-capture-form-copy">
-                  <strong>生成截图</strong>
-                  <span>输入视频时间点，输出一张 PNG 图片。</span>
-                </div>
-                <label class="fc2-capture-field">
-                  <span>截图时间（秒）</span>
-                  <input v-model="screenshotTime" class="form-control" type="number" min="0" step="any" required :disabled="captureBusy !== ''">
-                </label>
-                <button class="btn bucket-list-apply" type="submit" :disabled="captureBusy !== '' || !screenshotFormReady">
-                  {{ captureBusy === "screenshot" ? "正在生成..." : "生成截图" }}
-                </button>
-              </form>
-
-              <form class="fc2-capture-form" @submit.prevent="generateContactSheet">
-                <div class="fc2-capture-form-copy">
-                  <strong>生成联系表</strong>
-                  <span>按完整视频时长均匀抽帧并组成一张 PNG 图片。</span>
-                </div>
-                <div class="fc2-contact-sheet-fields">
-                  <label class="fc2-capture-field"><span>列数</span><input v-model="contactColumns" class="form-control" type="number" min="1" step="1" required :disabled="captureBusy !== ''"></label>
-                  <label class="fc2-capture-field"><span>行数</span><input v-model="contactRows" class="form-control" type="number" min="1" step="1" required :disabled="captureBusy !== ''"></label>
-                  <label class="fc2-capture-field"><span>单格宽度</span><input v-model="contactCellWidth" class="form-control" type="number" min="1" step="1" required :disabled="captureBusy !== ''"></label>
-                </div>
-                <button class="btn bucket-list-apply" type="submit" :disabled="captureBusy !== '' || !contactFormReady">
-                  {{ captureBusy === "contact_sheet" ? "正在生成..." : "生成联系表" }}
-                </button>
-              </form>
             </div>
 
             <div v-if="captureError" class="alert alert-danger fc2-capture-alert" role="alert">{{ captureError }}</div>
@@ -134,16 +103,16 @@
                   <img :src="rowText(image, 'ImageURL')" :alt="imageTypeText(image)" loading="lazy">
                 </a>
                 <div class="fc2-capture-card-meta">
-                  <span class="fc2-state-badge" :class="rowText(image, 'ImageType') === 'contact_sheet' ? 'is-mask' : 'is-ready'">{{ imageTypeText(image) }}</span>
+                  <span class="fc2-state-badge is-mask">{{ imageTypeText(image) }}</span>
                   <span v-if="imageIsCover(image)" class="fc2-cover-badge">当前封面</span>
                   <ScDateTime :value="rowValue(image, 'CreatedOn')" unix />
                   <a :href="rowText(image, 'ImageURL')" target="_blank" rel="noopener noreferrer" :title="rowText(image, 'FilePath')">{{ imageFileName(image) }}</a>
                   <div class="fc2-capture-card-actions">
                     <button
-                      v-if="imageIsScreenshot(image) && !imageIsCover(image)"
+                      v-if="imageCanBeCover(image) && !imageIsCover(image)"
                       type="button"
                       class="btn btn-sm btn-outline-primary"
-                      :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID) || captureBusy !== ''"
+                      :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID)"
                       @click="setCoverImage(image)"
                     >
                       {{ coverBusyImageID === imageID(image) ? "设置中" : "设为封面" }}
@@ -154,12 +123,12 @@
                       </button>
                       <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="Boolean(coverBusyImageID) || deleteBusyImageID === imageID(image)" @click="cancelDeleteMediaImage(image)">取消</button>
                     </template>
-                    <button v-else type="button" class="btn btn-sm btn-outline-danger" :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID) || captureBusy !== ''" @click="requestDeleteMediaImage(image)">删除</button>
+                    <button v-else type="button" class="btn btn-sm btn-outline-danger" :disabled="Boolean(coverBusyImageID) || Boolean(deleteBusyImageID)" @click="requestDeleteMediaImage(image)">删除</button>
                   </div>
                 </div>
               </article>
             </div>
-            <div v-else class="sc-empty-state fc2-empty-state">当前媒体还没有生成图片。</div>
+            <div v-else class="sc-empty-state fc2-empty-state">默认联系表封面尚未生成。</div>
           </div>
         </section>
 
@@ -222,13 +191,6 @@ const loading = ref(false);
 const error = ref("");
 const expandedThreadTID = ref("");
 const copyFeedback = ref("");
-type NumericInput = string | number;
-
-const screenshotTime = ref<NumericInput>("");
-const contactColumns = ref<NumericInput>("");
-const contactRows = ref<NumericInput>("");
-const contactCellWidth = ref<NumericInput>("");
-const captureBusy = ref("");
 const captureFeedback = ref("");
 const captureError = ref("");
 const coverBusyImageID = ref("");
@@ -248,12 +210,16 @@ async function load() {
   deleteConfirmImageID.value = "";
   deleteBusyImageID.value = "";
   try {
-    payload.value = asRecord(await getJSON(apiPathForRoute(route)));
+    await refreshPayload();
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
     loading.value = false;
   }
+}
+
+async function refreshPayload(): Promise<void> {
+  payload.value = asRecord(await getJSON(apiPathForRoute(route)));
 }
 
 const pageTitle = computed(() => text(payload.value, "PageTitle", "Title") || "FC2影片详情");
@@ -276,17 +242,8 @@ const mediaResolution = computed(() => {
   return width > 0 && height > 0 ? `${width} × ${height}` : "-";
 });
 const mediaMaskText = computed(() => mediaText("HasMask") === "2" ? "去码" : mediaText("HasMask") === "3" ? "无码" : "有码");
-const screenshotFormReady = computed(() => {
-  const timeSeconds = Number(screenshotTime.value);
-  return hasInputValue(screenshotTime.value) && Number.isFinite(timeSeconds) && timeSeconds >= 0;
-});
-const contactFormReady = computed(() => [contactColumns.value, contactRows.value, contactCellWidth.value].every((value) => {
-  const numberValue = Number(value);
-  return hasInputValue(value) && Number.isInteger(numberValue) && numberValue > 0;
-}));
 
 function rowValue(row: AnyRecord, key: string): unknown { return pick(row, key); }
-function hasInputValue(value: NumericInput): boolean { return String(value).trim() !== ""; }
 function rowText(row: AnyRecord, key: string): string { return text(row, key); }
 function movieText(key: string): string { return text(movie.value, key); }
 function mediaValue(key: string): unknown { return pick(media.value, key); }
@@ -301,29 +258,13 @@ function uniqueLines(values: string[]): string[] { return [...new Set(values)]; 
 function compactLines(value: string): string { return lines(value).join(" · "); }
 function statusClass(status: string): string { return status === "conflict" ? "is-conflict" : status === "ready" ? "is-ready" : "is-neutral"; }
 function mediaStateClass(value: string, activeValue: string): string { return value === activeValue ? "is-ready" : "is-neutral"; }
-function imageTypeText(image: AnyRecord): string { return rowText(image, "ImageType") === "contact_sheet" ? "联系表" : "截图"; }
+function imageTypeText(_image: AnyRecord): string { return "联系表封面"; }
 function imageFileName(image: AnyRecord): string { return rowText(image, "FilePath").split(/[\\/]/).pop() || "打开原图"; }
 function imageID(image: AnyRecord): string { return rowText(image, "ID").trim(); }
-function imageIsScreenshot(image: AnyRecord): boolean { return rowText(image, "ImageType") === "screenshot"; }
-function imageIsCover(image: AnyRecord): boolean {
-  const id = imageID(image);
-  return id !== "" && (pick(image, "IsCover") === true || id === movieText("CoverImageID"));
+function imageCanBeCover(image: AnyRecord): boolean {
+  return rowText(image, "ImageType") === "contact_sheet";
 }
-function applyCoverState(coverImageID: string, images: AnyRecord[] = mediaImages.value): void {
-  const normalizedCoverImageID = coverImageID.trim();
-  const numericCoverImageID = Number(normalizedCoverImageID);
-  payload.value = {
-    ...payload.value,
-    Movie: {
-      ...movie.value,
-      CoverImageID: Number.isSafeInteger(numericCoverImageID) && numericCoverImageID > 0 ? numericCoverImageID : 0,
-    },
-    MediaImages: images.map((item) => ({
-      ...item,
-      IsCover: normalizedCoverImageID !== "" && normalizedCoverImageID !== "0" && imageID(item) === normalizedCoverImageID,
-    })),
-  };
-}
+function imageIsCover(image: AnyRecord): boolean { return pick(image, "IsCover") === true; }
 function formatMediaSize(value: unknown): string {
   const bytes = Number(value || 0);
   return bytes > 0 ? `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB` : "-";
@@ -348,51 +289,9 @@ function toggleAttachments(resource: AnyRecord) {
   const threadTID = rowText(resource, "ThreadTID");
   expandedThreadTID.value = expandedThreadTID.value === threadTID ? "" : threadTID;
 }
-async function generateScreenshot() {
-  const timeSeconds = Number(screenshotTime.value);
-  if (!hasInputValue(screenshotTime.value) || !Number.isFinite(timeSeconds) || timeSeconds < 0) {
-    captureError.value = "请输入有效的截图时间。";
-    return;
-  }
-  await generateMediaImage("screenshot", { time_seconds: timeSeconds });
-}
-async function generateContactSheet() {
-  const columns = Number(contactColumns.value);
-  const rows = Number(contactRows.value);
-  const cellWidth = Number(contactCellWidth.value);
-  if (![columns, rows, cellWidth].every((value) => Number.isInteger(value) && value > 0)) {
-    captureError.value = "列数、行数和单格宽度必须是正整数。";
-    return;
-  }
-  await generateMediaImage("contact_sheet", { columns, rows, cell_width: cellWidth });
-}
-async function generateMediaImage(type: "screenshot" | "contact_sheet", request: AnyRecord) {
-  captureBusy.value = type;
-  captureFeedback.value = "";
-  captureError.value = "";
-  const fc2Key = movieText("FC2Key");
-  const endpoint = type === "screenshot" ? "screenshot" : "contact-sheet";
-  try {
-    const response = asRecord(await sendJSON(`/api/fc2/movies/${encodeURIComponent(fc2Key)}/${endpoint}`, "POST", request));
-    const image = asRecord(pick(response, "image", "Image"));
-    if (!rowText(image, "ID")) throw new Error("接口未返回图片记录");
-    const nextImages = [image, ...mediaImages.value];
-    if (type === "screenshot") {
-      applyCoverState(text(response, "cover_image_id") || imageID(image), nextImages);
-      captureFeedback.value = "截图生成完成并已设为封面";
-    } else {
-      payload.value = { ...payload.value, MediaImages: nextImages };
-      captureFeedback.value = "联系表生成完成";
-    }
-  } catch (err) {
-    captureError.value = err instanceof Error ? err.message : String(err);
-  } finally {
-    captureBusy.value = "";
-  }
-}
 async function setCoverImage(image: AnyRecord) {
   const id = imageID(image);
-  if (!id || !imageIsScreenshot(image) || imageIsCover(image) || coverBusyImageID.value || deleteBusyImageID.value || captureBusy.value) return;
+  if (!id || !imageCanBeCover(image) || imageIsCover(image) || coverBusyImageID.value || deleteBusyImageID.value) return;
   coverBusyImageID.value = id;
   deleteConfirmImageID.value = "";
   captureFeedback.value = "";
@@ -401,7 +300,7 @@ async function setCoverImage(image: AnyRecord) {
     const fc2Key = movieText("FC2Key");
     const response = asRecord(await sendJSON(`/api/fc2/movies/${encodeURIComponent(fc2Key)}/images/${encodeURIComponent(id)}/cover`, "PUT"));
     if (pick(response, "ok") !== true) throw new Error("接口未确认封面设置结果");
-    applyCoverState(text(response, "cover_image_id") || id);
+    await refreshPayload();
     captureFeedback.value = "封面设置完成";
   } catch (err) {
     captureError.value = err instanceof Error ? err.message : String(err);
@@ -411,7 +310,7 @@ async function setCoverImage(image: AnyRecord) {
 }
 function requestDeleteMediaImage(image: AnyRecord) {
   const id = imageID(image);
-  if (!id || coverBusyImageID.value || deleteBusyImageID.value || captureBusy.value) return;
+  if (!id || coverBusyImageID.value || deleteBusyImageID.value) return;
   deleteConfirmImageID.value = id;
   captureFeedback.value = "";
   captureError.value = "";
@@ -431,7 +330,7 @@ async function deleteMediaImage(image: AnyRecord) {
     const fc2Key = movieText("FC2Key");
     const response = asRecord(await sendJSON(`/api/fc2/movies/${encodeURIComponent(fc2Key)}/images/${encodeURIComponent(id)}`, "DELETE"));
     if (pick(response, "ok") !== true) throw new Error("接口未确认图片删除结果");
-    applyCoverState(text(response, "cover_image_id"), mediaImages.value.filter((item) => imageID(item) !== id));
+    await refreshPayload();
     deleteConfirmImageID.value = "";
     captureFeedback.value = `${imageTypeText(image)}已移动到删除目录`;
   } catch (err) {

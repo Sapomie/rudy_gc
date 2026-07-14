@@ -36,25 +36,71 @@ type CopyStatus struct {
 	LastError  string `json:"last_error"`
 }
 
+type SmartPickCopyItem struct {
+	SourcePath string
+	FileName   string
+}
+
 func (l *ScService) StartCopyAsync(movies []*types.MovieType, source string) (bool, CopyStatus) {
+	return l.StartCopyItemsAsync(l.smartPickCopyItems(movies, source))
+}
+
+func (l *ScService) smartPickCopyItems(movies []*types.MovieType, source string) []SmartPickCopyItem {
+	items := make([]SmartPickCopyItem, 0, len(movies))
+	for _, movie := range movies {
+		videoURL := SmartPickMovieVideoURL(movie, source)
+		items = append(items, SmartPickCopyItem{
+			SourcePath: videoURL,
+			FileName:   l.smartPickCopyFileName(movie, videoURL, source),
+		})
+	}
+	return items
+}
+
+func (l *ScService) StartFC2CopyAsync(movies []*FC2SmartPickMovie) (bool, CopyStatus) {
+	return l.StartCopyItemsAsync(l.smartPickFC2CopyItems(movies))
+}
+
+func (l *ScService) smartPickFC2CopyItems(movies []*FC2SmartPickMovie) []SmartPickCopyItem {
+	items := make([]SmartPickCopyItem, 0, len(movies))
+	for _, movie := range movies {
+		sourcePath := ""
+		if movie != nil {
+			sourcePath = movie.VideoURL
+		}
+		items = append(items, SmartPickCopyItem{
+			SourcePath: sourcePath,
+			FileName:   smartPickFC2CopyFileName(movie, sourcePath),
+		})
+	}
+	return items
+}
+
+func (l *ScService) StartMixedCopyAsync(javMovies []*types.MovieType, source string, fc2Movies []*FC2SmartPickMovie) (bool, CopyStatus) {
+	items := l.smartPickCopyItems(javMovies, source)
+	items = append(items, l.smartPickFC2CopyItems(fc2Movies)...)
+	return l.StartCopyItemsAsync(items)
+}
+
+func (l *ScService) StartCopyItemsAsync(items []SmartPickCopyItem) (bool, CopyStatus) {
 	l.copyMu.Lock()
 	defer l.copyMu.Unlock()
 
 	if l.copyTask != nil && l.copyTask.running {
 		return false, l.copyStatusLocked()
 	}
-	if len(movies) == 0 {
+	if len(items) == 0 {
 		return false, CopyStatus{}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	l.copyTask = &copyTask{
 		running:   true,
-		total:     len(movies),
+		total:     len(items),
 		startedAt: time.Now().Unix(),
 		cancel:    cancel,
 	}
-	go l.runCopyTask(ctx, movies, source)
+	go l.runCopyTask(ctx, items)
 	return true, l.copyStatusLocked()
 }
 
@@ -94,18 +140,14 @@ func (l *ScService) copyStatusLocked() CopyStatus {
 	}
 }
 
-func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType, source string) {
-	for _, mf := range movies {
+func (l *ScService) runCopyTask(ctx context.Context, items []SmartPickCopyItem) {
+	for _, item := range items {
 		if ctx.Err() != nil {
 			l.finishCopy(true)
 			return
 		}
-		if mf == nil {
-			l.incCopyDone("")
-			continue
-		}
-		videoURL := SmartPickMovieVideoURL(mf, source)
-		current := l.smartPickCopyFileName(mf, videoURL, source)
+		videoURL := strings.TrimSpace(item.SourcePath)
+		current := strings.TrimSpace(item.FileName)
 		if strings.TrimSpace(current) == "" {
 			current = filepath.Base(videoURL)
 		}
@@ -115,7 +157,7 @@ func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType, 
 			l.incCopyDone("")
 			continue
 		}
-		if err := l.copyFileToDestinationCtx(ctx, mf, videoURL, source); err != nil {
+		if err := l.copyFileToDestinationCtx(ctx, item); err != nil {
 			if errors.Is(err, context.Canceled) {
 				l.finishCopy(true)
 				return
@@ -128,7 +170,7 @@ func (l *ScService) runCopyTask(ctx context.Context, movies []*types.MovieType, 
 	l.finishCopy(false)
 }
 
-func (l *ScService) copyFileToDestinationCtx(ctx context.Context, movie *types.MovieType, srcFilePath, source string) error {
+func (l *ScService) copyFileToDestinationCtx(ctx context.Context, item SmartPickCopyItem) error {
 	destDir := strings.TrimSpace(l.deps.Config.Film.CopyDestinationPath)
 	if destDir == "" {
 		return fmt.Errorf("copy destination path is empty")
@@ -137,7 +179,11 @@ func (l *ScService) copyFileToDestinationCtx(ctx context.Context, movie *types.M
 		return fmt.Errorf("create copy destination dir failed: %w", err)
 	}
 
-	fileName := l.smartPickCopyFileName(movie, srcFilePath, source)
+	srcFilePath := strings.TrimSpace(item.SourcePath)
+	fileName := strings.TrimSpace(item.FileName)
+	if fileName == "" {
+		fileName = filepath.Base(srcFilePath)
+	}
 	destFilePath, err := nextAvailableTargetPath(destDir, fileName)
 	if err != nil {
 		return err

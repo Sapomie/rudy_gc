@@ -1,4 +1,4 @@
-FROM golang:1.25
+FROM node:22-bookworm-slim
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -7,20 +7,17 @@ ARG http_proxy
 ARG https_proxy
 ARG all_proxy
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app/gc-web-next02
 
-WORKDIR /app/gc-web
+COPY gc-web-next02/package.json gc-web-next02/package-lock.json ./
+RUN npm ci
 
-COPY gc-web/package.json ./package.json
-COPY gc-web ./
-
-RUN mkdir -p /app/z_text
+COPY gc-web-next02 ./
+RUN npm run build
 
 ENV PORT=15012
 ENV TZ=Asia/Shanghai
 
 EXPOSE 15012
 
-CMD ["node", "server.mjs"]
+CMD ["npm", "run", "dev"]

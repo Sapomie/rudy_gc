@@ -3,7 +3,7 @@
 v3 Docker 部署包含两个业务容器：
 
 - `gc-api`：Go API 服务，Docker 内监听 `15013`。
-- `gc-web`：Node 页面与静态资源服务，Docker 内监听 `15012`，并代理 `/api/...` 到 `gc-api`。
+- `gc-web`：运行 `gc-web-next02` 的 Vue/Vite 前端服务，Docker 内监听 `15012`，并代理 `/api/...` 到 `gc-api`。
 
 基础服务使用已有 Docker 容器：
 

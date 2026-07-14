@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	moviedomain "rudy_gc/internal/domain/movie"
+	"rudy_gc/internal/model/modelx/moviex"
 )
 
 func TestBuildAddScPreviewAllowsImageOnly(t *testing.T) {
@@ -77,5 +78,27 @@ func TestBuildAddScMovieSelectionMapUsesTypedIdentity(t *testing.T) {
 	}
 	if selection["fc2ppv:42"] != 2 {
 		t.Fatalf("FC2 selection = %d", selection["fc2ppv:42"])
+	}
+}
+
+func TestNormalizeScAddFC2KeySupportsSmartPickCopyName(t *testing.T) {
+	copyName := smartPickFC2CopyFileName(&FC2SmartPickMovie{
+		FC2Movie: &moviex.FC2Movie{
+			FC2Key:        "FC2PPV-3347918-1",
+			PerformerText: "石川祐奈",
+			Title:         "影片标题",
+		},
+	}, "/media/source.mp4")
+
+	key, ok := normalizeScAddFC2Key(copyName)
+	if !ok || key != "FC2PPV-3347918-1" {
+		t.Fatalf("normalizeScAddFC2Key(%q) = %q, %v", copyName, key, ok)
+	}
+}
+
+func TestNormalizeScAddFC2KeyKeepsEncodedMediaNameSupport(t *testing.T) {
+	key, ok := normalizeScAddFC2Key("15122252531-3347918-1_sub_self_nomsk.mp4")
+	if !ok || key != "FC2PPV-3347918-1" {
+		t.Fatalf("normalizeScAddFC2Key() = %q, %v", key, ok)
 	}
 }

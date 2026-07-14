@@ -289,21 +289,21 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 
 	fileNames := make([]string, 0, len(videoInfos))
 	movieNames := make([]string, 0, len(videoInfos))
-	encodedKeys := make([]string, 0, len(videoInfos))
-	encodedKeyByFileName := make(map[string]string, len(videoInfos))
+	fc2Keys := make([]string, 0, len(videoInfos))
+	fc2KeyByFileName := make(map[string]string, len(videoInfos))
 	for _, info := range videoInfos {
 		fileNames = append(fileNames, info.Name())
 		movieNames = append(movieNames, extractMovieName(info.Name()))
-		if key, ok := fc2domain.NormalizeEncodedMediaKey(extractMovieName(info.Name())); ok {
-			encodedKeys = append(encodedKeys, key)
-			encodedKeyByFileName[info.Name()] = key
+		if key, ok := normalizeScAddFC2Key(info.Name()); ok {
+			fc2Keys = append(fc2Keys, key)
+			fc2KeyByFileName[info.Name()] = key
 		}
 	}
 	fc2ByFileRows, err := l.deps.FC2MediaModel.ListByFileNames(ctx, fileNames)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to list fc2 media by file names: %w", err)
 	}
-	fc2ByKeyRows, err := l.deps.FC2MediaModel.ListByKeys(ctx, encodedKeys)
+	fc2ByKeyRows, err := l.deps.FC2MediaModel.ListByKeys(ctx, fc2Keys)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to list fc2 media by keys: %w", err)
 	}
@@ -348,8 +348,8 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 	for _, info := range videoInfos {
 		candidates := make(map[string]*AddScPreviewMovie)
 		addFC2PreviewCandidate(candidates, fc2MediaByFileName[info.Name()], fc2MovieByID)
-		if encodedKey := encodedKeyByFileName[info.Name()]; encodedKey != "" {
-			addFC2PreviewCandidate(candidates, fc2MediaByKey[encodedKey], fc2MovieByID)
+		if fc2Key := fc2KeyByFileName[info.Name()]; fc2Key != "" {
+			addFC2PreviewCandidate(candidates, fc2MediaByKey[fc2Key], fc2MovieByID)
 		}
 		movieName := extractMovieName(info.Name())
 		if wm := javByMovieName[movieName]; wm != nil {
@@ -606,4 +606,12 @@ func copyFile(srcPath, dstPath string) error {
 func extractMovieName(fileName string) string {
 	strs := strings.Split(fileName, "_")
 	return strs[0]
+}
+
+func normalizeScAddFC2Key(fileName string) (string, bool) {
+	movieName := extractMovieName(fileName)
+	if key, _, _, _, ok := fc2domain.NormalizeKey(movieName); ok {
+		return key, true
+	}
+	return fc2domain.NormalizeEncodedMediaKey(movieName)
 }

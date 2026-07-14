@@ -164,9 +164,6 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := backfillFC2MediaSortSnapshots(db); err != nil {
 		return err
 	}
-	if err := backfillFC2MovieCoverImages(db); err != nil {
-		return err
-	}
 	if err := migrateAddAmCastOwnedWMediaNumber(db); err != nil {
 		return err
 	}
@@ -2125,21 +2122,6 @@ func backfillFC2MediaSortSnapshots(db *gorm.DB) error {
 		}
 	}
 	return nil
-}
-
-func backfillFC2MovieCoverImages(db *gorm.DB) error {
-	return db.Exec(`
-UPDATE fc2_movie AS movie
-SET cover_image_id = COALESCE((
-	SELECT image.id
-	FROM fc2_media AS media
-	JOIN fc2_media_image AS image ON image.fc2_media_id = media.id
-	WHERE media.fc2_movie_id = movie.id
-		AND image.image_type = 'screenshot'
-	ORDER BY image.created_on DESC, image.id DESC
-	LIMIT 1
-), 0)
-WHERE movie.cover_image_id = 0`).Error
 }
 
 func ensureBaiduFanyiFetchSite(db *gorm.DB) error {

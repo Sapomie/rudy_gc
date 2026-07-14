@@ -219,12 +219,10 @@ func (l *ScService) buildSmartPickGroups(ctx context.Context, reqs []PickRequest
 	return groups, nil
 }
 
-func normalizeSmartPickReq(req *types.ListMovieFullRequest, source string) {
-	req.MediaOwned = consts.MovieAll
+func normalizeSmartPickReq(req *types.ListMovieFullRequest, _ string) {
 	req.MediaOwned = consts.OwnedAllNotRemoved
 	req.Page = 1
-	req.PageSize = 100000
-	ensureReqDefaults(req)
+	req.PageSize = 0
 }
 
 func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickGroup) (map[string]smartCastStat, error) {

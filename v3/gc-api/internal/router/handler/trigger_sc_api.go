@@ -12,7 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/dep"
+	moviedomain "rudy_gc/internal/domain/movie"
+	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/loop"
+	mediaservice "rudy_gc/internal/service/media"
 	"rudy_gc/internal/service/sc"
 	"rudy_gc/internal/types"
 )
@@ -20,6 +23,7 @@ import (
 type ScTriggerAPI struct {
 	runtime   *loop.FetchLoopService
 	scSvc     *sc.ScService
+	mediaSvc  *mediaservice.Service
 	scRootDir string
 }
 
@@ -27,6 +31,7 @@ func NewScTriggerAPI(deps *dep.Dep) *ScTriggerAPI {
 	return &ScTriggerAPI{
 		runtime:   newCrawlerRuntime(deps),
 		scSvc:     sc.NewService(deps),
+		mediaSvc:  mediaservice.NewService(deps),
 		scRootDir: deps.Config.Film.ScRootDir,
 	}
 }
@@ -255,13 +260,25 @@ func (h *ScTriggerAPI) startTask(c *gin.Context, req loop.StartTaskRequest) {
 type scPickReq struct {
 	Weight int64                      `json:"weight"`
 	Req    types.ListMovieFullRequest `json:"req"`
+	FC2Req sc.FC2SmartPickRequest     `json:"fc2Req"`
+}
+
+type scSmartPickJAVReq struct {
+	PickN   int                 `json:"pickN"`
+	Options sc.SmartPickOptions `json:"options"`
+	Reqs    []scPickReq         `json:"reqs"`
+}
+
+type scSmartPickFC2Req struct {
+	PickN   int                    `json:"pickN"`
+	Options sc.FC2SmartPickOptions `json:"options"`
+	Reqs    []scPickReq            `json:"reqs"`
 }
 
 type scSmartPickReq struct {
-	PickN   int                 `json:"pickN"`
-	Source  string              `json:"source"`
-	Options sc.SmartPickOptions `json:"options"`
-	Reqs    []scPickReq         `json:"reqs"`
+	Source string            `json:"source"`
+	JAV    scSmartPickJAVReq `json:"jav"`
+	FC2    scSmartPickFC2Req `json:"fc2"`
 }
 
 type scPickCopyCast struct {
@@ -338,11 +355,15 @@ func buildPickCopyMovies(movies []*types.MovieType, source string) []scPickCopyM
 	return resp
 }
 
-func buildPickedTotalSizeGB(movies []*types.MovieType, source string) string {
+func buildPickedTotalSize(movies []*types.MovieType, source string) int64 {
 	var totalBytes int64
 	for _, m := range movies {
 		totalBytes += sc.SmartPickMovieSize(m, source)
 	}
+	return totalBytes
+}
+
+func formatSmartPickSizeGB(totalBytes int64) string {
 	return fmt.Sprintf("%.2f", float64(totalBytes)/(1024*1024*1024))
 }
 
@@ -352,35 +373,7 @@ func (h *ScTriggerAPI) PickSmartOnly(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	if len(req.Reqs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
-		return
-	}
-
-	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
-	for _, r := range req.Reqs {
-		converted = append(converted, sc.PickRequestWithWeight{
-			Req:    r.Req,
-			Weight: r.Weight,
-		})
-	}
-
-	source := sc.NormalizeSmartPickSource(req.Source)
-	result, err := h.scSvc.SmartPickWithInfoFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	totalSizeGB := buildPickedTotalSizeGB(result.Movies, source)
-	pickInfo := result.Info
-	pickInfo.TotalSizeGB = totalSizeGB
-	c.JSON(http.StatusOK, gin.H{
-		"picked":        len(result.Movies),
-		"movies":        buildPickCopyMovies(result.Movies, source),
-		"total_size_gb": totalSizeGB,
-		"source":        source,
-		"pick_info":     pickInfo,
-	})
+	h.pickSmartMixed(c, req, false)
 }
 
 func (h *ScTriggerAPI) PickSmartCopy(c *gin.Context) {
@@ -389,38 +382,123 @@ func (h *ScTriggerAPI) PickSmartCopy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	if len(req.Reqs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "reqs is empty"})
-		return
-	}
+	h.pickSmartMixed(c, req, true)
+}
 
-	converted := make([]sc.PickRequestWithWeight, 0, len(req.Reqs))
-	for _, r := range req.Reqs {
-		converted = append(converted, sc.PickRequestWithWeight{
-			Req:    r.Req,
-			Weight: r.Weight,
-		})
+func validateScSmartPickReq(req scSmartPickReq) error {
+	if req.JAV.PickN < 0 {
+		return fmt.Errorf("JAV pickN must be >= 0")
 	}
+	if req.FC2.PickN < 0 {
+		return fmt.Errorf("FC2 pickN must be >= 0")
+	}
+	if req.JAV.PickN == 0 && req.FC2.PickN == 0 {
+		return fmt.Errorf("JAV pickN and FC2 pickN cannot both be 0")
+	}
+	if req.JAV.PickN > 0 && len(req.JAV.Reqs) == 0 {
+		return fmt.Errorf("JAV reqs is empty")
+	}
+	if req.FC2.PickN > 0 && len(req.FC2.Reqs) == 0 {
+		return fmt.Errorf("FC2 reqs is empty")
+	}
+	return nil
+}
 
-	source := sc.NormalizeSmartPickSource(req.Source)
-	result, err := h.scSvc.SmartPickWithInfoFromRequests(c.Request.Context(), converted, req.PickN, req.Options, source)
-	if err != nil {
+func (h *ScTriggerAPI) pickSmartMixed(c *gin.Context, req scSmartPickReq, withCopy bool) {
+	if err := validateScSmartPickReq(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	totalSizeGB := buildPickedTotalSizeGB(result.Movies, source)
-	pickInfo := result.Info
-	pickInfo.TotalSizeGB = totalSizeGB
-	started, status := h.scSvc.StartCopyAsync(result.Movies, source)
-	c.JSON(http.StatusOK, gin.H{
-		"picked":        len(result.Movies),
-		"movies":        buildPickCopyMovies(result.Movies, source),
-		"total_size_gb": totalSizeGB,
-		"source":        source,
-		"pick_info":     pickInfo,
-		"copy_started":  started,
-		"copy_status":   status,
-	})
+
+	source := sc.NormalizeSmartPickSource(req.Source)
+	var javResult *sc.SmartPickResult
+	if req.JAV.PickN > 0 {
+		converted := make([]sc.PickRequestWithWeight, 0, len(req.JAV.Reqs))
+		for _, item := range req.JAV.Reqs {
+			converted = append(converted, sc.PickRequestWithWeight{Req: item.Req, Weight: item.Weight})
+		}
+		result, err := h.scSvc.SmartPickWithInfoFromRequests(c.Request.Context(), converted, req.JAV.PickN, req.JAV.Options, source)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "JAV: " + err.Error()})
+			return
+		}
+		javResult = result
+	}
+
+	var fc2Result *sc.FC2SmartPickResult
+	if req.FC2.PickN > 0 {
+		converted := make([]sc.FC2PickRequestWithWeight, 0, len(req.FC2.Reqs))
+		for _, item := range req.FC2.Reqs {
+			converted = append(converted, sc.FC2PickRequestWithWeight{Req: item.FC2Req, Weight: item.Weight})
+		}
+		result, err := h.scSvc.SmartPickFC2WithInfoFromRequests(c.Request.Context(), converted, req.FC2.PickN, req.FC2.Options)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "FC2: " + err.Error()})
+			return
+		}
+		fc2Result = result
+	}
+
+	javMovies := make([]*types.MovieType, 0)
+	javInfo := sc.SmartPickInfo{}
+	if javResult != nil {
+		javMovies = javResult.Movies
+		javInfo = javResult.Info
+	}
+	fc2Movies := make([]*sc.FC2SmartPickMovie, 0)
+	fc2Info := sc.FC2SmartPickInfo{}
+	if fc2Result != nil {
+		fc2Movies = fc2Result.Movies
+		fc2Info = fc2Result.Info
+	}
+	fc2MovieRows := make([]*moviex.FC2Movie, 0, len(fc2Movies))
+	for _, movie := range fc2Movies {
+		if movie != nil && movie.FC2Movie != nil {
+			fc2MovieRows = append(fc2MovieRows, movie.FC2Movie)
+		}
+	}
+	fc2CardViews := make([]*mediaservice.FC2CardView, 0, len(fc2MovieRows))
+	if len(fc2MovieRows) > 0 {
+		views, buildErr := h.mediaSvc.BuildFC2CardViews(c.Request.Context(), fc2MovieRows)
+		if buildErr != nil {
+			jsonServerError(c, "FC2卡片数据加载失败", buildErr)
+			return
+		}
+		fc2CardViews = views
+	}
+
+	javSizeBytes := buildPickedTotalSize(javMovies, source)
+	fc2SizeBytes := sc.FC2SmartPickTotalSize(fc2Movies)
+	javSizeGB := formatSmartPickSizeGB(javSizeBytes)
+	fc2SizeGB := formatSmartPickSizeGB(fc2SizeBytes)
+	javInfo.TotalSizeGB = javSizeGB
+	fc2Info.TotalSizeGB = fc2SizeGB
+	response := gin.H{
+		"picked":        len(javMovies) + len(fc2Movies),
+		"total_size_gb": formatSmartPickSizeGB(javSizeBytes + fc2SizeBytes),
+		"jav": gin.H{
+			"picked":        len(javMovies),
+			"movies":        buildPickCopyMovies(javMovies, source),
+			"total_size_gb": javSizeGB,
+			"movie_type":    moviedomain.SehuatangThreadMovieTypeJAV,
+			"source":        source,
+			"pick_info":     javInfo,
+		},
+		"fc2": gin.H{
+			"picked":        len(fc2Movies),
+			"movies":        fc2CardViews,
+			"total_size_gb": fc2SizeGB,
+			"movie_type":    moviedomain.SehuatangThreadMovieTypeFC2PPV,
+			"source":        "fc2media",
+			"pick_info":     fc2Info,
+		},
+	}
+	if withCopy {
+		started, status := h.scSvc.StartMixedCopyAsync(javMovies, source, fc2Movies)
+		response["copy_started"] = started
+		response["copy_status"] = status
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ScTriggerAPI) CopyStatus(c *gin.Context) {
