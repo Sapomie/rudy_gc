@@ -207,11 +207,18 @@ func (h *MovieDetailAPI) UpdateTorrentHash(c *gin.Context) {
 		return
 	}
 
+	previousTorrentHash := mediaRow.SourceTorrentHash
 	mediaRow.SourceTorrentHash = torrentHash
 	mediaRow.UpdatedOn = time.Now().Unix()
 	if err := h.deps.WMediaModel.Update(c.Request.Context(), mediaRow); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 		return
+	}
+	if h.deps.ShMagnetModel != nil {
+		if err := h.deps.ShMagnetModel.RefreshDownloadStatesByInfoHashes(c.Request.Context(), previousTorrentHash, torrentHash); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+			return
+		}
 	}
 
 	h.movieSvc.InvalidateMovieType(c.Request.Context(), mv.JavId)

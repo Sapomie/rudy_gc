@@ -16,7 +16,10 @@
             <h2>{{ pageTitle }}</h2>
             <p v-if="pageNote">{{ pageNote }}</p>
           </div>
-          <button type="button" class="btn albums-create-button" id="btnOpenCreateMovieAlbumModal" @click="openCreateModal">新增电影相册</button>
+          <div class="albums-list-hero-actions">
+            <button type="button" class="btn albums-manage-button" id="btnOpenManageMovieAlbumsModal" @click="activeModal = 'manage'">管理相册</button>
+            <button type="button" class="btn albums-create-button" id="btnOpenCreateMovieAlbumModal" @click="openCreateModal">新增电影相册</button>
+          </div>
         </header>
 
         <div id="movieAlbumItemsMsg" class="alert albums-list-message" :class="messageClass" role="alert">
@@ -25,7 +28,7 @@
 
         <section class="albums-list-panel next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="albums-list-controls">
-            <form ref="filterForm" class="albums-filter-form movie-albums-filter-form" id="movieAlbumsFilterForm" method="get" action="/movie-albums">
+            <form ref="filterForm" class="albums-filter-form movie-albums-filter-form" id="movieAlbumsFilterForm" method="get" action="/moviealbumlist">
               <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
               <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
               <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
@@ -79,14 +82,14 @@
                 <div class="albums-filter-field movie-albums-release-range">
                   <span>上映日期</span>
                   <div class="movie-albums-release-range-inputs">
-                    <input class="form-control" type="date" name="releasing_from" aria-label="上映开始日期" :value="queryValue('ReleasingFrom')">
+                    <input class="form-control smart-pick-date-input" type="text" name="releasing_from" aria-label="上映开始日期" :value="queryValue('ReleasingFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     <span class="movie-albums-release-range-separator" aria-hidden="true">—</span>
-                    <input class="form-control" type="date" name="releasing_to" aria-label="上映结束日期" :value="queryValue('ReleasingTo')">
+                    <input class="form-control smart-pick-date-input" type="text" name="releasing_to" aria-label="上映结束日期" :value="queryValue('ReleasingTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                   </div>
                 </div>
                 <div class="albums-filter-actions">
                   <button class="btn albums-apply-button" type="submit">筛选</button>
-                  <a class="btn albums-clear-button" href="/movie-albums">清空</a>
+                  <a class="btn albums-clear-button" href="/moviealbumlist">清空</a>
                 </div>
               </div>
             </form>
@@ -185,7 +188,7 @@
                       <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
                     </td>
                     <td class="sc-number text-nowrap">{{ formatUnixDate(value(row, "ReleasingDate")) }}</td>
-                    <td class="sc-number text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
+                    <td class="sc-number text-nowrap"><ScDateTime :value="value(row, 'CreatedOn')" unix /></td>
                     <td class="text-nowrap">
                       <button
                         type="button"
@@ -208,12 +211,16 @@
           :loading-downloaded="loadingDownloaded"
           :transfer-mode="transferMode"
           :transfer-target-options="transferTargetOptions"
+          :album-options="manageAlbumOptions"
+          :selected-album-id="selectedAlbumID"
           @close="closeModal"
           @update-create-name="createName = $event"
           @confirm-create="createMovieAlbum"
           @confirm-execute="executeRemove"
           @confirm-remove-downloaded="removeDownloadedItems"
           @confirm-transfer="transferMovieAlbumItems"
+          @rename-album="renameManagedMovieAlbum"
+          @delete-album="deleteManagedMovieAlbum"
         />
       </div>
     </div>
@@ -225,6 +232,7 @@ import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
@@ -236,7 +244,7 @@ const loading = ref(false);
 const error = ref("");
 const messageText = ref("");
 const messageOk = ref(true);
-const activeModal = ref<"" | "create" | "execute" | "downloaded" | "transfer">("");
+const activeModal = ref<"" | "create" | "execute" | "downloaded" | "transfer" | "manage">("");
 const transferMode = ref<"move" | "copy">("copy");
 const createName = ref("");
 const downloadedPreviewItems = ref<AnyRecord[]>([]);
@@ -288,6 +296,13 @@ const albumSelectOptions = computed(() => {
 const transferTargetOptions = computed(() => albums.value
   .filter((album) => Number(value(album, "ID")) > 0 && Number(value(album, "ID")) !== selectedAlbumID.value)
   .map((album) => ({ value: value(album, "ID"), label: value(album, "Name") || value(album, "ID") })));
+const manageAlbumOptions = computed(() => albums.value
+  .filter((album) => Number(value(album, "ID")) > 0)
+  .map((album) => ({
+    value: value(album, "ID"),
+    label: value(album, "Name") || value(album, "ID"),
+    protected: pick(album, "Protected") === true
+  })));
 
 function queryValue(key: string): string {
   return text(query.value, key);
@@ -307,13 +322,6 @@ function sortLink(key: string): AnyRecord {
 
 function movieHref(row: AnyRecord): string {
   return `/moviedetail/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
-}
-
-function formatUnixMinute(input: unknown): string {
-  const n = Number(input || 0);
-  if (!n) return "-";
-  const d = new Date(n * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatUnixDate(input: unknown): string {
@@ -357,7 +365,7 @@ function quickFilter(albumName: string) {
       return;
     }
   }
-  const url = new URL("/movie-albums", window.location.origin);
+  const url = new URL("/moviealbumlist", window.location.origin);
   url.searchParams.set("album_name", albumName);
   window.location.href = `${url.pathname}${url.search}`;
 }
@@ -447,11 +455,55 @@ async function createMovieAlbum() {
     closeModal();
     showMessage(text(data, "message") || "电影相册创建成功");
     const albumName = text(data, "album_name") || name;
-    const url = new URL("/movie-albums", window.location.origin);
+    const url = new URL("/moviealbumlist", window.location.origin);
     url.searchParams.set("album_name", albumName);
     window.location.href = `${url.pathname}${url.search}`;
   } catch (err) {
     showMessage(err instanceof Error ? err.message : "电影相册创建失败", false);
+  }
+}
+
+async function renameManagedMovieAlbum(input: { id: string; name: string }) {
+  const albumID = Number(input.id || 0);
+  const name = String(input.name || "").trim();
+  if (albumID <= 0 || !name) {
+    showMessage("电影相册名称不能为空", false);
+    return;
+  }
+  try {
+    const data = asRecord(await sendJSON(`/api/movie-albums/${albumID}`, "PUT", { name }));
+    closeModal();
+    const updatedName = text(data, "album_name") || name;
+    if (albumID === selectedAlbumID.value) {
+      const url = new URL("/moviealbumlist", window.location.origin);
+      url.searchParams.set("album_name", updatedName);
+      window.location.href = `${url.pathname}${url.search}`;
+      return;
+    }
+    window.location.reload();
+  } catch (err) {
+    closeModal();
+    showMessage(err instanceof Error ? err.message : "编辑电影相册失败", false);
+  }
+}
+
+async function deleteManagedMovieAlbum(albumIDValue: string) {
+  const albumID = Number(albumIDValue || 0);
+  if (albumID <= 0) {
+    showMessage("电影相册 ID 无效", false);
+    return;
+  }
+  try {
+    await sendJSON(`/api/movie-albums/${albumID}`, "DELETE");
+    closeModal();
+    if (albumID === selectedAlbumID.value) {
+      window.location.href = "/moviealbumlist";
+      return;
+    }
+    window.location.reload();
+  } catch (err) {
+    closeModal();
+    showMessage(err instanceof Error ? err.message : "删除电影相册失败", false);
   }
 }
 
@@ -586,12 +638,28 @@ const MovieAlbumModals = defineComponent({
     downloadedItems: { type: Array as PropType<AnyRecord[]>, required: true },
     loadingDownloaded: { type: Boolean, required: true },
     transferMode: { type: String as PropType<"move" | "copy">, required: true },
-    transferTargetOptions: { type: Array as PropType<Array<{ value: string; label: string }>>, required: true }
+    transferTargetOptions: { type: Array as PropType<Array<{ value: string; label: string }>>, required: true },
+    albumOptions: { type: Array as PropType<Array<{ value: string; label: string; protected: boolean }>>, required: true },
+    selectedAlbumId: { type: Number, required: true }
   },
-  emits: ["close", "updateCreateName", "confirmCreate", "confirmExecute", "confirmRemoveDownloaded", "confirmTransfer"],
+  emits: ["close", "updateCreateName", "confirmCreate", "confirmExecute", "confirmRemoveDownloaded", "confirmTransfer", "renameAlbum", "deleteAlbum"],
   setup(props, { emit }) {
+    const editingAlbumID = ref("");
+    const editingAlbumName = ref("");
+    const deletingAlbumID = ref("");
+    const deletingAlbumName = ref("");
     const modalClass = (name: string) => ["modal", "fade", props.activeModal === name ? "show d-block" : ""];
     const ariaHidden = (name: string) => props.activeModal === name ? "false" : "true";
+    const resetManagement = () => {
+      editingAlbumID.value = "";
+      editingAlbumName.value = "";
+      deletingAlbumID.value = "";
+      deletingAlbumName.value = "";
+    };
+    const closeManagement = () => {
+      resetManagement();
+      emit("close");
+    };
     const previewList = () => props.downloadedItems.length
       ? props.downloadedItems.map((item) => {
         const row = asRecord(item);
@@ -604,6 +672,86 @@ const MovieAlbumModals = defineComponent({
       })
       : [h("div", { id: "movieAlbumRemoveDownloadedEmpty", class: "small text-muted" }, props.loadingDownloaded ? "正在加载预览..." : "没有可移除的已下载条目。")];
     return () => h("div", [
+      h("div", {
+        class: modalClass("manage"),
+        id: "movieAlbumManageModal",
+        tabindex: "-1",
+        "aria-labelledby": "movieAlbumManageModalLabel",
+        "aria-hidden": ariaHidden("manage")
+      }, [h("div", { class: "modal-dialog modal-dialog-centered albums-manage-dialog" }, [h("div", { class: "modal-content" }, [
+        h("div", { class: "modal-header" }, [
+          h("h5", { class: "modal-title", id: "movieAlbumManageModalLabel" }, "管理电影相册"),
+          h("button", { type: "button", class: "btn-close", "aria-label": "Close", onClick: closeManagement })
+        ]),
+        h("div", { class: "modal-body albums-manage-body" }, deletingAlbumID.value
+          ? [
+              h("div", { class: "albums-manage-delete-confirm" }, [
+                h("h6", "删除电影相册确认"),
+                h("p", ["确认删除电影相册“", h("strong", deletingAlbumName.value), "”吗？"]),
+                h("p", { class: "text-muted small mb-0" }, "仅空电影相册可以删除；相册中存在任何影片记录时，删除操作会被拒绝。")
+              ])
+            ]
+          : [
+              h("p", { class: "text-muted small mb-2" }, "可编辑或删除自定义电影相册；业务相册由现有流程使用。"),
+              h("div", { class: "albums-manage-list" }, props.albumOptions.map((option) => {
+                const isEditing = editingAlbumID.value === option.value;
+                const isSelected = Number(option.value) === props.selectedAlbumId;
+                return h("div", { class: ["albums-manage-item", isSelected ? "is-selected" : ""], key: option.value }, [
+                  h("div", { class: "albums-manage-item-main" }, isEditing
+                    ? [h("input", {
+                        class: "form-control albums-manage-name-input",
+                        value: editingAlbumName.value,
+                        maxlength: "128",
+                        "aria-label": `编辑电影相册 ${option.label}`,
+                        onInput: (event: Event) => { editingAlbumName.value = (event.target as HTMLInputElement).value; }
+                      })]
+                    : [
+                        h("span", { class: "albums-manage-name" }, option.label),
+                        option.protected ? h("span", { class: "albums-manage-system-badge" }, "业务相册") : null,
+                        isSelected ? h("span", { class: "albums-manage-current-badge" }, "当前") : null
+                      ]),
+                  h("div", { class: "albums-manage-item-actions" }, isEditing
+                    ? [
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-primary btn-sm",
+                          disabled: !editingAlbumName.value.trim(),
+                          onClick: () => emit("renameAlbum", { id: option.value, name: editingAlbumName.value })
+                        }, "保存"),
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-light btn-sm",
+                          onClick: () => { editingAlbumID.value = ""; editingAlbumName.value = ""; }
+                        }, "取消")
+                      ]
+                    : [
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-outline-secondary btn-sm",
+                          disabled: option.protected,
+                          "aria-label": `编辑电影相册 ${option.label}`,
+                          onClick: () => { editingAlbumID.value = option.value; editingAlbumName.value = option.label; }
+                        }, "编辑"),
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-outline-danger btn-sm",
+                          disabled: option.protected,
+                          "aria-label": `删除电影相册 ${option.label}`,
+                          onClick: () => { deletingAlbumID.value = option.value; deletingAlbumName.value = option.label; }
+                        }, "删除")
+                      ])
+                ]);
+              }))
+            ]),
+        h("div", { class: "modal-footer" }, [
+          deletingAlbumID.value
+            ? h("button", { type: "button", class: "btn btn-light", onClick: () => { deletingAlbumID.value = ""; deletingAlbumName.value = ""; } }, "返回管理")
+            : null,
+          deletingAlbumID.value
+            ? h("button", { type: "button", class: "btn btn-danger", id: "movieAlbumDeleteConfirmBtn", onClick: () => emit("deleteAlbum", deletingAlbumID.value) }, "确认删除")
+            : h("button", { type: "button", class: "btn btn-light", onClick: closeManagement }, "关闭")
+        ])
+      ])])]),
       h("div", {
         class: modalClass("create"),
         id: "movieAlbumCreateModal",

@@ -15,7 +15,7 @@
         <div class="card next02-pink-list-panel next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card casts-list-panel">
           <div class="card-body">
             <div class="next02-pink-list-toolbar casts-list-toolbar">
-              <form class="casts-filter-form" method="get" action="/casts" id="castsFilterForm">
+              <form class="casts-filter-form" method="get" action="/castlist" id="castsFilterForm">
                 <input type="hidden" name="p" value="1">
                 <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
                 <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
@@ -52,13 +52,13 @@
                 <div class="casts-filter-field casts-filter-date">
                   <span>Last SC</span>
                   <span class="casts-filter-range">
-                    <input id="casts-last-sc-from" type="date" name="last_sc_from" aria-label="Last SC from" :value="queryValue('LastScFrom')">
+                    <input id="casts-last-sc-from" class="smart-pick-date-input" type="text" name="last_sc_from" aria-label="Last SC from" :value="queryValue('LastScFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     <span aria-hidden="true">–</span>
-                    <input id="casts-last-sc-to" type="date" name="last_sc_to" aria-label="Last SC to" :value="queryValue('LastScTo')">
+                    <input id="casts-last-sc-to" class="smart-pick-date-input" type="text" name="last_sc_to" aria-label="Last SC to" :value="queryValue('LastScTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                   </span>
                 </div>
                 <button class="next02-pink-list-submit" type="submit">Apply</button>
-                <a class="next02-pink-list-clear" href="/casts">Clear</a>
+                <a class="next02-pink-list-clear" href="/castlist">Clear</a>
               </form>
 
               <div class="casts-list-controls">

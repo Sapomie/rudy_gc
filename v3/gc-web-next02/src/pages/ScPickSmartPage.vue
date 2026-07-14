@@ -11,8 +11,8 @@
             <p>{{ pageNote || "组合多组条件、Rank 配额和 SC 阻断策略，完成抽片与 Copy。" }}</p>
           </div>
           <div class="next02-sc-hero-actions">
-            <a href="/sc-events" class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer">SC Events</a>
-            <a href="/crawler/tasks" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">任务列表</a>
+            <a href="/scevents" class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer">SC Events</a>
+            <a href="/crawltasklist" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">任务列表</a>
           </div>
         </section>
 

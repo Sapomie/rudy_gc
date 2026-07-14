@@ -7,12 +7,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	"rudy_gc/internal/consts"
+	fc2domain "rudy_gc/internal/domain/fc2"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/taskctx"
 	"rudy_gc/internal/types"
@@ -20,7 +23,9 @@ import (
 
 type AddScInput struct {
 	Dir             string
+	ComeMovieType   string
 	ComeMovieJavId  string
+	ComeFC2MovieId  int64
 	MovieCast       string
 	Kind            string
 	DurationMinutes int64
@@ -31,7 +36,9 @@ type AddScInput struct {
 }
 
 type AddScInputMovie struct {
+	MovieType  string
 	MovieJavId string
+	FC2MovieId int64
 	IsSc       int64
 }
 
@@ -46,8 +53,12 @@ type AddScPreview struct {
 }
 
 type AddScPreviewMovie struct {
-	MovieName  string
+	MovieType  string
 	MovieJavId string
+	FC2MovieId int64
+	MovieKey   string
+	MovieName  string
+	Title      string
 	MovieHref  string
 	JacketImg  string
 	Casts      []string
@@ -78,8 +89,8 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 		Message: fmt.Sprintf("预览完成，影片数=%d", preview.MovieCount),
 	})
 
-	comeMovieJavId := strings.TrimSpace(in.ComeMovieJavId)
-	if strings.TrimSpace(in.MovieCast) != "" && comeMovieJavId == "" {
+	comeRef := normalizeAddScMovieRef(in.ComeMovieType, in.ComeMovieJavId, in.ComeFC2MovieId)
+	if strings.TrimSpace(in.MovieCast) != "" && comeRef == "" {
 		return fmt.Errorf("movie cast requires come movie")
 	}
 	selectedIsScMap := buildAddScMovieSelectionMap(in.Movies)
@@ -89,7 +100,9 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 		scCount       int64
 		comeMovie     string
 		movieJavIdMap = make(map[string]struct{})
+		fc2MovieIDMap = make(map[int64]struct{})
 		comeFound     bool
+		gListRows     = make([]*moviex.GList, 0, len(preview.Movies))
 	)
 	for _, movie := range preview.Movies {
 		if err := taskctx.WaitIfPaused(ctx); err != nil {
@@ -98,14 +111,29 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 		if movie == nil {
 			continue
 		}
-		movieJavIdMap[movie.MovieJavId] = struct{}{}
+		movieRef := addScPreviewMovieRef(movie)
+		if movieRef == "" {
+			return fmt.Errorf("preview movie identity is invalid: %s", movie.MovieName)
+		}
+		if movie.MovieType == moviedomain.SehuatangThreadMovieTypeJAV {
+			movieJavIdMap[movie.MovieJavId] = struct{}{}
+		} else if movie.MovieType == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+			fc2MovieIDMap[movie.FC2MovieId] = struct{}{}
+		}
 
-		isCome := movie.MovieJavId == comeMovieJavId
-		isSc := resolveAddScMovieIsSc(selectedIsScMap, movie.MovieJavId)
+		isCome := movieRef == comeRef
+		isSc := resolveAddScMovieIsSc(selectedIsScMap, movieRef)
+		delete(selectedIsScMap, movieRef)
 		if isCome && isSc != consts.GListIsSc {
 			return fmt.Errorf("come movie must be selected from is_sc=2 movies")
 		}
-		gl := createGList(preview.ScName, movie.MovieName, movie.MovieJavId, isCome, isSc)
+		if isCome && movie.MovieType == moviedomain.SehuatangThreadMovieTypeFC2PPV && strings.TrimSpace(in.MovieCast) != "" {
+			return fmt.Errorf("FC2 come movie lead cast must be empty")
+		}
+		if isCome && movie.MovieType == moviedomain.SehuatangThreadMovieTypeJAV && strings.TrimSpace(in.MovieCast) != "" && !containsExactString(movie.Casts, in.MovieCast) {
+			return fmt.Errorf("movie cast must be selected from come movie casts")
+		}
+		gl := createGList(preview.ScName, movie, isCome, isSc)
 		if isCome {
 			comeMovie = movie.MovieName
 			comeFound = true
@@ -114,20 +142,13 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 			scCount++
 		}
 
-		_, err = l.glUpsert(ctx, gl)
-		if err != nil {
-			return fmt.Errorf("failed to upsert glist: %w", err)
-		}
+		gListRows = append(gListRows, mapTypesGListToModel(gl))
 		totalCount++
-		taskctx.ReportProgress(ctx, taskctx.Progress{
-			Stage:        "sc_add_movie_done",
-			Message:      fmt.Sprintf("已写入影片：%s", movie.MovieName),
-			HandledCount: int(totalCount),
-			SuccessCount: int(totalCount),
-			QueuedCount:  int(preview.MovieCount - totalCount),
-		})
 	}
-	if comeMovieJavId != "" && !comeFound {
+	if len(selectedIsScMap) > 0 {
+		return fmt.Errorf("submitted movie is not present in current preview")
+	}
+	if comeRef != "" && !comeFound {
 		return fmt.Errorf("selected come movie not found in preview movies")
 	}
 
@@ -137,43 +158,68 @@ func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
 		return fmt.Errorf("directory name %s does not have the expected length of 16 characters", scName)
 	}
 
-	sc := &types.GSc{
-		Name:            scName,
-		ScTime:          preview.ScTime,
-		Kind:            strings.TrimSpace(in.Kind),
-		ComeMovieName:   comeMovie,
-		MovieNumber:     scCount,
-		Cooldown:        0,
-		DurationMinutes: in.DurationMinutes,
-		Fg:              strings.TrimSpace(in.Fg),
-		Vessel:          strings.TrimSpace(in.Vessel),
-		Remarks:         strings.TrimSpace(in.Remarks),
-		MovieCast:       strings.TrimSpace(in.MovieCast),
+	now := time.Now().Unix()
+	sc := &moviex.GSc{
+		Name:          scName,
+		ScTime:        preview.ScTime,
+		Kind:          strings.TrimSpace(in.Kind),
+		ComeMovieName: comeMovie,
+		MovieNumber:   scCount,
+		Cooldown:      0,
+		Duration:      in.DurationMinutes,
+		Fg:            strings.TrimSpace(in.Fg),
+		Vessel:        strings.TrimSpace(in.Vessel),
+		Remarks:       strings.TrimSpace(in.Remarks),
+		MovieCast:     strings.TrimSpace(in.MovieCast),
+		CreatedOn:     now,
+		UpdatedOn:     now,
 	}
+	var copiedImagePath string
 	if imageFilePath != "" {
 		imagePath, err := l.copyScImage(imageFilePath, scName)
 		if err != nil {
 			return fmt.Errorf("failed to copy sc image: %w", err)
 		}
 		sc.ImagePath = imagePath
+		copiedImagePath = imagePath
 	}
 
 	prev, err := l.scFindNearest(ctx, preview.ScTime)
 	if err != nil && !errors.Is(err, sqlx.ErrNotFound) {
+		if copiedImagePath != "" {
+			_ = os.Remove(filepath.Clean(copiedImagePath))
+		}
 		return fmt.Errorf("failed to find previous sc: %w", err)
 	}
 	if prev != nil {
 		sc.Cooldown = preview.ScTime - prev.ScTime
 	}
 
-	_, err = l.scUpsert(ctx, sc)
-	if err != nil {
-		return fmt.Errorf("failed to upsert sc: %w", err)
+	if err = l.deps.ScEventWriteModel.CreateEvent(ctx, sc, gListRows); err != nil {
+		if copiedImagePath != "" {
+			_ = os.Remove(filepath.Clean(copiedImagePath))
+		}
+		return fmt.Errorf("failed to create sc event transaction: %w", err)
 	}
-
-	err = l.AddMovieAndCastScInfo(ctx, movieJavIdMap)
-	if err != nil {
+	if err = l.refreshPersonScSnapshotsByScNames(ctx, now, scName); err != nil {
+		return fmt.Errorf("failed to refresh person sc snapshots: %w", err)
+	}
+	if err = l.AddMovieAndCastScInfo(ctx, movieJavIdMap); err != nil {
 		return fmt.Errorf("failed to add movie and cast sc: %w", err)
+	}
+	if err = l.AddFC2MovieScInfo(ctx, fc2MovieIDMap); err != nil {
+		return fmt.Errorf("failed to add fc2 movie sc: %w", err)
+	}
+	for _, movie := range preview.Movies {
+		if movie == nil {
+			continue
+		}
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:        "sc_add_movie_done",
+			Message:      fmt.Sprintf("已写入影片：%s", movie.MovieName),
+			HandledCount: int(totalCount),
+			SuccessCount: int(totalCount),
+		})
 	}
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:        "sc_add_done",
@@ -215,6 +261,7 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 	}
 
 	var imageFilePath string
+	videoInfos := make([]os.FileInfo, 0, len(entries))
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {
@@ -234,33 +281,138 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 		if !isMp4File(info) {
 			continue
 		}
+		videoInfos = append(videoInfos, info)
+	}
+	if len(videoInfos) == 0 {
+		return preview, imageFilePath, nil
+	}
 
+	fileNames := make([]string, 0, len(videoInfos))
+	movieNames := make([]string, 0, len(videoInfos))
+	encodedKeys := make([]string, 0, len(videoInfos))
+	encodedKeyByFileName := make(map[string]string, len(videoInfos))
+	for _, info := range videoInfos {
+		fileNames = append(fileNames, info.Name())
+		movieNames = append(movieNames, extractMovieName(info.Name()))
+		if key, ok := fc2domain.NormalizeEncodedMediaKey(extractMovieName(info.Name())); ok {
+			encodedKeys = append(encodedKeys, key)
+			encodedKeyByFileName[info.Name()] = key
+		}
+	}
+	fc2ByFileRows, err := l.deps.FC2MediaModel.ListByFileNames(ctx, fileNames)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to list fc2 media by file names: %w", err)
+	}
+	fc2ByKeyRows, err := l.deps.FC2MediaModel.ListByKeys(ctx, encodedKeys)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to list fc2 media by keys: %w", err)
+	}
+	javRows, err := l.deps.WMediaModel.ListByMovieNames(ctx, movieNames)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to list jav media by movie names: %w", err)
+	}
+
+	fc2MediaByFileName := make(map[string]*moviex.FC2Media, len(fc2ByFileRows))
+	fc2MediaByKey := make(map[string]*moviex.FC2Media, len(fc2ByKeyRows))
+	fc2MovieIDs := make([]int64, 0, len(fc2ByFileRows)+len(fc2ByKeyRows))
+	for _, row := range append(fc2ByFileRows, fc2ByKeyRows...) {
+		if row == nil || row.FC2MovieID <= 0 {
+			continue
+		}
+		fc2MovieIDs = append(fc2MovieIDs, row.FC2MovieID)
+		if strings.TrimSpace(row.FileName) != "" {
+			fc2MediaByFileName[strings.TrimSpace(row.FileName)] = row
+		}
+		if strings.TrimSpace(row.FC2Key) != "" {
+			fc2MediaByKey[strings.TrimSpace(row.FC2Key)] = row
+		}
+	}
+	fc2MovieRows, err := l.deps.FC2MovieModel.ListByIDs(ctx, fc2MovieIDs)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to list fc2 movies: %w", err)
+	}
+	fc2MovieByID := make(map[int64]*moviex.FC2Movie, len(fc2MovieRows))
+	for _, row := range fc2MovieRows {
+		if row != nil {
+			fc2MovieByID[row.ID] = row
+		}
+	}
+	javByMovieName := make(map[string]*moviex.WMedia, len(javRows))
+	for _, row := range javRows {
+		if row != nil {
+			javByMovieName[strings.TrimSpace(row.MovieName)] = row
+		}
+	}
+
+	seenRefs := make(map[string]string, len(videoInfos))
+	for _, info := range videoInfos {
+		candidates := make(map[string]*AddScPreviewMovie)
+		addFC2PreviewCandidate(candidates, fc2MediaByFileName[info.Name()], fc2MovieByID)
+		if encodedKey := encodedKeyByFileName[info.Name()]; encodedKey != "" {
+			addFC2PreviewCandidate(candidates, fc2MediaByKey[encodedKey], fc2MovieByID)
+		}
 		movieName := extractMovieName(info.Name())
-		wm, err := l.wMediaFindOneByMovieName(ctx, movieName)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to find media by name %s: %w", movieName, err)
+		if wm := javByMovieName[movieName]; wm != nil {
+			mt, movieErr := l.movieSvc.GetMovieType(ctx, wm.MovieJavId)
+			if movieErr != nil || mt == nil {
+				return nil, "", fmt.Errorf("failed to get movie type: %w,%s", movieErr, wm.MovieJavId)
+			}
+			ref := normalizeAddScMovieRef(moviedomain.SehuatangThreadMovieTypeJAV, wm.MovieJavId, 0)
+			candidates[ref] = &AddScPreviewMovie{
+				MovieType:  moviedomain.SehuatangThreadMovieTypeJAV,
+				MovieJavId: wm.MovieJavId,
+				MovieKey:   wm.MovieName,
+				MovieName:  wm.MovieName,
+				Title:      mt.Title,
+				MovieHref:  buildMovieHref(wm.MovieName),
+				JacketImg:  strings.TrimSpace(mt.JacketImg),
+				Casts:      collectCastNames(mt),
+			}
 		}
-
-		mt, err := l.movieSvc.GetMovieType(ctx, wm.MovieJavId)
-		if err != nil || mt == nil {
-			return nil, "", fmt.Errorf("failed to get movie type: %w,%s", err, wm.MovieJavId)
+		if len(candidates) == 0 {
+			return nil, "", fmt.Errorf("failed to resolve sc movie file: %s", info.Name())
 		}
-
-		previewMovie := &AddScPreviewMovie{
-			MovieName:  wm.MovieName,
-			MovieJavId: wm.MovieJavId,
-			MovieHref:  buildMovieHref(wm.MovieName),
-			JacketImg:  strings.TrimSpace(mt.JacketImg),
-			Casts:      collectCastNames(mt),
+		if len(candidates) > 1 {
+			refs := make([]string, 0, len(candidates))
+			for ref := range candidates {
+				refs = append(refs, ref)
+			}
+			return nil, "", fmt.Errorf("sc movie file has conflicting owners: %s => %s", info.Name(), strings.Join(refs, ","))
 		}
-		preview.Movies = append(preview.Movies, previewMovie)
-		preview.MovieCount++
+		for ref, movie := range candidates {
+			if firstFile, ok := seenRefs[ref]; ok {
+				return nil, "", fmt.Errorf("sc movie appears multiple times: %s, files=%s,%s", ref, firstFile, info.Name())
+			}
+			seenRefs[ref] = info.Name()
+			preview.Movies = append(preview.Movies, movie)
+			preview.MovieCount++
+		}
 	}
 
 	return preview, imageFilePath, nil
 }
 
-func createGList(scName, movieName, movieJavId string, isCome bool, isSc int64) *types.GList {
+func addFC2PreviewCandidate(candidates map[string]*AddScPreviewMovie, media *moviex.FC2Media, movies map[int64]*moviex.FC2Movie) {
+	if media == nil || media.FC2MovieID <= 0 {
+		return
+	}
+	movie := movies[media.FC2MovieID]
+	if movie == nil {
+		return
+	}
+	ref := normalizeAddScMovieRef(moviedomain.SehuatangThreadMovieTypeFC2PPV, "", movie.ID)
+	candidates[ref] = &AddScPreviewMovie{
+		MovieType:  moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		FC2MovieId: movie.ID,
+		MovieKey:   movie.FC2Key,
+		MovieName:  movie.FC2Key,
+		Title:      movie.Title,
+		MovieHref:  "/fcdetail/" + movie.FC2Key,
+		Casts:      []string{},
+	}
+}
+
+func createGList(scName string, movie *AddScPreviewMovie, isCome bool, isSc int64) *types.GList {
 	comeFlag := consts.GListIsNotCome
 	if isCome {
 		comeFlag = consts.GListIsCome
@@ -269,9 +421,11 @@ func createGList(scName, movieName, movieJavId string, isCome bool, isSc int64) 
 		isSc = consts.GListIsNotSc
 	}
 	return &types.GList{
-		Name:       fmt.Sprintf("%s__%s", scName, movieName),
+		Name:       fmt.Sprintf("%s__%s", scName, movie.MovieKey),
 		ScName:     scName,
-		MovieJavId: movieJavId,
+		MovieType:  movie.MovieType,
+		MovieJavId: movie.MovieJavId,
+		FC2MovieId: movie.FC2MovieId,
 		IsCome:     comeFlag,
 		IsSc:       isSc,
 	}
@@ -280,23 +434,59 @@ func createGList(scName, movieName, movieJavId string, isCome bool, isSc int64) 
 func buildAddScMovieSelectionMap(items []AddScInputMovie) map[string]int64 {
 	out := make(map[string]int64, len(items))
 	for _, item := range items {
-		movieJavId := strings.TrimSpace(item.MovieJavId)
-		if movieJavId == "" {
+		ref := normalizeAddScMovieRef(item.MovieType, item.MovieJavId, item.FC2MovieId)
+		if ref == "" {
 			continue
 		}
-		out[movieJavId] = normalizeAddScMovieIsSc(item.IsSc)
+		out[ref] = normalizeAddScMovieIsSc(item.IsSc)
 	}
 	return out
 }
 
-func resolveAddScMovieIsSc(selected map[string]int64, movieJavId string) int64 {
+func resolveAddScMovieIsSc(selected map[string]int64, movieRef string) int64 {
 	if selected == nil {
 		return consts.GListIsSc
 	}
-	if v, ok := selected[strings.TrimSpace(movieJavId)]; ok {
+	if v, ok := selected[strings.TrimSpace(movieRef)]; ok {
 		return normalizeAddScMovieIsSc(v)
 	}
 	return consts.GListIsSc
+}
+
+func normalizeAddScMovieRef(movieType, movieJavID string, fc2MovieID int64) string {
+	switch strings.ToLower(strings.TrimSpace(movieType)) {
+	case moviedomain.SehuatangThreadMovieTypeJAV:
+		movieJavID = strings.TrimSpace(movieJavID)
+		if movieJavID == "" || fc2MovieID != 0 {
+			return ""
+		}
+		return "jav:" + movieJavID
+	case moviedomain.SehuatangThreadMovieTypeFC2PPV:
+		if strings.TrimSpace(movieJavID) != "" || fc2MovieID <= 0 {
+			return ""
+		}
+		return "fc2ppv:" + strconv.FormatInt(fc2MovieID, 10)
+	default:
+		return ""
+	}
+}
+
+func addScPreviewMovieRef(movie *AddScPreviewMovie) string {
+	if movie == nil {
+		return ""
+	}
+	return normalizeAddScMovieRef(movie.MovieType, movie.MovieJavId, movie.FC2MovieId)
+}
+
+func mapTypesGListToModel(row *types.GList) *moviex.GList {
+	if row == nil {
+		return nil
+	}
+	return &moviex.GList{
+		Id: row.Id, Name: row.Name, ScName: row.ScName, MovieType: row.MovieType,
+		MovieJavId: row.MovieJavId, FC2MovieId: row.FC2MovieId, IsCome: row.IsCome,
+		IsSc: row.IsSc, CreatedOn: row.CreatedOn, UpdatedOn: row.UpdatedOn,
+	}
 }
 
 func normalizeAddScMovieIsSc(v int64) int64 {

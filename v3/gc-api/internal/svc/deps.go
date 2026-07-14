@@ -55,6 +55,7 @@ type Deps struct {
 	CPersonScModel                       moviex.CPersonScModel
 	GListModel                           moviex.GListModel
 	ScModel                              moviex.GScModel
+	ScEventWriteModel                    moviex.ScEventWriteModel
 	RankModel                            moviex.CRankModel
 	RankPeriodModel                      moviex.CRankPeriodModel
 	RankPeriodItemModel                  moviex.CRankPeriodItemModel
@@ -68,7 +69,13 @@ type Deps struct {
 	MovieAlbumItemModel                  moviex.CMovieAlbumItemModel
 	JavbusMagnetModel                    moviex.TJavbusMagnetModel
 	SehuatangMagnetModel                 moviex.TSehuatangMagnetModel
+	ShMagnetModel                        moviex.ShMagnetModel
 	ShForumModel                         moviex.ShForumModel
+	FC2MovieModel                        moviex.FC2MovieModel
+	FC2FolderModel                       moviex.FC2FolderModel
+	FC2MediaModel                        moviex.FC2MediaModel
+	FC2MediaImageModel                   moviex.FC2MediaImageModel
+	FC2ScStatModel                       moviex.FC2ScStatModel
 	ShSehuatangThreadModel               moviex.ShSehuatangThreadModel
 	ShThreadBucketStatModel              moviex.ShThreadBucketStatModel
 	ShSehuatangFetchRunModel             moviex.ShSehuatangFetchRunModel
@@ -110,6 +117,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		cafoModel                            = moviex.NewCCafoModel(conn, c)
 		glistModel                           = moviex.NewGListModel(conn, c)
 		scModel                              = moviex.NewGScModel(conn, c)
+		scEventWriteModel                    = moviex.NewScEventWriteModel(conn, glistModel, scModel)
 		recordModel                          = moviex.NewERecordModel(conn, c)
 		albumModel                           = moviex.NewTAlbumModel(conn, c)
 		albumItemModel                       = moviex.NewTmAlbumItemModel(conn, c)
@@ -117,7 +125,13 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		movieAlbumItemModel                  = moviex.NewCMovieAlbumItemModel(conn, c)
 		javbusMagnetModel                    = moviex.NewTJavbusMagnetModel(conn, c)
 		sehuatangMagnetModel                 = moviex.NewTSehuatangMagnetModel(conn, c)
+		shMagnetModel                        = moviex.NewShMagnetModel(conn)
 		shForumModel                         = moviex.NewShForumModel(conn)
+		fc2MovieModel                        = moviex.NewFC2MovieModel(conn)
+		fc2FolderModel                       = moviex.NewFC2FolderModel(conn)
+		fc2MediaModel                        = moviex.NewFC2MediaModel(conn)
+		fc2MediaImageModel                   = moviex.NewFC2MediaImageModel(conn)
+		fc2ScStatModel                       = moviex.NewFC2ScStatModel(conn, c)
 		shSehuatangThreadModel               = moviex.NewShSehuatangThreadModel(conn)
 		shThreadBucketStatModel              = moviex.NewShThreadBucketStatModel(conn)
 		shSehuatangFetchRunModel             = moviex.NewShSehuatangFetchRunModel(conn)
@@ -215,6 +229,7 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		CPersonScModel:                       cPersonScModel,
 		GListModel:                           glistModel,
 		ScModel:                              scModel,
+		ScEventWriteModel:                    scEventWriteModel,
 		RankModel:                            rankModel,
 		RankPeriodModel:                      rankPeriodModel,
 		RankPeriodItemModel:                  rankPeriodItemModel,
@@ -228,7 +243,13 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		MovieAlbumItemModel:                  movieAlbumItemModel,
 		JavbusMagnetModel:                    javbusMagnetModel,
 		SehuatangMagnetModel:                 sehuatangMagnetModel,
+		ShMagnetModel:                        shMagnetModel,
 		ShForumModel:                         shForumModel,
+		FC2MovieModel:                        fc2MovieModel,
+		FC2FolderModel:                       fc2FolderModel,
+		FC2MediaModel:                        fc2MediaModel,
+		FC2MediaImageModel:                   fc2MediaImageModel,
+		FC2ScStatModel:                       fc2ScStatModel,
 		ShSehuatangThreadModel:               shSehuatangThreadModel,
 		ShThreadBucketStatModel:              shThreadBucketStatModel,
 		ShSehuatangFetchRunModel:             shSehuatangFetchRunModel,

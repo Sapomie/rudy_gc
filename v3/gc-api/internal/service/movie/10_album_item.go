@@ -15,7 +15,7 @@ const (
 	pendingAlbumName       = "待下载"
 	sourceTypeJavbusMagnet = "javbus_magnet"
 	sourceTypeSukebei      = "sukebei_torrent"
-	sourceTypeSehuatang    = "sehuatang_magnet"
+	sourceTypeSHMagnet     = "sh_magnet"
 )
 
 var (
@@ -38,6 +38,18 @@ type albumSourcePayload struct {
 	PublishTime int64
 }
 
+type BatchAddSHMagnetAlbumFailure struct {
+	SourceRowID int64  `json:"source_row_id"`
+	Error       string `json:"error"`
+}
+
+type BatchAddSHMagnetAlbumResult struct {
+	AlbumName   string                          `json:"album_name"`
+	AddedIDs    []int64                         `json:"added_ids"`
+	ExistingIDs []int64                         `json:"existing_ids"`
+	FailedItems []*BatchAddSHMagnetAlbumFailure `json:"failed_items"`
+}
+
 func normalizeAlbumName(raw string) string {
 	name := strings.TrimSpace(raw)
 	if name == "" {
@@ -54,7 +66,7 @@ func (s *Service) AddFetchResourceToAlbum(ctx context.Context, albumName, movieJ
 	}
 
 	normalizedSourceType := strings.TrimSpace(sourceType)
-	if normalizedMovieJavID == "" && normalizedSourceType != sourceTypeSehuatang {
+	if normalizedMovieJavID == "" && normalizedSourceType != sourceTypeSHMagnet {
 		return false, normalizedAlbumName, ErrInvalidSourceRow
 	}
 	sourcePayload, err := s.readSourcePayload(ctx, normalizedMovieJavID, normalizedSourceType, sourceRowID)
@@ -99,6 +111,42 @@ func (s *Service) AddFetchResourceToDefaultAlbum(ctx context.Context, movieJavID
 	return created, err
 }
 
+func (s *Service) BatchAddSHMagnetsToAlbum(ctx context.Context, albumName string, sourceRowIDs []int64) (*BatchAddSHMagnetAlbumResult, error) {
+	result := &BatchAddSHMagnetAlbumResult{
+		AlbumName:   normalizeAlbumName(albumName),
+		AddedIDs:    []int64{},
+		ExistingIDs: []int64{},
+		FailedItems: []*BatchAddSHMagnetAlbumFailure{},
+	}
+	seen := make(map[int64]struct{}, len(sourceRowIDs))
+	for _, sourceRowID := range sourceRowIDs {
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
+		if _, exists := seen[sourceRowID]; exists {
+			continue
+		}
+		seen[sourceRowID] = struct{}{}
+		if sourceRowID <= 0 {
+			result.FailedItems = append(result.FailedItems, &BatchAddSHMagnetAlbumFailure{SourceRowID: sourceRowID, Error: ErrInvalidSourceRow.Error()})
+			continue
+		}
+
+		created, normalizedAlbumName, err := s.AddFetchResourceToAlbum(ctx, result.AlbumName, "", sourceTypeSHMagnet, sourceRowID)
+		result.AlbumName = normalizedAlbumName
+		if err != nil {
+			result.FailedItems = append(result.FailedItems, &BatchAddSHMagnetAlbumFailure{SourceRowID: sourceRowID, Error: err.Error()})
+			continue
+		}
+		if created {
+			result.AddedIDs = append(result.AddedIDs, sourceRowID)
+			continue
+		}
+		result.ExistingIDs = append(result.ExistingIDs, sourceRowID)
+	}
+	return result, nil
+}
+
 func (s *Service) RemoveFetchResourceFromAlbum(ctx context.Context, albumName, movieJavID string, sourceType string, sourceRowID int64) (bool, string, error) {
 	normalizedAlbumName := normalizeAlbumName(albumName)
 	normalizedMovieJavID := strings.TrimSpace(movieJavID)
@@ -106,7 +154,7 @@ func (s *Service) RemoveFetchResourceFromAlbum(ctx context.Context, albumName, m
 		return false, normalizedAlbumName, ErrInvalidSourceRow
 	}
 	normalizedSourceType := strings.TrimSpace(sourceType)
-	if normalizedMovieJavID == "" && normalizedSourceType != sourceTypeSehuatang {
+	if normalizedMovieJavID == "" && normalizedSourceType != sourceTypeSHMagnet {
 		return false, normalizedAlbumName, ErrInvalidSourceRow
 	}
 	if _, err := s.readSourcePayload(ctx, normalizedMovieJavID, normalizedSourceType, sourceRowID); err != nil {
@@ -331,8 +379,8 @@ func (s *Service) readSourcePayload(ctx context.Context, movieJavID string, sour
 			Size:        formatResourceSizeBytes(row.SizeBytes),
 			PublishTime: row.PublishTime,
 		}, nil
-	case sourceTypeSehuatang:
-		row, err := s.deps.SehuatangMagnetModel.FindOne(ctx, sourceRowID)
+	case sourceTypeSHMagnet:
+		row, err := s.deps.ShMagnetModel.FindOne(ctx, sourceRowID)
 		if err != nil {
 			if errors.Is(err, moviex.ErrNotFound) {
 				return nil, ErrSourceNotFound

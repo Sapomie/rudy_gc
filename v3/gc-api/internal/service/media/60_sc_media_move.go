@@ -159,9 +159,9 @@ func buildScMediaMovePrecheckResult(mode, scName string, generatedAt int64, item
 func (s *Service) listScMediaMoveRowsForScope(ctx context.Context, mode, scName string) ([]*moviex.GList, error) {
 	switch normalizeScMediaMoveMode(mode) {
 	case scMediaMoveModeAll:
-		return s.deps.GListModel.ListAllScOnly(ctx)
+		return s.deps.GListModel.ListAllScOnlyByMovieType(ctx, "jav")
 	default:
-		return s.deps.GListModel.ListScOnlyByScName(ctx, strings.TrimSpace(scName))
+		return s.deps.GListModel.ListScOnlyByScNameAndMovieType(ctx, strings.TrimSpace(scName), "jav")
 	}
 }
 
@@ -409,6 +409,11 @@ func (s *Service) commitOneScMediaMove(ctx context.Context, entry *scMediaMovePl
 		return item
 	}
 	if err = s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+	if err = s.syncJAVScMediaSnapshot(ctx, updated.MovieJavId); err != nil {
 		item.Status = scMediaMoveStatusFail
 		item.Error = err.Error()
 		return item

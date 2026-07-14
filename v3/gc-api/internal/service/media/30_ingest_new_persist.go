@@ -131,6 +131,14 @@ func (s *Service) findFavoriteAlbumSourceInfo(ctx context.Context, movieJavID st
 }
 
 func (s *Service) moveFavoriteItemToMediaAlbum(ctx context.Context, source *favoriteAlbumSourceInfo) error {
+	return s.moveFavoriteItemToAlbum(ctx, source, mediaAlbumName, "media ingest 自动迁移")
+}
+
+func (s *Service) moveFC2SourceItemToMediaAlbum(ctx context.Context, source *favoriteAlbumSourceInfo) error {
+	return s.moveFavoriteItemToAlbum(ctx, source, fc2MediaAlbumName, "fc2 media ingest 自动迁移")
+}
+
+func (s *Service) moveFavoriteItemToAlbum(ctx context.Context, source *favoriteAlbumSourceInfo, targetAlbumName, remark string) error {
 	if source == nil || source.item == nil || source.favoriteAlbumID <= 0 {
 		return nil
 	}
@@ -139,7 +147,7 @@ func (s *Service) moveFavoriteItemToMediaAlbum(ctx context.Context, source *favo
 		return fmt.Errorf("missing favorite album item id: source_type=%s, source_row_id=%d", item.SourceType, item.SourceRowId)
 	}
 
-	mediaAlbumID, err := s.ensureAlbumByName(ctx, mediaAlbumName, "media ingest 自动迁移")
+	targetAlbumID, err := s.ensureAlbumByName(ctx, targetAlbumName, remark)
 	if err != nil {
 		return err
 	}
@@ -147,7 +155,7 @@ func (s *Service) moveFavoriteItemToMediaAlbum(ctx context.Context, source *favo
 	sourceItem, err := s.deps.AlbumItemModel.FindOne(ctx, item.Id)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
-			_, targetErr := s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, mediaAlbumID, item.SourceType, item.SourceRowId)
+			_, targetErr := s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, targetAlbumID, item.SourceType, item.SourceRowId)
 			if targetErr == nil {
 				return nil
 			}
@@ -158,14 +166,14 @@ func (s *Service) moveFavoriteItemToMediaAlbum(ctx context.Context, source *favo
 		}
 		return err
 	}
-	if sourceItem.AlbumId == mediaAlbumID {
+	if sourceItem.AlbumId == targetAlbumID {
 		return nil
 	}
 	if sourceItem.AlbumId != source.favoriteAlbumID {
 		return fmt.Errorf("favorite album item album mismatch: id=%d, album_id=%d, expected=%d", sourceItem.Id, sourceItem.AlbumId, source.favoriteAlbumID)
 	}
 
-	_, err = s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, mediaAlbumID, sourceItem.SourceType, sourceItem.SourceRowId)
+	_, err = s.deps.AlbumItemModel.FindOneByAlbumIdSourceTypeSourceRowId(ctx, targetAlbumID, sourceItem.SourceType, sourceItem.SourceRowId)
 	switch {
 	case err == nil:
 		if err := s.deps.AlbumItemModel.Delete(ctx, sourceItem.Id); err != nil {
@@ -174,7 +182,7 @@ func (s *Service) moveFavoriteItemToMediaAlbum(ctx context.Context, source *favo
 	case errors.Is(err, moviex.ErrNotFound):
 		now := time.Now().Unix()
 		_, insertErr := s.deps.AlbumItemModel.Insert(ctx, &moviex.TmAlbumItem{
-			AlbumId:     mediaAlbumID,
+			AlbumId:     targetAlbumID,
 			SourceType:  sourceItem.SourceType,
 			SourceRowId: sourceItem.SourceRowId,
 			MovieJavId:  sourceItem.MovieJavId,
@@ -283,12 +291,19 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		return err
 	}
 	if existing != nil {
+		previousSourceHash := existing.SourceTorrentHash
 		row.Id = existing.Id
 		row.CreatedOn = existing.CreatedOn
 		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 			return err
 		}
+		if err := s.refreshSHMagnetDownloadStates(ctx, previousSourceHash, row.SourceTorrentHash); err != nil {
+			return err
+		}
 		if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, existing.MovieJavId, row.MovieJavId); err != nil {
+			return err
+		}
+		if err := s.syncJAVScMediaSnapshots(ctx, existing.MovieJavId, row.MovieJavId); err != nil {
 			return err
 		}
 		s.invalidateMovieTypeCaches(ctx, existing.MovieJavId, row.MovieJavId)
@@ -312,17 +327,36 @@ func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
 		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
 			return err
 		}
+		if err := s.refreshSHMagnetDownloadStates(ctx, dup.SourceTorrentHash, row.SourceTorrentHash); err != nil {
+			return err
+		}
 		if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, dup.MovieJavId, row.MovieJavId); err != nil {
+			return err
+		}
+		if err := s.syncJAVScMediaSnapshots(ctx, dup.MovieJavId, row.MovieJavId); err != nil {
 			return err
 		}
 		s.invalidateMovieTypeCaches(ctx, dup.MovieJavId, row.MovieJavId)
 		return nil
 	}
+	if err := s.refreshSHMagnetDownloadStates(ctx, row.SourceTorrentHash); err != nil {
+		return err
+	}
 	if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, row.MovieJavId); err != nil {
+		return err
+	}
+	if err := s.syncJAVScMediaSnapshot(ctx, row.MovieJavId); err != nil {
 		return err
 	}
 	s.invalidateMovieTypeCaches(ctx, row.MovieJavId)
 	return nil
+}
+
+func (s *Service) refreshSHMagnetDownloadStates(ctx context.Context, infoHashes ...string) error {
+	if s == nil || s.deps == nil || s.deps.ShMagnetModel == nil {
+		return nil
+	}
+	return s.deps.ShMagnetModel.RefreshDownloadStatesByInfoHashes(ctx, infoHashes...)
 }
 
 func (s *Service) invalidateMovieTypeCaches(ctx context.Context, javIDs ...string) {
@@ -485,16 +519,25 @@ func buildEncodedMovieCode(meta rawMovieMeta) string {
 	if len(match) != 3 {
 		return current
 	}
+	return encodeMediaAliasCode(match[1], match[2])
+}
 
-	prefix := match[1]
-	serial := match[2]
-
+func encodeMediaAliasCode(prefix, serial string) string {
+	prefix = strings.ToUpper(strings.TrimSpace(prefix))
+	serial = strings.ToUpper(strings.TrimSpace(serial))
+	if prefix == "" || serial == "" {
+		return ""
+	}
 	var b strings.Builder
 	for _, ch := range prefix {
-		if ch < 'A' || ch > 'Z' {
-			return current
+		switch {
+		case ch >= 'A' && ch <= 'Z':
+			b.WriteString(fmt.Sprintf("%02d", int(ch-'A')+10))
+		case ch >= '0' && ch <= '9':
+			b.WriteRune(ch)
+		default:
+			return prefix + "-" + serial
 		}
-		b.WriteString(fmt.Sprintf("%02d", int(ch-'A')+10))
 	}
 	return b.String() + "-" + serial
 }

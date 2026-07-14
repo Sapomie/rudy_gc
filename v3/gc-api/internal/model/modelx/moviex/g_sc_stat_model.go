@@ -2,6 +2,7 @@ package moviex
 
 import (
 	"context"
+	"errors"
 
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -15,6 +16,7 @@ type (
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
 		TableName() string
+		ListAllMovieJavIDs(ctx context.Context) ([]string, error)
 	}
 
 	customGScStatModel struct {
@@ -38,4 +40,15 @@ func (m *customGScStatModel) QueryRowNoCacheCtx(ctx context.Context, dest any, q
 
 func (m *customGScStatModel) TableName() string {
 	return m.table
+}
+
+func (m *customGScStatModel) ListAllMovieJavIDs(ctx context.Context) ([]string, error) {
+	var rows []string
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, "SELECT `movie_jav_id` FROM "+m.table+" WHERE `movie_jav_id` <> ''"); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
 }

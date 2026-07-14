@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"rudy_gc/internal/dep"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/loop"
 )
@@ -98,18 +99,21 @@ func (h *CrawlerAPI) PreviewSehuatangSHThreadDetails(c *gin.Context) {
 			detailStatuses = []string{detailStatus}
 		}
 	}
+	movieTypes := moviedomain.NormalizeSehuatangThreadMovieTypes(append(req.MovieTypes, req.MovieType)...)
 	if req.Limit < 0 {
 		writeCrawlerError(c, http.StatusBadRequest, "limit 必须大于等于 0")
 		return
 	}
+	targetForumIDs, err := normalizeSHFillTargetForumIDs(req.TargetForumIDs)
+	if err != nil {
+		writeCrawlerError(c, http.StatusBadRequest, err.Error())
+		return
+	}
 	filter := moviex.ShSehuatangThreadListFilter{
 		Keyword:        strings.TrimSpace(req.Keyword),
-		SourceForumIDs: req.TargetForumIDs,
+		MovieTypes:     movieTypes,
+		SourceForumIDs: targetForumIDs,
 		DetailStatuses: detailStatuses,
-	}
-	if len(filter.SourceForumIDs) == 0 {
-		writeCrawlerError(c, http.StatusBadRequest, "请选择目标版块")
-		return
 	}
 	if ts, ok, err := parseOptionalDateStart(req.PostTimeFrom); err != nil {
 		writeCrawlerError(c, http.StatusBadRequest, fmt.Sprintf("发帖时间开始日期错误: %v", err))
@@ -126,7 +130,7 @@ func (h *CrawlerAPI) PreviewSehuatangSHThreadDetails(c *gin.Context) {
 		filter.HasPostTimeTo = true
 	}
 
-	total, err := h.deps.ShSehuatangThreadModel.CountAll(c.Request.Context(), filter)
+	aggregate, err := h.deps.ShSehuatangThreadModel.Aggregate(c.Request.Context(), filter)
 	if err != nil {
 		writeCrawlerError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -136,11 +140,58 @@ func (h *CrawlerAPI) PreviewSehuatangSHThreadDetails(c *gin.Context) {
 		writeCrawlerError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	threadTIDs := make([]string, 0, len(rows))
+	seenThreadTIDs := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		threadTID := strings.TrimSpace(row.ThreadTID)
+		if threadTID == "" {
+			continue
+		}
+		if _, ok := seenThreadTIDs[threadTID]; ok {
+			continue
+		}
+		seenThreadTIDs[threadTID] = struct{}{}
+		threadTIDs = append(threadTIDs, threadTID)
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"total": total,
-		"limit": req.Limit,
-		"rows":  rows,
+		"total":          aggregate.Total,
+		"selected_count": len(threadTIDs),
+		"limit":          req.Limit,
+		"thread_tids":    threadTIDs,
+		"aggregate": gin.H{
+			"total":                aggregate.Total,
+			"pending_detail_count": aggregate.PendingDetailCount,
+			"fetched_detail_count": aggregate.FetchedDetailCount,
+			"failed_detail_count":  aggregate.FailedDetailCount,
+			"forum_counts": gin.H{
+				"36":  aggregate.Forum36Count,
+				"103": aggregate.Forum103Count,
+			},
+		},
 	})
+}
+
+func normalizeSHFillTargetForumIDs(values []string) ([]string, error) {
+	out := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("请选择目标版块")
+	}
+	return out, nil
 }
 
 func normalizeSHDetailStatuses(values []string) []string {

@@ -213,6 +213,14 @@ func (s *Service) glUpsert(ctx context.Context, in *types.GList) (*types.GList, 
 			old.MovieJavId = in.MovieJavId
 			changed = true
 		}
+		if old.MovieType != in.MovieType {
+			old.MovieType = in.MovieType
+			changed = true
+		}
+		if old.FC2MovieId != in.FC2MovieId {
+			old.FC2MovieId = in.FC2MovieId
+			changed = true
+		}
 		if old.IsCome != in.IsCome {
 			old.IsCome = in.IsCome
 			changed = true
@@ -236,7 +244,9 @@ func (s *Service) glUpsert(ctx context.Context, in *types.GList) (*types.GList, 
 	row := &moviex.GList{
 		Name:       in.Name,
 		ScName:     in.ScName,
+		MovieType:  in.MovieType,
 		MovieJavId: in.MovieJavId,
+		FC2MovieId: in.FC2MovieId,
 		IsCome:     in.IsCome,
 		IsSc:       in.IsSc,
 		CreatedOn:  now,
@@ -325,6 +335,18 @@ func (s *Service) glFindAllByMovieJavIDs(ctx context.Context, javIDs []string) (
 	return out, nil
 }
 
+func (s *Service) glFindAllByFC2MovieIDs(ctx context.Context, movieIDs []int64) ([]*types.GList, error) {
+	rows, err := s.deps.GListModel.ListByFC2MovieIDs(ctx, movieIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*types.GList, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapGListModelToTypes(row))
+	}
+	return out, nil
+}
+
 func (s *Service) glFindByMovieJavID(ctx context.Context, javID string) ([]*types.GList, error) {
 	rows, err := s.deps.GListModel.ListScOnlyByMovieJavId(ctx, javID)
 	if err != nil {
@@ -343,6 +365,10 @@ func (s *Service) glListDistinctMovieJavIDs(ctx context.Context) ([]string, erro
 
 func (s *Service) glListDistinctAllMovieJavIDs(ctx context.Context) ([]string, error) {
 	return s.deps.GListModel.ListDistinctMovieJavIds(ctx)
+}
+
+func (s *Service) glListDistinctAllFC2MovieIDs(ctx context.Context) ([]int64, error) {
+	return s.deps.GListModel.ListDistinctFC2MovieIDs(ctx)
 }
 
 func (s *Service) movieFindOneByJavID(ctx context.Context, javID string) (*moviex.AMovie, error) {
@@ -451,6 +477,86 @@ func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName strin
 		return nil, 0, err
 	}
 	return ins, consts.UpsertInserted, nil
+}
+
+func (s *Service) fc2ScStatUpsert(ctx context.Context, movie *moviex.FC2Movie, mediaBirthTime int64, info movieScInfo) (*moviex.FC2ScStat, consts.UpsertStatus, error) {
+	if movie == nil || movie.ID <= 0 || strings.TrimSpace(movie.FC2Key) == "" {
+		return nil, 0, errors.New("invalid fc2 movie")
+	}
+	movieName := strings.TrimSpace(movie.Title)
+	if movieName == "" {
+		movieName = strings.TrimSpace(movie.FC2Key)
+	}
+	now := time.Now().Unix()
+	old, err := s.deps.FC2ScStatModel.FindOneByMovieID(ctx, movie.ID)
+	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+		return nil, 0, err
+	}
+	if old != nil {
+		changed := false
+		if old.FC2Key != movie.FC2Key {
+			old.FC2Key = movie.FC2Key
+			changed = true
+		}
+		if old.MovieName != movieName {
+			old.MovieName = movieName
+			changed = true
+		}
+		if old.ScEventTimes != info.ScEventTimes {
+			old.ScEventTimes = info.ScEventTimes
+			changed = true
+		}
+		if old.ScTimes != info.ScTimes {
+			old.ScTimes = info.ScTimes
+			changed = true
+		}
+		if old.ComeTimes != info.ComeTimes {
+			old.ComeTimes = info.ComeTimes
+			changed = true
+		}
+		if old.LastScTime != info.LastScTime {
+			old.LastScTime = info.LastScTime
+			changed = true
+		}
+		if old.PostTime != movie.PostTime {
+			old.PostTime = movie.PostTime
+			changed = true
+		}
+		if old.MediaBirthTime != mediaBirthTime {
+			old.MediaBirthTime = mediaBirthTime
+			changed = true
+		}
+		if !changed {
+			return old, consts.UpsertUnchanged, nil
+		}
+		old.UpdatedOn = now
+		if err := s.deps.FC2ScStatModel.Update(ctx, old); err != nil {
+			return nil, 0, err
+		}
+		return old, consts.UpsertUpdated, nil
+	}
+
+	row := &moviex.FC2ScStat{
+		FC2MovieID:     movie.ID,
+		FC2Key:         movie.FC2Key,
+		MovieName:      movieName,
+		ScEventTimes:   info.ScEventTimes,
+		ScTimes:        info.ScTimes,
+		ComeTimes:      info.ComeTimes,
+		LastScTime:     info.LastScTime,
+		PostTime:       movie.PostTime,
+		MediaBirthTime: mediaBirthTime,
+		CreatedOn:      now,
+		UpdatedOn:      now,
+	}
+	if _, err := s.deps.FC2ScStatModel.Insert(ctx, row); err != nil {
+		return nil, 0, err
+	}
+	inserted, err := s.deps.FC2ScStatModel.FindOneByMovieID(ctx, movie.ID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return inserted, consts.UpsertInserted, nil
 }
 
 func (s *Service) castFindOne(ctx context.Context, id int64) (*types.Cast, error) {
@@ -689,7 +795,9 @@ func mapGListModelToTypes(v *moviex.GList) *types.GList {
 		Id:         v.Id,
 		Name:       v.Name,
 		ScName:     v.ScName,
+		MovieType:  v.MovieType,
 		MovieJavId: v.MovieJavId,
+		FC2MovieId: v.FC2MovieId,
 		IsCome:     v.IsCome,
 		IsSc:       v.IsSc,
 		CreatedOn:  v.CreatedOn,

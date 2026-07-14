@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/service/fetchsite"
 )
 
 var (
 	safeIDPattern               = regexp.MustCompile(`var\s+safeid='([^']+)'`)
 	magnetPattern               = regexp.MustCompile(`(?i)magnet:\?xt=urn:btih:[0-9a-z]+(?:&[a-z0-9._~!$&'()*+,;=:@%/-]+)*`)
-	javIDPattern                = regexp.MustCompile(`(?i)\b([a-z0-9]{2,12}-\d{2,7})\b`)
 	forumHoursAgoPattern        = regexp.MustCompile(`(?i)(\d+)\s*小时[前前]`)
 	forumMinutesAgoPattern      = regexp.MustCompile(`(?i)(\d+)\s*分钟[前前]`)
 	forumSecondsAgoPattern      = regexp.MustCompile(`(?i)(\d+)\s*秒[前前]`)
@@ -58,6 +58,7 @@ type shThreadDetail struct {
 	RawContentText string
 	MagnetText     string
 	InfoHashText   string
+	Magnets        []parsedMagnet
 }
 
 func parseSafeID(body []byte) string {
@@ -209,15 +210,7 @@ func parseThreadTitle(detailHTML []byte, fallback string) string {
 }
 
 func parseMovieName(title string) string {
-	text := strings.TrimSpace(title)
-	if text == "" {
-		return ""
-	}
-	match := javIDPattern.FindStringSubmatch(text)
-	if len(match) < 2 {
-		return ""
-	}
-	return strings.ToUpper(strings.TrimSpace(match[1]))
+	return moviedomain.ParseSehuatangMovieName(title)
 }
 
 func parseThreadTag(title string) string {
@@ -560,6 +553,7 @@ func parseSHThreadDetail(detailHTML []byte, topic *topicLink, now time.Time) (*s
 		RawContentText: content,
 		MagnetText:     strings.Join(magnetURLs, "\n"),
 		InfoHashText:   strings.Join(infoHashes, "\n"),
+		Magnets:        magnets,
 	}, nil
 }
 

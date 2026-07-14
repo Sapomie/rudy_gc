@@ -91,6 +91,9 @@ const sidebarCollapsed = ref(false);
 const expandedGroupLabels = ref<string[]>([]);
 const collapsedGroupLabels = ref<string[]>([]);
 const legacyListCardRouteClasses: Record<string, string> = {
+  "/fclistcard": "route-cards",
+  "/fclistcardowned": "route-cardsmediamowned",
+  "/fclistcardrandom": "route-cardsrandom",
   "/listcard": "route-cards",
   "/listcardtoday": "route-cardstoday",
   "/listcardrank": "route-cardshasrank",
@@ -101,22 +104,61 @@ const legacyListCardRouteClasses: Record<string, string> = {
   "/listcarddayrank": "route-moviecarddayrank",
   "/listcardperiodrank": "route-moviecardperiodrank"
 };
+const legacyRenamedRouteClasses: Record<string, string> = {
+  "/dailybestfetch": "route-triggers-dailybest",
+  "/seedfetch": "route-triggers-seeds",
+  "/postprocess": "route-triggers-post-process",
+  "/databackfill": "route-triggers-backfill",
+  "/sitefetch": "route-triggers-fetch-site",
+  "/sehuatangfetch": "route-triggers-fetch-sehuatang",
+  "/javbusfetch": "route-triggers-fetch-site-javbus-filtered",
+  "/sukebeifetch": "route-triggers-fetch-site-sukebei-filtered",
+  "/scadd": "route-triggers-sc",
+  "/scmove": "route-triggers-sc-media",
+  "/mediaingest": "route-triggers-media",
+  "/fcingest": "route-triggers-fc2-media",
+  "/mediarescan": "route-triggers-media-rescan",
+  "/mediarollback": "route-triggers-media-rollback",
+  "/scevents": "route-sc-events",
+  "/sccards": "route-sc-events-cards",
+  "/scpick": "route-sc-pick-smart-media",
+  "/crawlrecordlist": "route-records route-crawl-records route-crawlrecords",
+  "/crawltasklist": "route-crawler-tasks route-crawltasks",
+  "/detailfetch": "route-crawler-detail-loop",
+  "/siteconfiglist": "route-fetch-sites route-siteconfig",
+  "/javbuslist": "route-fetch-site-javbus-list",
+  "/sukebeilist": "route-fetch-site-sukebei-list",
+  "/sehuatanglist": "route-fetch-site-sehuatang-list",
+  "/shbucketlist": "route-bucketssh route-shbuckets",
+  "/medialist": "route-medias",
+  "/aggeventlist": "route-w-agg-events route-wevents",
+  "/torrentalbumlist": "route-torrent-albums route-torrentalbums",
+  "/moviealbumlist": "route-movie-albums route-moviealbums",
+  "/seedlist": "route-d-seeds route-seeddata",
+  "/castlist": "route-casts",
+  "/eitemlist": "route-e-items route-eitems"
+};
 
 const currentTitle = computed(() => String(route.meta.title || routeTitle(route.path)));
 const sidebarToggleLabel = computed(() => (sidebarCollapsed.value ? "展开侧边导航" : "收起侧边导航"));
-const activePath = computed(() => (route.path === "/records" ? "/crawl-records" : route.path));
+const activePath = computed(() => route.path);
 const routeClass = computed(() => {
   const slug = route.path.replace(/^\/+/, "").replace(/[^a-zA-Z0-9_-]+/g, "-") || "home";
   return [
     legacyListCardRouteClasses[route.path] || "",
-    route.path === "/crawl-records" ? "route-records" : "",
+    legacyRenamedRouteClasses[route.path] || "",
     route.path.startsWith("/moviedetail/") ? "route-movie-detail" : "",
-    route.path === "/cast" || route.path.startsWith("/castdetail/") ? "route-cast-detail" : "",
+    route.path.startsWith("/castdetail/") ? "route-cast-detail" : "",
     route.path === "/shfetchall" ? "route-triggers-fetch-sehuatang-sh" : "",
     route.path === "/shfetch" ? "route-triggers-fetch-sehuatang-sh-thread-list" : "",
     route.path === "/shfill" ? "route-triggers-fetch-sehuatang-sh-thread-detail" : "",
     route.path === "/shpool" ? "route-fetch-site-sehuatang-sh-list" : "",
     route.path.startsWith("/shthread/") ? "route-fetch-site-sehuatang-sh-detail" : "",
+    route.path === "/shmagnetlist" ? "route-fetch-site-sehuatang-sh-list route-sh-magnets route-shmagnets" : "",
+    route.path === "/fclist" || route.path.startsWith("/fcdetail/") ? "route-fc2" : "",
+    route.path === "/fclist" ? "route-fc2-list" : "",
+    route.path.startsWith("/fcdetail/") ? "route-fc2-detail" : "",
+    route.path.startsWith("/scevent/") ? "route-sc-events" : "",
     `route-${slug}`
   ].filter(Boolean).join(" ");
 });
@@ -124,7 +166,6 @@ const showLegacyTopActions = computed(() => (
   route.path === "/listcarddayrank"
   || route.path === "/listcardperiodrank"
   || route.path.startsWith("/moviedetail/")
-  || route.path === "/cast"
   || route.path.startsWith("/castdetail/")
 ));
 

@@ -13,16 +13,18 @@ import (
 )
 
 type SHDetailFetchRequest struct {
-	TriggerSource     string   `json:"trigger_source"`
-	SelectionCriteria string   `json:"selection_criteria"`
-	TargetForumIDs    []string `json:"target_forum_ids"`
-	Keyword           string   `json:"keyword"`
-	DetailStatus      string   `json:"detail_status"`
-	ThreadTIDs        []string `json:"thread_tids"`
-	PostTimeFrom      int64    `json:"post_time_from"`
-	HasPostTimeFrom   bool     `json:"has_post_time_from"`
-	PostTimeTo        int64    `json:"post_time_to"`
-	HasPostTimeTo     bool     `json:"has_post_time_to"`
+	TriggerSource     string            `json:"trigger_source"`
+	SelectionCriteria string            `json:"selection_criteria"`
+	TargetForumIDs    []string          `json:"target_forum_ids"`
+	Keyword           string            `json:"keyword"`
+	DetailStatus      string            `json:"detail_status"`
+	ThreadTIDs        []string          `json:"thread_tids"`
+	PostTimeFrom      int64             `json:"post_time_from"`
+	HasPostTimeFrom   bool              `json:"has_post_time_from"`
+	PostTimeTo        int64             `json:"post_time_to"`
+	HasPostTimeTo     bool              `json:"has_post_time_to"`
+	BaseStats         map[string]int64  `json:"-"`
+	BaseStatsText     map[string]string `json:"-"`
 }
 
 type shListPageCoverage struct {
@@ -153,6 +155,7 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (re
 		TotalPageCount:  int64(len(jobs)),
 		CurrentPage:     jobs[0].Page,
 		CurrentPageText: jobs[0].PageText,
+		CurrentForumID:  jobs[0].ForumID,
 	}
 	defer func() {
 		if aggErr := s.flushSHThreadAgg(context.Background(), "sh_list", result); aggErr != nil && err == nil {
@@ -173,10 +176,10 @@ func (s *Service) FetchSHThreadList(ctx context.Context, req SHFetchRequest) (re
 		return result, err
 	}
 
-	reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池完成: run_id=%d | seen=%d | matched=%d | list_saved=%d | failed=%d", runID, result.SeenCount, result.MatchedCount, result.FetchedCount, result.FailedCount))
+	reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池完成: run_id=%d | pages=%d/%d | seen=%d | matched=%d | inserted=%d | existing=%d | persist_failed=%d | skipped_top=%d", runID, result.SuccessPageCount, result.FailedPageCount, result.SeenCount, result.MatchedCount, result.InsertedCount, result.ExistingCount, result.PersistFailedCount, result.SkippedTopCount))
 	reportSHProgress(ctx, result, taskctx.Progress{
 		Stage:        "fetch_sehuatang_sh_list_done",
-		Message:      fmt.Sprintf("色花堂列表建池完成：发现=%d，基础入库=%d，失败=%d", result.SeenCount, result.FetchedCount, result.FailedCount),
+		Message:      fmt.Sprintf("列表抓取完成：页面成功=%d，页面失败=%d，新增=%d，更新已有=%d，入库失败=%d，跳过置顶=%d", result.SuccessPageCount, result.FailedPageCount, result.InsertedCount, result.ExistingCount, result.PersistFailedCount, result.SkippedTopCount),
 		HandledCount: int(result.MatchedCount),
 		SuccessCount: int(result.FetchedCount),
 		FailedCount:  int(result.FailedCount),
@@ -188,7 +191,7 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 	if s == nil || s.deps == nil {
 		return nil, fmt.Errorf("fetchsehuatang service is nil")
 	}
-	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShSehuatangThreadDetailFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
+	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShMagnetModel == nil || s.deps.ShSehuatangThreadDetailFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
 		return nil, fmt.Errorf("sh sehuatang models are nil")
 	}
 	jobID := taskctx.JobID(ctx)
@@ -310,7 +313,7 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		}
 	}()
 	reportInfoLog(ctx, fmt.Sprintf("色花堂选中帖子详情抓取开始: selected=%d", len(rows)))
-	reportSHProgress(ctx, result, taskctx.Progress{
+	reportSHDetailProgress(ctx, result, req, taskctx.Progress{
 		Stage:           "fetch_sehuatang_sh_detail_start",
 		Message:         fmt.Sprintf("开始抓取选中帖子详情，选中=%d", len(rows)),
 		CurrentPhaseKey: "detail",
@@ -339,7 +342,7 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 			return result, err
 		}
 
-		reportSHProgress(ctx, result, taskctx.Progress{
+		reportSHDetailProgress(ctx, result, req, taskctx.Progress{
 			Stage:             "fetch_sehuatang_sh_detail_item_start",
 			Message:           fmt.Sprintf("开始抓取帖子详情：%s", row.ThreadTitle),
 			CurrentPhaseKey:   "detail",
@@ -362,7 +365,7 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		if err := s.deps.ShSehuatangThreadDetailFetchRunModel.Update(ctx, run); err != nil {
 			return result, err
 		}
-		reportSHProgress(ctx, result, taskctx.Progress{
+		reportSHDetailProgress(ctx, result, req, taskctx.Progress{
 			Stage:             "fetch_sehuatang_sh_detail_item_done",
 			Message:           fmt.Sprintf("帖子详情处理完成：%s", row.ThreadTitle),
 			CurrentPhaseKey:   "detail",
@@ -373,7 +376,7 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 	}
 
 	reportInfoLog(ctx, fmt.Sprintf("色花堂选中帖子详情抓取完成: selected=%d | fetched=%d | failed=%d", result.SeenCount, result.FetchedCount, result.FailedCount))
-	reportSHProgress(ctx, result, taskctx.Progress{
+	reportSHDetailProgress(ctx, result, req, taskctx.Progress{
 		Stage:        "fetch_sehuatang_sh_detail_done",
 		Message:      fmt.Sprintf("色花堂选中帖子详情抓取完成：选中=%d，成功=%d，失败=%d", len(rows), result.FetchedCount, result.FailedCount),
 		HandledCount: int(result.MatchedCount),
@@ -381,6 +384,30 @@ func (s *Service) FetchSHThreadDetails(ctx context.Context, req SHDetailFetchReq
 		FailedCount:  int(result.FailedCount),
 	})
 	return result, nil
+}
+
+func reportSHDetailProgress(ctx context.Context, result *SHFetchResult, req SHDetailFetchRequest, progress taskctx.Progress) {
+	if len(req.BaseStats) == 0 {
+		reportSHProgress(ctx, result, progress)
+		return
+	}
+	stats := make(map[string]int64, len(req.BaseStats)+20)
+	for key, value := range req.BaseStats {
+		stats[key] = value
+	}
+	for key, value := range BuildSHProgressStats(result) {
+		stats["detail_"+key] = value
+	}
+	statsText := make(map[string]string, len(req.BaseStatsText)+3)
+	for key, value := range req.BaseStatsText {
+		statsText[key] = value
+	}
+	for key, value := range BuildSHProgressStatsText(result) {
+		statsText["detail_"+key] = value
+	}
+	progress.Stats = stats
+	progress.StatsText = statsText
+	taskctx.ReportProgress(ctx, progress)
 }
 
 func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig, state *remoteState, req SHFetchRequest, jobs []shPageJob, run *moviex.ShSehuatangThreadListFetchRun, result *SHFetchResult, coverage shListCoverage) error {
@@ -393,6 +420,7 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 		pageStartedOn := time.Now().Unix()
 		result.CurrentPage = job.Page
 		result.CurrentPageText = job.PageText
+		result.CurrentForumID = job.ForumID
 		result.CompletedPageCount = int64(index)
 		run.CurrentForumID = job.ForumID
 		run.CurrentURL = job.URL
@@ -416,6 +444,7 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 		body, fetchErr := s.fetchWithSafeWithOptions(ctx, cfg, state, job.URL, true)
 		if fetchErr != nil {
 			result.FailedCount++
+			result.FailedPageCount++
 			result.LastError = fetchErr.Error()
 			run.FailedPageCount++
 			run.CompletedPageCount = int64(index + 1)
@@ -436,7 +465,8 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 				PhaseKey:          "list",
 				PhaseHandledCount: index + 1,
 				PhaseTotalCount:   len(jobs),
-				PhaseFailedCount:  int(result.FailedCount),
+				PhaseSuccessCount: int(result.SuccessPageCount),
+				PhaseFailedCount:  int(result.FailedPageCount),
 			})
 			continue
 		}
@@ -444,6 +474,7 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 		topics, skippedTopCount, err := parseSHPageTopics(SHFetchModeForum, body, job)
 		if err != nil {
 			result.FailedCount++
+			result.FailedPageCount++
 			result.LastError = err.Error()
 			run.FailedPageCount++
 			run.CompletedPageCount = int64(index + 1)
@@ -464,7 +495,8 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 				PhaseKey:          "list",
 				PhaseHandledCount: index + 1,
 				PhaseTotalCount:   len(jobs),
-				PhaseFailedCount:  int(result.FailedCount),
+				PhaseSuccessCount: int(result.SuccessPageCount),
+				PhaseFailedCount:  int(result.FailedPageCount),
 			})
 			continue
 		}
@@ -501,6 +533,7 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 
 		result.HandledPageCount++
 		run.SkippedTopCount += int64(skippedTopCount)
+		result.SkippedTopCount += int64(skippedTopCount)
 		for _, topic := range topics {
 			if topic == nil || topic.ThreadTID == "" {
 				continue
@@ -513,31 +546,39 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 			seenThreads[topic.ThreadTID] = struct{}{}
 			result.MatchedCount++
 			oldTarget, existed := existingTargets[topic.ThreadTID]
+			needsDetail := shListTopicNeedsDetail(existed, oldTarget.DetailStatus)
 			if existed {
 				markSHThreadAggTarget(result, oldTarget)
 			}
 			if err = s.saveSHListTopic(ctx, req, shRunRef{ID: run.Id, Source: SHRunSourceList}, result, topic); err != nil {
 				result.FailedCount++
+				result.PersistFailedCount++
 				page.FailedCount++
 				result.LastError = err.Error()
 				run.LastError = err.Error()
 				reportErrorLog(ctx, fmt.Sprintf("列表帖子基础入库失败: tid=%s | %s | err=%v", topic.ThreadTID, topic.Title, err))
 			} else {
 				result.FetchedCount++
+				if needsDetail {
+					result.DetailThreadTIDs = append(result.DetailThreadTIDs, topic.ThreadTID)
+				}
 				if existed {
 					page.ExistingCount++
 					run.ExistingCount++
+					result.ExistingCount++
 				} else {
 					page.InsertedCount++
 					run.InsertedCount++
+					result.InsertedCount++
 				}
 			}
 		}
 
-		reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池页完成: run_id=%d | %s | topics=%d | skipped_top=%d | seen=%d | saved=%d", run.Id, job.PageText, len(topics), skippedTopCount, result.SeenCount, result.FetchedCount))
+		reportInfoLog(ctx, fmt.Sprintf("色花堂列表建池页完成: run_id=%d | %s | topics=%d | skipped_top=%d | seen=%d | inserted=%d | existing=%d | persist_failed=%d", run.Id, job.PageText, len(topics), skippedTopCount, result.SeenCount, result.InsertedCount, result.ExistingCount, result.PersistFailedCount))
 		result.CompletedPageCount = int64(index + 1)
 		run.CompletedPageCount = int64(index + 1)
 		run.SuccessPageCount++
+		result.SuccessPageCount++
 		page.FinishedOn = time.Now().Unix()
 		if page.FailedCount > 0 {
 			page.Error = result.LastError
@@ -548,14 +589,20 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 		}
 		reportSHProgress(ctx, result, taskctx.Progress{
 			Stage:             "fetch_sehuatang_sh_list_page_done",
-			Message:           fmt.Sprintf("列表页完成：%s，帖子=%d，跳过置顶=%d，累计入库=%d", job.PageText, len(topics), skippedTopCount, result.FetchedCount),
+			Message:           fmt.Sprintf("列表页完成：%s，帖子=%d，新增=%d，更新已有=%d，入库失败=%d，跳过置顶=%d", job.PageText, len(topics), result.InsertedCount, result.ExistingCount, result.PersistFailedCount, skippedTopCount),
 			CurrentPhaseKey:   "list",
 			PhaseKey:          "list",
 			PhaseHandledCount: index + 1,
 			PhaseTotalCount:   len(jobs),
+			PhaseSuccessCount: int(result.SuccessPageCount),
+			PhaseFailedCount:  int(result.FailedPageCount),
 		})
 	}
 	return nil
+}
+
+func shListTopicNeedsDetail(existed bool, detailStatus string) bool {
+	return !existed || strings.TrimSpace(detailStatus) != SHDetailStatusFetched
 }
 
 func syncSHListRunCounts(run *moviex.ShSehuatangThreadListFetchRun, result *SHFetchResult) {
@@ -635,8 +682,11 @@ func normalizeSHDetailFetchRequest(req SHDetailFetchRequest) SHDetailFetchReques
 }
 
 func normalizeSHDetailTriggerSource(raw string) string {
-	if strings.TrimSpace(raw) == "shpool" {
+	switch strings.TrimSpace(raw) {
+	case "shpool":
 		return "shpool"
+	case "shfetchall":
+		return "shfetchall"
 	}
 	return "shfill"
 }

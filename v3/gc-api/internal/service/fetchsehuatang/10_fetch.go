@@ -272,11 +272,7 @@ func (s *Service) FetchMagnetsFromList(ctx context.Context, req FetchRequest) (*
 
 		now := time.Now()
 		threadTitle := parseThreadTitle(detailBody, topic.Title)
-		movieName := parseMovieName(threadTitle)
-		if movieName == "" {
-			movieName = parseMovieName(topic.Title)
-		}
-		movieJavID, resolveErr := s.resolveMovieJavIDByMovieName(ctx, movieName)
+		movieName, movieJavID, resolveErr := s.resolveSehuatangThreadMovieFields(ctx, threadTitle, topic.Title)
 		if resolveErr != nil {
 			item.Error = resolveErr.Error()
 			result.FailedCount++

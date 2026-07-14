@@ -46,7 +46,9 @@ func (h *ScTriggerAPI) Add(c *gin.Context) {
 	h.startTask(c, loop.StartTaskRequest{
 		TaskType:        loop.TaskScAdd,
 		Dir:             dir,
+		ComeMovieType:   strings.TrimSpace(req.ComeMovieType),
 		ComeMovieJavID:  strings.TrimSpace(req.ComeMovieJavId),
+		ComeFC2MovieID:  req.ComeFC2MovieId,
 		MovieCast:       strings.TrimSpace(req.MovieCast),
 		Kind:            strings.TrimSpace(req.Kind),
 		DurationMinutes: req.DurationMinutes,
@@ -58,7 +60,9 @@ func (h *ScTriggerAPI) Add(c *gin.Context) {
 }
 
 type scAddReq struct {
+	ComeMovieType   string          `json:"comeMovieType"`
 	ComeMovieJavId  string          `json:"comeMovieJavId"`
+	ComeFC2MovieId  int64           `json:"comeFC2MovieId"`
 	MovieCast       string          `json:"movieCast"`
 	Kind            string          `json:"kind"`
 	DurationMinutes int64           `json:"duration"`
@@ -69,7 +73,9 @@ type scAddReq struct {
 }
 
 type scAddMovieReq struct {
+	MovieType  string `json:"movieType"`
 	MovieJavId string `json:"movieJavId"`
+	FC2MovieId int64  `json:"fc2MovieId"`
 	IsSc       int64  `json:"isSc"`
 }
 
@@ -79,12 +85,10 @@ func buildScAddInputMovies(reqs []scAddMovieReq) []sc.AddScInputMovie {
 	}
 	out := make([]sc.AddScInputMovie, 0, len(reqs))
 	for _, req := range reqs {
-		movieJavId := strings.TrimSpace(req.MovieJavId)
-		if movieJavId == "" {
-			continue
-		}
 		out = append(out, sc.AddScInputMovie{
-			MovieJavId: movieJavId,
+			MovieType:  strings.TrimSpace(req.MovieType),
+			MovieJavId: strings.TrimSpace(req.MovieJavId),
+			FC2MovieId: req.FC2MovieId,
 			IsSc:       req.IsSc,
 		})
 	}
@@ -92,8 +96,12 @@ func buildScAddInputMovies(reqs []scAddMovieReq) []sc.AddScInputMovie {
 }
 
 type scAddPreviewMovieResp struct {
+	MovieType  string   `json:"movieType"`
 	MovieName  string   `json:"movieName"`
 	MovieJavId string   `json:"movieJavId"`
+	FC2MovieId int64    `json:"fc2MovieId"`
+	MovieKey   string   `json:"movieKey"`
+	Title      string   `json:"title"`
 	MovieHref  string   `json:"movieHref"`
 	JacketImg  string   `json:"jacketImg"`
 	Casts      []string `json:"casts"`
@@ -136,8 +144,12 @@ func (h *ScTriggerAPI) AddPreview(c *gin.Context) {
 			continue
 		}
 		resp.Movies = append(resp.Movies, scAddPreviewMovieResp{
+			MovieType:  movie.MovieType,
 			MovieName:  movie.MovieName,
 			MovieJavId: movie.MovieJavId,
+			FC2MovieId: movie.FC2MovieId,
+			MovieKey:   movie.MovieKey,
+			Title:      movie.Title,
 			MovieHref:  movie.MovieHref,
 			JacketImg:  movie.JacketImg,
 			Casts:      movie.Casts,

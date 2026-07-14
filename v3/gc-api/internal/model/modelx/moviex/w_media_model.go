@@ -3,14 +3,16 @@ package moviex
 import (
 	"context"
 	"errors"
-	"rudy_gc/internal/consts"
-	"rudy_gc/internal/types"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+
+	"rudy_gc/internal/consts"
+	"rudy_gc/internal/types"
 )
 
 var _ WMediaModel = (*customWMediaModel)(nil)
@@ -82,9 +84,11 @@ type (
 		CalcTopPrefixesByBirthRange(ctx context.Context, start, end int64, limit int) ([]*WMediaBirthTopCalc, error)
 		ListByMovieJavIds(ctx context.Context, movieJavIds []string) ([]*WMedia, error)
 		ListNativeMediaPage(ctx context.Context, offset, limit int64, orderBy string, filter types.MediaListFilter) ([]*NativeMediaListRow, error)
+		ListNativeMediaPageWithTotal(ctx context.Context, offset, limit int64, orderBy string, filter types.MediaListFilter) ([]*NativeMediaListRow, int64, error)
 		CountNativeMedia(ctx context.Context, filter types.MediaListFilter) (int64, error)
 		FindOneByMovieJavIdSourceType(ctx context.Context, movieJavId string, sourceType int64) (*WMedia, error)
 		FindOneByMovieNameSourceType(ctx context.Context, movieName string, sourceType int64) (*WMedia, error)
+		ListByMovieNames(ctx context.Context, movieNames []string) ([]*WMedia, error)
 		FindOneByFileNameSourceType(ctx context.Context, fileName string, sourceType int64) (*WMedia, error)
 		ListScMissingNativeMedia(ctx context.Context) ([]*MissingScNativeMediaRow, error)
 		ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*WMedia, total int64, err error)
@@ -123,6 +127,45 @@ func (m *customWMediaModel) FindOneByMovieJavId(ctx context.Context, movieJavId 
 
 func (m *customWMediaModel) FindOneByMovieName(ctx context.Context, movieName string) (*WMedia, error) {
 	return m.FindOneByMovieNameSourceType(ctx, movieName, consts.WMediaSourceNative)
+}
+
+func (m *customWMediaModel) ListByMovieNames(ctx context.Context, movieNames []string) ([]*WMedia, error) {
+	values := uniqueStringsForWMedia(movieNames)
+	if len(values) == 0 {
+		return []*WMedia{}, nil
+	}
+	query, args, err := squirrel.Select(wMediaRows).
+		From(m.table).
+		Where(squirrel.Eq{"movie_name": values, "source_type": consts.WMediaSourceNative}).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*WMedia
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*WMedia{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func uniqueStringsForWMedia(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func (m *customWMediaModel) FindOneByFileName(ctx context.Context, fileName string) (*WMedia, error) {
@@ -188,9 +231,9 @@ func nativeMediaListColumns(alias string) []string {
 		alias + ".need_scan_meta AS need_scan_meta",
 		alias + ".is_removed AS is_removed",
 		alias + ".remove_time AS remove_time",
-		"COALESCE(gss.sc_times, 0) AS sc_times",
-		"COALESCE(gss.come_times, 0) AS come_times",
-		"COALESCE(gss.last_sc_time, 0) AS last_sc_time",
+		"0 AS sc_times",
+		"0 AS come_times",
+		"0 AS last_sc_time",
 		alias + ".birth_time AS birth_time",
 		alias + ".releasing_date AS releasing_date",
 		alias + ".created_on AS created_on",
@@ -205,7 +248,6 @@ func nativeMediaListBuilder(tableName string, alias string, columns ...string) s
 	return squirrel.
 		Select(columns...).
 		From(tableName + " " + alias).
-		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = " + alias + ".movie_jav_id").
 		Where(squirrel.Eq{alias + ".source_type": consts.WMediaSourceNative})
 }
 
@@ -263,18 +305,6 @@ func applyNativeMediaListFilter(builder squirrel.SelectBuilder, filter types.Med
 	if filter.HasReleasingDateTo {
 		builder = builder.Where(squirrel.LtOrEq{"wm.releasing_date": filter.ReleasingDateTo})
 	}
-	if filter.HasScTimesMin {
-		builder = builder.Where(squirrel.Expr("COALESCE(gss.sc_times, 0) >= ?", filter.ScTimesMin))
-	}
-	if filter.HasScTimesMax {
-		builder = builder.Where(squirrel.Expr("COALESCE(gss.sc_times, 0) <= ?", filter.ScTimesMax))
-	}
-	if filter.HasLastScFrom {
-		builder = builder.Where(squirrel.Expr("COALESCE(gss.last_sc_time, 0) >= ?", filter.LastScFrom))
-	}
-	if filter.HasLastScTo {
-		builder = builder.Where(squirrel.Expr("COALESCE(gss.last_sc_time, 0) <= ?", filter.LastScTo))
-	}
 	return builder
 }
 
@@ -284,29 +314,70 @@ func (m *customWMediaModel) ListNativeMediaPage(ctx context.Context, offset, lim
 		orderParts = []string{"wm.birth_time DESC", "wm.movie_name DESC"}
 	}
 
-	builder := applyNativeMediaListFilter(nativeMediaListBuilder(m.table, "wm"), filter).OrderBy(orderParts...)
+	builder := applyNativeMediaListFilter(nativeMediaListBuilder(m.table, "wm"), filter)
+	if nativeMediaNeedsStatScope(orderBy, filter) {
+		rows, err := m.queryNativeMediaRows(ctx, builder)
+		if err != nil {
+			return nil, err
+		}
+		if err := m.attachNativeMediaStats(ctx, rows); err != nil {
+			return nil, err
+		}
+		rows = filterNativeMediaStats(rows, filter)
+		sortNativeMediaRows(rows, orderBy)
+		return paginateNativeMediaRows(rows, offset, limit), nil
+	}
+
+	builder = builder.OrderBy(orderParts...)
 	if limit > 0 {
 		builder = builder.Limit(uint64(limit))
 	}
 	if offset > 0 {
 		builder = builder.Offset(uint64(offset))
 	}
-	query, args, err := builder.ToSql()
+	rows, err := m.queryNativeMediaRows(ctx, builder)
 	if err != nil {
 		return nil, err
 	}
-
-	var rows []*NativeMediaListRow
-	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			return []*NativeMediaListRow{}, nil
-		}
+	if err := m.attachNativeMediaStats(ctx, rows); err != nil {
 		return nil, err
 	}
 	return rows, nil
 }
 
+func (m *customWMediaModel) ListNativeMediaPageWithTotal(ctx context.Context, offset, limit int64, orderBy string, filter types.MediaListFilter) ([]*NativeMediaListRow, int64, error) {
+	if nativeMediaNeedsStatScope(orderBy, filter) {
+		rows, err := m.queryNativeMediaRows(ctx, applyNativeMediaListFilter(nativeMediaListBuilder(m.table, "wm"), filter))
+		if err != nil {
+			return nil, 0, err
+		}
+		if err := m.attachNativeMediaStats(ctx, rows); err != nil {
+			return nil, 0, err
+		}
+		rows = filterNativeMediaStats(rows, filter)
+		total := int64(len(rows))
+		sortNativeMediaRows(rows, orderBy)
+		return paginateNativeMediaRows(rows, offset, limit), total, nil
+	}
+	total, err := m.CountNativeMedia(ctx, filter)
+	if err != nil || total == 0 {
+		return []*NativeMediaListRow{}, total, err
+	}
+	rows, err := m.ListNativeMediaPage(ctx, offset, limit, orderBy, filter)
+	return rows, total, err
+}
+
 func (m *customWMediaModel) CountNativeMedia(ctx context.Context, filter types.MediaListFilter) (int64, error) {
+	if nativeMediaHasStatFilter(filter) {
+		rows, err := m.queryNativeMediaRows(ctx, applyNativeMediaListFilter(nativeMediaListBuilder(m.table, "wm"), filter))
+		if err != nil {
+			return 0, err
+		}
+		if err := m.attachNativeMediaStats(ctx, rows); err != nil {
+			return 0, err
+		}
+		return int64(len(filterNativeMediaStats(rows, filter))), nil
+	}
 	query, args, err := applyNativeMediaListFilter(nativeMediaListBuilder(m.table, "wm", "COUNT(1)"), filter).ToSql()
 	if err != nil {
 		return 0, err
@@ -325,27 +396,200 @@ func (m *customWMediaModel) CountNativeMedia(ctx context.Context, filter types.M
 func (m *customWMediaModel) ListScMissingNativeMedia(ctx context.Context) ([]*MissingScNativeMediaRow, error) {
 	const query = `
 SELECT
-	g.movie_jav_id AS movie_jav_id,
-	g.movie_name AS movie_name,
-	g.sc_times AS sc_times,
-	g.last_sc_time AS last_sc_time,
-	g.releasing_date AS releasing_date,
-	g.media_birth_time AS media_birth_time
-FROM g_sc_stat g
-LEFT JOIN w_media wm
-	ON wm.movie_jav_id = g.movie_jav_id
-	AND wm.source_type = ?
-WHERE wm.id IS NULL
-ORDER BY g.sc_times DESC, g.last_sc_time DESC, g.movie_name DESC, g.movie_jav_id DESC`
+	movie_jav_id,
+	movie_name,
+	sc_times,
+	last_sc_time,
+	releasing_date,
+	media_birth_time
+FROM g_sc_stat
+WHERE media_birth_time = 0
+ORDER BY sc_times DESC, last_sc_time DESC, movie_name DESC, movie_jav_id DESC`
 
 	var rows []*MissingScNativeMediaRow
-	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, consts.WMediaSourceNative); err != nil {
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return []*MissingScNativeMediaRow{}, nil
 		}
 		return nil, err
 	}
 	return rows, nil
+}
+
+func nativeMediaHasStatFilter(filter types.MediaListFilter) bool {
+	return filter.HasScTimesMin || filter.HasScTimesMax || filter.HasLastScFrom || filter.HasLastScTo
+}
+
+func nativeMediaNeedsStatScope(orderBy string, filter types.MediaListFilter) bool {
+	return nativeMediaHasStatFilter(filter) || strings.Contains(strings.ToLower(orderBy), "gss.")
+}
+
+func (m *customWMediaModel) queryNativeMediaRows(ctx context.Context, builder squirrel.SelectBuilder) ([]*NativeMediaListRow, error) {
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*NativeMediaListRow
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*NativeMediaListRow{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customWMediaModel) attachNativeMediaStats(ctx context.Context, rows []*NativeMediaListRow) error {
+	javIDs := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if row != nil {
+			javIDs = append(javIDs, row.MovieJavId)
+		}
+	}
+	javIDs = uniqueStringsForWMedia(javIDs)
+	if len(javIDs) == 0 {
+		return nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(javIDs)), ",")
+	args := make([]any, len(javIDs))
+	for index, javID := range javIDs {
+		args[index] = javID
+	}
+	var statRows []*GScStat
+	if err := m.QueryRowsNoCacheCtx(ctx, &statRows, "SELECT "+gScStatRows+" FROM `g_sc_stat` WHERE `movie_jav_id` IN ("+placeholders+")", args...); err != nil && !errors.Is(err, sqlx.ErrNotFound) {
+		return err
+	}
+	stats := make(map[string]*GScStat, len(statRows))
+	for _, row := range statRows {
+		if row != nil {
+			stats[row.MovieJavId] = row
+		}
+	}
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		if stat := stats[row.MovieJavId]; stat != nil {
+			row.ScTimes = stat.ScTimes
+			row.ComeTimes = stat.ComeTimes
+			row.LastScTime = stat.LastScTime
+		}
+	}
+	return nil
+}
+
+func filterNativeMediaStats(rows []*NativeMediaListRow, filter types.MediaListFilter) []*NativeMediaListRow {
+	out := make([]*NativeMediaListRow, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		if filter.HasScTimesMin && row.ScTimes < filter.ScTimesMin {
+			continue
+		}
+		if filter.HasScTimesMax && row.ScTimes > filter.ScTimesMax {
+			continue
+		}
+		if filter.HasLastScFrom && row.LastScTime < filter.LastScFrom {
+			continue
+		}
+		if filter.HasLastScTo && row.LastScTime > filter.LastScTo {
+			continue
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+func paginateNativeMediaRows(rows []*NativeMediaListRow, offset, limit int64) []*NativeMediaListRow {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset >= int64(len(rows)) {
+		return []*NativeMediaListRow{}
+	}
+	end := int64(len(rows))
+	if limit > 0 && offset+limit < end {
+		end = offset + limit
+	}
+	return rows[int(offset):int(end)]
+}
+
+func sortNativeMediaRows(rows []*NativeMediaListRow, orderBy string) {
+	parts := splitOrderClause(orderBy)
+	if len(parts) == 0 {
+		parts = []string{"wm.birth_time DESC", "wm.movie_name DESC"}
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		left, right := rows[i], rows[j]
+		for _, part := range parts {
+			comparison := compareNativeMediaRows(left, right, part)
+			if comparison == 0 {
+				continue
+			}
+			if strings.HasSuffix(strings.ToUpper(strings.TrimSpace(part)), " ASC") {
+				return comparison < 0
+			}
+			return comparison > 0
+		}
+		return false
+	})
+}
+
+func compareNativeMediaRows(left, right *NativeMediaListRow, orderPart string) int {
+	part := strings.ToLower(orderPart)
+	switch {
+	case strings.Contains(part, "sc_times"):
+		return compareInt64(left.ScTimes, right.ScTimes)
+	case strings.Contains(part, "last_sc_time"):
+		return compareInt64(left.LastScTime, right.LastScTime)
+	case strings.Contains(part, "movie_name"):
+		return strings.Compare(left.MovieName, right.MovieName)
+	case strings.Contains(part, "frame_average"):
+		return compareFloat64(left.FrameAverage, right.FrameAverage)
+	case strings.Contains(part, "releasing_date"):
+		return compareInt64(left.ReleasingDate, right.ReleasingDate)
+	case strings.Contains(part, "birth_time"):
+		return compareInt64(left.BirthTime, right.BirthTime)
+	case strings.Contains(part, "bit_rate"):
+		return compareInt64(left.BitRate, right.BitRate)
+	case strings.Contains(part, "duration"):
+		return compareInt64(left.Duration, right.Duration)
+	case strings.Contains(part, "height"):
+		return compareInt64(left.Height, right.Height)
+	case strings.Contains(part, "self_make"):
+		return compareInt64(left.SelfMake, right.SelfMake)
+	case strings.Contains(part, "has_mask"):
+		return compareInt64(left.HasMask, right.HasMask)
+	case strings.Contains(part, "size"):
+		return compareInt64(left.Size, right.Size)
+	case strings.Contains(part, ".id"):
+		return compareInt64(left.Id, right.Id)
+	default:
+		return 0
+	}
+}
+
+func compareInt64(left, right int64) int {
+	switch {
+	case left < right:
+		return -1
+	case left > right:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareFloat64(left, right float64) int {
+	switch {
+	case left < right:
+		return -1
+	case left > right:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (m *customWMediaModel) findOneByFieldAndSourceType(ctx context.Context, fieldName string, fieldValue string, sourceType int64) (*WMedia, error) {
@@ -585,15 +829,17 @@ func (m *customWMediaModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int
 		orderParts = []string{"wm.birth_time DESC", "wm.movie_name DESC"}
 	}
 
-	qAll, argsAll, err := squirrel.
+	statOrder := strings.Contains(strings.ToLower(mapWMediaOrderBy(orderBy)), "gss.")
+	builder := squirrel.
 		Select("wm.*").
 		From(m.table + " AS wm").
-		LeftJoin("`g_sc_stat` gss ON gss.movie_jav_id = wm.movie_jav_id").
 		Where(squirrel.Eq{"wm.source_type": consts.WMediaSourceNative}).
 		Where(squirrel.Eq{"wm.is_removed": consts.FilmIsNotRemoved}).
-		Where(squirrel.Eq{"wm.directory_id": dirIDs}).
-		OrderBy(orderParts...).
-		ToSql()
+		Where(squirrel.Eq{"wm.directory_id": dirIDs})
+	if !statOrder {
+		builder = builder.OrderBy(orderParts...)
+	}
+	qAll, argsAll, err := builder.ToSql()
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -604,6 +850,27 @@ func (m *customWMediaModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int
 			return []*WMedia{}, []*WMedia{}, 0, nil
 		}
 		return nil, nil, 0, err
+	}
+	if statOrder {
+		nativeRows := make([]*NativeMediaListRow, 0, len(rows))
+		mediaByID := make(map[int64]*WMedia, len(rows))
+		for _, row := range rows {
+			if row == nil {
+				continue
+			}
+			mediaByID[row.Id] = row
+			nativeRows = append(nativeRows, nativeMediaListRowFromWMedia(row))
+		}
+		if err := m.attachNativeMediaStats(ctx, nativeRows); err != nil {
+			return nil, nil, 0, err
+		}
+		sortNativeMediaRows(nativeRows, mapWMediaOrderBy(orderBy))
+		rows = rows[:0]
+		for _, nativeRow := range nativeRows {
+			if nativeRow != nil && mediaByID[nativeRow.Id] != nil {
+				rows = append(rows, mediaByID[nativeRow.Id])
+			}
+		}
 	}
 
 	total = int64(len(rows))
@@ -622,6 +889,20 @@ func (m *customWMediaModel) ListByDirectoryIDs(ctx context.Context, dirIDs []int
 	}
 	paged = rows[start:end]
 	return rows, paged, total, nil
+}
+
+func nativeMediaListRowFromWMedia(row *WMedia) *NativeMediaListRow {
+	if row == nil {
+		return nil
+	}
+	return &NativeMediaListRow{
+		Id: row.Id, MovieJavId: row.MovieJavId, MovieName: row.MovieName, FileName: row.FileName,
+		DirectoryId: row.DirectoryId, RootDir: row.RootDir, FullDir: row.FullDir, Alias: row.Alias,
+		Size: row.Size, Width: row.Width, Height: row.Height, BitRate: row.BitRate, Duration: row.Duration,
+		FrameAverage: row.FrameAverage, HasSub: row.HasSub, SelfMake: row.SelfMake, HasMask: row.HasMask,
+		NeedScanMeta: row.NeedScanMeta, IsRemoved: row.IsRemoved, RemoveTime: row.RemoveTime,
+		BirthTime: row.BirthTime, ReleasingDate: row.ReleasingDate, CreatedOn: row.CreatedOn, UpdatedOn: row.UpdatedOn,
+	}
 }
 
 func (m *customWMediaModel) ListByFullDirPrefixes(ctx context.Context, prefixes []string) ([]*WMedia, error) {

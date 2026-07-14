@@ -114,11 +114,11 @@ func personDisplayName(person *types.Person) string {
 	return strings.TrimSpace(person.Name)
 }
 
-func buildCastDetailFrontendPath(person *types.Person, rawName string) string {
+func buildCastDetailFrontendPath(person *types.Person, _ string) string {
 	if person != nil && person.Id > 0 {
 		return "/castdetail/" + strconv.FormatInt(person.Id, 10)
 	}
-	return "/cast"
+	return "/listcard"
 }
 
 func buildCastDetailMovieCardTargets(person *types.Person, rawName string) (string, string) {
@@ -127,17 +127,15 @@ func buildCastDetailMovieCardTargets(person *types.Person, rawName string) (stri
 		return target, target
 	}
 
-	values := url.Values{}
 	name := strings.TrimSpace(rawName)
 	if name == "" && person != nil {
 		name = strings.TrimSpace(person.Name)
 	}
+	path := "/listcard"
 	if name != "" {
-		values.Set("name", name)
-	}
-	path := "/cast"
-	if encoded := values.Encode(); encoded != "" {
-		target := path + "?" + encoded
+		listValues := url.Values{}
+		listValues.Set("cn", name)
+		target := path + "?" + listValues.Encode()
 		return target, target
 	}
 	return path, path

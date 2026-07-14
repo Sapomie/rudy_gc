@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/taskctx"
@@ -35,12 +36,21 @@ func BuildSHProgressStats(result *SHFetchResult) map[string]int64 {
 		"completed_page_count":   0,
 		"current_page":           0,
 		"handled_page_count":     0,
+		"success_page_count":     0,
+		"failed_page_count":      0,
 		"seen_count":             0,
 		"matched_count":          0,
+		"inserted_count":         0,
+		"existing_count":         0,
+		"skipped_top_count":      0,
 		"skipped_forum_count":    0,
 		"skipped_existing_count": 0,
 		"fetched_count":          0,
+		"persist_failed_count":   0,
 		"failed_count":           0,
+		"start_page":             0,
+		"end_page":               0,
+		"run_id":                 0,
 	}
 	if result == nil {
 		return stats
@@ -49,12 +59,21 @@ func BuildSHProgressStats(result *SHFetchResult) map[string]int64 {
 	stats["completed_page_count"] = result.CompletedPageCount
 	stats["current_page"] = result.CurrentPage
 	stats["handled_page_count"] = result.HandledPageCount
+	stats["success_page_count"] = result.SuccessPageCount
+	stats["failed_page_count"] = result.FailedPageCount
 	stats["seen_count"] = result.SeenCount
 	stats["matched_count"] = result.MatchedCount
+	stats["inserted_count"] = result.InsertedCount
+	stats["existing_count"] = result.ExistingCount
+	stats["skipped_top_count"] = result.SkippedTopCount
 	stats["skipped_forum_count"] = result.SkippedForumCount
 	stats["skipped_existing_count"] = result.SkippedExistingCount
 	stats["fetched_count"] = result.FetchedCount
+	stats["persist_failed_count"] = result.PersistFailedCount
 	stats["failed_count"] = result.FailedCount
+	stats["start_page"] = result.StartPage
+	stats["end_page"] = result.EndPage
+	stats["run_id"] = result.RunID
 	return stats
 }
 
@@ -62,13 +81,20 @@ func BuildSHProgressStatsText(result *SHFetchResult) map[string]string {
 	if result == nil {
 		return nil
 	}
-	currentPageText := strings.TrimSpace(result.CurrentPageText)
-	if currentPageText == "" {
+	stats := make(map[string]string, 3)
+	if currentPageText := strings.TrimSpace(result.CurrentPageText); currentPageText != "" {
+		stats["current_page_text"] = currentPageText
+	}
+	if currentForumID := strings.TrimSpace(result.CurrentForumID); currentForumID != "" {
+		stats["current_forum_id"] = currentForumID
+	}
+	if targetForumIDs := strings.TrimSpace(result.TargetForumIDs); targetForumIDs != "" {
+		stats["target_forum_ids"] = targetForumIDs
+	}
+	if len(stats) == 0 {
 		return nil
 	}
-	return map[string]string{
-		"current_page_text": currentPageText,
-	}
+	return stats
 }
 
 func reportSHProgress(ctx context.Context, result *SHFetchResult, progress taskctx.Progress) {
@@ -81,7 +107,7 @@ func (s *Service) FetchSHThreads(ctx context.Context, req SHFetchRequest) (*SHFe
 	if s == nil || s.deps == nil {
 		return nil, fmt.Errorf("fetchsehuatang service is nil")
 	}
-	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShSehuatangFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
+	if s.deps.ShSehuatangThreadModel == nil || s.deps.ShMagnetModel == nil || s.deps.ShSehuatangFetchRunModel == nil || s.deps.ShSehuatangFetchItemModel == nil {
 		return nil, fmt.Errorf("sh sehuatang models are nil")
 	}
 
@@ -338,11 +364,18 @@ func (s *Service) saveSHListTopic(ctx context.Context, req SHFetchRequest, run s
 	if _, err := s.deps.ShSehuatangFetchItemModel.Upsert(ctx, item); err != nil {
 		return err
 	}
+	movieName, movieJavID, err := s.resolveSehuatangThreadMovieFields(ctx, topic.Title)
+	if err != nil {
+		return err
+	}
 
 	threadRow, err := s.deps.ShSehuatangThreadModel.UpsertListBasic(ctx, &moviex.ShSehuatangThread{
 		ThreadTID:      topic.ThreadTID,
 		ThreadURL:      topic.DetailURL,
 		ThreadTitle:    topic.Title,
+		MovieJavId:     movieJavID,
+		MovieName:      movieName,
+		MovieType:      moviedomain.ResolveSehuatangThreadMovieType(movieName, movieJavID),
 		AuthorName:     topic.AuthorName,
 		PostTime:       parseForumTimeText(topic.ListPostAt, time.Now()),
 		SourceForumID:  topic.SourceForumID,
@@ -498,12 +531,37 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	if detail.PostTime <= 0 {
 		detail.PostTime = parseForumTimeText(topic.ListPostAt, time.Now())
 	}
+	movieName, movieJavID, resolveErr := s.resolveSehuatangThreadMovieFields(ctx, detail.ThreadTitle, topic.Title)
+	if resolveErr != nil {
+		result.FailedCount++
+		result.LastError = resolveErr.Error()
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, 0, resolveErr.Error(), time.Now().Unix()); updateErr != nil {
+			return updateErr
+		}
+		updatedThread, updateErr := s.deps.ShSehuatangThreadModel.UpdateDetailFailureByThreadTID(ctx, topic.ThreadTID, resolveErr.Error(), time.Now().Unix())
+		if updateErr != nil && !errors.Is(updateErr, moviex.ErrNotFound) {
+			return updateErr
+		}
+		markSHThreadAggRow(result, updatedThread)
+		reportErrorLog(ctx, fmt.Sprintf("影片映射失败: tid=%s | %s | movie_name=%s | err=%v", topic.ThreadTID, detail.ThreadTitle, movieName, resolveErr))
+		reportSHProgress(ctx, result, taskctx.Progress{
+			Stage:        "fetch_sehuatang_sh_detail_failed",
+			Message:      fmt.Sprintf("影片映射失败：%s，错误=%v", detail.ThreadTitle, resolveErr),
+			HandledCount: int(result.MatchedCount),
+			SuccessCount: int(result.FetchedCount),
+			FailedCount:  int(result.FailedCount),
+		})
+		return nil
+	}
 
 	detailFetchedOn := time.Now().Unix()
 	threadRow, err := s.deps.ShSehuatangThreadModel.Upsert(ctx, &moviex.ShSehuatangThread{
 		ThreadTID:       detail.ThreadTID,
 		ThreadURL:       topic.DetailURL,
 		ThreadTitle:     detail.ThreadTitle,
+		MovieJavId:      movieJavID,
+		MovieName:       movieName,
+		MovieType:       moviedomain.ResolveSehuatangThreadMovieType(movieName, movieJavID),
 		AuthorName:      detail.AuthorName,
 		PostTime:        detail.PostTime,
 		SourceForumID:   topic.SourceForumID,
@@ -543,6 +601,33 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 		})
 		return nil
 	}
+	if err := s.persistSHMagnets(ctx, threadRow, detail.Magnets, detailFetchedOn); err != nil {
+		result.FailedCount++
+		result.LastError = err.Error()
+		threadRowID := int64(0)
+		if threadRow != nil {
+			threadRowID = threadRow.Id
+		}
+		if _, updateErr := s.deps.ShSehuatangFetchItemModel.UpdateStatus(ctx, run.Source, run.ID, topic.ThreadTID, SHFetchItemStatusFailed, threadRowID, err.Error(), time.Now().Unix()); updateErr != nil {
+			return updateErr
+		}
+		markSHThreadAggRow(result, threadRow)
+		reportErrorLog(ctx, fmt.Sprintf("SH 磁力入库失败: tid=%s | %s | err=%v", topic.ThreadTID, detail.ThreadTitle, err))
+		reportSHProgress(ctx, result, taskctx.Progress{
+			Stage:        "fetch_sehuatang_sh_magnet_failed",
+			Message:      fmt.Sprintf("帖子详情已保存，磁力入库失败：%s，错误=%v", detail.ThreadTitle, err),
+			HandledCount: int(result.MatchedCount),
+			SuccessCount: int(result.FetchedCount),
+			FailedCount:  int(result.FailedCount),
+		})
+		return nil
+	}
+	if err := s.syncFC2Movie(ctx, threadRow); err != nil {
+		result.FailedCount++
+		result.LastError = err.Error()
+		reportErrorLog(ctx, fmt.Sprintf("FC2资料同步失败: tid=%s | movie_name=%s | err=%v", topic.ThreadTID, movieName, err))
+		return err
+	}
 
 	threadRowID := int64(0)
 	if threadRow != nil {
@@ -554,7 +639,7 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	}
 
 	result.FetchedCount++
-	reportInfoLog(ctx, fmt.Sprintf("帖子详情入库完成: run_id=%d | tid=%s | title=%s | post_time=%d | magnets=%d", run.ID, detail.ThreadTID, detail.ThreadTitle, detail.PostTime, countLines(detail.InfoHashText)))
+	reportInfoLog(ctx, fmt.Sprintf("帖子详情入库完成: run_id=%d | tid=%s | movie_name=%s | movie_jav_id=%s | title=%s | post_time=%d | magnets=%d", run.ID, detail.ThreadTID, movieName, movieJavID, detail.ThreadTitle, detail.PostTime, countLines(detail.InfoHashText)))
 	reportSHProgress(ctx, result, taskctx.Progress{
 		Stage:        "fetch_sehuatang_sh_detail_done",
 		Message:      fmt.Sprintf("帖子详情入库完成：%s", detail.ThreadTitle),

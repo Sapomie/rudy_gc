@@ -18,6 +18,7 @@ type Config struct {
 	MovieTypeCache   MovieTypeCacheConf
 	Film             Film
 	Media            Media
+	FC2Media         FC2MediaConfig
 	LogursLevel      string
 }
 
@@ -35,6 +36,11 @@ type FilmDirPair struct {
 
 type Media struct {
 	RootDirs []string
+}
+
+type FC2MediaConfig struct {
+	RootDirs      []string
+	LocalImageDir string
 }
 
 type FetcherConf struct {

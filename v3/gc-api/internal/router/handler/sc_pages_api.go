@@ -42,7 +42,7 @@ type scEventListQuery struct {
 }
 
 func (h *ScPagesAPI) ListScEvents(c *gin.Context) {
-	defer withFrontendPath(c, "/sc-events")()
+	defer withFrontendPath(c, "/scevents")()
 
 	var q scEventListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -84,7 +84,7 @@ func (h *ScPagesAPI) ListScEvents(c *gin.Context) {
 }
 
 func (h *ScPagesAPI) ListScEventCards(c *gin.Context) {
-	defer withFrontendPath(c, "/sc-events-cards")()
+	defer withFrontendPath(c, "/sccards")()
 
 	var q scEventListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -160,7 +160,7 @@ func (h *ScPagesAPI) ScEventDetail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少参数: name"})
 		return
 	}
-	defer withFrontendPath(c, "/sc-events/"+url.PathEscape(name))()
+	defer withFrontendPath(c, "/scevent/"+url.PathEscape(name))()
 
 	movieFilter := normalizeScEventDetailMovieFilter(c.Query("mf"))
 	detail, err := h.scSvc.GetEventDetail(c.Request.Context(), name, movieFilter)
@@ -184,16 +184,25 @@ func (h *ScPagesAPI) ScEventDetail(c *gin.Context) {
 		"Items":                     detail.Items,
 		"FailedItems":               detail.FailedItems,
 		"ComeCount":                 detail.ComeCount,
+		"ComeMovieHref":             detail.ComeMovieHref,
+		"ComeMovieType":             detail.ComeMovieType,
+		"TotalMovieCount":           detail.TotalMovieCount,
+		"ScMovieCount":              detail.ScMovieCount,
+		"NoScMovieCount":            detail.NoScMovieCount,
+		"JavMovieCount":             detail.JavMovieCount,
+		"FC2MovieCount":             detail.FC2MovieCount,
 		"EditImageName":             detail.EditImageName,
 		"EditMovieCount":            detail.EditMovieCount,
 		"EditScMovieCount":          detail.EditScMovieCount,
-		"EditComeMovieJavId":        detail.EditComeMovieJavId,
+		"EditComeGListId":           detail.EditComeGListId,
 		"EditComeMovieOptions":      detail.EditComeMovieOptions,
 		"EditCurrentMovieCastNames": detail.EditCurrentMovieCastNames,
 		"MovieFilter":               movieFilter,
 		"MovieFilterAllHref":        buildScEventDetailMovieFilterHref(c, "all"),
 		"MovieFilterScHref":         buildScEventDetailMovieFilterHref(c, "sc"),
 		"MovieFilterNoScHref":       buildScEventDetailMovieFilterHref(c, "nosc"),
+		"MovieFilterJAVHref":        buildScEventDetailMovieFilterHref(c, "jav"),
+		"MovieFilterFC2Href":        buildScEventDetailMovieFilterHref(c, "fc2"),
 	})
 }
 
@@ -203,6 +212,10 @@ func normalizeScEventDetailMovieFilter(v string) string {
 		return "all"
 	case "nosc":
 		return "nosc"
+	case "jav":
+		return "jav"
+	case "fc2":
+		return "fc2"
 	default:
 		return "sc"
 	}
@@ -302,8 +315,8 @@ type scEventViewQuery struct {
 func buildScEventViewQuery(c *gin.Context) *scEventViewQuery {
 	q := c.Request.URL.Query()
 
-	listHref := "/sc-events"
-	cardHref := "/sc-events-cards"
+	listHref := "/scevents"
+	cardHref := "/sccards"
 	if enc := q.Encode(); enc != "" {
 		listHref += "?" + enc
 		cardHref += "?" + enc
@@ -312,8 +325,8 @@ func buildScEventViewQuery(c *gin.Context) *scEventViewQuery {
 	return &scEventViewQuery{
 		ListHref: listHref,
 		CardHref: cardHref,
-		IsList:   c.Request.URL.Path == "/sc-events",
-		IsCard:   c.Request.URL.Path == "/sc-events-cards",
+		IsList:   c.Request.URL.Path == "/scevents",
+		IsCard:   c.Request.URL.Path == "/sccards",
 	}
 }
 
@@ -359,6 +372,18 @@ func (h *ScPagesAPI) MediaPage(c *gin.Context) {
 	})
 }
 
+func (h *ScPagesAPI) FC2MediaPage(c *gin.Context) {
+	favoriteRows, _ := h.loadFC2MediaSourceAlbumRows(c.Request.Context())
+	c.JSON(http.StatusOK, gin.H{
+		"Title":        "FC2媒体入库",
+		"ViewType":     "fc2-media-ingest",
+		"PageTitle":    "FC2媒体入库（两段执行）",
+		"PageNote":     "第一段从下载中相册反查 FC2影片、来源帖子和 Info Hash；第二段探测视频元数据并写入 fc2_folder、fc2_media，随后将来源条目移入 FcMedia。",
+		"RootDirs":     h.deps.Config.FC2Media.RootDirs,
+		"FavoriteRows": favoriteRows,
+	})
+}
+
 func (h *ScPagesAPI) MediaRescanPage(c *gin.Context) {
 	rootOptions, err := h.mediaSvc.ListLibraryRescanRootOptions(c.Request.Context())
 	if err != nil {
@@ -392,7 +417,7 @@ func (h *ScPagesAPI) ScMediaMovePage(c *gin.Context) {
 	scName := strings.TrimSpace(c.Query("sc_name"))
 	scDetailHref := ""
 	if mode == "single" && scName != "" {
-		scDetailHref = "/sc-events/" + url.PathEscape(scName)
+		scDetailHref = "/scevent/" + url.PathEscape(scName)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -413,6 +438,8 @@ type mediaPageFavoriteAlbumItemRow struct {
 	SourceType  string
 	SourceLabel string
 	Size        string
+	SourceRowID int64
+	InfoHash    string
 }
 
 const (
@@ -446,6 +473,42 @@ func (h *ScPagesAPI) loadMediaPageFavoriteAlbumRows(ctx context.Context) ([]*med
 			SourceType:  strings.TrimSpace(row.SourceType),
 			SourceLabel: mediaPageFavoriteSourceTypeLabel(row.SourceType),
 			Size:        strings.TrimSpace(row.Size),
+			SourceRowID: row.SourceRowId,
+			InfoHash:    strings.TrimSpace(row.InfoHash),
+		})
+	}
+	return out, nil
+}
+
+func (h *ScPagesAPI) loadFC2MediaSourceAlbumRows(ctx context.Context) ([]*mediaPageFavoriteAlbumItemRow, error) {
+	album, err := h.deps.AlbumModel.FindOneByName(ctx, "下载中")
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return []*mediaPageFavoriteAlbumItemRow{}, nil
+		}
+		return nil, err
+	}
+	rows, err := h.deps.AlbumItemModel.ListPageRows(ctx, album.Id, 0, mediaPageFavoriteCardMaxRow, "`created_on` DESC, `id` DESC", moviex.AlbumItemPageFilter{
+		Keyword:       "FC2PPV-",
+		SourceType:    "sh_magnet",
+		SourceTypeSet: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*mediaPageFavoriteAlbumItemRow, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		out = append(out, &mediaPageFavoriteAlbumItemRow{
+			MovieName:   strings.TrimSpace(row.MovieName),
+			MovieJavID:  strings.TrimSpace(row.MovieJavId),
+			SourceType:  strings.TrimSpace(row.SourceType),
+			SourceLabel: mediaPageFavoriteSourceTypeLabel(row.SourceType),
+			Size:        strings.TrimSpace(row.Size),
+			SourceRowID: row.SourceRowId,
+			InfoHash:    strings.TrimSpace(row.InfoHash),
 		})
 	}
 	return out, nil
@@ -457,8 +520,8 @@ func mediaPageFavoriteSourceTypeLabel(sourceType string) string {
 		return "JavBus"
 	case "sukebei_torrent":
 		return "Sukebei"
-	case "sehuatang_magnet":
-		return "Sehuatang"
+	case "sh_magnet":
+		return "色花堂"
 	default:
 		return "未知"
 	}

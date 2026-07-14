@@ -59,12 +59,7 @@
                 </label>
                 <label class="bucket-filter-field is-page-size">
                   <span>每页</span>
-                  <select class="form-select" id="releaseBucketPageSize" name="ps" :value="queryValue('PageSize') || '24'">
-                    <option value="24">24</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="200">200</option>
-                  </select>
+                  <input class="form-control" id="releaseBucketPageSize" type="number" step="1" name="ps" :value="queryValue('PageSize') || '24'">
                 </label>
                 <div class="bucket-list-filter-actions">
                   <button class="btn bucket-list-apply" type="submit">筛选</button>
@@ -137,7 +132,10 @@
                   <td v-for="key in metricValueKeys" :key="key" class="text-nowrap">{{ rowText(row, key) }}</td>
                   <td class="text-nowrap">{{ humanSize(rowValue(row, "SizeBytes")) }}</td>
                   <td v-if="isWMediaBucket" class="text-nowrap">{{ rowText(row, "HasSubCount") }}</td>
-                  <td class="text-nowrap">{{ formatUnixDate(rowValue(row, latestValueKey), isWMediaBucket) }}</td>
+                  <td class="text-nowrap">
+                    <ScDateTime v-if="isWMediaBucket" :value="rowValue(row, latestValueKey)" unix />
+                    <span v-else>{{ formatUnixDate(rowValue(row, latestValueKey)) }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -153,6 +151,7 @@ import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
@@ -253,17 +252,14 @@ function humanSize(input: unknown): string {
   return `${value} B`;
 }
 
-function formatUnixDate(input: unknown, withTime = false): string {
+function formatUnixDate(input: unknown): string {
   const n = Number(input || 0);
   if (!n) return "";
   const d = new Date(n * 1000);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  if (!withTime) return `${yyyy}-${mm}-${dd}`;
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 const HeaderLink = defineComponent({

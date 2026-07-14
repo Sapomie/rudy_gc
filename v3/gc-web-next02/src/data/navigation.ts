@@ -31,48 +31,48 @@ export const sidebarGroups: NavGroup[] = [
     label: "List",
     icon: "LS",
     links: [
-      { href: "/medias", label: "Medias" },
-      { href: "/w-agg-events", label: "WAggEvents" },
-      { href: "/torrent-albums", label: "TorrentAlbums" },
-      { href: "/movie-albums", label: "MovieAlbums" },
-      { href: "/d-seeds", label: "DSeeds" },
-      { href: "/casts", label: "Casts" },
-      { href: "/e-items", label: "EItems" }
+      { href: "/medialist", label: "Medias" },
+      { href: "/aggeventlist", label: "WAggEvents" },
+      { href: "/torrentalbumlist", label: "TorrentAlbums" },
+      { href: "/moviealbumlist", label: "MovieAlbums" },
+      { href: "/seedlist", label: "DSeeds" },
+      { href: "/castlist", label: "Casts" },
+      { href: "/eitemlist", label: "EItems" }
     ]
   },
   {
     label: "SC",
     icon: "S",
     links: [
-      { href: "/sc-events", label: "ScEvents" },
-      { href: "/sc-pick-smart-media", label: "ScPickSmartMedia" },
-      { href: "/triggers/sc", label: "ScPreview" },
-      { href: "/triggers/sc-media", label: "ScMediaMove" }
+      { href: "/scevents", label: "ScEvents" },
+      { href: "/scpick", label: "ScPickSmartMedia" },
+      { href: "/scadd", label: "ScPreview" },
+      { href: "/scmove", label: "ScMediaMove" }
     ]
   },
   {
     label: "抓取任务",
     icon: "TK",
     links: [
-      { href: "/crawl-records", label: "CrawlRecords" },
-      { href: "/triggers/dailybest", label: "DailyBest" },
-      { href: "/triggers/seeds", label: "Seeds" },
-      { href: "/triggers/post-process", label: "PostProcess" },
-      { href: "/triggers/backfill", label: "Backfill" },
-      { href: "/crawler/detail-loop", label: "DetailLoop" },
-      { href: "/crawler/tasks", label: "CrawlerTasks" }
+      { href: "/crawlrecordlist", label: "CrawlRecords" },
+      { href: "/dailybestfetch", label: "DailyBest" },
+      { href: "/seedfetch", label: "Seeds" },
+      { href: "/postprocess", label: "PostProcess" },
+      { href: "/databackfill", label: "Backfill" },
+      { href: "/detailfetch", label: "DetailLoop" },
+      { href: "/crawltasklist", label: "CrawlerTasks" }
     ]
   },
   {
     label: "FetchSite操作",
     icon: "FS",
     links: [
-      { href: "/triggers/fetch-site", label: "FetchSite" },
-      { href: "/triggers/fetch-sehuatang", label: "FetchSehuatang" },
-      { href: "/fetch-sites", label: "FetchSitesConfig" },
-      { href: "/fetch-site-javbus-list", label: "JavbusList" },
-      { href: "/fetch-site-sukebei-list", label: "SukebeiList" },
-      { href: "/fetch-site-sehuatang-list", label: "SehuatangList" }
+      { href: "/sitefetch", label: "FetchSite" },
+      { href: "/sehuatangfetch", label: "FetchSehuatang" },
+      { href: "/siteconfiglist", label: "FetchSitesConfig" },
+      { href: "/javbuslist", label: "JavbusList" },
+      { href: "/sukebeilist", label: "SukebeiList" },
+      { href: "/sehuatanglist", label: "SehuatangList" }
     ]
   },
   {
@@ -83,16 +83,28 @@ export const sidebarGroups: NavGroup[] = [
       { href: "/shfetch", label: "SH列表建池" },
       { href: "/shfill", label: "SH详情补全" },
       { href: "/shpool", label: "SH帖子池" },
-      { href: "/bucketssh", label: "SH聚合桶" }
+      { href: "/shmagnetlist", label: "SH磁力" },
+      { href: "/shbucketlist", label: "SH聚合桶" }
+    ]
+  },
+  {
+    label: "FC2",
+    icon: "FC",
+    links: [
+      { href: "/fclist", label: "FC2影片" },
+      { href: "/fclistcard", label: "FC2Cards" },
+      { href: "/fclistcardowned", label: "FC2Owned" },
+      { href: "/fclistcardrandom", label: "FC2Random" },
+      { href: "/fcingest", label: "FC2Media" }
     ]
   },
   {
     label: "Media操作",
     icon: "MD",
     links: [
-      { href: "/triggers/media", label: "Media" },
-      { href: "/triggers/media-rescan", label: "MediaRescan" },
-      { href: "/triggers/media-rollback", label: "MediaRollback" }
+      { href: "/mediaingest", label: "Media" },
+      { href: "/mediarescan", label: "MediaRescan" },
+      { href: "/mediarollback", label: "MediaRollback" }
     ]
   }
 ];
@@ -102,21 +114,21 @@ export const topNavGroups: { label: string; links: NavLink[] }[] = [
     label: "常用",
     links: [
       { href: "/listcardtoday", label: "今日卡片" },
-      { href: "/crawler/tasks", label: "任务列表" },
-      { href: "/triggers/dailybest", label: "每日榜" }
+      { href: "/crawltasklist", label: "任务列表" },
+      { href: "/dailybestfetch", label: "每日榜" }
     ]
   },
   {
     label: "片单",
     links: [
-      { href: "/movie-albums", label: "影片专辑" },
-      { href: "/torrent-albums", label: "种子专辑" }
+      { href: "/moviealbumlist", label: "影片专辑" },
+      { href: "/torrentalbumlist", label: "种子专辑" }
     ]
   },
   {
     label: "抓取",
     links: [
-      { href: "/triggers/fetch-sehuatang", label: "色花堂" },
+      { href: "/sehuatangfetch", label: "色花堂" },
       { href: "/shfetchall", label: "SH一体" }
     ]
   },
@@ -126,7 +138,9 @@ export const topNavGroups: { label: string; links: NavLink[] }[] = [
       { href: "/shfetch", label: "列表建池" },
       { href: "/shfill", label: "详情补全" },
       { href: "/shpool", label: "帖子池" },
-      { href: "/bucketssh", label: "聚合桶" }
+      { href: "/shmagnetlist", label: "SH磁力" },
+      { href: "/fclist", label: "FC2影片" },
+      { href: "/shbucketlist", label: "聚合桶" }
     ]
   }
 ];

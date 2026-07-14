@@ -100,24 +100,32 @@ type SHFetchRequest struct {
 }
 
 type SHFetchResult struct {
-	RunID                int64  `json:"run_id"`
-	FetchMode            string `json:"fetch_mode"`
-	Keyword              string `json:"keyword"`
-	TargetForumIDs       string `json:"target_forum_ids"`
-	StartPage            int64  `json:"start_page"`
-	EndPage              int64  `json:"end_page"`
-	TotalPageCount       int64  `json:"total_page_count"`
-	CompletedPageCount   int64  `json:"completed_page_count"`
-	CurrentPage          int64  `json:"current_page"`
-	CurrentPageText      string `json:"current_page_text"`
-	HandledPageCount     int64  `json:"handled_page_count"`
-	SeenCount            int64  `json:"seen_count"`
-	MatchedCount         int64  `json:"matched_count"`
-	SkippedExistingCount int64  `json:"skipped_existing_count"`
-	SkippedForumCount    int64  `json:"skipped_forum_count"`
-	FetchedCount         int64  `json:"fetched_count"`
-	FailedCount          int64  `json:"failed_count"`
-	LastError            string `json:"last_error"`
+	RunID                int64    `json:"run_id"`
+	FetchMode            string   `json:"fetch_mode"`
+	Keyword              string   `json:"keyword"`
+	TargetForumIDs       string   `json:"target_forum_ids"`
+	StartPage            int64    `json:"start_page"`
+	EndPage              int64    `json:"end_page"`
+	TotalPageCount       int64    `json:"total_page_count"`
+	CompletedPageCount   int64    `json:"completed_page_count"`
+	CurrentPage          int64    `json:"current_page"`
+	CurrentPageText      string   `json:"current_page_text"`
+	CurrentForumID       string   `json:"current_forum_id"`
+	HandledPageCount     int64    `json:"handled_page_count"`
+	SuccessPageCount     int64    `json:"success_page_count"`
+	FailedPageCount      int64    `json:"failed_page_count"`
+	SeenCount            int64    `json:"seen_count"`
+	MatchedCount         int64    `json:"matched_count"`
+	InsertedCount        int64    `json:"inserted_count"`
+	ExistingCount        int64    `json:"existing_count"`
+	SkippedTopCount      int64    `json:"skipped_top_count"`
+	SkippedExistingCount int64    `json:"skipped_existing_count"`
+	SkippedForumCount    int64    `json:"skipped_forum_count"`
+	FetchedCount         int64    `json:"fetched_count"`
+	PersistFailedCount   int64    `json:"persist_failed_count"`
+	FailedCount          int64    `json:"failed_count"`
+	LastError            string   `json:"last_error"`
+	DetailThreadTIDs     []string `json:"-"`
 	aggTargets           map[string]moviex.ShThreadAggTarget
 }
 

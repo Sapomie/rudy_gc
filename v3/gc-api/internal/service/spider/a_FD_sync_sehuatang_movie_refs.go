@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const sehuatangAlbumSourceType = "sehuatang_magnet"
+const sehuatangAlbumSourceType = "sh_magnet"
 
 func (l *CrawlLogic) syncSehuatangMovieRefsAfterMovieSaved(ctx context.Context, movieName string, movieJavID string, now int64) error {
 	movieName = strings.TrimSpace(movieName)
@@ -15,7 +15,7 @@ func (l *CrawlLogic) syncSehuatangMovieRefsAfterMovieSaved(ctx context.Context, 
 		return nil
 	}
 
-	missingRows, err := l.deps.SehuatangMagnetModel.ListMissingMovieJavIDByMovieName(ctx, movieName)
+	missingRows, err := l.deps.ShMagnetModel.ListMissingMovieJavIDByMovieName(ctx, movieName)
 	if err != nil {
 		return fmt.Errorf("list missing sehuatang movie_jav_id failed: %w", err)
 	}
@@ -23,14 +23,12 @@ func (l *CrawlLogic) syncSehuatangMovieRefsAfterMovieSaved(ctx context.Context, 
 		if row == nil || strings.TrimSpace(row.MovieJavId) != "" {
 			continue
 		}
-		row.MovieJavId = movieJavID
-		row.UpdatedOn = now
-		if err := l.deps.SehuatangMagnetModel.Update(ctx, row); err != nil {
+		if err := l.deps.ShMagnetModel.UpdateMovieFields(ctx, row.Id, movieJavID, movieName, now); err != nil {
 			return fmt.Errorf("update sehuatang movie_jav_id failed, id=%d: %w", row.Id, err)
 		}
 	}
 
-	sourceRows, err := l.deps.SehuatangMagnetModel.ListByMovieKey(ctx, movieJavID, movieName)
+	sourceRows, err := l.deps.ShMagnetModel.ListByMovieKey(ctx, movieJavID, movieName)
 	if err != nil {
 		return fmt.Errorf("list sehuatang rows for album repair failed: %w", err)
 	}

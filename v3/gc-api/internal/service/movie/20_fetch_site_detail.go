@@ -135,7 +135,7 @@ func (s *Service) buildSukebeiTorrents(ctx context.Context, javID string) ([]*ty
 }
 
 func (s *Service) buildSehuatangMagnets(ctx context.Context, javID string, movieName string) ([]*types.MovieSehuatangMagnet, error) {
-	rows, err := s.deps.SehuatangMagnetModel.ListByMovieKey(ctx, javID, movieName)
+	rows, err := s.deps.ShMagnetModel.ListByMovieKey(ctx, javID, movieName)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (s *Service) buildSehuatangMagnets(ctx context.Context, javID string, movie
 		out = append(out, &types.MovieSehuatangMagnet{
 			RowID:       row.Id,
 			ThreadTitle: row.ThreadTitle,
-			ThreadURL:   row.ThreadUrl,
+			ThreadURL:   row.ThreadURL,
 			InfoHash:    row.InfoHash,
 			PostTime:    tsToDateTime(row.PostTime),
 		})
@@ -342,8 +342,8 @@ func (s *Service) applyFetchSiteFavoriteStatus(ctx context.Context, javID string
 		if row == nil {
 			continue
 		}
-		_, okDownload := inDownload[favoriteKey(sourceTypeSehuatang, row.RowID)]
-		_, okPending := inPending[favoriteKey(sourceTypeSehuatang, row.RowID)]
+		_, okDownload := inDownload[favoriteKey(sourceTypeSHMagnet, row.RowID)]
+		_, okPending := inPending[favoriteKey(sourceTypeSHMagnet, row.RowID)]
 		row.IsFavorited = okDownload
 		row.IsInDownload = okDownload
 		row.IsInPending = okPending

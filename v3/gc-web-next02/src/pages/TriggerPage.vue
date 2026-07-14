@@ -147,8 +147,29 @@
                       </div>
 
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHForumsFieldWrap" :class="{ 'is-hidden': !showSHForumsField }">
-                        <label class="d-block mb-2">目标版块</label>
-                        <div class="status-check-grid">
+                        <label>目标版块</label>
+                        <template v-if="isSHSingleForumPage">
+                          <input v-for="forumID in targetForumIDs" :key="`target-forum-${forumID}`" type="hidden" name="target_forum_ids" :value="forumID">
+                          <div class="sh-forum-single-toggle" role="radiogroup" aria-label="目标版块">
+                            <button
+                              type="button"
+                              class="sh-forum-toggle-button"
+                              :class="{ 'is-active': allTargetForumsSelected }"
+                              :aria-pressed="allTargetForumsSelected"
+                              @click="selectAllTargetForums"
+                            >全部</button>
+                            <button
+                              v-for="forum in shForums"
+                              :key="forum.forumID"
+                              type="button"
+                              class="sh-forum-toggle-button"
+                              :class="{ 'is-active': targetForumIDs.length === 1 && targetForumIDs[0] === forum.forumID }"
+                              :aria-pressed="targetForumIDs.length === 1 && targetForumIDs[0] === forum.forumID"
+                              @click="selectTargetForum(forum.forumID)"
+                            >{{ forum.forumName }}</button>
+                          </div>
+                        </template>
+                        <div v-else class="status-check-grid">
                           <div v-for="forum in shForums" :key="forum.forumID" class="form-check">
                             <input :id="`task_sehuatang_sh_forum_${forum.forumID}`" v-model="targetForumIDs" name="target_forum_ids" class="form-check-input" type="checkbox" :value="forum.forumID">
                             <label class="form-check-label" :for="`task_sehuatang_sh_forum_${forum.forumID}`">{{ forum.forumName }}</label>
@@ -158,7 +179,7 @@
 
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHDetailStatusFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
                         <label class="d-block mb-2">详情状态</label>
-                        <div class="status-check-grid">
+                        <div class="status-check-grid sh-detail-status-toggle">
                           <div class="form-check">
                             <input id="task_sehuatang_sh_detail_status_pending" v-model="shDetailStatusValues" name="detail_statuses" class="form-check-input" type="checkbox" value="pending">
                             <label class="form-check-label" for="task_sehuatang_sh_detail_status_pending">待抓详情</label>
@@ -174,19 +195,14 @@
                         </div>
                       </div>
 
-                      <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHDetailTitleFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
-                        <label for="task_sehuatang_sh_detail_keyword">帖子标题筛选</label>
-                        <input id="task_sehuatang_sh_detail_keyword" v-model="form.detailKeyword" name="keyword" class="form-control" type="text" placeholder="按标题筛选待抓详情帖子">
-                      </div>
-
                       <div class="form-group compact-field" id="fetchSehuatangSHPostTimeFromFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
                         <label for="task_sehuatang_sh_post_time_from">发帖时间开始</label>
-                        <input id="task_sehuatang_sh_post_time_from" v-model="form.postTimeFrom" name="post_time_from" class="form-control" type="text" placeholder="YYYY-MM-DD">
+                        <input id="task_sehuatang_sh_post_time_from" v-model="form.postTimeFrom" name="post_time_from" class="form-control smart-pick-date-input" type="text" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                       </div>
 
                       <div class="form-group compact-field" id="fetchSehuatangSHPostTimeToFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
                         <label for="task_sehuatang_sh_post_time_to">发帖时间结束</label>
-                        <input id="task_sehuatang_sh_post_time_to" v-model="form.postTimeTo" name="post_time_to" class="form-control" type="text" placeholder="YYYY-MM-DD">
+                        <input id="task_sehuatang_sh_post_time_to" v-model="form.postTimeTo" name="post_time_to" class="form-control smart-pick-date-input" type="text" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                       </div>
 
                       <div class="form-group compact-field" id="fetchSehuatangSHDetailLimitFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
@@ -271,7 +287,7 @@
                     <div class="d-flex align-items-center flex-wrap action-row next02-action-dock" :class="{ 'next02-seeds-action-dock next02-pink-trigger-action-dock': isPinkTriggerRewritePage }">
                       <button v-if="showFetchSitePanel" type="button" id="previewFetchSiteBtn" class="btn btn-outline-info mr-2" :disabled="fetchSitePreviewLoading" @click="previewFetchSite(1, false)">预览筛选结果</button>
                       <button v-if="showSHDetailFields" type="button" id="previewSHDetailBtn" class="btn btn-outline-info mr-2" :disabled="shDetailPreviewLoading" @click="previewSHDetail">筛选帖子预览</button>
-                      <button type="submit" id="submitBtn" class="btn btn-primary" :disabled="shDetailSubmitDisabled">{{ showSHDetailFields ? "抓取选中详情" : "开始执行" }}</button>
+                      <button type="submit" id="submitBtn" class="btn btn-primary" :disabled="shDetailSubmitDisabled">{{ showSHDetailFields ? "抓取预览结果" : "开始执行" }}</button>
                       <button type="button" id="pauseBtn" class="btn btn-outline-warning ml-2" :disabled="pauseDisabled" @click="controlSelected('pause')">暂停</button>
                       <button type="button" id="resumeBtn" class="btn btn-outline-success ml-2" :disabled="resumeDisabled" @click="controlSelected('resume')">继续</button>
                       <button type="button" id="stopBtn" class="btn btn-outline-danger ml-2" :disabled="stopDisabled" @click="controlSelected('stop')">停止</button>
@@ -288,9 +304,23 @@
                       <div v-if="isCommandVisualPage" class="next02-panel-eyebrow">{{ commandRuntimeEyebrow }}</div>
                       <h4 class="card-title mb-0">运行概览</h4>
                     </div>
-                    <span v-if="isCommandVisualPage" class="next02-live-dot">Live</span>
+                    <span
+                      v-if="isCommandVisualPage"
+                      class="next02-live-dot"
+                      :class="{
+                        'is-idle': isSHRuntimeOverview && !currentJob,
+                        'is-complete': isSHRuntimeOverview && currentJobDone,
+                        'is-failed': isSHRuntimeOverview && currentJobDone && text(currentJob || {}, 'stage', 'Stage') === 'failed'
+                      }"
+                    >{{ runtimeBadgeText }}</span>
                   </div>
                   <div class="crawl-overview">
+                    <div v-if="isSHRuntimeOverview && currentJob" class="sh-list-runtime-context">
+                      <span v-for="item in shRuntimeContext" :key="item.label">
+                        <small>{{ item.label }}</small>
+                        <strong>{{ item.value }}</strong>
+                      </span>
+                    </div>
                     <div v-if="isStageOverviewPage" class="next02-seeds-stage-groups">
                       <section v-for="group in stageOverviewGroups" :key="group.label" class="next02-seeds-stage-group">
                         <div class="next02-seeds-stage-label">{{ group.label }}</div>
@@ -302,7 +332,14 @@
                         </div>
                       </section>
                     </div>
-                    <div v-else class="status-grid" :class="{ 'sehuatang-progress-grid': overviewMode === 'sehuatang_progress' }">
+                    <div
+                      v-else-if="showRuntimeOverviewMetrics"
+                      class="status-grid"
+                      :class="{
+                        'sehuatang-progress-grid': overviewMode === 'sehuatang_progress',
+                        'sehuatang-list-progress-grid': isSHRuntimeOverview
+                      }"
+                    >
                       <div v-for="item in overviewItems" :key="item.label" class="overview-item">
                         <div class="label">{{ item.label }}</div>
                         <div class="value">{{ item.value }}</div>
@@ -339,18 +376,25 @@
                               </div>
                               <span class="queue-badge" :class="queueBadgeClass(item)">{{ queueBadgeText(item) }}</span>
                             </div>
-                            <div v-if="queueItemCompletedAt(item)" class="queue-item-meta">完成时间：{{ formatUnix(queueItemCompletedAt(item)) }}</div>
+                            <div v-if="queueItemCompletedAt(item)" class="queue-item-meta">完成时间：<ScDateTime :value="queueItemCompletedAt(item)" unix seconds /></div>
                             <div v-if="queueItemError(item)" class="queue-item-error">{{ queueItemError(item) }}</div>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div class="progress mt-3" :class="{ 'next02-seeds-progress next02-pink-trigger-progress': isPinkTriggerRewritePage }">
+                    <div
+                      v-if="showRuntimeProgress"
+                      class="progress mt-3"
+                      :class="{
+                        'next02-seeds-progress next02-pink-trigger-progress': isPinkTriggerRewritePage,
+                        'is-complete': currentJobDone
+                      }"
+                    >
                       <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" :style="{ width: `${currentProgressPercent}%` }" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="currentProgressPercent">{{ currentProgressPercent }}%</div>
                     </div>
                     <div class="mt-3 d-flex align-items-center justify-content-between" :class="{ 'next02-seeds-runtime-footer next02-pink-trigger-runtime-footer': isPinkTriggerRewritePage }">
                       <span id="statusMsg" :class="runtimeStatusClass">{{ runtimeStatusText }}</span>
-                      <span class="badge bg-light text-dark" id="eventCountText">{{ renderedEventEntries.length }} 条</span>
+                      <span class="badge bg-light text-dark" id="eventCountText">事件 {{ renderedEventEntries.length }} 条</span>
                     </div>
                   </div>
                 </div>
@@ -440,88 +484,37 @@
                   <div class="card-body">
                     <div class="next02-sc-panel-head next02-sh-detail-preview-toolbar">
                       <div>
-                        <span class="next02-sc-panel-kicker">THREAD PREVIEW</span>
-                        <h5 class="mb-0">帖子预览</h5>
+                        <span class="next02-sc-panel-kicker">FILTER SUMMARY</span>
+                        <h5 class="mb-0">筛选结果预览</h5>
                         <div class="next02-sh-detail-preview-summary" id="shDetailPreviewSummary">{{ shDetailPreviewSummary }}</div>
                       </div>
                       <div class="next02-sh-detail-preview-controls">
                         <div class="next02-sh-detail-preview-actions">
-                          <button
-                            type="button"
-                            id="selectAllSHDetailPreviewBtn"
+                          <a
+                            v-if="shDetailPreviewPoolHref"
                             class="btn btn-outline-secondary btn-sm"
-                            :disabled="shDetailPreviewLoading || !shDetailPreviewRows.length || allSHDetailPreviewSelected"
-                            @click="selectAllSHDetailPreview"
-                          >全选当前页</button>
-                          <button
-                            type="button"
-                            id="clearSHDetailPreviewBtn"
-                            class="btn btn-outline-secondary btn-sm"
-                            :disabled="shDetailPreviewLoading || !selectedSHDetailThreadIDs.length"
-                            @click="clearSHDetailPreviewSelection"
-                          >取消选择</button>
+                            :href="shDetailPreviewPoolHref"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >在帖子池查看</a>
                           <button type="button" id="hideSHDetailPreviewBtn" class="btn btn-outline-secondary btn-sm" @click="collapseSHDetailPreview">收起</button>
-                        </div>
-                        <div class="next02-sc-hero-metrics sc-event-list-metrics" id="shDetailPreviewMetaText" aria-label="帖子预览选择统计">
-                          <span><strong>{{ shDetailPreviewRows.length }}</strong> Preview</span>
-                          <span><strong>{{ selectedSHDetailThreadIDs.length }}</strong> Selected</span>
                         </div>
                       </div>
                     </div>
                     <div v-if="shDetailPreviewError" class="alert alert-danger next02-sh-detail-preview-error" role="alert">
                       {{ shDetailPreviewError }}
                     </div>
-                    <div class="table-responsive">
-                      <table class="table table-hover align-middle mb-0 sc-events-table next02-sh-detail-preview-table">
-                        <colgroup>
-                          <col class="next02-sh-preview-col-select">
-                          <col class="next02-sh-preview-col-tid">
-                          <col class="next02-sh-preview-col-title">
-                          <col class="next02-sh-preview-col-forum">
-                          <col class="next02-sh-preview-col-time">
-                          <col class="next02-sh-preview-col-status">
-                          <col class="next02-sh-preview-col-author">
-                        </colgroup>
-                        <thead>
-                          <tr>
-                            <th>选择</th>
-                            <th>TID</th>
-                            <th>标题</th>
-                            <th>版块</th>
-                            <th>发布时间</th>
-                            <th>详情状态</th>
-                            <th>作者</th>
-                          </tr>
-                        </thead>
-                        <tbody id="shDetailPreviewTableBody">
-                          <tr v-if="!shDetailPreviewRows.length">
-                            <td colspan="7"><div class="sc-empty-state">{{ shDetailPreviewEmptyText }}</div></td>
-                          </tr>
-                          <tr v-for="(item, index) in shDetailPreviewRows" v-else :key="`${shPreviewThreadTID(item)}-${index}`" class="next02-sc-event-row">
-                            <td>
-                              <input
-                                :id="`sh_detail_preview_${index}`"
-                                v-model="selectedSHDetailThreadIDs"
-                                class="form-check-input sh-detail-preview-check"
-                                type="checkbox"
-                                name="sh_detail_thread_tid"
-                                :value="shPreviewThreadTID(item)"
-                                :aria-label="`选择帖子 ${shPreviewThreadTID(item)}`"
-                              >
-                            </td>
-                            <td :title="shPreviewThreadTID(item)">
-                              <a class="sc-event-link" :href="shPreviewDetailHref(item)">{{ shPreviewThreadTID(item) || "-" }}</a>
-                            </td>
-                            <td class="sc-content-cell" :title="shPreviewTitle(item)">
-                              <label :for="`sh_detail_preview_${index}`">{{ shPreviewTitle(item) || "-" }}</label>
-                            </td>
-                            <td :title="shPreviewForum(item)">{{ shPreviewForum(item) || "-" }}</td>
-                            <td :title="formatUnix(pick(item, 'PostTime', 'post_time'))">{{ formatUnix(pick(item, "PostTime", "post_time")) }}</td>
-                            <td><span :class="shPreviewStatusClass(item)">{{ shPreviewStatus(item) || "-" }}</span></td>
-                            <td :title="shPreviewAuthor(item)">{{ shPreviewAuthor(item) || "-" }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div v-if="shDetailPreviewLoading" class="sc-empty-state">正在统计筛选结果...</div>
+                    <div v-else class="next02-sh-detail-preview-groups" aria-label="帖子筛选聚合数据">
+                      <section v-for="group in shDetailPreviewMetricGroups" :key="group.label" class="next02-sh-detail-preview-group">
+                        <div class="next02-sh-detail-preview-group-label">{{ group.label }}</div>
+                        <div class="next02-sh-detail-preview-group-items">
+                          <div v-for="item in group.items" :key="item.label" class="next02-sh-detail-preview-metric" :class="item.className">
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                          </div>
+                        </div>
+                      </section>
                     </div>
                   </div>
                 </div>
@@ -542,9 +535,11 @@ import ErrorPanel from "@/components/ErrorPanel.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import MovieCardFilterForm from "@/components/MovieCardFilterForm.vue";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, pick, text } from "@/utils/format";
-import { loadSHForumOptions, shForumName, type SHForumOption } from "@/utils/shForums";
+import { loadSHForumOptions, shForumName, shForumNames, type SHForumOption } from "@/utils/shForums";
+import { estimateRemainingSeconds, formatTaskEta } from "@/utils/taskEta";
 
 const route = useRoute();
 const payload = ref<AnyRecord>({});
@@ -566,15 +561,23 @@ const fetchSitePreviewPage = ref(1);
 const fetchSitePreviewTotalPages = ref(0);
 const fetchSitePreviewPageSize = ref(100);
 const fetchSitePreviewTaskType = ref("");
-const targetForumIDs = ref<string[]>(["36", "103"]);
+const targetForumIDs = ref<string[]>(["103"]);
+const allTargetForumsSelected = computed(() => {
+  const availableForumIDs = shForums.value.map((forum) => forum.forumID);
+  const selected = new Set(targetForumIDs.value);
+  return availableForumIDs.length > 0
+    && selected.size === availableForumIDs.length
+    && availableForumIDs.every((forumID) => selected.has(forumID));
+});
 const shDetailStatusValues = ref<string[]>(["pending"]);
 const shDetailPreviewOpen = ref(false);
 const shDetailPreviewLoading = ref(false);
-const shDetailPreviewRows = ref<AnyRecord[]>([]);
+const shDetailPreviewThreadIDs = ref<string[]>([]);
+const shDetailPreviewAggregate = ref<AnyRecord>({});
 const shDetailPreviewTotal = ref(0);
 const shDetailPreviewError = ref("");
 const shDetailPreviewSignature = ref("");
-const selectedSHDetailThreadIDs = ref<string[]>([]);
+const shDetailPreviewPoolHref = ref("");
 const jobEventHistorySize = 300;
 const rawJobEvents = ref<AnyRecord[]>([]);
 const rawJobEventKeys = new Set<string>();
@@ -599,7 +602,6 @@ const form = reactive({
   fetchMode: "search",
   persistMode: "skip_existing",
   stopOnExisting: false,
-  detailKeyword: "",
   postTimeFrom: "",
   postTimeTo: "",
   detailLimit: undefined as number | undefined
@@ -697,7 +699,6 @@ async function load() {
     targetForumIDs.value = initialTargetForumIDs();
     shDetailStatusValues.value = initialSHDetailStatusValues();
     form.number = 1000000;
-    form.detailKeyword = "";
     form.postTimeFrom = "";
     form.postTimeTo = "";
     form.detailLimit = undefined;
@@ -735,8 +736,8 @@ const allHeaderLinks = computed(() => {
       links.push({ href, label });
     }
   };
-  ensure("/crawler/tasks", "任务列表");
-  ensure("/triggers/sc", "SC 预览与提交");
+  ensure("/crawltasklist", "任务列表");
+  ensure("/scadd", "SC 预览与提交");
   return links;
 });
 const filter = computed(() => asRecord(pick(payload.value, "MovieCardFilter")));
@@ -749,25 +750,26 @@ const isSehuatangSHTask = computed(() => currentTaskType.value === "spider_fetch
 const isSehuatangSHListTask = computed(() => currentTaskType.value === "spider_fetch_sehuatang_sh_thread_list");
 const isSehuatangSHDetailTask = computed(() => currentTaskType.value === "spider_fetch_sehuatang_sh_thread_detail");
 const isSehuatangSHPage = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value || isSehuatangSHDetailTask.value);
-const isFetchSiteCommandPage = computed(() => route.path === "/triggers/fetch-site" && isFetchSiteTask.value);
-const isOldSehuatangCommandPage = computed(() => route.path === "/triggers/fetch-sehuatang" && isOldSehuatangTask.value);
-const isDailyBestCommandPage = computed(() => route.path === "/triggers/dailybest");
-const isSeedsCommandPage = computed(() => route.path === "/triggers/seeds");
-const isPostProcessCommandPage = computed(() => route.path === "/triggers/post-process");
-const isBackfillCommandPage = computed(() => route.path === "/triggers/backfill");
-const isFilteredFetchSitePage = computed(() => ["/triggers/fetch-site-javbus-filtered", "/triggers/fetch-site-sukebei-filtered"].includes(route.path));
+const isSHSingleForumPage = computed(() => ["/shfetchall", "/shfetch", "/shfill"].includes(route.path));
+const isFetchSiteCommandPage = computed(() => route.path === "/sitefetch" && isFetchSiteTask.value);
+const isOldSehuatangCommandPage = computed(() => route.path === "/sehuatangfetch" && isOldSehuatangTask.value);
+const isDailyBestCommandPage = computed(() => route.path === "/dailybestfetch");
+const isSeedsCommandPage = computed(() => route.path === "/seedfetch");
+const isPostProcessCommandPage = computed(() => route.path === "/postprocess");
+const isBackfillCommandPage = computed(() => route.path === "/databackfill");
+const isFilteredFetchSitePage = computed(() => ["/javbusfetch", "/sukebeifetch"].includes(route.path));
 const pinkTriggerPaths = new Set([
-  "/triggers/dailybest",
-  "/triggers/seeds",
-  "/triggers/post-process",
-  "/triggers/backfill",
-  "/triggers/fetch-site",
-  "/triggers/fetch-sehuatang",
+  "/dailybestfetch",
+  "/seedfetch",
+  "/postprocess",
+  "/databackfill",
+  "/sitefetch",
+  "/sehuatangfetch",
   "/shfetchall",
   "/shfetch",
   "/shfill",
-  "/triggers/fetch-site-javbus-filtered",
-  "/triggers/fetch-site-sukebei-filtered"
+  "/javbusfetch",
+  "/sukebeifetch"
 ]);
 const isPinkTriggerRewritePage = computed(() => pinkTriggerPaths.has(route.path));
 const isFormHeavyTriggerPage = computed(() => isFetchSiteCommandPage.value || isOldSehuatangCommandPage.value || isSehuatangSHPage.value);
@@ -782,15 +784,18 @@ const showNumberField = computed(() => [
 ].includes(currentTaskType.value));
 const showActorNameField = computed(() => currentTaskType.value === "spider_rebuild_actor_rank");
 const showOldSehuatangFields = computed(() => isOldSehuatangTask.value);
-const showSHModeField = computed(() => isSehuatangSHTask.value);
+const showSHModeField = computed(() => isSehuatangSHTask.value && route.path !== "/shfetchall");
 const showSHForumsField = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value || isSehuatangSHDetailTask.value);
 const showSHDetailFields = computed(() => isSehuatangSHDetailTask.value);
 const showPagingFields = computed(() => isOldSehuatangTask.value || isSehuatangSHTask.value || isSehuatangSHListTask.value);
-const showKeywordField = computed(() => isOldSehuatangTask.value || (isSehuatangSHTask.value && form.fetchMode === "search"));
+const showKeywordField = computed(() => isOldSehuatangTask.value || (isSehuatangSHTask.value && route.path !== "/shfetchall" && form.fetchMode === "search"));
 const showListUrlField = computed(() => isOldSehuatangTask.value);
 const showAutoFetchSiteField = computed(() => autoFetchSiteTaskTypes.has(currentTaskType.value));
 const showTranslateStatusesField = computed(() => currentTaskType.value === "spider_translate_title" || currentTaskType.value === "spider_post_process");
 const overviewMode = computed(() => text(payload.value, "OverviewExtraMode"));
+const isSHListOverview = computed(() => overviewMode.value === "sehuatang_list_progress");
+const isSHDetailOverview = computed(() => overviewMode.value === "sehuatang_detail_progress");
+const isSHRuntimeOverview = computed(() => isSHListOverview.value || isSHDetailOverview.value);
 const isStageOverviewPage = computed(() => ["dailybest_stages", "seeds_stages", "post_process_stages"].includes(overviewMode.value));
 const allowedTaskTypes = computed(() => asArray<string>(pick(payload.value, "AllowedTaskTypes")).map((item) => String(item || "").trim()).filter(Boolean));
 const selectedJobStorageKey = computed(() => text(payload.value, "StorageKey") || "crawler_jobs_selected_job");
@@ -807,6 +812,26 @@ const currentJob = computed(() => {
 });
 const currentJobDone = computed(() => Boolean(pick(currentJob.value || {}, "done", "Done")));
 const currentJobPaused = computed(() => Boolean(pick(currentJob.value || {}, "paused", "Paused")));
+const showRuntimeOverviewMetrics = computed(() => !isSHRuntimeOverview.value || Boolean(currentJob.value));
+const showRuntimeProgress = computed(() => !isSHRuntimeOverview.value || Boolean(currentJob.value));
+const runtimeBadgeText = computed(() => {
+  if (!isSHRuntimeOverview.value) {
+    return "Live";
+  }
+  if (!currentJob.value) {
+    return "待执行";
+  }
+  if (currentJobDone.value && text(currentJob.value, "stage", "Stage") === "failed") {
+    return "失败";
+  }
+  if (currentJobDone.value) {
+    return "已完成";
+  }
+  if (currentJobPaused.value) {
+    return "已暂停";
+  }
+  return "抓取中";
+});
 const currentTaskStatusLabel = computed(() => {
   if (!currentJob.value) {
     return "Ready";
@@ -843,7 +868,7 @@ const stopDisabled = computed(() => {
 });
 const currentProgressPercent = computed(() => {
   const job = currentJob.value || {};
-  if (overviewMode.value === "sehuatang_progress") {
+  if (overviewMode.value === "sehuatang_progress" || isSHRuntimeOverview.value) {
     const page = sehuatangPageCounts(job);
     return page.total > 0 ? Math.max(0, Math.min(100, Math.round(page.completed * 100 / page.total))) : 0;
   }
@@ -905,35 +930,50 @@ const shDetailPreviewSummary = computed(() => {
   if (shDetailPreviewLoading.value) {
     return "正在加载预览数据";
   }
-  return `筛选命中 ${shDetailPreviewTotal.value} 条，当前预览 ${shDetailPreviewRows.value.length} 条`;
+  return `筛选命中 ${shDetailPreviewTotal.value} 条，本次抓取 ${shDetailPreviewThreadIDs.value.length} 条`;
 });
-const shDetailPreviewEmptyText = computed(() => {
-  if (shDetailPreviewLoading.value) {
-    return "加载中...";
-  }
-  return shDetailPreviewOpen.value ? "当前筛选没有命中帖子" : "等待预览";
+const shDetailPreviewMetricGroups = computed(() => {
+  const aggregate = shDetailPreviewAggregate.value;
+  const forumCounts = asRecord(pick(aggregate, "forum_counts", "ForumCounts"));
+  return [
+    {
+      label: "数据范围",
+      items: [
+        { label: "命中总数", value: String(shDetailPreviewTotal.value), className: "" },
+        { label: "本次抓取", value: String(shDetailPreviewThreadIDs.value.length), className: "" }
+      ]
+    },
+    {
+      label: "详情状态",
+      items: [
+        { label: "待抓详情", value: String(Number(pick(aggregate, "pending_detail_count", "PendingDetailCount") || 0)), className: "is-pending" },
+        { label: "已抓详情", value: String(Number(pick(aggregate, "fetched_detail_count", "FetchedDetailCount") || 0)), className: "is-fetched" },
+        { label: "详情失败", value: String(Number(pick(aggregate, "failed_detail_count", "FailedDetailCount") || 0)), className: "is-failed" }
+      ]
+    },
+    {
+      label: "来源板块",
+      items: shForums.value.map((forum) => ({
+        label: forum.forumName,
+        value: String(Number(pick(forumCounts, forum.forumID) || 0)),
+        className: "is-forum"
+      }))
+    }
+  ];
 });
 const shDetailFilterSignature = computed(() => JSON.stringify({
   targetForumIDs: [...targetForumIDs.value].sort(),
   detailStatuses: [...shDetailStatusValues.value].sort(),
-  keyword: form.detailKeyword.trim(),
   postTimeFrom: form.postTimeFrom.trim(),
   postTimeTo: form.postTimeTo.trim(),
   limit: form.detailLimit ?? ""
 }));
-const allSHDetailPreviewSelected = computed(() => {
-  if (!shDetailPreviewRows.value.length) {
-    return false;
-  }
-  const selected = new Set(selectedSHDetailThreadIDs.value);
-  return shDetailPreviewRows.value.every((item) => selected.has(shPreviewThreadTID(item)));
-});
 const shDetailSubmitDisabled = computed(() => {
   if (!showSHDetailFields.value) {
     return false;
   }
   return shDetailPreviewLoading.value
-    || !selectedSHDetailThreadIDs.value.length
+    || !shDetailPreviewThreadIDs.value.length
     || shDetailPreviewSignature.value !== shDetailFilterSignature.value;
 });
 
@@ -943,10 +983,46 @@ watch(shDetailFilterSignature, (signature) => {
   }
 });
 const shHeroMetrics = computed(() => [
-  { label: "目标版块", value: String(targetForumIDs.value.length || 0) },
+  { label: "目标版块", value: shForumNames(shForums.value, targetForumIDs.value) },
   { label: "起止页", value: showPagingFields.value ? `${form.startPage || "-"}-${form.endPage || "-"}` : "-" },
   { label: "当前任务", value: taskLabelByType(currentTaskType.value) }
 ]);
+const shListRuntimeContext = computed(() => {
+  const job = currentJob.value || {};
+  const page = sehuatangPageCounts(job);
+  const targetForumText = jobStatText(job, "target_forum_ids") || targetForumIDs.value.join(",");
+  const currentForumID = jobStatText(job, "current_forum_id") || targetForumText.split(",")[0] || "";
+  const currentPage = jobStatNumber(job, "current_page");
+  const startPage = jobStatNumber(job, "start_page") || Number(form.startPage || 0);
+  const endPage = jobStatNumber(job, "end_page") || Number(form.endPage || 0);
+  return [
+    { label: "当前阶段", value: currentPhaseLabel(job) },
+    { label: "目标版块", value: shForumNames(shForums.value, targetForumText) },
+    { label: "页码范围", value: startPage > 0 && endPage > 0 ? `${startPage}-${endPage}` : "-" },
+    { label: "当前抓取", value: currentPage > 0 ? `${shForumName(shForums.value, currentForumID)} · 第 ${currentPage} 页` : "准备中" },
+    { label: "运行时长", value: formatJobElapsed(job) },
+    { label: "预计剩余时间", value: formatJobEstimatedRemaining(job, page.completed, page.total) }
+  ];
+});
+const shDetailRuntimeContext = computed(() => {
+  const job = currentJob.value || {};
+  const targetForumText = jobStatText(job, "target_forum_ids") || targetForumIDs.value.join(",");
+  const page = sehuatangPageCounts(job);
+  const currentPageText = jobStatText(job, "current_page_text");
+  const currentMatch = currentPageText.match(/^detail=(\d+)\/(\d+)(?:\s+tid=(\S+))?/);
+  const currentDetail = currentMatch
+    ? `${currentMatch[1]}/${currentMatch[2]}${currentMatch[3] ? ` · TID ${currentMatch[3]}` : ""}`
+    : (jobStatNumber(job, "current_page") > 0 ? `第 ${jobStatNumber(job, "current_page")} 条` : "准备中");
+  return [
+    { label: "当前阶段", value: currentPhaseLabel(job) },
+    { label: "目标版块", value: shForumNames(shForums.value, targetForumText) },
+    { label: "选中帖子", value: String(page.total) },
+    { label: "当前抓取", value: currentDetail },
+    { label: "运行时长", value: formatJobElapsed(job) },
+    { label: "预计剩余时间", value: formatJobEstimatedRemaining(job, page.completed, page.total) }
+  ];
+});
+const shRuntimeContext = computed(() => isSHDetailOverview.value ? shDetailRuntimeContext.value : shListRuntimeContext.value);
 const fetchSiteHeroMetrics = computed(() => [
   { label: "当前任务", value: taskLabelByType(currentTaskType.value) },
   { label: "抓取数量", value: String(form.number || 0) },
@@ -1043,6 +1119,17 @@ const overviewItems = computed(() => {
       { label: "Sukebei 结果（成功/失败）", value: jobResultText(sukebei) }
     ];
   }
+  if (mode === "sehuatang_detail_progress") {
+    const job = currentJob.value || {};
+    const page = sehuatangPageCounts(job);
+    return [
+      { label: "详情进度", value: `${page.completed} / ${page.total}` },
+      { label: "选中帖子", value: String(page.total) },
+      { label: "已处理", value: String(page.completed) },
+      { label: "抓取成功", value: String(jobStatNumber(job, "fetched_count")) },
+      { label: "抓取失败", value: String(jobStatNumber(job, "failed_count")) }
+    ];
+  }
   if (mode === "sehuatang_progress") {
     const job = currentJob.value || {};
     const page = sehuatangPageCounts(job);
@@ -1061,6 +1148,33 @@ const overviewItems = computed(() => {
       { label: "跳过已存在", value: String(jobStatNumber(job, "skipped_existing_count")) },
       { label: "入库", value: String(fetched) },
       { label: "失败", value: String(failed) }
+    ];
+  }
+  if (mode === "sehuatang_list_progress") {
+    const job = currentJob.value || {};
+    const page = sehuatangPageCounts(job);
+    const listItems = [
+      { label: "页面进度", value: `${page.completed} / ${page.total}` },
+      { label: "页面成功 / 失败", value: `${jobStatNumber(job, "success_page_count")} / ${jobStatNumber(job, "failed_page_count")}` },
+      { label: "页面帖子", value: String(jobStatNumber(job, "seen_count")) },
+      { label: "去重帖子", value: String(jobStatNumber(job, "matched_count")) },
+      { label: "新增帖子", value: String(jobStatNumber(job, "inserted_count")) },
+      { label: "更新已有", value: String(jobStatNumber(job, "existing_count")) },
+      { label: "入库失败", value: String(jobStatNumber(job, "persist_failed_count")) },
+      { label: "跳过置顶", value: String(jobStatNumber(job, "skipped_top_count")) }
+    ];
+    if (!isSehuatangSHTask.value) {
+      return listItems;
+    }
+    const detailTarget = hasJobStat(job, "detail_target_count")
+      ? jobStatNumber(job, "detail_target_count")
+      : jobStatNumber(job, "detail_total_page_count");
+    return [
+      { label: "当前阶段", value: currentPhaseLabel(job) },
+      ...listItems,
+      { label: "详情进度", value: phaseProgressText(job, "detail") },
+      { label: "详情目标", value: String(detailTarget) },
+      { label: "详情成功 / 失败", value: `${jobStatNumber(job, "detail_fetched_count")} / ${jobStatNumber(job, "detail_failed_count")}` }
     ];
   }
   if (mode === "javbus_filtered_queue" || mode === "sukebei_filtered_queue") {
@@ -1272,6 +1386,43 @@ function formatElapsed(value: unknown): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatJobElapsed(job: AnyRecord): string {
+  const startedAt = Number(pick(job, "started_at", "StartedAt") || 0);
+  if (!startedAt) {
+    return "00:00";
+  }
+  const finishedAt = Boolean(pick(job, "done", "Done")) ? Number(pick(job, "at", "At") || 0) : 0;
+  if (!finishedAt) {
+    return formatElapsed(startedAt);
+  }
+  const delta = Math.max(0, finishedAt - startedAt);
+  const hours = Math.floor(delta / 3600);
+  const minutes = Math.floor((delta % 3600) / 60);
+  const seconds = delta % 60;
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function jobElapsedSeconds(job: AnyRecord): number {
+  const startedAt = Number(pick(job, "started_at", "StartedAt") || 0);
+  if (startedAt <= 0) {
+    return 0;
+  }
+  const finishedAt = Boolean(pick(job, "done", "Done"))
+    ? Number(pick(job, "at", "At") || 0)
+    : Math.floor(nowTick.value / 1000);
+  return Math.max(0, finishedAt - startedAt);
+}
+
+function formatJobEstimatedRemaining(job: AnyRecord, completed: number, total: number): string {
+  if (Boolean(pick(job, "done", "Done"))) {
+    return "00:00:00";
+  }
+  return formatTaskEta(estimateRemainingSeconds(jobElapsedSeconds(job), completed, total));
+}
+
 function progressPercent(job: AnyRecord): number {
   const handled = Number(pick(job, "handled_count", "HandledCount") || 0);
   const queued = Number(pick(job, "queued_count", "QueuedCount") || 0);
@@ -1377,7 +1528,16 @@ function initialTargetForumIDs(): string[] {
   const values = asArray<string>(pick(payload.value, "FetchSehuatangSHTargetForums")).map((item) => String(item || "").trim()).filter(Boolean);
   const available = new Set(shForums.value.map((item) => item.forumID));
   const selected = values.filter((item) => available.has(item));
-  return selected.length ? selected : shForums.value.map((item) => item.forumID);
+  const normalized = selected.length ? selected : shForums.value.map((item) => item.forumID);
+  return normalized;
+}
+
+function selectAllTargetForums() {
+  targetForumIDs.value = shForums.value.map((forum) => forum.forumID);
+}
+
+function selectTargetForum(forumID: string) {
+  targetForumIDs.value = forumID ? [forumID] : [];
 }
 
 function initialSHDetailStatusValues(): string[] {
@@ -1758,11 +1918,8 @@ function buildTaskPayload(type: string): Record<string, unknown> {
     if (!targetForumIDs.value.length) {
       throw new Error("请选择目标版块");
     }
-    if (form.fetchMode === "search" && !form.keyword.trim()) {
-      throw new Error("请填写搜索关键词");
-    }
-    body.fetch_mode = form.fetchMode;
-    body.keyword = form.keyword;
+    body.fetch_mode = "forum";
+    body.keyword = "";
     body.start_page = form.startPage;
     body.end_page = form.endPage;
     body.target_forum_ids = targetForumIDs.value;
@@ -1779,15 +1936,14 @@ function buildTaskPayload(type: string): Record<string, unknown> {
     if (!shDetailPreviewSignature.value || shDetailPreviewSignature.value !== shDetailFilterSignature.value) {
       throw new Error("筛选条件已变化，请重新执行帖子预览");
     }
-    const tids = selectedSHDetailThreadIDs.value.map((item) => item.trim()).filter(Boolean);
+    const tids = shDetailPreviewThreadIDs.value.map((item) => item.trim()).filter(Boolean);
     if (!tids.length) {
-      throw new Error("请先筛选帖子预览并选择要抓取详情的帖子");
+      throw new Error("请先预览筛选结果，确认存在可抓取帖子");
     }
     body.thread_tids = tids;
     body.trigger_source = "shfill";
     body.target_forum_ids = targetForumIDs.value;
     body.detail_statuses = shDetailStatusValues.value;
-    body.keyword = form.detailKeyword.trim();
     body.post_time_from = form.postTimeFrom.trim();
     body.post_time_to = form.postTimeTo.trim();
   }
@@ -1832,11 +1988,12 @@ function hideFetchSitePreview() {
 function hideSHDetailPreview() {
   shDetailPreviewOpen.value = false;
   shDetailPreviewLoading.value = false;
-  shDetailPreviewRows.value = [];
+  shDetailPreviewThreadIDs.value = [];
+  shDetailPreviewAggregate.value = {};
   shDetailPreviewTotal.value = 0;
   shDetailPreviewError.value = "";
   shDetailPreviewSignature.value = "";
-  selectedSHDetailThreadIDs.value = [];
+  shDetailPreviewPoolHref.value = "";
 }
 
 function collapseSHDetailPreview() {
@@ -1851,7 +2008,6 @@ function currentSHDetailFilterPayload(): Record<string, unknown> {
     task_type: "spider_fetch_sehuatang_sh_thread_detail",
     target_forum_ids: targetForumIDs.value,
     detail_statuses: shDetailStatusValues.value,
-    keyword: form.detailKeyword,
     post_time_from: form.postTimeFrom,
     post_time_to: form.postTimeTo
   };
@@ -1863,6 +2019,32 @@ function currentSHDetailFilterPayload(): Record<string, unknown> {
     body.limit = Math.floor(limit);
   }
   return body;
+}
+
+function buildSHDetailPoolHref(body: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  params.set("p", "1");
+  asArray<unknown>(body.target_forum_ids).forEach((value) => {
+    const current = String(value || "").trim();
+    if (current) {
+      params.append("source_forum_ids", current);
+    }
+  });
+  asArray<unknown>(body.detail_statuses).forEach((value) => {
+    const current = String(value || "").trim();
+    if (current) {
+      params.append("detail_statuses", current);
+    }
+  });
+  const postTimeFrom = String(body.post_time_from || "").trim();
+  const postTimeTo = String(body.post_time_to || "").trim();
+  if (postTimeFrom) {
+    params.set("post_time_from", postTimeFrom);
+  }
+  if (postTimeTo) {
+    params.set("post_time_to", postTimeTo);
+  }
+  return `/shpool?${params.toString()}`;
 }
 
 async function previewSHDetail() {
@@ -1878,15 +2060,18 @@ async function previewSHDetail() {
   shDetailPreviewOpen.value = true;
   shDetailPreviewError.value = "";
   shDetailPreviewSignature.value = "";
-  shDetailPreviewRows.value = [];
+  shDetailPreviewThreadIDs.value = [];
+  shDetailPreviewAggregate.value = {};
   shDetailPreviewTotal.value = 0;
-  selectedSHDetailThreadIDs.value = [];
+  shDetailPreviewPoolHref.value = "";
   try {
     const data = asRecord(await sendJSON("/api/crawler/jobs/sehuatang-sh-thread-detail/preview", "POST", body));
-    const rows = asArray<AnyRecord>(pick(data, "rows", "Rows", "items", "Items"));
-    shDetailPreviewRows.value = rows;
-    shDetailPreviewTotal.value = Number(pick(data, "total", "Total") || rows.length);
-    selectedSHDetailThreadIDs.value = rows.map((item) => shPreviewThreadTID(item)).filter(Boolean);
+    shDetailPreviewThreadIDs.value = Array.from(new Set(asArray<unknown>(pick(data, "thread_tids", "ThreadTIDs"))
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)));
+    shDetailPreviewAggregate.value = asRecord(pick(data, "aggregate", "Aggregate"));
+    shDetailPreviewTotal.value = Number(pick(data, "total", "Total") || 0);
+    shDetailPreviewPoolHref.value = buildSHDetailPoolHref(body);
     shDetailPreviewSignature.value = shDetailFilterSignature.value;
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
@@ -1895,14 +2080,6 @@ async function previewSHDetail() {
   } finally {
     shDetailPreviewLoading.value = false;
   }
-}
-
-function selectAllSHDetailPreview() {
-  selectedSHDetailThreadIDs.value = Array.from(new Set(shDetailPreviewRows.value.map((item) => shPreviewThreadTID(item)).filter(Boolean)));
-}
-
-function clearSHDetailPreviewSelection() {
-  selectedSHDetailThreadIDs.value = [];
 }
 
 function formatUnix(sec: unknown): string {
@@ -1967,42 +2144,6 @@ function queueBadgeText(item: AnyRecord): string {
     return "失败";
   }
   return "待入列";
-}
-
-function shPreviewThreadTID(item: AnyRecord): string {
-  return text(item, "ThreadTID", "thread_tid");
-}
-
-function shPreviewDetailHref(item: AnyRecord): string {
-  const tid = shPreviewThreadTID(item);
-  return tid ? `/shthread/${encodeURIComponent(tid)}` : "#";
-}
-
-function shPreviewTitle(item: AnyRecord): string {
-  return text(item, "ThreadTitle", "thread_title");
-}
-
-function shPreviewForum(item: AnyRecord): string {
-  return shForumName(shForums.value, text(item, "SourceForumID", "source_forum_id"));
-}
-
-function shPreviewStatus(item: AnyRecord): string {
-  return text(item, "DetailStatus", "detail_status");
-}
-
-function shPreviewStatusClass(item: AnyRecord): string {
-  const status = shPreviewStatus(item);
-  if (status === "fetched") {
-    return "next02-sh-preview-status is-fetched";
-  }
-  if (status === "failed") {
-    return "next02-sh-preview-status is-failed";
-  }
-  return "next02-sh-preview-status is-pending";
-}
-
-function shPreviewAuthor(item: AnyRecord): string {
-  return text(item, "AuthorName", "author_name");
 }
 
 async function previewFetchSite(pageNumber: number, useStoredPayload: boolean) {

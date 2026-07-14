@@ -82,7 +82,7 @@
           </div>
 
           <div v-if="recentEvents.length" class="next02-cast-history-table-wrap">
-            <table class="next02-cast-history-table">
+            <table class="table table-hover align-middle mb-0 sc-events-table next02-cast-history-table">
               <colgroup>
                 <col class="next02-cast-history-time">
                 <col class="next02-cast-history-count">
@@ -104,12 +104,15 @@
                   :key="`${eventHref(event)}-${index}`"
                 >
                   <td>
-                    <a :href="eventHref(event)" target="_blank" rel="noopener noreferrer">
-                      {{ formatUnixMinute(eventTime(event)) }}
+                    <a class="sc-event-link" :href="eventHref(event)" target="_blank" rel="noopener noreferrer">
+                      <span class="sc-event-time">
+                        <span class="sc-event-date">{{ formatUnixDate(eventTime(event)) }}</span>
+                        <small class="sc-event-hour">{{ formatUnixHm(eventTime(event)) }}</small>
+                      </span>
                     </a>
                   </td>
-                  <td>{{ eventMovieCount(event) }}</td>
-                  <td>
+                  <td class="sc-number sc-primary-value">{{ eventMovieCount(event) }}</td>
+                  <td class="sc-content-cell">
                     <div v-if="eventMovies(event).length" class="next02-cast-sc-movies">
                       <a
                         v-for="movie in eventMovies(event)"
@@ -118,12 +121,12 @@
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        {{ movieName(movie) }}<b v-if="movieCome(movie)">COME</b>
+                        {{ movieName(movie) }}<b v-if="movieCome(movie)" class="next02-cast-sc-come">COME</b>
                       </a>
                     </div>
                     <span v-else class="next02-cast-empty-value">-</span>
                   </td>
-                  <td>{{ humanDays(eventCooldown(event)) }}</td>
+                  <td class="sc-number">{{ humanDays(eventCooldown(event)) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -350,11 +353,11 @@ function formatUnixDate(value: unknown): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function formatUnixMinute(value: unknown): string {
+function formatUnixHm(value: unknown): string {
   const n = Number(value || 0);
   if (!n) return "-";
   const d = new Date(n * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function humanDays(value: unknown): string {

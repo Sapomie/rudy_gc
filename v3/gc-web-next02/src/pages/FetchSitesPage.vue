@@ -14,7 +14,7 @@
             <div class="btn-group" role="group" aria-label="FetchSites 视图">
               <span class="btn active" aria-current="page">配置列表</span>
             </div>
-            <a class="btn btn-outline-secondary" href="/triggers/fetch-sehuatang">FetchSehuatang</a>
+            <a class="btn btn-outline-secondary" href="/sehuatangfetch">FetchSehuatang</a>
           </div>
         </section>
 

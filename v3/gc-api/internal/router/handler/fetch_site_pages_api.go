@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/service/fetchsite"
 	"rudy_gc/internal/service/loop"
@@ -94,6 +95,8 @@ type shSehuatangThreadPageQuery struct {
 	ThreadTID        string   `form:"thread_tid"`
 	AuthorName       string   `form:"author_name"`
 	InfoHash         string   `form:"info_hash"`
+	MovieType        string   `form:"movie_type"`
+	MovieTypes       []string `form:"movie_types"`
 	SourceForumID    string   `form:"source_forum_id"`
 	SourceForumIDs   []string `form:"source_forum_ids"`
 	DetailStatus     string   `form:"detail_status"`
@@ -106,14 +109,16 @@ type shSehuatangThreadPageQuery struct {
 
 type shSehuatangThreadSortQuery struct {
 	ByThreadTID    sehuatangMagnetSortLink
+	ByMovieName    sehuatangMagnetSortLink
 	ByPostTime     sehuatangMagnetSortLink
+	ByDetailStatus sehuatangMagnetSortLink
 	ByLastSeenTime sehuatangMagnetSortLink
 	ByCreatedOn    sehuatangMagnetSortLink
 	ByUpdatedOn    sehuatangMagnetSortLink
 }
 
 func (h *CrawlerPagesAPI) FetchSiteJavbusListPageMain(c *gin.Context) {
-	defer withFrontendPath(c, "/fetch-site-javbus-list")()
+	defer withFrontendPath(c, "/javbuslist")()
 
 	q, pageQuery, statusSelected, ok := h.parseFetchSitePageQuery(c, "JavBus")
 	if !ok {
@@ -141,9 +146,9 @@ func (h *CrawlerPagesAPI) FetchSiteJavbusListPageMain(c *gin.Context) {
 		"ownedQuery":             buildOwnedFilterInfo(c),
 		"PageInfo":               buildFetchSitePageInfo(c, result.Total, result.Page, result.PageSize),
 		"SortQuery":              buildFetchSiteSortQuery(c, q.Sort, q.Order),
-		"PeerPageURL":            "/fetch-site-sukebei-list",
-		"TaskPageURL":            "/triggers/fetch-site-javbus-filtered",
-		"TasksPageURL":           "/crawler/tasks",
+		"PeerPageURL":            "/sukebeilist",
+		"TaskPageURL":            "/javbusfetch",
+		"TasksPageURL":           "/crawltasklist",
 		"FilteredJavbusTaskType": loop.TaskSpiderFetchJavbusFilter,
 		"StatusSelected":         statusSelected,
 		"StatusAllActive":        len(statusSelected) == 0,
@@ -151,7 +156,7 @@ func (h *CrawlerPagesAPI) FetchSiteJavbusListPageMain(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSiteSukebeiListPageMain(c *gin.Context) {
-	defer withFrontendPath(c, "/fetch-site-sukebei-list")()
+	defer withFrontendPath(c, "/sukebeilist")()
 
 	q, pageQuery, statusSelected, ok := h.parseFetchSitePageQuery(c, "Sukebei")
 	if !ok {
@@ -179,9 +184,9 @@ func (h *CrawlerPagesAPI) FetchSiteSukebeiListPageMain(c *gin.Context) {
 		"ownedQuery":              buildOwnedFilterInfo(c),
 		"PageInfo":                buildFetchSitePageInfo(c, result.Total, result.Page, result.PageSize),
 		"SortQuery":               buildFetchSiteSortQuery(c, q.Sort, q.Order),
-		"PeerPageURL":             "/fetch-site-javbus-list",
-		"TaskPageURL":             "/triggers/fetch-site-sukebei-filtered",
-		"TasksPageURL":            "/crawler/tasks",
+		"PeerPageURL":             "/javbuslist",
+		"TaskPageURL":             "/sukebeifetch",
+		"TasksPageURL":            "/crawltasklist",
 		"FilteredSukebeiTaskType": loop.TaskSpiderFetchSukebeiFilter,
 		"StatusSelected":          statusSelected,
 		"StatusAllActive":         len(statusSelected) == 0,
@@ -271,7 +276,7 @@ func (h *CrawlerPagesAPI) parseFetchSitePageQuery(c *gin.Context, label string) 
 }
 
 func (h *CrawlerPagesAPI) FetchSiteSehuatangListPageMain(c *gin.Context) {
-	defer withFrontendPath(c, "/fetch-site-sehuatang-list")()
+	defer withFrontendPath(c, "/sehuatanglist")()
 
 	var q sehuatangMagnetPageQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -335,8 +340,8 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangListPageMain(c *gin.Context) {
 		"PageInfo":       buildFetchSitePageInfo(c, result.Total, result.Page, result.PageSize),
 		"SortQuery":      buildSehuatangMagnetSortQuery(c, q.Sort, q.Order),
 		"QuickTags":      buildSehuatangTagQuickFilters(c, q.Tag),
-		"TaskPageURL":    "/triggers/fetch-sehuatang",
-		"TasksPageURL":   "/crawler/tasks",
+		"TaskPageURL":    "/sehuatangfetch",
+		"TasksPageURL":   "/crawltasklist",
 		"ShtTimeValue":   shtTimeValue,
 		"ShtTimeDisplay": displayWKvDateValue(shtTimeValue),
 	})
@@ -360,12 +365,14 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 	q.Order = normalizeSehuatangMagnetSortOrder(q.Order)
 	q.SourceForumIDs = normalizeSHMultiQueryValues(q.SourceForumIDs, q.SourceForumID)
 	q.DetailStatuses = normalizeSHMultiQueryValues(q.DetailStatuses, q.DetailStatus)
+	q.MovieTypes = moviedomain.NormalizeSehuatangThreadMovieTypes(normalizeSHMultiQueryValues(q.MovieTypes, q.MovieType)...)
 
 	filter := moviex.ShSehuatangThreadListFilter{
 		Keyword:        strings.TrimSpace(q.Keyword),
 		ThreadTID:      strings.TrimSpace(q.ThreadTID),
 		AuthorName:     strings.TrimSpace(q.AuthorName),
 		InfoHash:       strings.TrimSpace(q.InfoHash),
+		MovieTypes:     q.MovieTypes,
 		SourceForumIDs: q.SourceForumIDs,
 		DetailStatuses: q.DetailStatuses,
 	}
@@ -430,8 +437,8 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		"SortQuery":         buildSHSehuatangThreadSortQuery(c, q.Sort, q.Order),
 		"TaskPageURL":       "/shfetch",
 		"DetailTaskPageURL": "/shfill",
-		"TasksPageURL":      "/crawler/tasks",
-		"OldListURL":        "/fetch-site-sehuatang-list",
+		"TasksPageURL":      "/crawltasklist",
+		"OldListURL":        "/sehuatanglist",
 	})
 }
 
@@ -468,7 +475,7 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHDetailPageMain(c *gin.Context) {
 		"ListPageURL":     "/shpool",
 		"TaskPageURL":     "/shfill",
 		"ListTaskPageURL": "/shfetch",
-		"TasksPageURL":    "/crawler/tasks",
+		"TasksPageURL":    "/crawltasklist",
 	})
 }
 
@@ -651,7 +658,9 @@ func buildSHSehuatangThreadSortQuery(c *gin.Context, currentField string, curren
 
 	return &shSehuatangThreadSortQuery{
 		ByThreadTID:    makeHref("thread_tid"),
+		ByMovieName:    makeHref("movie_name"),
 		ByPostTime:     makeHref("post_time"),
+		ByDetailStatus: makeHref("detail_status"),
 		ByLastSeenTime: makeHref("last_seen_time"),
 		ByCreatedOn:    makeHref("created_on"),
 		ByUpdatedOn:    makeHref("updated_on"),
@@ -669,7 +678,7 @@ func normalizeSehuatangMagnetSortField(raw string) string {
 
 func normalizeSHSehuatangThreadSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
-	case "thread_tid", "post_time", "last_seen_time", "created_on", "updated_on":
+	case "thread_tid", "movie_name", "post_time", "detail_status", "last_seen_time", "created_on", "updated_on":
 		return strings.TrimSpace(raw)
 	default:
 		return "post_time"

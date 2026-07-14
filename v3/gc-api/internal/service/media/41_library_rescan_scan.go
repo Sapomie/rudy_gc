@@ -106,6 +106,21 @@ func (s *Service) rescanOneScope(ctx context.Context, scope libraryRescanScope, 
 			})
 			return nil
 		}
+		if err := s.refreshSHMagnetDownloadStates(ctx, updated.SourceTorrentHash); err != nil {
+			result.Errors++
+			result.ErrorItems = append(result.ErrorItems, &LibraryRescanItem{
+				MovieName:    updated.MovieName,
+				MovieJavId:   updated.MovieJavId,
+				FileName:     filepath.Base(path),
+				MatchBy:      matchBy,
+				Path:         path,
+				PreviousPath: before.Path,
+				RootDir:      scope.Root,
+				PreviousRoot: before.RootDir,
+				Error:        err.Error(),
+			})
+			return nil
+		}
 		s.invalidateMovieTypeCaches(ctx, updated.MovieJavId)
 
 		if locationChanged {

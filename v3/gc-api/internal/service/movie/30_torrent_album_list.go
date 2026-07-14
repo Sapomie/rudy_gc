@@ -10,7 +10,7 @@ import (
 const (
 	albumSourceTypeJavbusMagnet = "javbus_magnet"
 	albumSourceTypeSukebei      = "sukebei_torrent"
-	albumSourceTypeSehuatang    = "sehuatang_magnet"
+	albumSourceTypeSehuatang    = "sh_magnet"
 )
 
 type TorrentAlbumsPageQuery struct {
@@ -43,8 +43,9 @@ type TorrentAlbumsPageResult struct {
 }
 
 type TorrentAlbumOption struct {
-	ID   int64
-	Name string
+	ID        int64
+	Name      string
+	Protected bool
 }
 
 type TorrentAlbumPageRow struct {
@@ -181,8 +182,9 @@ func buildTorrentAlbumOptions(rows []*moviex.TAlbum, selectedAlbumName string) [
 			hasSelected = true
 		}
 		options = append(options, &TorrentAlbumOption{
-			ID:   row.Id,
-			Name: name,
+			ID:        row.Id,
+			Name:      name,
+			Protected: IsProtectedTorrentAlbumName(name),
 		})
 	}
 	if !hasSelected && strings.TrimSpace(selectedAlbumName) != "" {
@@ -201,7 +203,7 @@ func torrentAlbumSourceTypeText(sourceType string) string {
 	case albumSourceTypeSukebei:
 		return "Sukebei 种子"
 	case albumSourceTypeSehuatang:
-		return "Sehuatang 磁力"
+		return "色花堂磁力"
 	default:
 		return "-"
 	}

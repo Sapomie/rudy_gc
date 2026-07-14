@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"rudy_gc/internal/consts"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/types"
 )
@@ -41,14 +42,14 @@ func (s *Service) UpdateEventMeta(ctx context.Context, in *types.ScEventEditForm
 		return nil, err
 	}
 
-	comeMovieJavID := strings.TrimSpace(in.ComeMovieJavId)
+	comeGListID := in.ComeGListId
 	movieCast := strings.TrimSpace(in.MovieCast)
-	comeMovieName, castOptions, err := s.resolveScEventComeMovie(ctx, glRows, comeMovieJavID)
+	comeMovieName, castOptions, err := s.resolveScEventComeMovie(ctx, glRows, comeGListID)
 	if err != nil {
 		return nil, err
 	}
 	if movieCast != "" {
-		if comeMovieJavID == "" {
+		if comeGListID <= 0 {
 			return nil, &types.BadRequestError{Message: "未选择 Come Movie 时，Lead Cast 必须为空"}
 		}
 		if !containsExactString(castOptions, movieCast) {
@@ -57,166 +58,69 @@ func (s *Service) UpdateEventMeta(ctx context.Context, in *types.ScEventEditForm
 	}
 
 	now := time.Now().Unix()
-	changed := false
 	kind := strings.TrimSpace(in.Kind)
-	if row.Kind != kind {
-		row.Kind = kind
-		changed = true
-	}
-	if row.Duration != in.DurationMinutes {
-		row.Duration = in.DurationMinutes
-		changed = true
-	}
+	row.Kind = kind
+	row.Duration = in.DurationMinutes
 	fg := strings.TrimSpace(in.Fg)
-	if row.Fg != fg {
-		row.Fg = fg
-		changed = true
-	}
+	row.Fg = fg
 	vessel := strings.TrimSpace(in.Vessel)
-	if row.Vessel != vessel {
-		row.Vessel = vessel
-		changed = true
-	}
-	if row.MovieCast != movieCast {
-		row.MovieCast = movieCast
-		changed = true
-	}
-	if row.ComeMovieName != comeMovieName {
-		row.ComeMovieName = comeMovieName
-		changed = true
-	}
+	row.Vessel = vessel
+	row.MovieCast = movieCast
+	row.ComeMovieName = comeMovieName
 	remarks := strings.TrimSpace(in.Remarks)
-	if row.Remarks != remarks {
-		row.Remarks = remarks
-		changed = true
-	}
-
-	comeChanged, affectedMovieJavIDs, err := s.updateScEventComeFlags(ctx, glRows, comeMovieJavID, now)
-	if err != nil {
-		return nil, err
-	}
-
-	if changed {
-		row.UpdatedOn = now
-		if err := s.deps.ScModel.Update(ctx, row); err != nil {
-			return nil, err
-		}
-	}
-	if comeChanged {
-		if err := s.refreshPersonScSnapshotsByScNames(ctx, now, name); err != nil {
-			return nil, err
-		}
-		if err := s.AddMovieAndCastScInfo(ctx, affectedMovieJavIDs); err != nil {
-			return nil, err
-		}
-	}
-
-	return mapScModelToTypes(row), nil
-}
-
-func (s *Service) UpdateScEventMovieStatus(ctx context.Context, scName, movieJavID string, isSc int64) (*types.GList, error) {
-	scName = strings.TrimSpace(scName)
-	movieJavID = strings.TrimSpace(movieJavID)
-	if scName == "" || movieJavID == "" {
-		return nil, types.ErrNotFound
-	}
-	if isSc != consts.GListIsSc && isSc != consts.GListIsNotSc {
-		return nil, &types.BadRequestError{Message: "影片 SC 状态无效"}
-	}
-
-	eventRow, err := s.deps.ScModel.FindOneByName(ctx, scName)
+	row.Remarks = remarks
+	updatedRows, updatedEvent, err := s.deps.ScEventWriteModel.UpdateEventMeta(ctx, row, comeGListID, now)
 	if err != nil {
 		if errors.Is(err, moviex.ErrNotFound) {
 			return nil, types.ErrNotFound
 		}
 		return nil, err
 	}
-	if eventRow == nil {
-		return nil, types.ErrNotFound
-	}
-
-	glRows, err := s.deps.GListModel.ListByScName(ctx, scName)
-	if err != nil {
+	if err := s.refreshPersonScSnapshotsByScNames(ctx, now, name); err != nil {
 		return nil, err
 	}
-
-	var target *moviex.GList
-	for _, row := range glRows {
-		if row == nil {
-			continue
-		}
-		if strings.TrimSpace(row.MovieJavId) == movieJavID {
-			target = row
-			break
-		}
+	javIDs, fc2IDs := splitGListMovieIdentities(updatedRows)
+	if err := s.AddMovieAndCastScInfo(ctx, javIDs); err != nil {
+		return nil, err
 	}
-	if target == nil {
+	if err := s.AddFC2MovieScInfo(ctx, fc2IDs); err != nil {
+		return nil, err
+	}
+	return mapScModelToTypes(updatedEvent), nil
+}
+
+func (s *Service) UpdateScEventMovieStatus(ctx context.Context, scName string, gListID, isSc int64) (*types.GList, error) {
+	scName = strings.TrimSpace(scName)
+	if scName == "" || gListID <= 0 {
 		return nil, types.ErrNotFound
+	}
+	if isSc != consts.GListIsSc && isSc != consts.GListIsNotSc {
+		return nil, &types.BadRequestError{Message: "影片 SC 状态无效"}
 	}
 
 	now := time.Now().Unix()
-	changed := false
-	eventChanged := false
-	affectedMovieJavIDs := map[string]struct{}{movieJavID: {}}
-	if target.IsSc != isSc {
-		target.IsSc = isSc
-		target.UpdatedOn = now
-		changed = true
-	}
-	if isSc == consts.GListIsNotSc && target.IsCome == consts.GListIsCome {
-		target.IsCome = consts.GListIsNotCome
-		target.UpdatedOn = now
-		changed = true
-		eventRow.ComeMovieName = ""
-		eventRow.MovieCast = ""
-		eventRow.UpdatedOn = now
-		eventChanged = true
-	}
-	if changed {
-		if err := s.deps.GListModel.Update(ctx, target); err != nil {
-			return nil, err
+	target, _, err := s.deps.ScEventWriteModel.UpdateMovieStatus(ctx, scName, gListID, isSc, now)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return nil, types.ErrNotFound
 		}
+		return nil, err
 	}
-
-	scMovieCount := int64(0)
-	for _, row := range glRows {
-		if row == nil {
-			continue
-		}
-		rowIsSc := row.IsSc
-		if row.Id == target.Id {
-			rowIsSc = target.IsSc
-		}
-		if rowIsSc == consts.GListIsSc {
-			scMovieCount++
-		}
+	if err := s.refreshPersonScSnapshotsByScNames(ctx, now, scName); err != nil {
+		return nil, err
 	}
-	if eventRow.MovieNumber != scMovieCount {
-		eventRow.MovieNumber = scMovieCount
-		eventRow.UpdatedOn = now
-		eventChanged = true
+	javIDs, fc2IDs := splitGListMovieIdentities([]*moviex.GList{target})
+	if err := s.AddMovieAndCastScInfo(ctx, javIDs); err != nil {
+		return nil, err
 	}
-	if eventChanged {
-		if err := s.deps.ScModel.Update(ctx, eventRow); err != nil {
-			return nil, err
-		}
+	if err := s.AddFC2MovieScInfo(ctx, fc2IDs); err != nil {
+		return nil, err
 	}
-
-	if changed {
-		if err := s.refreshPersonScSnapshotsByScNames(ctx, now, scName); err != nil {
-			return nil, err
-		}
-		if err := s.AddMovieAndCastScInfo(ctx, affectedMovieJavIDs); err != nil {
-			return nil, err
-		}
-	}
-
 	return mapGListModelToTypes(target), nil
 }
 
-func (s *Service) resolveScEventComeMovie(ctx context.Context, glRows []*moviex.GList, comeMovieJavID string) (string, []string, error) {
-	comeMovieJavID = strings.TrimSpace(comeMovieJavID)
-	if comeMovieJavID == "" {
+func (s *Service) resolveScEventComeMovie(ctx context.Context, glRows []*moviex.GList, comeGListID int64) (string, []string, error) {
+	if comeGListID <= 0 {
 		return "", nil, nil
 	}
 
@@ -225,7 +129,7 @@ func (s *Service) resolveScEventComeMovie(ctx context.Context, glRows []*moviex.
 		if row == nil {
 			continue
 		}
-		if strings.TrimSpace(row.MovieJavId) != comeMovieJavID {
+		if row.Id != comeGListID {
 			continue
 		}
 		if row.IsSc != consts.GListIsSc {
@@ -238,53 +142,54 @@ func (s *Service) resolveScEventComeMovie(ctx context.Context, glRows []*moviex.
 		return "", nil, &types.BadRequestError{Message: "Come Movie 必须从 is_sc=2 的电影中选择"}
 	}
 
-	comeMovieName := ""
-	movieRow, err := s.movieFindOneByJavID(ctx, comeMovieJavID)
-	if err != nil && !errors.Is(err, moviex.ErrNotFound) {
-		return "", nil, fmt.Errorf("load come movie failed: %w", err)
+	switch strings.TrimSpace(selectedRow.MovieType) {
+	case moviedomain.SehuatangThreadMovieTypeJAV:
+		comeMovieName := ""
+		movieRow, err := s.movieFindOneByJavID(ctx, selectedRow.MovieJavId)
+		if err != nil && !errors.Is(err, moviex.ErrNotFound) {
+			return "", nil, fmt.Errorf("load come movie failed: %w", err)
+		}
+		if movieRow != nil {
+			comeMovieName = strings.TrimSpace(movieRow.Name)
+		}
+		if comeMovieName == "" {
+			comeMovieName = strings.TrimSpace(parseGListMovieName(mapGListModelToTypes(selectedRow)))
+		}
+		castOptions, err := s.listMovieCastDisplayNames(ctx, selectedRow.MovieJavId)
+		if err != nil {
+			return "", nil, fmt.Errorf("load come movie casts failed: %w", err)
+		}
+		return comeMovieName, castOptions, nil
+	case moviedomain.SehuatangThreadMovieTypeFC2PPV:
+		movieRow, err := s.deps.FC2MovieModel.FindOne(ctx, selectedRow.FC2MovieId)
+		if err != nil {
+			return "", nil, fmt.Errorf("load fc2 come movie failed: %w", err)
+		}
+		return strings.TrimSpace(movieRow.FC2Key), []string{}, nil
+	default:
+		return "", nil, &types.BadRequestError{Message: "Come Movie 影片类型无效"}
 	}
-	if movieRow != nil && strings.TrimSpace(movieRow.Name) != "" {
-		comeMovieName = strings.TrimSpace(movieRow.Name)
-	}
-	if comeMovieName == "" {
-		comeMovieName = strings.TrimSpace(parseGListMovieName(mapGListModelToTypes(selectedRow)))
-	}
-
-	castOptions, err := s.listMovieCastDisplayNames(ctx, comeMovieJavID)
-	if err != nil {
-		return "", nil, fmt.Errorf("load come movie casts failed: %w", err)
-	}
-	if comeMovieName == "" {
-		comeMovieName = strings.TrimSpace(comeMovieJavID)
-	}
-
-	return comeMovieName, castOptions, nil
 }
 
-func (s *Service) updateScEventComeFlags(ctx context.Context, glRows []*moviex.GList, comeMovieJavID string, now int64) (bool, map[string]struct{}, error) {
-	affectedMovieJavIDs := make(map[string]struct{})
-	comeMovieJavID = strings.TrimSpace(comeMovieJavID)
-	changed := false
-	for _, row := range glRows {
-		if row == nil || strings.TrimSpace(row.MovieJavId) == "" {
+func splitGListMovieIdentities(rows []*moviex.GList) (map[string]struct{}, map[int64]struct{}) {
+	javIDs := make(map[string]struct{})
+	fc2IDs := make(map[int64]struct{})
+	for _, row := range rows {
+		if row == nil {
 			continue
 		}
-		want := consts.GListIsNotCome
-		if comeMovieJavID != "" && strings.TrimSpace(row.MovieJavId) == comeMovieJavID {
-			want = consts.GListIsCome
+		switch strings.TrimSpace(row.MovieType) {
+		case moviedomain.SehuatangThreadMovieTypeJAV:
+			if javID := strings.TrimSpace(row.MovieJavId); javID != "" {
+				javIDs[javID] = struct{}{}
+			}
+		case moviedomain.SehuatangThreadMovieTypeFC2PPV:
+			if row.FC2MovieId > 0 {
+				fc2IDs[row.FC2MovieId] = struct{}{}
+			}
 		}
-		if row.IsCome == want {
-			continue
-		}
-		row.IsCome = want
-		row.UpdatedOn = now
-		if err := s.deps.GListModel.Update(ctx, row); err != nil {
-			return false, nil, err
-		}
-		affectedMovieJavIDs[strings.TrimSpace(row.MovieJavId)] = struct{}{}
-		changed = true
 	}
-	return changed, affectedMovieJavIDs, nil
+	return javIDs, fc2IDs
 }
 
 func containsExactString(items []string, want string) bool {

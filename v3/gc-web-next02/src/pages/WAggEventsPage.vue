@@ -15,7 +15,7 @@
         <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="card-body">
             <div class="next02-sc-panel-head">
-              <form class="sc-event-filter-form w-agg-event-filter-form" method="get" action="/w-agg-events">
+              <form class="sc-event-filter-form w-agg-event-filter-form" method="get" action="/aggeventlist">
                 <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
                 <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
@@ -37,11 +37,7 @@
                 <div class="w-agg-event-filter-cluster w-agg-event-filter-options">
                   <label class="sc-event-filter-field w-agg-event-page-size-field" for="wAggEventPageSize">
                     <span>每页</span>
-                    <select id="wAggEventPageSize" class="form-select" name="ps">
-                      <option v-for="size in pageSizeOptions" :key="size" :value="size" :selected="Number(queryValue('PageSize')) === size">
-                        {{ size }}
-                      </option>
-                    </select>
+                    <input id="wAggEventPageSize" class="form-control" type="number" step="1" name="ps" :value="queryValue('PageSize') || '20'">
                   </label>
 
                   <div class="w-agg-event-filter-actions">
@@ -140,8 +136,6 @@ const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
-const pageSizeOptions = [20, 50, 100, 200];
-
 watch(() => route.fullPath, load, { immediate: true });
 
 async function load() {
@@ -165,7 +159,7 @@ const hasRows = computed(() => rows.value.length > 0);
 const headerLinks = computed(() => asRecord(pick(payload.value, "HeaderLinks")));
 const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
 const pageLinks = computed(() => asArray<AnyRecord>(pageInfo.value.Links));
-const clearHref = computed(() => normalizeHref(text(payload.value, "ClearHref") || "/w-agg-events"));
+const clearHref = computed(() => normalizeHref(text(payload.value, "ClearHref") || "/aggeventlist"));
 
 function queryValue(key: string): string {
   return text(query.value, key);

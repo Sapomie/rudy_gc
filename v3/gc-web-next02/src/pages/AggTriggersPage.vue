@@ -14,7 +14,7 @@
             <a href="/aggbirth" class="btn btn-outline-primary btn-sm">WMedia 聚合页</a>
             <a href="/aggrelease" class="btn btn-outline-secondary btn-sm">上映日聚合页</a>
             <a href="/bucketsrelease" class="btn btn-outline-secondary btn-sm">上映桶表</a>
-            <a href="/bucketssh" class="btn btn-outline-secondary btn-sm">SH 桶表</a>
+            <a href="/shbucketlist" class="btn btn-outline-secondary btn-sm">SH 桶表</a>
           </div>
         </section>
 

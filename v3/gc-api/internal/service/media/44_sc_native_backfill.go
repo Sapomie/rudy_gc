@@ -50,6 +50,9 @@ func (s *Service) BackfillMissingScNativeMedia(ctx context.Context) (*ScNativeBa
 		}
 
 		dirtyJavIDs = append(dirtyJavIDs, row.MovieJavId)
+		if err := s.syncJAVScMediaSnapshot(ctx, row.MovieJavId); err != nil {
+			return result, err
+		}
 		result.InsertedCount++
 	}
 

@@ -61,6 +61,8 @@ type StartTaskRequest struct {
 	Status          string               `json:"status"`
 	DetailStatus    string               `json:"detail_status"`
 	DetailStatuses  []string             `json:"detail_statuses"`
+	MovieType       string               `json:"movie_type"`
+	MovieTypes      []string             `json:"movie_types"`
 	Statuses        []string             `json:"statuses"`
 	TriggerSort     string               `json:"trigger_sort"`
 	TriggerOrder    string               `json:"trigger_order"`
@@ -81,7 +83,9 @@ type StartTaskRequest struct {
 	MovieJavID      string               `json:"movie_jav_id"`
 	MovieName       string               `json:"movie_name"`
 	Dir             string               `json:"dir"`
+	ComeMovieType   string               `json:"come_movie_type"`
 	ComeMovieJavID  string               `json:"come_movie_jav_id"`
+	ComeFC2MovieID  int64                `json:"come_fc2_movie_id"`
 	MovieCast       string               `json:"movie_cast"`
 	Kind            string               `json:"kind"`
 	DurationMinutes int64                `json:"duration"`
@@ -335,6 +339,11 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 	case TaskSpiderFetchSehuatangSHList:
 		return l.StartFetchSehuatangSHThreadList(req)
 	case TaskSpiderFetchSehuatangSHDetail:
+		targetForumIDs, err := normalizeSHDetailTaskTargetForumIDs(req.TriggerSource, req.TargetForumIDs)
+		if err != nil {
+			return "", err
+		}
+		req.TargetForumIDs = targetForumIDs
 		return l.StartFetchSehuatangSHThreadDetails(req)
 	case TaskScRebuildStats:
 		return l.StartScRebuildStats()
@@ -345,7 +354,9 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 		}
 		return l.StartScAdd(sc.AddScInput{
 			Dir:             dir,
+			ComeMovieType:   strings.TrimSpace(req.ComeMovieType),
 			ComeMovieJavId:  strings.TrimSpace(req.ComeMovieJavID),
+			ComeFC2MovieId:  req.ComeFC2MovieID,
 			MovieCast:       strings.TrimSpace(req.MovieCast),
 			Kind:            strings.TrimSpace(req.Kind),
 			DurationMinutes: req.DurationMinutes,
@@ -357,6 +368,17 @@ func (l *FetchLoopService) StartTask(req StartTaskRequest) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported task_type: %s", req.TaskType)
 	}
+}
+
+func normalizeSHDetailTaskTargetForumIDs(triggerSource string, values []string) ([]string, error) {
+	normalized := uniqueNonEmpty(values)
+	if strings.TrimSpace(triggerSource) == "shpool" {
+		return normalized, nil
+	}
+	if len(normalized) == 0 {
+		return nil, fmt.Errorf("请选择目标版块")
+	}
+	return normalized, nil
 }
 
 func (l *FetchLoopService) StartDailyBest(autoFetchSite bool) (string, error) {
@@ -769,13 +791,8 @@ func (l *FetchLoopService) StartFetchSehuatangMagnets(req StartTaskRequest) (str
 
 func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (string, error) {
 	return l.startManagedTask(TaskSpiderFetchSehuatangSH, taskRuntimePolicy{}, func(ctx context.Context) error {
-		fetchMode := strings.TrimSpace(req.FetchMode)
-		keyword := strings.TrimSpace(req.Keyword)
 		startPage := req.StartPage
 		endPage := req.EndPage
-		if fetchMode == "" {
-			fetchMode = fetchsehuatang.SHFetchModeSearch
-		}
 		if startPage <= 0 {
 			startPage = fetchsehuatang.DefaultStartPage
 		}
@@ -783,18 +800,16 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 			endPage = fetchsehuatang.DefaultEndPage
 		}
 
-		msg := fmt.Sprintf("开始色花堂帖子新流程，模式=%s，页码=%d-%d", fetchMode, startPage, endPage)
-		if keyword != "" {
-			msg += fmt.Sprintf("，关键词=%s", keyword)
-		}
 		taskctx.ReportProgress(ctx, taskctx.Progress{
-			Stage:   "pipeline_pre",
-			Message: msg,
+			Stage:             "pipeline_pre",
+			Message:           fmt.Sprintf("开始色花堂一体抓取，先执行列表建池，页码=%d-%d，版块=%s", startPage, endPage, strings.Join(req.TargetForumIDs, ",")),
+			CurrentPhaseKey:   "list",
+			PhaseKey:          "list",
+			PhaseHandledCount: 0,
 		})
 
-		result, err := l.fetchSehuatangSvc.FetchSHThreads(ctx, fetchsehuatang.SHFetchRequest{
-			FetchMode:      fetchMode,
-			Keyword:        keyword,
+		listResult, err := l.fetchSehuatangSvc.FetchSHThreadList(ctx, fetchsehuatang.SHFetchRequest{
+			FetchMode:      fetchsehuatang.SHFetchModeForum,
 			TargetForumIDs: req.TargetForumIDs,
 			StartPage:      startPage,
 			EndPage:        endPage,
@@ -802,15 +817,86 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 		if err != nil {
 			return err
 		}
+		listStats := fetchsehuatang.BuildSHProgressStats(listResult)
+		listStatsText := fetchsehuatang.BuildSHProgressStatsText(listResult)
+		detailTargets := append([]string(nil), listResult.DetailThreadTIDs...)
+		taskctx.ReportProgress(ctx, taskctx.Progress{
+			Stage:             "fetch_sehuatang_sh_detail_prepare",
+			Message:           fmt.Sprintf("列表建池完成，准备补全详情，待处理=%d", len(detailTargets)),
+			HandledCount:      int(listResult.MatchedCount),
+			SuccessCount:      int(listResult.FetchedCount),
+			FailedCount:       int(listResult.FailedCount),
+			CurrentPhaseKey:   "detail",
+			PhaseKey:          "detail",
+			PhaseHandledCount: 0,
+			PhaseTotalCount:   len(detailTargets),
+			Stats:             listStats,
+			StatsText:         listStatsText,
+		})
+
+		var detailResult *fetchsehuatang.SHFetchResult
+		if len(detailTargets) > 0 {
+			selectionCriteria, marshalErr := json.Marshal(map[string]any{
+				"trigger_source":   "shfetchall",
+				"target_forum_ids": req.TargetForumIDs,
+				"detail_statuses":  []string{fetchsehuatang.SHDetailStatusPending, fetchsehuatang.SHDetailStatusFailed},
+				"list_start_page":  startPage,
+				"list_end_page":    endPage,
+			})
+			if marshalErr != nil {
+				return marshalErr
+			}
+			detailResult, err = l.fetchSehuatangSvc.FetchSHThreadDetails(ctx, fetchsehuatang.SHDetailFetchRequest{
+				TriggerSource:     "shfetchall",
+				SelectionCriteria: string(selectionCriteria),
+				TargetForumIDs:    req.TargetForumIDs,
+				ThreadTIDs:        detailTargets,
+				BaseStats:         listStats,
+				BaseStatsText:     listStatsText,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		stats := make(map[string]int64, len(listStats)+20)
+		for key, value := range listStats {
+			stats[key] = value
+		}
+		stats["detail_target_count"] = int64(len(detailTargets))
+		statsText := make(map[string]string, len(listStatsText)+3)
+		for key, value := range listStatsText {
+			statsText[key] = value
+		}
+		detailMatched := int64(0)
+		detailFetched := int64(0)
+		detailFailed := int64(0)
+		if detailResult != nil {
+			detailMatched = detailResult.MatchedCount
+			detailFetched = detailResult.FetchedCount
+			detailFailed = detailResult.FailedCount
+			for key, value := range fetchsehuatang.BuildSHProgressStats(detailResult) {
+				stats["detail_"+key] = value
+			}
+			for key, value := range fetchsehuatang.BuildSHProgressStatsText(detailResult) {
+				statsText["detail_"+key] = value
+			}
+		}
 
 		taskctx.ReportProgress(ctx, taskctx.Progress{
-			Stage:        "fetch_sehuatang_sh_done",
-			Message:      fmt.Sprintf("色花堂帖子新流程完成：run_id=%d，发现=%d，命中=%d，跳过版块=%d，跳过已存在=%d，入库=%d，失败=%d", result.RunID, result.SeenCount, result.MatchedCount, result.SkippedForumCount, result.SkippedExistingCount, result.FetchedCount, result.FailedCount),
-			HandledCount: int(result.MatchedCount),
-			SuccessCount: int(result.FetchedCount),
-			FailedCount:  int(result.FailedCount),
-			Stats:        fetchsehuatang.BuildSHProgressStats(result),
-			StatsText:    fetchsehuatang.BuildSHProgressStatsText(result),
+			Stage:             "fetch_sehuatang_sh_done",
+			Message:           fmt.Sprintf("色花堂一体抓取完成：列表页面成功=%d，页面失败=%d，新增=%d，更新已有=%d，详情目标=%d，详情成功=%d，详情失败=%d", listResult.SuccessPageCount, listResult.FailedPageCount, listResult.InsertedCount, listResult.ExistingCount, detailMatched, detailFetched, detailFailed),
+			HandledCount:      int(listResult.MatchedCount + detailMatched),
+			SuccessCount:      int(listResult.FetchedCount + detailFetched),
+			FailedCount:       int(listResult.FailedCount + detailFailed),
+			CurrentPhaseKey:   "detail",
+			PhaseKey:          "detail",
+			PhaseHandledCount: int(detailMatched),
+			PhaseTotalCount:   len(detailTargets),
+			PhaseSuccessCount: int(detailFetched),
+			PhaseFailedCount:  int(detailFailed),
+			Stats:             stats,
+			StatsText:         statsText,
 		})
 		return nil
 	})
@@ -844,7 +930,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreadList(req StartTaskRequest)
 
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:        "fetch_sehuatang_sh_list_done",
-			Message:      fmt.Sprintf("色花堂帖子列表建池完成：run_id=%d，发现=%d，基础入库=%d，失败=%d", result.RunID, result.SeenCount, result.FetchedCount, result.FailedCount),
+			Message:      fmt.Sprintf("色花堂帖子列表抓取完成：run_id=%d，页面成功=%d，页面失败=%d，新增=%d，更新已有=%d，入库失败=%d，跳过置顶=%d", result.RunID, result.SuccessPageCount, result.FailedPageCount, result.InsertedCount, result.ExistingCount, result.PersistFailedCount, result.SkippedTopCount),
 			HandledCount: int(result.MatchedCount),
 			SuccessCount: int(result.FetchedCount),
 			FailedCount:  int(result.FailedCount),
@@ -860,6 +946,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreadDetails(req StartTaskReque
 		selectionCriteria, err := json.Marshal(map[string]any{
 			"source_forum_ids": req.TargetForumIDs,
 			"detail_statuses":  req.DetailStatuses,
+			"movie_types":      req.MovieTypes,
 			"keyword":          strings.TrimSpace(req.Keyword),
 			"post_time_from":   strings.TrimSpace(req.PostTimeFrom),
 			"post_time_to":     strings.TrimSpace(req.PostTimeTo),

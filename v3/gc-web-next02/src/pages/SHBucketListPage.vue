@@ -20,27 +20,19 @@
           <div class="card-body">
             <div class="bucket-list-controls sh-bucket-controls sh-bucket-toolbar" aria-label="SH 聚合桶筛选栏">
               <div class="bucket-list-control-main sh-bucket-toolbar-main">
-                <div class="bucket-list-switch-row sh-bucket-toolbar-sort">
-                  <div class="bucket-list-switch-group"><span>排序</span><a v-for="item in sortLinks" :key="linkKey(item)" :href="linkHref(item)" class="bucket-list-switch" :class="{ 'is-active': linkActive(item) }">{{ linkLabel(item) }}</a></div>
-                </div>
                 <div class="sh-bucket-toolbar-bottom">
                   <div class="sh-bucket-toolbar-filter-area">
                     <div class="bucket-list-switch-group bucket-level-switch"><span>层级</span><a v-for="item in levelLinks" :key="linkKey(item)" :href="linkHref(item)" class="bucket-list-switch" :class="{ 'is-active': linkActive(item) }">{{ linkLabel(item) }}</a></div>
+                    <div class="bucket-list-switch-group bucket-scope-switch"><span>聚合范围</span><a v-for="item in scopeLinks" :key="item.value" :href="scopeHref(item.value)" class="bucket-list-switch" :class="{ 'is-active': scopeActive(item.value) }">{{ item.label }}</a></div>
                     <form class="bucket-list-filter-row sh-bucket-filter-row" method="get" :action="listPath">
                       <input type="hidden" name="p" value="1">
                       <input type="hidden" name="sort" :value="queryValue('Sort')">
                       <input type="hidden" name="dir" :value="queryValue('Dir')">
                       <input type="hidden" name="level" :value="queryValue('Level')">
-                      <label class="bucket-filter-field sh-bucket-scope-select">
-                        <span>聚合范围</span>
-                        <select class="form-select" name="agg_scope" :value="queryValue('AggScope') || 'all'">
-                          <option value="all">全部帖子</option>
-                          <option v-for="forum in shForums" :key="forum.forumID" :value="`forum:${forum.forumID}`">{{ forum.forumName }}</option>
-                        </select>
-                      </label>
-                      <label class="bucket-filter-field is-date"><span>起始时间</span><input class="form-control" type="date" name="time_from" :value="queryValue('TimeFrom')" :max="queryValue('TimeTo') || undefined"></label>
-                      <label class="bucket-filter-field is-date"><span>结束时间</span><input class="form-control" type="date" name="time_to" :value="queryValue('TimeTo')" :min="queryValue('TimeFrom') || undefined"></label>
-                      <label class="bucket-filter-field is-page-size"><span>每页</span><select class="form-select" name="ps" :value="queryValue('PageSize') || '100'"><option value="24">24</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select></label>
+                      <input type="hidden" name="agg_scope" :value="queryValue('AggScope') || 'all'">
+                      <label class="bucket-filter-field is-date"><span>起始时间</span><input class="form-control smart-pick-date-input" type="text" name="time_from" :value="queryValue('TimeFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"></label>
+                      <label class="bucket-filter-field is-date"><span>结束时间</span><input class="form-control smart-pick-date-input" type="text" name="time_to" :value="queryValue('TimeTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"></label>
+                      <label class="bucket-filter-field is-page-size"><span>每页</span><input class="form-control" type="number" name="ps" :value="queryValue('PageSize') || '100'"></label>
                       <div class="bucket-list-filter-actions"><button class="btn bucket-list-apply" type="submit">筛选</button><a class="btn bucket-list-clear" :href="clearHref">清空</a></div>
                     </form>
                   </div>
@@ -84,7 +76,7 @@
                     <td class="sc-number">{{ rowText(row, "CountFailed") }}</td>
                     <td class="sc-number">{{ rowText(row, "CountWithMagnet") }}</td>
                     <td class="sc-number">{{ rowText(row, "CountWithInfoHash") }}</td>
-                    <td class="sc-muted">{{ formatUnix(rowValue(row, "LatestPostTime")) }}</td>
+                    <td class="sc-muted"><ScDateTime :value="rowValue(row, 'LatestPostTime')" unix /></td>
                   </tr>
                   <tr v-if="!rows.length"><td colspan="8"><div class="sc-empty-state">当前筛选下没有 SH 帖子时间桶数据，请先在聚合回填页执行 SH 聚合回填。</div></td></tr>
                 </tbody>
@@ -102,6 +94,7 @@ import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 import { loadSHForumOptions, type SHForumOption } from "@/utils/shForums";
@@ -138,11 +131,14 @@ const query = computed(() => asRecord(pick(payload.value, "Query", "query")));
 const total = computed(() => Number(pick(payload.value, "Total", "total") || 0));
 const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
 const pageLinks = computed(() => asArray<AnyRecord>(pageInfo.value.Links || pageInfo.value.links));
-const sortLinks = computed(() => asArray<AnyRecord>(pick(payload.value, "SortLinks")));
 const levelLinks = computed(() => asArray<AnyRecord>(pick(payload.value, "LevelLinks")));
+const scopeLinks = computed(() => [
+  { value: "all", label: "全部帖子" },
+  ...shForums.value.map((forum) => ({ value: `forum:${forum.forumID}`, label: forum.forumName }))
+]);
 const headerLinks = computed(() => asRecord(pick(payload.value, "HeaderLinks")));
-const listPath = computed(() => text(payload.value, "ListPath") || "/bucketssh");
-const clearHref = computed(() => text(payload.value, "ClearHref") || "/bucketssh");
+const listPath = computed(() => text(payload.value, "ListPath") || "/shbucketlist");
+const clearHref = computed(() => text(payload.value, "ClearHref") || "/shbucketlist");
 
 function queryValue(key: string): string { return text(query.value, key); }
 function rowValue(row: AnyRecord, key: string): unknown { return pick(row, key); }
@@ -154,6 +150,23 @@ function linkHref(item: AnyRecord): string { return normalizeHref(text(item, "Hr
 function linkActive(item: AnyRecord): boolean { return Boolean(item.Active || item.active); }
 function linkKey(item: AnyRecord): string { return `${linkLabel(item)}-${linkHref(item)}`; }
 
+function scopeActive(value: string): boolean {
+  return (queryValue("AggScope") || "all") === value;
+}
+
+function scopeHref(value: string): string {
+  const params = new URLSearchParams();
+  for (const [key, rawValue] of Object.entries(route.query)) {
+    const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+    for (const item of values) {
+      if (item != null) params.append(key, String(item));
+    }
+  }
+  params.set("agg_scope", value);
+  params.set("p", "1");
+  return `${listPath.value}?${params.toString()}`;
+}
+
 function rowClass(row: AnyRecord, index: number): Record<string, boolean> {
   const timestamp = Number(rowValue(row, "BucketStart") || 0);
   const month = timestamp > 0 ? new Date(timestamp * 1000).getMonth() : -1;
@@ -164,18 +177,6 @@ function rowClass(row: AnyRecord, index: number): Record<string, boolean> {
     [`sc-running-month-${(month % 3) + 1}`]: month >= 0,
     "sc-running-month-start": month !== previousMonth
   };
-}
-
-function formatUnix(input: unknown): string {
-  const timestamp = Number(input || 0);
-  if (!timestamp) return "-";
-  const date = new Date(timestamp * 1000);
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mi = String(date.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
 const HeaderLink = defineComponent({

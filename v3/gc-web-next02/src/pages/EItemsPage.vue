@@ -15,7 +15,7 @@
         <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card e-items-panel">
           <div class="card-body">
             <div class="next02-sc-panel-head">
-              <form class="sc-event-filter-form e-items-filter-form" method="get" action="/e-items">
+              <form class="sc-event-filter-form e-items-filter-form" method="get" action="/eitemlist">
                 <input type="hidden" name="p" value="1">
                 <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
                 <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
@@ -67,23 +67,23 @@
                 </label>
                 <label class="sc-event-filter-field e-items-filter-field">
                   <span>详情从</span>
-                  <input type="date" name="detail_birth_time_from" :value="queryValue('DetailBirthTimeFrom')">
+                  <input class="smart-pick-date-input" type="text" name="detail_birth_time_from" :value="queryValue('DetailBirthTimeFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <label class="sc-event-filter-field e-items-filter-field">
                   <span>详情到</span>
-                  <input type="date" name="detail_birth_time_to" :value="queryValue('DetailBirthTimeTo')">
+                  <input class="smart-pick-date-input" type="text" name="detail_birth_time_to" :value="queryValue('DetailBirthTimeTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <label class="sc-event-filter-field e-items-filter-field">
                   <span>查询从</span>
-                  <input type="date" name="last_query_detail_time_from" :value="queryValue('LastQueryDetailTimeFrom')">
+                  <input class="smart-pick-date-input" type="text" name="last_query_detail_time_from" :value="queryValue('LastQueryDetailTimeFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <label class="sc-event-filter-field e-items-filter-field">
                   <span>查询到</span>
-                  <input type="date" name="last_query_detail_time_to" :value="queryValue('LastQueryDetailTimeTo')">
+                  <input class="smart-pick-date-input" type="text" name="last_query_detail_time_to" :value="queryValue('LastQueryDetailTimeTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <div class="e-items-filter-actions">
                   <button class="sc-event-filter-submit" type="submit">筛选</button>
-                  <a class="sc-event-filter-clear" href="/e-items">清空</a>
+                  <a class="sc-event-filter-clear" href="/eitemlist">清空</a>
                 </div>
               </form>
 

@@ -167,7 +167,7 @@
                                 v-for="album in selectedAlbums"
                                 :key="album.name"
                                 class="tag movie-album-badge movie-tag-album"
-                                :href="`/movie-albums?album_name=${encodeURIComponent(album.name)}`"
+                                :href="`/moviealbumlist?album_name=${encodeURIComponent(album.name)}`"
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -192,11 +192,7 @@
                     <div v-if="rankRows.length" class="movie-rank-toolbar">
                       <label class="movie-rank-size">
                         <span>每页</span>
-                        <select v-model.number="rankPageSize" class="form-select form-select-sm" @change="rankPage = 1">
-                          <option :value="10">10</option>
-                          <option :value="50">50</option>
-                          <option :value="100">100</option>
-                        </select>
+                        <input v-model.number="rankPageSize" class="form-control form-control-sm" type="number" step="1" @change="rankPage = 1">
                       </label>
                       <div class="movie-rank-pager">
                         <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="rankPage <= 1" @click="rankPage -= 1">上一页</button>
@@ -327,7 +323,7 @@
                   </li>
                   <li class="nav-item" role="presentation">
                     <button class="nav-link" :class="{ active: activeResourceTab === 'sehuatang' }" id="tab-sehuatang-magnets" type="button" @click="activeResourceTab = 'sehuatang'">
-                      <span class="movie-resource-tab-text">Sehuatang 磁力</span>
+                      <span class="movie-resource-tab-text">色花堂磁力</span>
                       <span v-if="sehuatangRows.length" class="movie-resource-count">{{ sehuatangRows.length }}</span>
                     </button>
                   </li>
@@ -342,8 +338,8 @@
                     <ResourceTable v-else type="sukebei_torrent" :rows="sukebeiRows" :media-hash="mediaTorrentHash" />
                   </div>
                   <div class="tab-pane fade" :class="{ 'show active': activeResourceTab === 'sehuatang' }" id="pane-sehuatang-magnets" role="tabpanel">
-                    <div v-if="!sehuatangRows.length" class="text-muted">暂无 Sehuatang 磁力数据</div>
-                    <ResourceTable v-else type="sehuatang_magnet" :rows="sehuatangRows" :media-hash="mediaTorrentHash" />
+                    <div v-if="!sehuatangRows.length" class="text-muted">暂无色花堂磁力数据</div>
+                    <ResourceTable v-else type="sh_magnet" :rows="sehuatangRows" :media-hash="mediaTorrentHash" />
                   </div>
                 </div>
               </div>
@@ -475,6 +471,7 @@ import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import ErrorPanel from "@/components/ErrorPanel.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, num, pick, text } from "@/utils/format";
 
@@ -1219,7 +1216,7 @@ const ResourceTable = defineComponent({
     const colgroup = () => {
       const widths = props.type === "sukebei_torrent"
         ? ["42%", "72px", "104px", "74px", "240px", "132px"]
-        : props.type === "sehuatang_magnet"
+        : props.type === "sh_magnet"
           ? ["48%", "116px", "240px", "132px"]
           : ["38%", "72px", "96px", "70px", "240px", "132px"];
       return h("colgroup", widths.map((width) => h("col", { style: { width } })));
@@ -1239,13 +1236,13 @@ const ResourceTable = defineComponent({
               : h("span", { class: "movie-resource-title-text", title }, title)
           ]),
           h("td", { class: "movie-resource-number-cell fetch-site-col-compact text-nowrap", "data-sort-key": "size" }, formatResourceSizeGB(text(record, "SizeText"))),
-          h("td", { class: "movie-resource-number-cell fetch-site-col-compact text-nowrap", "data-sort-key": "date" }, text(record, "PublishTime") || "-"),
+          h("td", { class: "movie-resource-number-cell fetch-site-col-compact text-nowrap", "data-sort-key": "date" }, [h(ScDateTime, { value: text(record, "PublishTime") })]),
           h("td", { class: "movie-resource-number-cell fetch-site-col-compact text-nowrap", "data-sort-key": "downloads" }, text(record, "Completed") || "-"),
           hashCell(record),
           h("td", { class: "movie-resource-actions-cell fetch-site-col-compact text-nowrap" }, favoriteButtons(record))
         ]);
       }
-      if (props.type === "sehuatang_magnet") {
+      if (props.type === "sh_magnet") {
         const title = text(record, "ThreadTitle");
         const url = text(record, "ThreadURL");
         return h("tr", { class: matched ? "fetch-site-row-match" : "" }, [
@@ -1254,7 +1251,7 @@ const ResourceTable = defineComponent({
               ? h("a", { class: "movie-resource-title-link", href: url, target: "_blank", rel: "noopener noreferrer", title }, title)
               : h("span", { class: "movie-resource-title-text", title }, title)
           ]),
-          h("td", { class: "movie-resource-number-cell text-nowrap", "data-sort-key": "date" }, text(record, "PostTime") || "-"),
+          h("td", { class: "movie-resource-number-cell text-nowrap", "data-sort-key": "date" }, [h(ScDateTime, { value: text(record, "PostTime") })]),
           hashCell(record),
           h("td", { class: "movie-resource-actions-cell text-nowrap" }, favoriteButtons(record))
         ]);
@@ -1280,7 +1277,7 @@ const ResourceTable = defineComponent({
           h("th", { class: "movie-resource-actions-head fetch-site-col-compact" }, "相册")
         ]);
       }
-      if (props.type === "sehuatang_magnet") {
+      if (props.type === "sh_magnet") {
         return h("tr", [
           h("th", { class: "movie-resource-title-head" }, "帖子标题"),
           h("th", { class: "movie-resource-number-head" }, sortButton("发帖时间", "date")),
@@ -1321,11 +1318,11 @@ const FetchStatusCard = defineComponent({
   },
   emits: ["trigger"],
   setup(props, { emit }) {
-    const row = (labelText: string, value: string, emptyText = "-", valueClass = "") => {
+    const row = (labelText: string, value: string, emptyText = "-", valueClass = "", dateTime = false) => {
       const displayValue = value || emptyText;
       return h("tr", [
         h("th", { class: "movie-fetch-status-label", title: labelText }, labelText),
-        h("td", { class: `movie-fetch-status-value ${valueClass}`.trim(), title: displayValue }, displayValue)
+        h("td", { class: `movie-fetch-status-value ${valueClass}`.trim(), title: displayValue }, dateTime ? [h(ScDateTime, { value: displayValue })] : displayValue)
       ]);
     };
     return () => h("div", { class: "col-12 col-xl-6 mb-3" }, [
@@ -1345,10 +1342,10 @@ const FetchStatusCard = defineComponent({
               h("tbody", [
                 row("状态", text(props.status, "FetchStatusText")),
                 row("重试次数", text(props.status, "TryCount")),
-                row("最后抓取", text(props.status, "LastFetchTime")),
+                row("最后抓取", text(props.status, "LastFetchTime"), "-", "", true),
                 row("最后抓取距离现在", text(props.status, "LastFetchAgo")),
                 row("Hash 数", text(props.status, "TorrentHashCount")),
-                row("最新日期", text(props.status, "LatestPublishTime"), ""),
+                row("最新日期", text(props.status, "LatestPublishTime"), "", "", true),
                 row("来源地址", text(props.status, "SourceURL"), "-", "movie-fetch-status-long"),
                 row("错误", text(props.status, "LastError"), "-", "movie-fetch-status-long")
               ])

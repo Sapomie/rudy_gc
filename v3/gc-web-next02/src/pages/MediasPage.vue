@@ -18,7 +18,7 @@
         <div class="card next02-pink-list-panel medias-list-panel">
           <div class="card-body">
             <div class="next02-pink-list-toolbar medias-list-toolbar">
-              <form class="medias-filter-form" method="get" action="/medias" id="mediasFilterForm">
+              <form class="medias-filter-form" method="get" action="/medialist" id="mediasFilterForm">
                 <input type="hidden" name="p" value="1">
                 <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
                 <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
@@ -56,18 +56,18 @@
 
                 <div class="medias-filter-lower">
                   <div class="medias-filter-date-actions">
-                    <div v-for="field in dateRangeFields" :key="field.label" class="medias-filter-field medias-filter-date">
+                    <div v-for="field in dateRangeFields" :key="field.label" class="medias-filter-field medias-filter-date smart-pick-date-field">
                       <span>{{ field.label }}</span>
                       <span class="medias-filter-range">
-                        <input :type="field.type" :name="field.minName" :value="queryValue(field.minKey)" :placeholder="field.minPlaceholder" :aria-label="`${field.label} from`">
+                        <input class="smart-pick-date-input" :type="field.type" :name="field.minName" :value="queryValue(field.minKey)" :placeholder="field.minPlaceholder" :aria-label="`${field.label} from`" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                         <span aria-hidden="true">–</span>
-                        <input :type="field.type" :name="field.maxName" :value="queryValue(field.maxKey)" :placeholder="field.maxPlaceholder" :aria-label="`${field.label} to`">
+                        <input class="smart-pick-date-input" :type="field.type" :name="field.maxName" :value="queryValue(field.maxKey)" :placeholder="field.maxPlaceholder" :aria-label="`${field.label} to`" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                       </span>
                     </div>
 
                     <div class="medias-filter-actions">
                       <button class="next02-pink-list-submit" type="submit">Apply</button>
-                      <a class="next02-pink-list-clear" href="/medias">Clear</a>
+                      <a class="next02-pink-list-clear" href="/medialist">Clear</a>
                     </div>
                   </div>
 
@@ -194,9 +194,9 @@ const numberRangeFields = [
   { label: "SC 次数范围", minName: "sc_times_min", minKey: "ScTimesMin", maxName: "sc_times_max", maxKey: "ScTimesMax", type: "number", min: "0", step: undefined, minPlaceholder: "Min", maxPlaceholder: "Max" }
 ];
 const dateRangeFields = [
-  { label: "最后 SC 时间", minName: "last_sc_from", minKey: "LastScFrom", maxName: "last_sc_to", maxKey: "LastScTo", type: "date", minPlaceholder: "", maxPlaceholder: "" },
-  { label: "下载时间", minName: "birth_from", minKey: "BirthFrom", maxName: "birth_to", maxKey: "BirthTo", type: "date", minPlaceholder: "", maxPlaceholder: "" },
-  { label: "发行时间", minName: "releasing_from", minKey: "ReleasingFrom", maxName: "releasing_to", maxKey: "ReleasingTo", type: "date", minPlaceholder: "", maxPlaceholder: "" }
+  { label: "最后 SC 时间", minName: "last_sc_from", minKey: "LastScFrom", maxName: "last_sc_to", maxKey: "LastScTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" },
+  { label: "下载时间", minName: "birth_from", minKey: "BirthFrom", maxName: "birth_to", maxKey: "BirthTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" },
+  { label: "发行时间", minName: "releasing_from", minKey: "ReleasingFrom", maxName: "releasing_to", maxKey: "ReleasingTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" }
 ];
 const selfMakeOptions = [{ value: "", label: "全部" }, { value: "1", label: "否" }, { value: "2", label: "是" }];
 const maskOptions = [{ value: "", label: "全部" }, { value: "1", label: "有码" }, { value: "2", label: "去码" }, { value: "3", label: "无码" }];

@@ -70,7 +70,7 @@
                         <td class="next02-task-number">{{ text(row, "queued_count", "QueuedCount") || 0 }}</td>
                         <td class="next02-task-number">{{ text(row, "handled_count", "HandledCount") || 0 }}</td>
                         <td class="next02-task-number">{{ text(row, "success_count", "SuccessCount") || 0 }} / {{ text(row, "failed_count", "FailedCount") || 0 }}</td>
-                        <td class="next02-task-time">{{ startedAtText(row) }}</td>
+                        <td class="next02-task-time"><ScDateTime :value="startedAtValue(row)" :unix="startedAtIsUnix(row)" seconds /></td>
                         <td><a class="next02-task-link" data-job-action="back-to-task" :href="taskHref(row)">回到任务</a></td>
                       </tr>
                     </tbody>
@@ -92,6 +92,7 @@ import { apiPathForRoute, getJSON } from "@/api/request";
 import ErrorPanel from "@/components/ErrorPanel.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, pick, text } from "@/utils/format";
 
@@ -127,7 +128,7 @@ async function load() {
 
 const title = computed(() => text(page.value, "Title") || "任务列表");
 const backHref = computed(() => {
-  const base = text(page.value, "TriggerPageURL") || "/triggers/dailybest";
+  const base = text(page.value, "TriggerPageURL") || "/dailybestfetch";
   const id = text(page.value, "JobID");
   return id ? `${base}?job_id=${encodeURIComponent(id)}` : base;
 });
@@ -165,27 +166,27 @@ const taskLabels: Record<string, string> = {
 };
 
 const triggerPages: Record<string, string> = {
-  spider_daily_best: "/triggers/dailybest",
-  spider_daily_best_sync: "/triggers/dailybest",
-  spider_seeds: "/triggers/seeds",
-  spider_seed_by_name: "/triggers/seeds",
-  spider_refresh_oldest_detail: "/triggers/seeds",
-  spider_download_cover: "/triggers/post-process",
-  spider_translate_title: "/triggers/post-process",
-  spider_post_process: "/triggers/post-process",
-  spider_backfill_person: "/triggers/backfill",
-  spider_backfill_rank_period: "/triggers/backfill",
-  spider_backfill_fetch_site: "/triggers/backfill",
-  spider_fetch_javbus_resources: "/triggers/fetch-site",
-  spider_fetch_javbus_filtered_resources: "/triggers/fetch-site-javbus-filtered",
-  spider_fetch_sukebei_resources: "/triggers/fetch-site",
-  spider_fetch_sukebei_filtered_resources: "/triggers/fetch-site-sukebei-filtered",
-  spider_fetch_sehuatang_magnets: "/triggers/fetch-sehuatang",
-  spider_rebuild_cast_rank: "/triggers/backfill",
-  spider_rebuild_actor_rank: "/triggers/backfill",
-  sc_rebuild_stats: "/triggers/backfill",
-  sc_move: "/triggers/backfill",
-  sc_add: "/triggers/sc"
+  spider_daily_best: "/dailybestfetch",
+  spider_daily_best_sync: "/dailybestfetch",
+  spider_seeds: "/seedfetch",
+  spider_seed_by_name: "/seedfetch",
+  spider_refresh_oldest_detail: "/seedfetch",
+  spider_download_cover: "/postprocess",
+  spider_translate_title: "/postprocess",
+  spider_post_process: "/postprocess",
+  spider_backfill_person: "/databackfill",
+  spider_backfill_rank_period: "/databackfill",
+  spider_backfill_fetch_site: "/databackfill",
+  spider_fetch_javbus_resources: "/sitefetch",
+  spider_fetch_javbus_filtered_resources: "/javbusfetch",
+  spider_fetch_sukebei_resources: "/sitefetch",
+  spider_fetch_sukebei_filtered_resources: "/sukebeifetch",
+  spider_fetch_sehuatang_magnets: "/sehuatangfetch",
+  spider_rebuild_cast_rank: "/databackfill",
+  spider_rebuild_actor_rank: "/databackfill",
+  sc_rebuild_stats: "/databackfill",
+  sc_move: "/databackfill",
+  sc_add: "/scadd"
 };
 
 function jobID(row: AnyRecord): string {
@@ -240,25 +241,17 @@ function statusClass(row: AnyRecord): string {
   return "is-running";
 }
 
-function startedAtText(row: AnyRecord): string {
+function startedAtValue(row: AnyRecord): unknown {
   const existing = text(row, "started_at_text", "StartedAtText");
-  if (existing) {
-    return existing;
-  }
-  const stamp = Number(pick(row, "started_at", "StartedAt") || 0);
-  if (!stamp) {
-    return "-";
-  }
-  const date = new Date(stamp * 1000);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return existing || pick(row, "started_at", "StartedAt");
+}
+
+function startedAtIsUnix(row: AnyRecord): boolean {
+  return !text(row, "started_at_text", "StartedAtText");
 }
 
 function taskHref(row: AnyRecord): string {
-  const base = triggerPages[taskType(row)] || text(page.value, "TriggerPageURL") || "/triggers/dailybest";
+  const base = triggerPages[taskType(row)] || text(page.value, "TriggerPageURL") || "/dailybestfetch";
   return `${base}?job_id=${encodeURIComponent(jobID(row))}`;
 }
 

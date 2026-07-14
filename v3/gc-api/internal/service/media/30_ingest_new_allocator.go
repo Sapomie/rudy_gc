@@ -33,52 +33,48 @@ func (s *Service) allocateTargetDirectoryUnder(ctx context.Context, baseDir stri
 	if mediaRoot == "" {
 		return "", 0, fmt.Errorf("base media dir is empty")
 	}
-	if err := os.MkdirAll(mediaRoot, defaultFilePerm); err != nil {
+	targetPath, err := allocateTargetDirectoryPathUnder(mediaRoot, now)
+	if err != nil {
 		return "", 0, err
 	}
 
 	nowUnix := now.Unix()
-	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, mediaRoot, nowUnix); err != nil {
+	dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, targetPath, nowUnix)
+	if err != nil {
 		return "", 0, err
 	}
+	return targetPath, dayFolder.Id, nil
+}
 
+func allocateTargetDirectoryPathUnder(baseDir string, now time.Time) (string, error) {
+	mediaRoot := filepath.Clean(strings.TrimSpace(baseDir))
+	if mediaRoot == "" {
+		return "", fmt.Errorf("base media dir is empty")
+	}
+	if err := os.MkdirAll(mediaRoot, defaultFilePerm); err != nil {
+		return "", err
+	}
 	if bucket, _, found, err := firstAvailableLeafBucketUnderBase(mediaRoot); err != nil {
-		return "", 0, err
+		return "", err
 	} else if found {
-		dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, bucket.path, nowUnix)
-		if err != nil {
-			return "", 0, err
-		}
-		return bucket.path, dayFolder.Id, nil
+		return bucket.path, nil
 	}
-
 	yearPath, _, err := chooseYearBucket(mediaRoot, now)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 	if err := os.MkdirAll(yearPath, defaultFilePerm); err != nil {
-		return "", 0, err
+		return "", err
 	}
-
-	if _, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, yearPath, nowUnix); err != nil {
-		return "", 0, err
-	}
-
 	dayName, err := chooseDayBucket(yearPath, now)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 	dayPath := filepath.Join(yearPath, dayName)
 	if err := os.MkdirAll(dayPath, defaultFilePerm); err != nil {
-		return "", 0, err
+		return "", err
 	}
-
-	dayFolder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, dayPath, nowUnix)
-	if err != nil {
-		return "", 0, err
-	}
-
-	return dayPath, dayFolder.Id, nil
+	return dayPath, nil
 }
 
 func previewTargetDirectory(layout rootLayout, now time.Time) (string, error) {

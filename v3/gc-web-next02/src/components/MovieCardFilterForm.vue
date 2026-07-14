@@ -66,15 +66,16 @@
             >
           </div>
 
-          <div v-for="pair in datePairs" :key="pair.label" class="col-12 col-xl-4">
+          <div v-for="pair in datePairs" :key="pair.label" class="col-12 col-xl-4 smart-pick-date-field">
             <label class="form-label mb-1">{{ pair.label }}</label>
             <div class="row g-2">
               <div class="col-6">
                 <input
-                  class="form-control"
+                  class="form-control smart-pick-date-input"
                   type="text"
                   :name="pair.startName"
                   :value="fieldValue(pair.startKey)"
+                  placeholder="YYYY-MM-DD"
                   inputmode="numeric"
                   maxlength="10"
                   pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
@@ -84,10 +85,11 @@
               </div>
               <div class="col-6">
                 <input
-                  class="form-control"
+                  class="form-control smart-pick-date-input"
                   type="text"
                   :name="pair.endName"
                   :value="fieldValue(pair.endKey)"
+                  placeholder="YYYY-MM-DD"
                   inputmode="numeric"
                   maxlength="10"
                   pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
@@ -195,13 +197,15 @@
         >
       </label>
 
-      <div v-for="pair in datePairs" :key="pair.label" class="filter-field wide">
+      <div v-for="pair in datePairs" :key="pair.label" class="filter-field wide smart-pick-date-field">
         <span>{{ pair.label }}</span>
         <div class="filter-pair">
           <input
+            class="smart-pick-date-input"
             type="text"
             :name="pair.startName"
             :value="fieldValue(pair.startKey)"
+            placeholder="YYYY-MM-DD"
             inputmode="numeric"
             maxlength="10"
             pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
@@ -209,9 +213,11 @@
             :data-initial-value="fieldValue(pair.startKey)"
           >
           <input
+            class="smart-pick-date-input"
             type="text"
             :name="pair.endName"
             :value="fieldValue(pair.endKey)"
+            placeholder="YYYY-MM-DD"
             inputmode="numeric"
             maxlength="10"
             pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"

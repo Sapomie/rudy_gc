@@ -61,7 +61,7 @@ type mediaListQuery struct {
 }
 
 func (h *ListPagesAPI) MediaList(c *gin.Context) {
-	defer withFrontendPath(c, "/medias")()
+	defer withFrontendPath(c, "/medialist")()
 
 	var q mediaListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -423,7 +423,7 @@ type wAggEventHeaderLinks struct {
 }
 
 func (h *ListPagesAPI) WAggEventList(c *gin.Context) {
-	defer withFrontendPath(c, "/w-agg-events")()
+	defer withFrontendPath(c, "/aggeventlist")()
 
 	var q wAggEventListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -469,7 +469,7 @@ func (h *ListPagesAPI) WAggEventList(c *gin.Context) {
 		"pageInfo":    pageInfo,
 		"Query":       q,
 		"HeaderLinks": buildWAggEventHeaderLinks(c, q.Sort, q.Order),
-		"ClearHref":   "/w-agg-events",
+		"ClearHref":   "/aggeventlist",
 		"MenuListID":  "w_agg_events",
 	})
 }
@@ -608,6 +608,10 @@ type createTorrentAlbumReq struct {
 	Name string `json:"name"`
 }
 
+type updateTorrentAlbumReq struct {
+	Name string `json:"name"`
+}
+
 type torrentAlbumsSortLink struct {
 	Href   string
 	Active bool
@@ -622,7 +626,7 @@ type torrentAlbumsSortQuery struct {
 }
 
 func (h *ListPagesAPI) TorrentAlbums(c *gin.Context) {
-	defer withFrontendPath(c, "/torrent-albums")()
+	defer withFrontendPath(c, "/torrentalbumlist")()
 
 	var q torrentAlbumsListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -650,7 +654,7 @@ func (h *ListPagesAPI) TorrentAlbums(c *gin.Context) {
 	}
 	switch strings.TrimSpace(q.SourceType) {
 	case "":
-	case "javbus_magnet", "sukebei_torrent", "sehuatang_magnet":
+	case "javbus_magnet", "sukebei_torrent", "sh_magnet":
 		request.SourceType = strings.TrimSpace(q.SourceType)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "来源类型参数错误"})
@@ -840,6 +844,67 @@ func (h *ListPagesAPI) CreateTorrentAlbum(c *gin.Context) {
 	})
 }
 
+func (h *ListPagesAPI) DeleteTorrentAlbum(c *gin.Context) {
+	albumID, err := parseTorrentAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	result, err := h.movieSvc.DeleteAlbum(c.Request.Context(), albumID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrAlbumInvalidID), errors.Is(err, movie.ErrAlbumDeleteBlocked), errors.Is(err, movie.ErrAlbumNotEmpty):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		case errors.Is(err, movie.ErrAlbumNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"deleted":    true,
+		"album_id":   result.AlbumID,
+		"album_name": result.AlbumName,
+		"message":    "相册删除成功",
+	})
+}
+
+func (h *ListPagesAPI) UpdateTorrentAlbum(c *gin.Context) {
+	albumID, err := parseTorrentAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req updateTorrentAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+	result, err := h.movieSvc.UpdateAlbum(c.Request.Context(), albumID, req.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrAlbumInvalidID), errors.Is(err, movie.ErrAlbumNameEmpty), errors.Is(err, movie.ErrAlbumNameTooLong), errors.Is(err, movie.ErrAlbumNameExists), errors.Is(err, movie.ErrAlbumUpdateBlocked):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		case errors.Is(err, movie.ErrAlbumNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"album_id":   result.AlbumID,
+		"album_name": result.AlbumName,
+		"message":    "相册名称更新成功",
+	})
+}
+
 func normalizeTorrentAlbumsSortField(raw string) string {
 	switch strings.TrimSpace(raw) {
 	case "movie_name", "source_type", "publish_time", "created_on":
@@ -923,8 +988,12 @@ type batchTransferMovieAlbumItemReq struct {
 	TargetAlbumID int64   `json:"target_album_id"`
 }
 
+type updateMovieAlbumReq struct {
+	Name string `json:"name"`
+}
+
 func (h *ListPagesAPI) MovieAlbumItems(c *gin.Context) {
-	defer withFrontendPath(c, "/movie-albums")()
+	defer withFrontendPath(c, "/moviealbumlist")()
 
 	var q movieAlbumItemsListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -994,6 +1063,74 @@ func parseMovieAlbumID(raw string) (int64, error) {
 		return 0, movie.ErrMovieAlbumInvalidID
 	}
 	return id, nil
+}
+
+func (h *ListPagesAPI) UpdateMovieAlbum(c *gin.Context) {
+	albumID, err := parseMovieAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var req updateMovieAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	result, err := h.movieSvc.UpdateMovieAlbum(c.Request.Context(), albumID, req.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumInvalidID),
+			errors.Is(err, movie.ErrMovieAlbumNameEmpty),
+			errors.Is(err, movie.ErrMovieAlbumNameTooLong),
+			errors.Is(err, movie.ErrMovieAlbumNameExists),
+			errors.Is(err, movie.ErrMovieAlbumUpdateBlocked):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		case errors.Is(err, movie.ErrMovieAlbumNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"album_id":   result.ID,
+		"album_name": result.Name,
+		"message":    "电影相册更新成功",
+	})
+}
+
+func (h *ListPagesAPI) DeleteMovieAlbum(c *gin.Context) {
+	albumID, err := parseMovieAlbumID(c.Param("albumID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	result, err := h.movieSvc.DeleteMovieAlbum(c.Request.Context(), albumID)
+	if err != nil {
+		switch {
+		case errors.Is(err, movie.ErrMovieAlbumInvalidID),
+			errors.Is(err, movie.ErrMovieAlbumDeleteBlocked),
+			errors.Is(err, movie.ErrMovieAlbumNotEmpty):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		case errors.Is(err, movie.ErrMovieAlbumNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"album_id":   result.ID,
+		"album_name": result.Name,
+		"message":    "电影相册删除成功",
+	})
 }
 
 func (h *ListPagesAPI) RemoveMovieAlbumItem(c *gin.Context) {
@@ -1283,7 +1420,7 @@ type castListQuery struct {
 }
 
 func (h *ListPagesAPI) CastList(c *gin.Context) {
-	defer withFrontendPath(c, "/casts")()
+	defer withFrontendPath(c, "/castlist")()
 
 	var q castListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -1545,7 +1682,7 @@ type itemListQuery struct {
 }
 
 func (h *ListPagesAPI) EItemList(c *gin.Context) {
-	defer withFrontendPath(c, "/e-items")()
+	defer withFrontendPath(c, "/eitemlist")()
 
 	var q itemListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -1960,7 +2097,7 @@ type crawlRecordHeaderLinks struct {
 }
 
 func (h *ListPagesAPI) CrawlRecordList(c *gin.Context) {
-	defer withFrontendPath(c, "/crawl-records")()
+	defer withFrontendPath(c, "/crawlrecordlist")()
 
 	var q crawlRecordListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {
@@ -2005,7 +2142,7 @@ func (h *ListPagesAPI) CrawlRecordList(c *gin.Context) {
 		"Query":       q,
 		"TypeLinks":   buildCrawlRecordTypeLinks(c, q.Type),
 		"HeaderLinks": buildCrawlRecordHeaderLinks(c, q.Sort, q.Order),
-		"ClearHref":   "/crawl-records",
+		"ClearHref":   "/crawlrecordlist",
 	})
 }
 

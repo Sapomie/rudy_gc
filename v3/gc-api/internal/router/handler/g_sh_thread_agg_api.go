@@ -52,7 +52,7 @@ func NewSHThreadAggAPI(deps *dep.Dep) *SHThreadAggAPI {
 
 func (h *SHThreadAggAPI) BucketList(c *gin.Context) {
 	originalPath := c.Request.URL.Path
-	c.Request.URL.Path = "/bucketssh"
+	c.Request.URL.Path = "/shbucketlist"
 	defer func() { c.Request.URL.Path = originalPath }()
 	removeLegacySHBucketTimeQuery(c)
 
@@ -97,11 +97,10 @@ func (h *SHThreadAggAPI) BucketList(c *gin.Context) {
 		"Rows":        result.Rows,
 		"Total":       result.Total,
 		"PageInfo":    BuildPageInfo(c, result.Total, int64(page), int64(size), pageWindow),
-		"SortLinks":   buildSHBucketSortLinks(c, sortValue, dir),
 		"HeaderLinks": buildSHBucketHeaderLinks(c, sortValue, dir),
 		"LevelLinks":  buildSHBucketLevelLinks(c, level),
-		"ClearHref":   "/bucketssh",
-		"ListPath":    "/bucketssh",
+		"ClearHref":   "/shbucketlist",
+		"ListPath":    "/shbucketlist",
 		"Query": shBucketListQuery{
 			AggScope: aggScope, Level: level, TimeFrom: timeFromRaw, TimeTo: timeToRaw,
 			Sort: sortValue, Dir: dir, Page: int64(page), PageSize: int64(size),
@@ -165,21 +164,6 @@ func normalizeSHBucketDir(value string) string {
 		return "asc"
 	}
 	return "desc"
-}
-
-func buildSHBucketSortLinks(c *gin.Context, currentSort, currentDir string) []shBucketLink {
-	items := []struct{ label, value string }{
-		{"按时间桶", "scope"}, {"按更新时间", "updated"}, {"按帖子总数", "all"},
-		{"按已抓取", "fetched"}, {"按磁力", "magnet"}, {"按最新发帖", "latest_post"},
-	}
-	out := make([]shBucketLink, 0, len(items))
-	for _, item := range items {
-		out = append(out, shBucketLink{
-			Label: item.label, Href: buildSHBucketSortHref(c, item.value, currentSort, currentDir),
-			Active: currentSort == item.value, Desc: currentSort == item.value && currentDir == "desc",
-		})
-	}
-	return out
 }
 
 func buildSHBucketHeaderLinks(c *gin.Context, currentSort, currentDir string) shBucketHeaderLinks {

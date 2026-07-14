@@ -128,7 +128,7 @@ func buildMovieAlbumOptions(rows []*moviex.CMovieAlbum, selectedAlbumName string
 		if selected {
 			hasSelected = true
 		}
-		options = append(options, &MovieAlbumOption{ID: row.Id, Name: name, Selected: selected})
+		options = append(options, &MovieAlbumOption{ID: row.Id, Name: name, Selected: selected, Protected: IsProtectedMovieAlbumName(name)})
 	}
 	if !hasSelected && selectedAlbumName != "" {
 		options = append(options, &MovieAlbumOption{ID: 0, Name: selectedAlbumName, Selected: true})

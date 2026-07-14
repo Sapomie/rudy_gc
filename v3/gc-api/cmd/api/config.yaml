@@ -47,4 +47,9 @@ Media:
     #    - "/Volumes/movie-un/w1/"
     - "/Volumes/Expansion/w1"
 
+FC2Media:
+  RootDirs:
+    - "/Volumes/Expansion/f1"
+  LocalImageDir: "/Volumes/T7/data/fc2_capture/"
+
 DataSourceRemote: root:12345678@tcp(8.134.149.91:5306)/zero_gc_v2?charset=utf8mb4

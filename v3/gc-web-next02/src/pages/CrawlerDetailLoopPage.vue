@@ -13,7 +13,7 @@
                 <div class="next02-detail-loop-note">详情抓取循环运行状态与实时日志。</div>
               </div>
               <div class="next02-detail-loop-hero-actions">
-                <a href="/triggers/dailybest" class="btn btn-outline-primary btn-sm">回到 DailyBest</a>
+                <a href="/dailybestfetch" class="btn btn-outline-primary btn-sm">回到 DailyBest</a>
               </div>
             </section>
           </div>
@@ -34,11 +34,11 @@
                 <div class="detail-loop-status-grid">
                   <div class="overview-item">
                     <div class="label">启动时间</div>
-                    <div class="value detail-loop-text" id="startedAtText" :title="startedAt">{{ startedAt }}</div>
+                    <div class="value detail-loop-text" id="startedAtText" :title="startedAt"><ScDateTime :value="startedAtValue" unix seconds /></div>
                   </div>
                   <div class="overview-item">
                     <div class="label">最近日志</div>
-                    <div class="value detail-loop-text" id="lastEventAtText" :title="lastEventAt">{{ lastEventAt }}</div>
+                    <div class="value detail-loop-text" id="lastEventAtText" :title="lastEventAt"><ScDateTime :value="lastEventAtValue" unix seconds /></div>
                   </div>
                   <div class="overview-item">
                     <div class="label">缓冲数量</div>
@@ -109,6 +109,7 @@ import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import ErrorPanel from "@/components/ErrorPanel.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asRecord, pick, text } from "@/utils/format";
 
@@ -156,8 +157,10 @@ const title = computed(() => text(page.value, "Title") || "详情抓取循环");
 const running = computed(() => Boolean(pick(status.value, "running", "Running")));
 const runningText = computed(() => running.value ? "运行中" : "未启动");
 const runningBadgeClass = computed(() => running.value ? "badge-running" : "badge-stopped");
-const startedAt = computed(() => formatTimestamp(pick(status.value, "started_at", "StartedAt")));
-const lastEventAt = computed(() => formatTimestamp(pick(status.value, "last_event_at", "LastEventAt")));
+const startedAtValue = computed(() => pick(status.value, "started_at", "StartedAt"));
+const lastEventAtValue = computed(() => pick(status.value, "last_event_at", "LastEventAt"));
+const startedAt = computed(() => formatTimestamp(startedAtValue.value));
+const lastEventAt = computed(() => formatTimestamp(lastEventAtValue.value));
 const buffered = computed(() => text(status.value, "buffered", "Buffered") || "0");
 const pausedText = computed(() => Boolean(pick(status.value, "paused", "Paused")) ? "是" : "否");
 const lastLine = computed(() => text(status.value, "last_line", "LastLine"));

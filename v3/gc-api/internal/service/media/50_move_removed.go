@@ -78,7 +78,13 @@ func (s *Service) moveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 	if err := s.deps.WMediaModel.Update(ctx, updated); err != nil {
 		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
 	}
+	if err := s.refreshSHMagnetDownloadStates(ctx, updated.SourceTorrentHash); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
 	if err := s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
+	if err := s.syncJAVScMediaSnapshot(ctx, updated.MovieJavId); err != nil {
 		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
 	}
 
@@ -128,7 +134,7 @@ func buildRemovedDir(rootDir string) string {
 	if rootDir == "" {
 		return ""
 	}
-	return filepath.Join(rootDir, "001_process", "005_removed")
+	return filepath.Join(rootDir, processDirName, removedDirName)
 }
 
 func nextAvailableTargetPath(destDir, fileName string) (string, error) {

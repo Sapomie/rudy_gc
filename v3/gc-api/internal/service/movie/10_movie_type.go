@@ -479,7 +479,7 @@ func (s *Service) findScInfo(ctx context.Context, movieJavId string) ([]*types.M
 		item := &types.MovieScEvent{
 			ScName: gl.ScName,
 			IsCome: gl.IsCome == consts.GListIsCome,
-			Href:   "/sc-events/" + gl.ScName,
+			Href:   "/scevent/" + url.PathEscape(gl.ScName),
 		}
 		if ev := scMap[gl.ScName]; ev != nil {
 			item.ScTime = ev.ScTime

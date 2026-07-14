@@ -87,7 +87,7 @@ type dSeedListRow struct {
 }
 
 func (h *DSeedAPI) List(c *gin.Context) {
-	defer withFrontendPath(c, "/d-seeds")()
+	defer withFrontendPath(c, "/seedlist")()
 
 	var q dSeedListQuery
 	if err := c.ShouldBindQuery(&q); err != nil {

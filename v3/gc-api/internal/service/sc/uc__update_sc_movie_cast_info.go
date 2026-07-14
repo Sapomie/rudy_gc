@@ -8,6 +8,7 @@ import (
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/model/modelx/moviex"
 	"rudy_gc/internal/taskctx"
+	"rudy_gc/internal/types"
 )
 
 type movieScInfo struct {
@@ -43,6 +44,22 @@ func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map
 	return nil
 }
 
+func (l *ScService) AddFC2MovieScInfo(ctx context.Context, movieIDMap map[int64]struct{}) error {
+	movieIDs := make([]int64, 0, len(movieIDMap))
+	for movieID := range movieIDMap {
+		if movieID > 0 {
+			movieIDs = append(movieIDs, movieID)
+		}
+	}
+	if len(movieIDs) == 0 {
+		return nil
+	}
+	if err := l.rebuildFC2MovieScStatsByIDs(ctx, movieIDs); err != nil {
+		return fmt.Errorf("rebuild fc2 movie sc stats: %w", err)
+	}
+	return nil
+}
+
 func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs []string) error {
 	movieJavIDs = uniqueStrings(movieJavIDs)
 	if len(movieJavIDs) == 0 {
@@ -55,10 +72,7 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 	}
 
 	for _, movieJavID := range movieJavIDs {
-		info, ok := movieAgg[movieJavID]
-		if !ok {
-			continue
-		}
+		info := movieAgg[movieJavID]
 
 		movieRow, err := l.movieFindOneByJavID(ctx, movieJavID)
 		if err != nil {
@@ -67,7 +81,7 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 		releasingDate := movieRow.ReleasingDate
 		mediaBirthTime := int64(0)
 		mediaRow, err := l.wMediaFindOneByMovieJavID(ctx, movieJavID)
-		if err == nil && mediaRow != nil {
+		if err == nil && mediaRow != nil && mediaRow.IsRemoved != int64(consts.FilmIsRemoved) {
 			mediaBirthTime = mediaRow.BirthTime
 		} else if err != nil && !errors.Is(err, moviex.ErrNotFound) {
 			return fmt.Errorf("WMediaModel.FindOneByMovieJavId %s: %w", movieJavID, err)
@@ -85,6 +99,50 @@ func (l *ScService) rebuildMovieScStatsByJavIDs(ctx context.Context, movieJavIDs
 		}
 	}
 
+	return nil
+}
+
+func (l *ScService) rebuildFC2MovieScStatsByIDs(ctx context.Context, movieIDs []int64) error {
+	movieIDs = uniqueFC2MovieIDs(movieIDs)
+	if len(movieIDs) == 0 {
+		return nil
+	}
+	movieAgg, err := l.buildFC2MovieScInfo(ctx, movieIDs)
+	if err != nil {
+		return err
+	}
+	movieRows, err := l.deps.FC2MovieModel.ListByIDs(ctx, movieIDs)
+	if err != nil {
+		return fmt.Errorf("FC2MovieModel.ListByIDs: %w", err)
+	}
+	mediaRows, err := l.deps.FC2MediaModel.ListByMovieIDs(ctx, movieIDs)
+	if err != nil {
+		return fmt.Errorf("FC2MediaModel.ListByMovieIDs: %w", err)
+	}
+	mediaBirthByMovieID := make(map[int64]int64, len(mediaRows))
+	for _, row := range mediaRows {
+		if row == nil || row.FC2MovieID <= 0 {
+			continue
+		}
+		if row.IsRemoved != int64(consts.FilmIsRemoved) {
+			mediaBirthByMovieID[row.FC2MovieID] = row.BirthTime
+		}
+	}
+	movieByID := make(map[int64]*moviex.FC2Movie, len(movieRows))
+	for _, row := range movieRows {
+		if row != nil && row.ID > 0 {
+			movieByID[row.ID] = row
+		}
+	}
+	for _, movieID := range movieIDs {
+		movie := movieByID[movieID]
+		if movie == nil {
+			continue
+		}
+		if _, _, err := l.fc2ScStatUpsert(ctx, movie, mediaBirthByMovieID[movieID], movieAgg[movieID]); err != nil {
+			return fmt.Errorf("FC2ScStat.Upsert %d: %w", movieID, err)
+		}
+	}
 	return nil
 }
 
@@ -148,6 +206,9 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 		return result, nil
 	}
 
+	for _, movieJavID := range movieJavIDs {
+		result[movieJavID] = movieScInfo{}
+	}
 	gls, err := l.glFindAllByMovieJavIDs(ctx, movieJavIDs)
 	if err != nil {
 		return nil, fmt.Errorf("find g_list by movies: %w", err)
@@ -198,6 +259,61 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 	}
 
 	return result, nil
+}
+
+func (l *ScService) buildFC2MovieScInfo(ctx context.Context, movieIDs []int64) (map[int64]movieScInfo, error) {
+	movieIDs = uniqueFC2MovieIDs(movieIDs)
+	if len(movieIDs) == 0 {
+		return map[int64]movieScInfo{}, nil
+	}
+	gls, err := l.glFindAllByFC2MovieIDs(ctx, movieIDs)
+	if err != nil {
+		return nil, fmt.Errorf("find g_list by fc2 movies: %w", err)
+	}
+	scNameSet := make(map[string]struct{}, len(gls))
+	for _, gl := range gls {
+		if gl == nil || gl.FC2MovieId <= 0 || gl.ScName == "" {
+			continue
+		}
+		scNameSet[gl.ScName] = struct{}{}
+	}
+	scNames := make([]string, 0, len(scNameSet))
+	for scName := range scNameSet {
+		scNames = append(scNames, scName)
+	}
+	scTimeMap, err := l.loadScTimes(ctx, scNames)
+	if err != nil {
+		return nil, err
+	}
+	return aggregateFC2MovieScInfo(movieIDs, gls, scTimeMap), nil
+}
+
+func aggregateFC2MovieScInfo(movieIDs []int64, gls []*types.GList, scTimeMap map[string]int64) map[int64]movieScInfo {
+	result := make(map[int64]movieScInfo)
+	for _, movieID := range uniqueFC2MovieIDs(movieIDs) {
+		result[movieID] = movieScInfo{}
+	}
+	for _, gl := range gls {
+		if gl == nil || gl.FC2MovieId <= 0 || gl.ScName == "" {
+			continue
+		}
+		info := result[gl.FC2MovieId]
+		info.ScEventTimes++
+		if scTime := scTimeMap[gl.ScName]; scTime > info.LastScEventTime {
+			info.LastScEventTime = scTime
+		}
+		if gl.IsSc == consts.GListIsSc {
+			info.ScTimes++
+			if gl.IsCome == consts.GListIsCome {
+				info.ComeTimes++
+			}
+			if scTime := scTimeMap[gl.ScName]; scTime > info.LastScTime {
+				info.LastScTime = scTime
+			}
+		}
+		result[gl.FC2MovieId] = info
+	}
+	return result
 }
 
 func (l *ScService) loadScTimes(ctx context.Context, names []string) (map[string]int64, error) {
@@ -270,11 +386,32 @@ func uniqueStrings(items []string) []string {
 	return out
 }
 
+func uniqueFC2MovieIDs(items []int64) []int64 {
+	seen := make(map[int64]struct{}, len(items))
+	out := make([]int64, 0, len(items))
+	for _, item := range items {
+		if item <= 0 {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		out = append(out, item)
+	}
+	return out
+}
+
 func (l *ScService) RebuildAllScStats(ctx context.Context) error {
-	movieJavIDs, err := l.glListDistinctMovieJavIDs(ctx)
+	movieJavIDs, err := l.glListDistinctAllMovieJavIDs(ctx)
 	if err != nil {
 		return fmt.Errorf("GListRepo.ListDistinctMovieJavIds: %w", err)
 	}
+	existingMovieJavIDs, err := l.deps.GScStatModel.ListAllMovieJavIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("GScStatModel.ListAllMovieJavIDs: %w", err)
+	}
+	movieJavIDs = uniqueStrings(append(movieJavIDs, existingMovieJavIDs...))
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:   "sc_movie_stats_begin",
 		Message: fmt.Sprintf("开始回填影片 SC 统计，影片数=%d", len(movieJavIDs)),
@@ -288,6 +425,29 @@ func (l *ScService) RebuildAllScStats(ctx context.Context) error {
 		Message:      "影片 SC 统计回填完成",
 		HandledCount: len(movieJavIDs),
 		SuccessCount: len(movieJavIDs),
+	})
+
+	fc2MovieIDs, err := l.glListDistinctAllFC2MovieIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("GListRepo.ListDistinctFC2MovieIDs: %w", err)
+	}
+	existingFC2MovieIDs, err := l.deps.FC2ScStatModel.ListAllMovieIDs(ctx)
+	if err != nil {
+		return fmt.Errorf("FC2ScStatModel.ListAllMovieIDs: %w", err)
+	}
+	fc2MovieIDs = uniqueFC2MovieIDs(append(fc2MovieIDs, existingFC2MovieIDs...))
+	taskctx.ReportProgress(ctx, taskctx.Progress{
+		Stage:   "sc_fc2_movie_stats_begin",
+		Message: fmt.Sprintf("开始回填 FC2 影片 SC 统计，影片数=%d", len(fc2MovieIDs)),
+	})
+	if err := l.rebuildFC2MovieScStatsByIDs(ctx, fc2MovieIDs); err != nil {
+		return fmt.Errorf("rebuild fc2 movie sc stats: %w", err)
+	}
+	taskctx.ReportProgress(ctx, taskctx.Progress{
+		Stage:        "sc_fc2_movie_stats_done",
+		Message:      "FC2 影片 SC 统计回填完成",
+		HandledCount: len(fc2MovieIDs),
+		SuccessCount: len(fc2MovieIDs),
 	})
 
 	castIDs, err := l.castListAllIDs(ctx)

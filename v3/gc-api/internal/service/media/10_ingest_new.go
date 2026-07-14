@@ -13,6 +13,8 @@ const (
 	tmpDirName           = "002_tmp"
 	failedDirName        = "003_failed"
 	rollbackDirName      = "004_rollback"
+	removedDirName       = "005_removed"
+	waitForMovieDirName  = "006_wait_for_movie"
 	mediaDirName         = "media"
 	watchedDirName       = "watched"
 	maxFilesPerLeafDir   = 18

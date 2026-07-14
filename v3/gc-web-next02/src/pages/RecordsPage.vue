@@ -15,7 +15,7 @@
         <div class="card next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="card-body">
             <div class="next02-sc-panel-head">
-              <form class="sc-event-filter-form crawl-record-filter-form" method="get" action="/crawl-records">
+              <form class="sc-event-filter-form crawl-record-filter-form" method="get" action="/crawlrecordlist">
                 <input type="hidden" name="sort" :value="queryValue('Sort')">
                 <input type="hidden" name="order" :value="queryValue('Order')">
                 <input id="crawlRecordTypeInput" type="hidden" name="type" :value="queryValue('Type')">
@@ -38,11 +38,7 @@
                 <div class="crawl-record-filter-cluster crawl-record-filter-options">
                   <label class="sc-event-filter-field crawl-record-page-size-field" for="crawlRecordPageSize">
                     <span>每页</span>
-                    <select id="crawlRecordPageSize" class="form-select" name="ps">
-                      <option v-for="size in pageSizeOptions" :key="size" :value="size" :selected="Number(queryValue('PageSize')) === size">
-                        {{ size }}
-                      </option>
-                    </select>
+                    <input id="crawlRecordPageSize" class="form-control" type="number" step="1" name="ps" :value="queryValue('PageSize') || '20'">
                   </label>
 
                   <div class="crawl-record-filter-actions">
@@ -126,8 +122,6 @@ const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
-const pageSizeOptions = [20, 50, 100, 200];
-
 watch(() => route.fullPath, load, { immediate: true });
 
 async function load() {
@@ -152,7 +146,7 @@ const typeLinks = computed(() => asArray<AnyRecord>(pick(payload.value, "TypeLin
 const headerLinks = computed(() => asRecord(pick(payload.value, "HeaderLinks")));
 const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
 const pageLinks = computed(() => asArray<AnyRecord>(pageInfo.value.Links));
-const clearHref = computed(() => normalizeHref(text(payload.value, "ClearHref") || "/crawl-records"));
+const clearHref = computed(() => normalizeHref(text(payload.value, "ClearHref") || "/crawlrecordlist"));
 
 function queryValue(key: string): string {
   return text(query.value, key);

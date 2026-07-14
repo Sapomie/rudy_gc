@@ -11,8 +11,8 @@
             <p>扫描 SC 根目录，核对事件和影片状态，再提交后台任务。</p>
           </div>
           <div class="next02-sc-hero-actions">
-            <a href="/triggers/backfill" class="btn btn-outline-secondary">回填任务台</a>
-            <a href="/crawler/tasks" class="btn btn-outline-primary">查看任务列表</a>
+            <a href="/databackfill" class="btn btn-outline-secondary">回填任务台</a>
+            <a href="/crawltasklist" class="btn btn-outline-primary">查看任务列表</a>
           </div>
         </section>
 
@@ -70,14 +70,14 @@
                 </div>
                 <div class="next02-sc-review-field is-come-movie">
                   <label class="form-label">Come Movie</label>
-                  <select class="form-select" id="scPreviewComeMovie" v-model="form.comeMovieJavId">
+                  <select class="form-select" id="scPreviewComeMovie" v-model="form.comeMovieRef">
                     <option value="">可为空</option>
-                    <option v-for="movie in selectedScMovies" :key="movie.movieJavId" :value="movie.movieJavId">{{ movie.movieName }}</option>
+                    <option v-for="movie in selectedScMovies" :key="movieRef(movie)" :value="movieRef(movie)">{{ movie.movieName }}{{ movie.title ? ` · ${movie.title}` : '' }}</option>
                   </select>
                 </div>
                 <div class="next02-sc-review-field is-movie-cast">
                   <label class="form-label">Movie Cast</label>
-                  <select class="form-select" id="scPreviewMovieCast" v-model="form.movieCast">
+                  <select class="form-select" id="scPreviewMovieCast" v-model="form.movieCast" :disabled="comeMovieIsFC2">
                     <option value="">可为空</option>
                     <option v-for="cast in comeMovieCasts" :key="cast" :value="cast">{{ cast }}</option>
                   </select>
@@ -88,7 +88,7 @@
                 </div>
                 <div class="next02-sc-review-field is-duration">
                   <label class="form-label">时长(分钟)</label>
-                  <input type="number" class="form-control" id="scPreviewDuration" v-model="form.duration" placeholder="分钟">
+                  <input type="number" class="form-control" id="scPreviewDuration" v-model.number="form.duration" placeholder="分钟">
                 </div>
                 <div class="next02-sc-review-field is-fg">
                   <label class="form-label">FG</label>
@@ -106,7 +106,7 @@
                   <label class="form-label">影片明细</label>
                   <div class="sc-preview-movie-grid" id="scPreviewMovieTableBody">
                     <div v-if="!previewMovies.length" class="text-muted">暂无预览数据</div>
-                    <div v-for="(movie, index) in previewMovies" :key="movie.movieJavId || index">
+                    <div v-for="(movie, index) in previewMovies" :key="movieRef(movie) || index">
                       <div class="sc-preview-movie-card">
                         <a v-if="movie.movieHref" :href="movie.movieHref">
                           <img v-if="movie.jacketImg" class="sc-preview-movie-poster" :src="movie.jacketImg" :alt="`${movie.movieName} 海报`" loading="lazy" decoding="async">
@@ -118,6 +118,8 @@
                         </div>
                         <a v-if="movie.movieHref" :href="movie.movieHref" class="sc-preview-movie-link fw-semibold">{{ movie.movieName }}</a>
                         <div v-else class="sc-preview-movie-link fw-semibold">{{ movie.movieName }}</div>
+                        <span class="badge rounded-pill mt-1" :class="movie.movieType === MOVIE_TYPE_FC2 ? 'text-bg-warning' : 'text-bg-secondary'">{{ movie.movieType === MOVIE_TYPE_FC2 ? 'FC2' : 'JAV' }}</span>
+                        <div v-if="movie.title" class="small text-muted mt-1">{{ movie.title }}</div>
                         <div class="sc-preview-is-sc-buttons">
                           <div>
                             <input
@@ -172,10 +174,15 @@ import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, pick, text } from "@/utils/format";
+import { normalizeScDuration, type ScDurationInput } from "@/utils/scDuration";
 
 type PreviewMovie = {
+  movieType: string;
   movieName: string;
   movieJavId: string;
+  fc2MovieId: number;
+  movieKey: string;
+  title: string;
   movieHref: string;
   jacketImg: string;
   casts: string[];
@@ -184,6 +191,8 @@ type PreviewMovie = {
 
 const GLIST_IS_NOT_SC = 1;
 const GLIST_IS_SC = 2;
+const MOVIE_TYPE_JAV = "jav";
+const MOVIE_TYPE_FC2 = "fc2ppv";
 
 const route = useRoute();
 const payload = ref<AnyRecord>({});
@@ -197,8 +206,16 @@ const previewLoading = ref(false);
 const previewVisible = ref(false);
 const previewData = ref<AnyRecord>({});
 const previewMovies = ref<PreviewMovie[]>([]);
-const form = reactive({
-  comeMovieJavId: "",
+const form = reactive<{
+  comeMovieRef: string;
+  movieCast: string;
+  kind: string;
+  duration: ScDurationInput;
+  fg: string;
+  vessel: string;
+  remarks: string;
+}>({
+  comeMovieRef: "",
   movieCast: "",
   kind: "",
   duration: "",
@@ -208,7 +225,7 @@ const form = reactive({
 });
 
 watch(() => route.fullPath, load, { immediate: true });
-watch(() => form.comeMovieJavId, () => {
+watch(() => form.comeMovieRef, () => {
   form.movieCast = "";
 });
 
@@ -234,13 +251,19 @@ const previewImageText = computed(() => {
   return pick(previewData.value, "imageFound") ? (text(previewData.value, "imageName") || "已发现图片") : "无图片";
 });
 const selectedScMovies = computed(() => previewMovies.value.filter((movie) => movie.isSc === GLIST_IS_SC));
+const selectedComeMovie = computed(() => previewMovies.value.find((item) => movieRef(item) === form.comeMovieRef));
+const comeMovieIsFC2 = computed(() => selectedComeMovie.value?.movieType === MOVIE_TYPE_FC2);
 const comeMovieCasts = computed(() => {
-  const movie = previewMovies.value.find((item) => item.movieJavId === form.comeMovieJavId);
-  return movie ? movie.casts : [];
+  return selectedComeMovie.value?.casts || [];
+});
+watch(selectedScMovies, (movies) => {
+  if (form.comeMovieRef && !movies.some((movie) => movieRef(movie) === form.comeMovieRef)) {
+    form.comeMovieRef = "";
+  }
 });
 
 function resetForm() {
-  form.comeMovieJavId = "";
+  form.comeMovieRef = "";
   form.movieCast = "";
   form.kind = "";
   form.duration = "";
@@ -251,13 +274,23 @@ function resetForm() {
 
 function normalizeMovies(raw: unknown): PreviewMovie[] {
   return asArray<AnyRecord>(raw).map((movie) => ({
+    movieType: text(movie, "movieType") || (text(movie, "movieJavId") ? MOVIE_TYPE_JAV : MOVIE_TYPE_FC2),
     movieName: text(movie, "movieName"),
     movieJavId: text(movie, "movieJavId"),
+    fc2MovieId: Number(pick(movie, "fc2MovieId") || 0),
+    movieKey: text(movie, "movieKey"),
+    title: text(movie, "title"),
     movieHref: text(movie, "movieHref"),
     jacketImg: text(movie, "jacketImg"),
     casts: asArray<string>(pick(movie, "casts")),
     isSc: GLIST_IS_SC
   }));
+}
+
+function movieRef(movie: PreviewMovie): string {
+  if (movie.movieType === MOVIE_TYPE_FC2 && movie.fc2MovieId > 0) return `${MOVIE_TYPE_FC2}:${movie.fc2MovieId}`;
+  if (movie.movieType === MOVIE_TYPE_JAV && movie.movieJavId) return `${MOVIE_TYPE_JAV}:${movie.movieJavId}`;
+  return "";
 }
 
 async function loadPreview() {
@@ -279,21 +312,21 @@ async function loadPreview() {
 }
 
 function buildPayload() {
-  const rawDuration = form.duration.trim();
-  const duration = rawDuration ? Number.parseInt(rawDuration, 10) : 0;
-  if (!Number.isFinite(duration)) {
-    throw new Error("时长(分钟)必须是数字");
-  }
+  const comeMovie = previewMovies.value.find((movie) => movieRef(movie) === form.comeMovieRef);
   return {
-    comeMovieJavId: form.comeMovieJavId.trim(),
+    comeMovieType: comeMovie?.movieType || "",
+    comeMovieJavId: comeMovie?.movieJavId || "",
+    comeFC2MovieId: comeMovie?.fc2MovieId || 0,
     movieCast: form.movieCast.trim(),
     kind: form.kind.trim(),
-    duration,
+    duration: normalizeScDuration(form.duration),
     fg: form.fg.trim(),
     vessel: form.vessel.trim(),
     remarks: form.remarks.trim(),
     movies: previewMovies.value.map((movie) => ({
+      movieType: movie.movieType,
       movieJavId: movie.movieJavId,
+      fc2MovieId: movie.fc2MovieId,
       isSc: movie.isSc === GLIST_IS_SC ? GLIST_IS_SC : GLIST_IS_NOT_SC
     }))
   };
@@ -322,7 +355,7 @@ async function submitAdd() {
     const jobID = text(data, "job_id", "JobID");
     if (jobID) {
       window.setTimeout(() => {
-        window.location.href = `/crawler/tasks?job_id=${encodeURIComponent(jobID)}`;
+        window.location.href = `/crawltasklist?job_id=${encodeURIComponent(jobID)}`;
       }, 300);
     }
   } catch (err) {

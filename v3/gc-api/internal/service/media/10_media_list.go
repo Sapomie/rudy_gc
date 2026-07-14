@@ -26,17 +26,12 @@ func (s *Service) ListMediaPageWithFilter(ctx context.Context, page, pageSize in
 	}
 
 	offset := (page - 1) * pageSize
-	total, err := s.deps.WMediaModel.CountNativeMedia(ctx, filter)
+	rows, total, err := s.deps.WMediaModel.ListNativeMediaPageWithTotal(ctx, offset, pageSize, orderBy, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 	if total == 0 {
 		return []*types.MediaListItem{}, 0, nil
-	}
-
-	rows, err := s.deps.WMediaModel.ListNativeMediaPage(ctx, offset, pageSize, orderBy, filter)
-	if err != nil {
-		return nil, 0, err
 	}
 
 	items := make([]*types.MediaListItem, 0, len(rows))

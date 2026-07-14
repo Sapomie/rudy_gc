@@ -210,6 +210,9 @@ func (s *Service) moveMediaRowToDir(ctx context.Context, row *moviex.WMedia, roo
 	if err := s.deps.WMediaModel.Update(ctx, updated); err != nil {
 		return nil, err
 	}
+	if err := s.syncJAVScMediaSnapshot(ctx, updated.MovieJavId); err != nil {
+		return nil, err
+	}
 	return updated, nil
 }
 

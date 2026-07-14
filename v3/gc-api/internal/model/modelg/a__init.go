@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"rudy_gc/internal/consts"
+	fc2domain "rudy_gc/internal/domain/fc2"
+	moviedomain "rudy_gc/internal/domain/movie"
 
 	"gorm.io/gorm"
 )
@@ -109,6 +111,12 @@ func AutoMigrate(db *gorm.DB) error {
 		new(SehuatangMagnet),
 		new(ShForum),
 		new(SehuatangThread),
+		new(ShMagnet),
+		new(FC2Movie),
+		new(FC2Folder),
+		new(FC2Media),
+		new(FC2MediaImage),
+		new(FC2ScStat),
 		new(ShThreadBucketStat),
 		new(SehuatangFetchRun),
 		new(SehuatangFetchItem),
@@ -120,6 +128,9 @@ func AutoMigrate(db *gorm.DB) error {
 	); err != nil {
 		return err
 	}
+	if err := migrateGListMovieIdentity(db); err != nil {
+		return err
+	}
 	if err := ensureSHForums(db); err != nil {
 		return err
 	}
@@ -127,6 +138,33 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 	if err := backfillSehuatangThreadFirstSeenTime(db); err != nil {
+		return err
+	}
+	if err := backfillSehuatangThreadMovieFields(db); err != nil {
+		return err
+	}
+	if err := backfillSehuatangThreadMovieTypes(db); err != nil {
+		return err
+	}
+	if err := backfillSHMagnets(db); err != nil {
+		return err
+	}
+	if err := migrateOptimizeSHMagnetColumns(db); err != nil {
+		return err
+	}
+	if err := migrateSHMagnetDownloadState(db); err != nil {
+		return err
+	}
+	if err := migrateFC2Identity(db); err != nil {
+		return err
+	}
+	if err := backfillFC2Movies(db); err != nil {
+		return err
+	}
+	if err := backfillFC2MediaSortSnapshots(db); err != nil {
+		return err
+	}
+	if err := backfillFC2MovieCoverImages(db); err != nil {
 		return err
 	}
 	if err := migrateAddAmCastOwnedWMediaNumber(db); err != nil {
@@ -157,6 +195,9 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 	if err := migrateWFolderSourceType(db); err != nil {
+		return err
+	}
+	if err := migrateFC2FolderSourceType(db); err != nil {
 		return err
 	}
 	if err := migrateDSeedMovieStatsColumns(db); err != nil {
@@ -200,6 +241,318 @@ func backfillSehuatangThreadFirstSeenTime(db *gorm.DB) error {
 UPDATE sh_thread
 SET first_seen_time = created_on
 WHERE first_seen_time = 0`).Error
+}
+
+func backfillSehuatangThreadMovieFields(db *gorm.DB) error {
+	type threadRow struct {
+		ID          int64  `gorm:"column:id"`
+		ThreadTitle string `gorm:"column:thread_title"`
+		MovieJavID  string `gorm:"column:movie_jav_id"`
+		MovieName   string `gorm:"column:movie_name"`
+	}
+	type movieRow struct {
+		JavID string `gorm:"column:jav_id"`
+	}
+
+	var rows []threadRow
+	if err := db.Table("sh_thread").
+		Select("id", "thread_title", "movie_jav_id", "movie_name").
+		Where("TRIM(COALESCE(movie_name, '')) = '' OR TRIM(COALESCE(movie_jav_id, '')) = ''").
+		Find(&rows).Error; err != nil {
+		return err
+	}
+
+	for _, row := range rows {
+		movieName := strings.TrimSpace(row.MovieName)
+		if movieName == "" {
+			movieName = moviedomain.ParseSehuatangMovieName(row.ThreadTitle)
+		}
+		movieJavID := strings.TrimSpace(row.MovieJavID)
+		if movieJavID == "" && movieName != "" {
+			var movies []movieRow
+			if err := db.Table("a_movie").
+				Distinct("jav_id").
+				Where("name = ? AND TRIM(COALESCE(jav_id, '')) <> ''", movieName).
+				Find(&movies).Error; err != nil {
+				return err
+			}
+			if len(movies) == 1 {
+				movieJavID = strings.TrimSpace(movies[0].JavID)
+			}
+		}
+
+		updates := make(map[string]any, 2)
+		if movieName != strings.TrimSpace(row.MovieName) {
+			updates["movie_name"] = movieName
+		}
+		if movieJavID != strings.TrimSpace(row.MovieJavID) {
+			updates["movie_jav_id"] = movieJavID
+		}
+		if len(updates) == 0 {
+			continue
+		}
+		if err := db.Table("sh_thread").Where("id = ?", row.ID).Updates(updates).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func backfillSehuatangThreadMovieTypes(db *gorm.DB) error {
+	fc2Pattern := `^FC2PPV-[[:space:]]*[0-9]+$`
+	return db.Exec(`
+UPDATE sh_thread
+SET movie_type = CASE
+	WHEN UPPER(TRIM(COALESCE(movie_name, ''))) REGEXP ? THEN ?
+	WHEN TRIM(COALESCE(movie_jav_id, '')) <> '' THEN ?
+	ELSE ''
+END
+WHERE movie_type <> CASE
+	WHEN UPPER(TRIM(COALESCE(movie_name, ''))) REGEXP ? THEN ?
+	WHEN TRIM(COALESCE(movie_jav_id, '')) <> '' THEN ?
+	ELSE ''
+END`,
+		fc2Pattern,
+		moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		moviedomain.SehuatangThreadMovieTypeJAV,
+		fc2Pattern,
+		moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		moviedomain.SehuatangThreadMovieTypeJAV,
+	).Error
+}
+
+func backfillFC2Movies(db *gorm.DB) error {
+	type threadRow struct {
+		ID             int64   `gorm:"column:id"`
+		FC2MovieID     int64   `gorm:"column:fc2_movie_id"`
+		MovieName      string  `gorm:"column:movie_name"`
+		RawContentText string  `gorm:"column:raw_content_text"`
+		PostTime       int64   `gorm:"column:post_time"`
+		FC2MetaJSON    *string `gorm:"column:fc2_meta_json"`
+	}
+	type parsedRow struct {
+		thread threadRow
+		ppvNo  int64
+		meta   fc2domain.Meta
+	}
+
+	var rows []threadRow
+	if err := db.Table("sh_thread").
+		Select("id", "fc2_movie_id", "movie_name", "raw_content_text", "post_time", "fc2_meta_json").
+		Where("movie_type = ? AND detail_status = ? AND TRIM(COALESCE(raw_content_text, '')) <> ''", moviedomain.SehuatangThreadMovieTypeFC2PPV, "fetched").
+		Order("post_time DESC, id DESC").
+		Find(&rows).Error; err != nil {
+		return err
+	}
+
+	grouped := make(map[string][]parsedRow)
+	for _, row := range rows {
+		code, ppvNo, ok := fc2domain.NormalizeCode(row.MovieName)
+		if !ok {
+			continue
+		}
+		meta, err := fc2domain.Parse(row.RawContentText)
+		if err != nil {
+			return fmt.Errorf("解析 FC2 帖子失败 thread_id=%d: %w", row.ID, err)
+		}
+		metaJSON, err := fc2domain.Marshal(meta)
+		if err != nil {
+			return fmt.Errorf("序列化 FC2 帖子失败 thread_id=%d: %w", row.ID, err)
+		}
+		if row.FC2MetaJSON == nil || *row.FC2MetaJSON != metaJSON {
+			if err := db.Table("sh_thread").Where("id = ?", row.ID).Update("fc2_meta_json", metaJSON).Error; err != nil {
+				return err
+			}
+		}
+		grouped[code] = append(grouped[code], parsedRow{thread: row, ppvNo: ppvNo, meta: meta})
+	}
+
+	now := time.Now().Unix()
+	for code, candidates := range grouped {
+		if len(candidates) == 0 {
+			continue
+		}
+
+		var movies []FC2Movie
+		if err := db.Where("code = ?", code).Order("code_seq ASC, id ASC").Find(&movies).Error; err != nil {
+			return err
+		}
+		moviesByID := make(map[int64]*FC2Movie, len(movies))
+		moviesByMeta := make(map[string]*FC2Movie, len(movies))
+		nextSeq := int64(1)
+		baseCreatedOn := now
+		for index := range movies {
+			movie := &movies[index]
+			moviesByID[movie.ID] = movie
+			moviesByMeta[fc2MovieMetaIdentity(movie.Title, movie.PerformerText, movie.MaskType)] = movie
+			if movie.CodeSeq >= nextSeq {
+				nextSeq = movie.CodeSeq + 1
+			}
+			if movie.CreatedOn > 0 && movie.CreatedOn < baseCreatedOn {
+				baseCreatedOn = movie.CreatedOn
+			}
+		}
+
+		assigned := make(map[int64][]parsedRow)
+		for _, candidate := range candidates {
+			movie := moviesByID[candidate.thread.FC2MovieID]
+			identity := fc2MovieMetaIdentity(candidate.meta.Title, candidate.meta.PerformerText, candidate.meta.MaskType)
+			if movie == nil {
+				movie = moviesByMeta[identity]
+			}
+			if movie == nil {
+				movie = &FC2Movie{
+					FC2Key:           fc2domain.BuildKey(code, nextSeq),
+					Code:             code,
+					CodeSeq:          nextSeq,
+					PPVNo:            candidate.ppvNo,
+					Title:            candidate.meta.Title,
+					PerformerText:    candidate.meta.PerformerText,
+					MaskType:         candidate.meta.MaskType,
+					MetadataThreadID: candidate.thread.ID,
+					PostTime:         candidate.thread.PostTime,
+					DataStatus:       "ready",
+					CreatedOn:        baseCreatedOn,
+					UpdatedOn:        now,
+				}
+				if err := db.Create(movie).Error; err != nil {
+					return err
+				}
+				moviesByID[movie.ID] = movie
+				moviesByMeta[identity] = movie
+				nextSeq++
+			}
+			if candidate.thread.FC2MovieID != movie.ID {
+				if err := db.Table("sh_thread").Where("id = ?", candidate.thread.ID).Update("fc2_movie_id", movie.ID).Error; err != nil {
+					return err
+				}
+			}
+			assigned[movie.ID] = append(assigned[movie.ID], candidate)
+		}
+
+		for movieID, movieRows := range assigned {
+			movie := moviesByID[movieID]
+			if movie == nil || len(movieRows) == 0 {
+				continue
+			}
+			selected := movieRows[0]
+			status := "ready"
+			for _, candidate := range movieRows[1:] {
+				if fc2MovieMetaIdentity(candidate.meta.Title, candidate.meta.PerformerText, candidate.meta.MaskType) !=
+					fc2MovieMetaIdentity(selected.meta.Title, selected.meta.PerformerText, selected.meta.MaskType) {
+					status = "conflict"
+					break
+				}
+			}
+			if err := db.Model(movie).Updates(map[string]any{
+				"fc2_key": fc2domain.BuildKey(code, movie.CodeSeq), "ppv_no": selected.ppvNo,
+				"title": selected.meta.Title, "performer_text": selected.meta.PerformerText,
+				"mask_type": selected.meta.MaskType, "metadata_thread_id": selected.thread.ID,
+				"post_time": selected.thread.PostTime, "data_status": status, "updated_on": now,
+			}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func fc2MovieMetaIdentity(title, performerText, maskType string) string {
+	return strings.TrimSpace(title) + "\x1f" + strings.TrimSpace(performerText) + "\x1f" + strings.TrimSpace(maskType)
+}
+
+func migrateFC2Identity(db *gorm.DB) error {
+	if err := db.Exec("UPDATE `fc2_movie` SET `code_seq` = 1 WHERE `code_seq` <= 0").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("UPDATE `fc2_movie` SET `fc2_key` = CONCAT(`code`, '-', `code_seq`) WHERE TRIM(COALESCE(`fc2_key`, '')) = ''").Error; err != nil {
+		return err
+	}
+	for _, indexName := range []string{"uk_fc2_movie_code", "uk_fc2_movie_ppv_no"} {
+		hasOldIndex, err := hasIndex(db, "fc2_movie", indexName)
+		if err != nil {
+			return err
+		}
+		if hasOldIndex {
+			if err := db.Exec(fmt.Sprintf("ALTER TABLE `fc2_movie` DROP INDEX `%s`", indexName)).Error; err != nil {
+				return err
+			}
+		}
+	}
+	for _, index := range []struct {
+		name    string
+		columns string
+		unique  bool
+	}{
+		{name: "uk_fc2_movie_key", columns: "`fc2_key`", unique: true},
+		{name: "uk_fc2_movie_code_seq", columns: "`code`, `code_seq`", unique: true},
+		{name: "idx_fc2_movie_code", columns: "`code`"},
+		{name: "idx_fc2_movie_ppv_no", columns: "`ppv_no`"},
+	} {
+		hasNewIndex, err := hasIndex(db, "fc2_movie", index.name)
+		if err != nil {
+			return err
+		}
+		if hasNewIndex {
+			continue
+		}
+		keyword := "INDEX"
+		if index.unique {
+			keyword = "UNIQUE INDEX"
+		}
+		if err := db.Exec(fmt.Sprintf("ALTER TABLE `fc2_movie` ADD %s `%s` (%s)", keyword, index.name, index.columns)).Error; err != nil {
+			return err
+		}
+	}
+	hasMediaCodeUnique, err := hasIndex(db, "fc2_media", "uk_fc2_media_code")
+	if err != nil {
+		return err
+	}
+	if hasMediaCodeUnique {
+		if err := db.Exec("ALTER TABLE `fc2_media` DROP INDEX `uk_fc2_media_code`").Error; err != nil {
+			return err
+		}
+	}
+	type movieKeyRow struct {
+		ID     int64  `gorm:"column:id"`
+		FC2Key string `gorm:"column:fc2_key"`
+	}
+	var movieRows []movieKeyRow
+	if err := db.Table("fc2_movie").Select("id", "fc2_key").Find(&movieRows).Error; err != nil {
+		return err
+	}
+	movieKeyByID := make(map[int64]string, len(movieRows))
+	for _, row := range movieRows {
+		movieKeyByID[row.ID] = strings.TrimSpace(row.FC2Key)
+	}
+	type mediaKeyRow struct {
+		ID         int64  `gorm:"column:id"`
+		FC2MovieID int64  `gorm:"column:fc2_movie_id"`
+		FC2Key     string `gorm:"column:fc2_key"`
+	}
+	var mediaRows []mediaKeyRow
+	if err := db.Table("fc2_media").Select("id", "fc2_movie_id", "fc2_key").Find(&mediaRows).Error; err != nil {
+		return err
+	}
+	for _, row := range mediaRows {
+		fc2Key := movieKeyByID[row.FC2MovieID]
+		if fc2Key == "" || strings.TrimSpace(row.FC2Key) == fc2Key {
+			continue
+		}
+		if err := db.Table("fc2_media").Where("id = ?", row.ID).Update("fc2_key", fc2Key).Error; err != nil {
+			return err
+		}
+	}
+	hasMediaKeyUnique, err := hasIndex(db, "fc2_media", "uk_fc2_media_key")
+	if err != nil {
+		return err
+	}
+	if !hasMediaKeyUnique {
+		if err := db.Exec("ALTER TABLE `fc2_media` ADD UNIQUE INDEX `uk_fc2_media_key` (`fc2_key`)").Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func migrateAddAmCastOwnedWMediaNumber(db *gorm.DB) error {
@@ -1144,6 +1497,63 @@ func migrateWFolderSourceType(db *gorm.DB) error {
 	return rebuildWFolderTreesFromWMedia(db)
 }
 
+func migrateFC2FolderSourceType(db *gorm.DB) error {
+	const tableName = "fc2_folder"
+	hasFC2FolderTable, err := hasTable(db, tableName)
+	if err != nil || !hasFC2FolderTable {
+		return err
+	}
+	hasSourceType, err := hasColumn(db, tableName, "source_type")
+	if err != nil {
+		return err
+	}
+	if !hasSourceType {
+		if err := db.Exec("ALTER TABLE `fc2_folder` ADD COLUMN `source_type` tinyint NOT NULL DEFAULT 2 AFTER `name`").Error; err != nil {
+			return err
+		}
+	}
+	if err := db.Exec("UPDATE `fc2_folder` SET `source_type` = 2 WHERE `source_type` = 0").Error; err != nil {
+		return err
+	}
+	for _, indexName := range []string{"uk_fc2_folder_parent_name", "uk_fc2_folder_path"} {
+		hasOldIndex, err := hasIndex(db, tableName, indexName)
+		if err != nil {
+			return err
+		}
+		if hasOldIndex {
+			if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` DROP INDEX `%s`", tableName, indexName)).Error; err != nil {
+				return err
+			}
+		}
+	}
+	indexes := []struct {
+		name    string
+		columns string
+		unique  bool
+	}{
+		{name: "uk_fc2_folder_parent_name_source_type", columns: "`parent_id`, `name`, `source_type`", unique: true},
+		{name: "uk_fc2_folder_path_source_type", columns: "`path`, `source_type`", unique: true},
+		{name: "idx_fc2_folder_source_type", columns: "`source_type`"},
+	}
+	for _, index := range indexes {
+		hasNewIndex, err := hasIndex(db, tableName, index.name)
+		if err != nil {
+			return err
+		}
+		if hasNewIndex {
+			continue
+		}
+		keyword := "INDEX"
+		if index.unique {
+			keyword = "UNIQUE INDEX"
+		}
+		if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` ADD %s `%s` (%s)", tableName, keyword, index.name, index.columns)).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func rebuildWFolderTreesFromWMedia(db *gorm.DB) error {
 	hasWMediaTable, err := hasTable(db, "w_media")
 	if err != nil {
@@ -1566,15 +1976,170 @@ func backfillGScStatRedundantColumns(db *gorm.DB) error {
 		return nil
 	}
 
-	sql := `
-UPDATE ` + "`g_sc_stat` gss" + `
-LEFT JOIN ` + "`a_movie` am" + ` ON am.jav_id = gss.movie_jav_id
-LEFT JOIN ` + "`w_media` wm" + ` ON wm.movie_jav_id = gss.movie_jav_id AND wm.source_type = ` + fmt.Sprintf("%d", consts.WMediaSourceNative) + `
-SET
-	gss.releasing_date = COALESCE(am.releasing_date, 0),
-	gss.media_birth_time = COALESCE(wm.birth_time, 0)
-`
-	return db.Exec(sql).Error
+	type statKeyRow struct {
+		ID         int64  `gorm:"column:id"`
+		MovieJavID string `gorm:"column:movie_jav_id"`
+	}
+	var statRows []statKeyRow
+	if err := db.Table(tableName).Select("id", "movie_jav_id").Find(&statRows).Error; err != nil {
+		return err
+	}
+	if len(statRows) == 0 {
+		return nil
+	}
+
+	javIDs := make([]string, 0, len(statRows))
+	for _, row := range statRows {
+		if javID := strings.TrimSpace(row.MovieJavID); javID != "" {
+			javIDs = append(javIDs, javID)
+		}
+	}
+	type movieSnapshotRow struct {
+		JavID         string `gorm:"column:jav_id"`
+		ReleasingDate int64  `gorm:"column:releasing_date"`
+	}
+	var movieRows []movieSnapshotRow
+	if err := db.Table("a_movie").Select("jav_id", "releasing_date").Where("jav_id IN ?", javIDs).Find(&movieRows).Error; err != nil {
+		return err
+	}
+	type mediaSnapshotRow struct {
+		MovieJavID string `gorm:"column:movie_jav_id"`
+		BirthTime  int64  `gorm:"column:birth_time"`
+		IsRemoved  int64  `gorm:"column:is_removed"`
+	}
+	var mediaRows []mediaSnapshotRow
+	if err := db.Table("w_media").Select("movie_jav_id", "birth_time", "is_removed").Where("source_type = ?", consts.WMediaSourceNative).Where("movie_jav_id IN ?", javIDs).Find(&mediaRows).Error; err != nil {
+		return err
+	}
+
+	releasingDateByJavID := make(map[string]int64, len(movieRows))
+	for _, row := range movieRows {
+		releasingDateByJavID[strings.TrimSpace(row.JavID)] = row.ReleasingDate
+	}
+	mediaBirthByJavID := make(map[string]int64, len(mediaRows))
+	for _, row := range mediaRows {
+		if row.IsRemoved != int64(consts.FilmIsRemoved) {
+			mediaBirthByJavID[strings.TrimSpace(row.MovieJavID)] = row.BirthTime
+		}
+	}
+	for _, row := range statRows {
+		javID := strings.TrimSpace(row.MovieJavID)
+		if err := db.Table(tableName).Where("id = ?", row.ID).Updates(map[string]any{
+			"releasing_date":   releasingDateByJavID[javID],
+			"media_birth_time": mediaBirthByJavID[javID],
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateGListMovieIdentity(db *gorm.DB) error {
+	const tableName = "g_list"
+	for _, column := range []string{"movie_type", "fc2_movie_id"} {
+		hasColumnValue, err := hasColumn(db, tableName, column)
+		if err != nil {
+			return err
+		}
+		if !hasColumnValue {
+			return fmt.Errorf("%s.%s migration missing", tableName, column)
+		}
+	}
+	if err := db.Exec("UPDATE `g_list` SET `movie_type` = 'jav', `fc2_movie_id` = 0 WHERE TRIM(`movie_jav_id`) <> ''").Error; err != nil {
+		return err
+	}
+
+	type duplicateRow struct {
+		ScName     string `gorm:"column:sc_name"`
+		MovieType  string `gorm:"column:movie_type"`
+		MovieJavID string `gorm:"column:movie_jav_id"`
+		FC2MovieID int64  `gorm:"column:fc2_movie_id"`
+		Total      int64  `gorm:"column:total"`
+	}
+	var duplicates []duplicateRow
+	if err := db.Table(tableName).
+		Select("sc_name, movie_type, movie_jav_id, fc2_movie_id, COUNT(*) AS total").
+		Group("sc_name, movie_type, movie_jav_id, fc2_movie_id").
+		Having("COUNT(*) > 1").
+		Find(&duplicates).Error; err != nil {
+		return err
+	}
+	if len(duplicates) > 0 {
+		return fmt.Errorf("g_list contains duplicate event movie keys: %+v", duplicates)
+	}
+
+	indexes := []struct {
+		name    string
+		columns string
+		unique  bool
+	}{
+		{name: "idx_g_list_sc_name", columns: "`sc_name`,`is_sc`,`is_come`,`id`"},
+		{name: "idx_g_list_jav_sc", columns: "`movie_type`,`movie_jav_id`,`is_sc`,`sc_name`"},
+		{name: "idx_g_list_fc2_sc", columns: "`movie_type`,`fc2_movie_id`,`is_sc`,`sc_name`"},
+		{name: "uk_g_list_event_movie", columns: "`sc_name`,`movie_type`,`movie_jav_id`,`fc2_movie_id`", unique: true},
+	}
+	for _, index := range indexes {
+		hasIndexValue, err := hasIndex(db, tableName, index.name)
+		if err != nil {
+			return err
+		}
+		if hasIndexValue {
+			continue
+		}
+		keyword := "INDEX"
+		if index.unique {
+			keyword = "UNIQUE INDEX"
+		}
+		if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` ADD %s `%s` (%s)", tableName, keyword, index.name, index.columns)).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func backfillFC2MediaSortSnapshots(db *gorm.DB) error {
+	if err := db.Table("fc2_movie").Where("1 = 1").Updates(map[string]any{"media_present": 0, "media_birth_time": 0}).Error; err != nil {
+		return err
+	}
+	type mediaSnapshotRow struct {
+		FC2MovieID int64 `gorm:"column:fc2_movie_id"`
+		BirthTime  int64 `gorm:"column:birth_time"`
+		IsRemoved  int64 `gorm:"column:is_removed"`
+	}
+	var mediaRows []mediaSnapshotRow
+	if err := db.Table("fc2_media").Select("fc2_movie_id", "birth_time", "is_removed").Find(&mediaRows).Error; err != nil {
+		return err
+	}
+	for _, row := range mediaRows {
+		if row.FC2MovieID <= 0 || row.IsRemoved == int64(consts.FilmIsRemoved) {
+			continue
+		}
+		if err := db.Table("fc2_movie").Where("id = ?", row.FC2MovieID).Updates(map[string]any{
+			"media_present":    1,
+			"media_birth_time": row.BirthTime,
+		}).Error; err != nil {
+			return err
+		}
+		if err := db.Table("fc2_sc_stat").Where("fc2_movie_id = ?", row.FC2MovieID).Update("media_birth_time", row.BirthTime).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func backfillFC2MovieCoverImages(db *gorm.DB) error {
+	return db.Exec(`
+UPDATE fc2_movie AS movie
+SET cover_image_id = COALESCE((
+	SELECT image.id
+	FROM fc2_media AS media
+	JOIN fc2_media_image AS image ON image.fc2_media_id = media.id
+	WHERE media.fc2_movie_id = movie.id
+		AND image.image_type = 'screenshot'
+	ORDER BY image.created_on DESC, image.id DESC
+	LIMIT 1
+), 0)
+WHERE movie.cover_image_id = 0`).Error
 }
 
 func ensureBaiduFanyiFetchSite(db *gorm.DB) error {

@@ -53,11 +53,12 @@
             <button class="modal-close-v2" type="button" aria-label="关闭" @click="closePageDateModal">×</button>
           </div>
           <div class="modal-body-v2">
-            <label class="filter-field">
+            <label class="filter-field smart-pick-date-field">
               <span>日期</span>
               <input
                 v-model="pageDateInput"
                 id="movieCardPageDateInput"
+                class="smart-pick-date-input"
                 type="text"
                 placeholder="YYYY-MM-DD"
                 inputmode="numeric"

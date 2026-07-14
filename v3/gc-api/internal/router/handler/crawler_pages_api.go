@@ -51,7 +51,7 @@ func NewCrawlerPagesAPI(deps *dep.Dep) *CrawlerPagesAPI {
 }
 
 func (h *CrawlerPagesAPI) DailyBestPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/dailybest")()
+	defer withFrontendPath(c, "/dailybestfetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "DailyBest 任务",
@@ -94,7 +94,7 @@ func (h *CrawlerPagesAPI) DailyBestPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) SeedsPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/seeds")()
+	defer withFrontendPath(c, "/seedfetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "Seeds 任务",
@@ -138,7 +138,7 @@ func (h *CrawlerPagesAPI) SeedsPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) PostProcessPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/post-process")()
+	defer withFrontendPath(c, "/postprocess")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "后处理任务",
@@ -182,7 +182,7 @@ func (h *CrawlerPagesAPI) PostProcessPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) BackfillPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/backfill")()
+	defer withFrontendPath(c, "/databackfill")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "回填任务",
@@ -232,19 +232,19 @@ func (h *CrawlerPagesAPI) BackfillPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) TasksPage(c *gin.Context) {
-	defer withFrontendPath(c, "/crawler/tasks")()
+	defer withFrontendPath(c, "/crawltasklist")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":           "任务列表",
 		"ViewType":        "crawler-tasks",
 		"QuickNavCurrent": "crawler_tasks",
 		"JobID":           strings.TrimSpace(c.Query("job_id")),
-		"TriggerPageURL":  "/triggers/dailybest",
+		"TriggerPageURL":  "/dailybestfetch",
 	})
 }
 
 func (h *CrawlerPagesAPI) DetailLoopPage(c *gin.Context) {
-	defer withFrontendPath(c, "/crawler/detail-loop")()
+	defer withFrontendPath(c, "/detailfetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":    "详情抓取循环",
@@ -254,7 +254,7 @@ func (h *CrawlerPagesAPI) DetailLoopPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSitePage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-site")()
+	defer withFrontendPath(c, "/sitefetch")()
 
 	req, err := parseMovieCardRequest(c, types.ListMovieFullRequest{
 		OrderBy: consts.OrderByReleasingDate,
@@ -290,8 +290,8 @@ func (h *CrawlerPagesAPI) FetchSitePage(c *gin.Context) {
 			{TaskType: loop.TaskSpiderFetchSiteBoth, Label: "JavBus + Sukebei 同时抓取"},
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/fetch-site-javbus-list", Label: "JavBus 列表"},
-			{Href: "/fetch-site-sukebei-list", Label: "Sukebei 列表"},
+			{Href: "/javbuslist", Label: "JavBus 列表"},
+			{Href: "/sukebeilist", Label: "Sukebei 列表"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "任务类型",
@@ -313,7 +313,7 @@ func (h *CrawlerPagesAPI) FetchSitePage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSehuatangPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-sehuatang")()
+	defer withFrontendPath(c, "/sehuatangfetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "色花堂抓取任务",
@@ -335,9 +335,9 @@ func (h *CrawlerPagesAPI) FetchSehuatangPage(c *gin.Context) {
 			{TaskType: loop.TaskSpiderFetchSehuatang, Label: "色花堂磁力抓取"},
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/triggers/fetch-site", Label: "FetchSite"},
-			{Href: "/fetch-sites", Label: "FetchSites 配置"},
-			{Href: "/fetch-site-sehuatang-list", Label: "Sehuatang 列表"},
+			{Href: "/sitefetch", Label: "FetchSite"},
+			{Href: "/siteconfiglist", Label: "FetchSites 配置"},
+			{Href: "/sehuatanglist", Label: "Sehuatang 列表"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "任务类型",
@@ -362,28 +362,27 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
 	defer withFrontendPath(c, "/shfetchall")()
 
 	c.JSON(http.StatusOK, gin.H{
-		"Title":             "色花堂帖子新流程",
+		"Title":             "色花堂一体抓取",
 		"ViewType":          "crawler-jobs",
-		"PageTitle":         "色花堂帖子新流程（sh 表）",
+		"PageTitle":         "色花堂一体抓取",
 		"QuickNavCurrent":   "fetch_sehuatang_sh",
-		"TaskPanelTitle":    "色花堂帖子新流程",
-		"PageNote":          "抓取搜索结果或指定版块普通帖，详情写入 sh_thread，并记录 sh_fetch_run / sh_item。",
-		"TaskTableTitle":    "色花堂帖子新流程任务",
-		"EventTitle":        "色花堂帖子新流程事件流",
+		"TaskPanelTitle":    "色花堂一体抓取",
+		"PageNote":          "先按列表建池流程保存帖子基础信息，再补全本次待抓或失败的帖子详情。",
+		"TaskTableTitle":    "色花堂一体抓取任务",
+		"EventTitle":        "色花堂一体抓取事件流",
 		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_selected_job",
 		"DefaultTaskType":   loop.TaskSpiderFetchSehuatangSH,
-		"OverviewExtraMode": "sehuatang_progress",
-		"EmptyStateText":    "等待 色花堂帖子新流程任务触发",
+		"OverviewExtraMode": "sehuatang_list_progress",
+		"EmptyStateText":    "等待 色花堂一体抓取任务触发",
 		"AllowedTaskTypes": []string{
 			loop.TaskSpiderFetchSehuatangSH,
 		},
 		"TaskButtons": []crawlerJobsPageTask{
-			{TaskType: loop.TaskSpiderFetchSehuatangSH, Label: "色花堂帖子新流程"},
+			{TaskType: loop.TaskSpiderFetchSehuatangSH, Label: "色花堂一体抓取"},
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/triggers/fetch-sehuatang", Label: "旧磁力抓取"},
-			{Href: "/fetch-sites", Label: "FetchSites 配置"},
-			{Href: "/fetch-site-sehuatang-list", Label: "Sehuatang 列表"},
+			{Href: "/shfill", Label: "详情补全"},
+			{Href: "/shpool", Label: "帖子池"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "任务类型",
@@ -393,15 +392,11 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
 		"HideTaskForm":                 false,
 		"ShowMovieFilters":             false,
 		"ShowFavoriteAlbum":            false,
-		"ShowSehuatangSH":              true,
-		"FetchSehuatangSHMode":         fetchsehuatang.SHFetchModeSearch,
-		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumAsiaUncensoredOriginal, fetchsehuatang.SHForumHDChineseSubtitle},
-		"FetchSehuatangList":           "",
-		"FetchSehuatangKey":            "fc2ppv",
+		"ShowSehuatangSHThreadList":    true,
+		"FetchSehuatangSHMode":         fetchsehuatang.SHFetchModeForum,
+		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumHDChineseSubtitle},
 		"FetchSehuatangStartPage":      fetchsehuatang.DefaultStartPage,
 		"FetchSehuatangEndPage":        fetchsehuatang.DefaultEndPage,
-		"FetchSehuatangPersistMode":    "",
-		"FetchSehuatangStopOnExisting": false,
 		"ScRootDir":                    h.scRootDir,
 		"JobID":                        strings.TrimSpace(c.Query("job_id")),
 	})
@@ -421,7 +416,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadListPage(c *gin.Context) {
 		"EventTitle":        "色花堂帖子列表抓取事件流",
 		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_thread_list_selected_job",
 		"DefaultTaskType":   loop.TaskSpiderFetchSehuatangSHList,
-		"OverviewExtraMode": "sehuatang_progress",
+		"OverviewExtraMode": "sehuatang_list_progress",
 		"EmptyStateText":    "等待 色花堂帖子列表抓取任务触发",
 		"AllowedTaskTypes": []string{
 			loop.TaskSpiderFetchSehuatangSHList,
@@ -442,7 +437,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadListPage(c *gin.Context) {
 		"ShowMovieFilters":             false,
 		"ShowFavoriteAlbum":            false,
 		"ShowSehuatangSHThreadList":    true,
-		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumAsiaUncensoredOriginal, fetchsehuatang.SHForumHDChineseSubtitle},
+		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumHDChineseSubtitle},
 		"FetchSehuatangStartPage":      fetchsehuatang.DefaultStartPage,
 		"FetchSehuatangEndPage":        fetchsehuatang.DefaultEndPage,
 		"ScRootDir":                    h.scRootDir,
@@ -464,13 +459,13 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
 		"EventTitle":        "色花堂帖子详情补全事件流",
 		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_thread_detail_selected_job",
 		"DefaultTaskType":   loop.TaskSpiderFetchSehuatangSHDetail,
-		"OverviewExtraMode": "sehuatang_progress",
+		"OverviewExtraMode": "sehuatang_detail_progress",
 		"EmptyStateText":    "等待 色花堂帖子详情补全任务触发",
 		"AllowedTaskTypes": []string{
 			loop.TaskSpiderFetchSehuatangSHDetail,
 		},
 		"TaskButtons": []crawlerJobsPageTask{
-			{TaskType: loop.TaskSpiderFetchSehuatangSHDetail, Label: "抓取选中详情"},
+			{TaskType: loop.TaskSpiderFetchSehuatangSHDetail, Label: "帖子详情补全"},
 		},
 		"HeaderLinks": []crawlerJobsPageLink{
 			{Href: "/shfetch", Label: "列表抓取"},
@@ -485,7 +480,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
 		"ShowMovieFilters":             false,
 		"ShowFavoriteAlbum":            false,
 		"ShowSehuatangSHThreadDetail":  true,
-		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumAsiaUncensoredOriginal, fetchsehuatang.SHForumHDChineseSubtitle},
+		"FetchSehuatangSHTargetForums": []string{fetchsehuatang.SHForumHDChineseSubtitle},
 		"FetchSehuatangSHDetailStatus": fetchsehuatang.SHDetailStatusPending,
 		"ScRootDir":                    h.scRootDir,
 		"JobID":                        strings.TrimSpace(c.Query("job_id")),
@@ -493,7 +488,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHThreadDetailPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSiteSukebeiFilteredPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-site-sukebei-filtered")()
+	defer withFrontendPath(c, "/sukebeifetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "Sukebei 筛选抓取任务",
@@ -513,8 +508,8 @@ func (h *CrawlerPagesAPI) FetchSiteSukebeiFilteredPage(c *gin.Context) {
 		},
 		"TaskButtons": []crawlerJobsPageTask{},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/fetch-site-sukebei-list", Label: "返回 Sukebei 列表"},
-			{Href: "/fetch-site-javbus-list", Label: "JavBus 列表"},
+			{Href: "/sukebeilist", Label: "返回 Sukebei 列表"},
+			{Href: "/javbuslist", Label: "JavBus 列表"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "队列",
@@ -535,7 +530,7 @@ func (h *CrawlerPagesAPI) FetchSiteSukebeiFilteredPage(c *gin.Context) {
 }
 
 func (h *CrawlerPagesAPI) FetchSiteJavbusFilteredPage(c *gin.Context) {
-	defer withFrontendPath(c, "/triggers/fetch-site-javbus-filtered")()
+	defer withFrontendPath(c, "/javbusfetch")()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":             "JavBus 筛选抓取任务",
@@ -555,8 +550,8 @@ func (h *CrawlerPagesAPI) FetchSiteJavbusFilteredPage(c *gin.Context) {
 		},
 		"TaskButtons": []crawlerJobsPageTask{},
 		"HeaderLinks": []crawlerJobsPageLink{
-			{Href: "/fetch-site-javbus-list", Label: "返回 JavBus 列表"},
-			{Href: "/fetch-site-sukebei-list", Label: "Sukebei 列表"},
+			{Href: "/javbuslist", Label: "返回 JavBus 列表"},
+			{Href: "/sukebeilist", Label: "Sukebei 列表"},
 		},
 		"Labels": crawlerJobsPageLabels{
 			Extra:   "队列",

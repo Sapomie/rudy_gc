@@ -19,6 +19,10 @@ function movieCardDefaults(orderBy: string): QueryDefaults {
 
 function routeDefaults(path: string, query: QueryInput): QueryDefaults {
   switch (path) {
+    case "/fclistcard":
+    case "/fclistcardowned":
+    case "/fclistcardrandom":
+      return { ps: "18" };
     case "/listcard":
     case "/listcardtoday":
     case "/listcardneed":
@@ -71,30 +75,29 @@ function routeDefaults(path: string, query: QueryInput): QueryDefaults {
       }
       return { ps: "18", od: "media_birth_time", recursive: "true", cp: "1", cs: "60" };
     }
-    case "/sc-events":
+    case "/scevents":
       return listDefaults("24", "sc_time");
-    case "/sc-events-cards":
+    case "/sccards":
       return listDefaults("18", "sc_time");
-    case "/crawl-records":
-    case "/records":
+    case "/crawlrecordlist":
       return { ...listDefaults("50", "start_time"), type: "SeedsActive" };
-    case "/medias":
+    case "/medialist":
       return listDefaults("24", "birth_time");
-    case "/w-agg-events":
+    case "/aggeventlist":
       return listDefaults("50", "started_time");
-    case "/torrent-albums":
-    case "/movie-albums":
+    case "/torrentalbumlist":
+    case "/moviealbumlist":
       return listDefaults("50", "created_on");
-    case "/d-seeds":
+    case "/seedlist":
       return listDefaults("50", "updated_on");
-    case "/casts":
+    case "/castlist":
       return listDefaults("24", "owned_w_media_number");
-    case "/e-items":
+    case "/eitemlist":
       return listDefaults("50", "last_query_detail_time");
-    case "/fetch-site-javbus-list":
-    case "/fetch-site-sukebei-list":
+    case "/javbuslist":
+    case "/sukebeilist":
       return listDefaults("50", "last_fetch_time");
-    case "/fetch-site-sehuatang-list":
+    case "/sehuatanglist":
     case "/shpool":
       return listDefaults("50", "post_time");
     default:

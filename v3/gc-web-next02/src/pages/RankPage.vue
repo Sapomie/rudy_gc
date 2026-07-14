@@ -10,7 +10,7 @@
             <span class="total-pill rank-date-pill">{{ rankDate || "-" }}</span>
             <form class="rank-date-form" method="get" action="/listcarddayrank">
               <input
-                class="rank-date-input"
+                class="rank-date-input smart-pick-date-input"
                 type="text"
                 name="date"
                 :value="rankDate"

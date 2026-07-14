@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	moviedomain "rudy_gc/internal/domain/movie"
 )
 
 func TestBuildAddScPreviewAllowsImageOnly(t *testing.T) {
@@ -40,5 +42,40 @@ func TestBuildAddScPreviewAllowsImageOnly(t *testing.T) {
 	}
 	if imageFilePath != imagePath {
 		t.Fatalf("imageFilePath = %q, want %q", imageFilePath, imagePath)
+	}
+}
+
+func TestNormalizeAddScMovieRef(t *testing.T) {
+	tests := []struct {
+		name        string
+		movieType   string
+		movieJavID  string
+		fc2MovieID  int64
+		expectedRef string
+	}{
+		{name: "jav", movieType: moviedomain.SehuatangThreadMovieTypeJAV, movieJavID: "ABP-123", expectedRef: "jav:ABP-123"},
+		{name: "fc2", movieType: moviedomain.SehuatangThreadMovieTypeFC2PPV, fc2MovieID: 42, expectedRef: "fc2ppv:42"},
+		{name: "mixed identity", movieType: moviedomain.SehuatangThreadMovieTypeFC2PPV, movieJavID: "ABP-123", fc2MovieID: 42},
+		{name: "missing jav", movieType: moviedomain.SehuatangThreadMovieTypeJAV},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := normalizeAddScMovieRef(test.movieType, test.movieJavID, test.fc2MovieID); got != test.expectedRef {
+				t.Fatalf("normalizeAddScMovieRef() = %q, want %q", got, test.expectedRef)
+			}
+		})
+	}
+}
+
+func TestBuildAddScMovieSelectionMapUsesTypedIdentity(t *testing.T) {
+	selection := buildAddScMovieSelectionMap([]AddScInputMovie{
+		{MovieType: moviedomain.SehuatangThreadMovieTypeJAV, MovieJavId: "ABP-123", IsSc: 1},
+		{MovieType: moviedomain.SehuatangThreadMovieTypeFC2PPV, FC2MovieId: 42, IsSc: 2},
+	})
+	if selection["jav:ABP-123"] != 1 {
+		t.Fatalf("JAV selection = %d", selection["jav:ABP-123"])
+	}
+	if selection["fc2ppv:42"] != 2 {
+		t.Fatalf("FC2 selection = %d", selection["fc2ppv:42"])
 	}
 }

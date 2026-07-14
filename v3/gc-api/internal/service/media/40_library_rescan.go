@@ -190,6 +190,18 @@ func (s *Service) RescanLibrary(ctx context.Context, selections []LibraryRescanS
 			})
 			continue
 		}
+		if err := s.refreshSHMagnetDownloadStates(ctx, updated.SourceTorrentHash); err != nil {
+			result.Errors++
+			result.ErrorItems = append(result.ErrorItems, &LibraryRescanItem{
+				MovieName:  updated.MovieName,
+				MovieJavId: updated.MovieJavId,
+				FileName:   updated.FileName,
+				Path:       joinMediaPath(updated.FullDir, updated.FileName),
+				RootDir:    updated.RootDir,
+				Error:      err.Error(),
+			})
+			continue
+		}
 		if err := s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
 			result.Errors++
 			result.ErrorItems = append(result.ErrorItems, &LibraryRescanItem{
@@ -223,6 +235,9 @@ func (s *Service) RescanLibrary(ctx context.Context, selections []LibraryRescanS
 		}
 		sort.Strings(javIDs)
 		if err := s.syncPersonStatsByMovieJavIDs(ctx, nowUnix, javIDs...); err != nil {
+			return result, err
+		}
+		if err := s.syncJAVScMediaSnapshots(ctx, javIDs...); err != nil {
 			return result, err
 		}
 		s.movieSvc.EnqueueAggRebuildByMovieJavIDs("media_rescan", javIDs...)

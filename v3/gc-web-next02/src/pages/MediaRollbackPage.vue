@@ -14,8 +14,8 @@
                   <p>{{ pageNote }}</p>
                 </div>
                 <div class="next02-media-hero-actions">
-                  <a href="/triggers/media" class="btn btn-outline-primary btn-sm">返回入库页</a>
-                  <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
+                  <a href="/mediaingest" class="btn btn-outline-primary btn-sm">返回入库页</a>
+                  <a href="/mediarescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
                 </div>
               </section>
             </div>

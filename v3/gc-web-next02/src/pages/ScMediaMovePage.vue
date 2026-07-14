@@ -13,7 +13,7 @@
             </div>
             <div class="next02-sc-hero-actions">
               <a :href="navHref" class="btn btn-outline-primary btn-sm">{{ navLabel }}</a>
-              <a href="/triggers/media" class="btn btn-outline-secondary btn-sm">媒体入库</a>
+              <a href="/mediaingest" class="btn btn-outline-secondary btn-sm">媒体入库</a>
             </div>
           </section>
 
@@ -87,7 +87,7 @@
                     <div class="text-muted small">状态</div>
                     <div id="statusText" class="fw-semibold">{{ text(state, "message") || "等待操作" }}</div>
                   </div>
-                  <div class="mt-2 text-muted small" id="generatedAtText">{{ generatedAtText }}</div>
+                  <div v-if="generatedAt" class="mt-2 text-muted small" id="generatedAtText">预处理时间：<ScDateTime :value="generatedAt" /></div>
                 </div>
               </div>
 
@@ -117,6 +117,7 @@ import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, formatValue, num, pick, text } from "@/utils/format";
 
@@ -161,11 +162,11 @@ const title = computed(() => text(payload.value, "Title") || "SC Media 移动");
 const pageTitle = computed(() => text(payload.value, "PageTitle") || title.value);
 const pageNote = computed(() => text(payload.value, "PageNote"));
 const rootDirs = computed(() => asArray<string>(pick(payload.value, "RootDirs")));
-const navHref = computed(() => text(payload.value, "ScDetailHref") || "/sc-events");
+const navHref = computed(() => text(payload.value, "ScDetailHref") || "/scevents");
 const navLabel = computed(() => text(payload.value, "ScDetailHref") ? "返回当前 SC" : "SC Events");
 const canCommit = computed(() => Boolean(pick(state.value, "can_commit")));
 const hasPlan = computed(() => Boolean(pick(state.value, "has_plan")));
-const generatedAtText = computed(() => text(state.value, "generated_at") ? `预处理时间：${text(state.value, "generated_at")}` : "");
+const generatedAt = computed(() => text(state.value, "generated_at"));
 const tables = computed<ResultTableDef[]>(() => [
   table("tblPrecheckPass", "预处理通过 Media", ["SC Events", "影片", "源路径", "目标路径"], ["sc_names", "movie_name", "source_path", "target_path"], "precheck_pass"),
   table("tblPrecheckSkip", "预处理跳过 Media", ["SC Events", "影片", "源路径", "原因"], ["sc_names", "movie_name", "source_path", "error"], "precheck_skip"),

@@ -43,6 +43,21 @@ func (s *Service) resolveMovieJavIDByMovieName(ctx context.Context, movieName st
 	return "", nil
 }
 
+func (s *Service) resolveSehuatangThreadMovieFields(ctx context.Context, titles ...string) (string, string, error) {
+	movieName := ""
+	for _, title := range titles {
+		movieName = parseMovieName(title)
+		if movieName != "" {
+			break
+		}
+	}
+	movieJavID, err := s.resolveMovieJavIDByMovieName(ctx, movieName)
+	if err != nil {
+		return movieName, "", err
+	}
+	return movieName, movieJavID, nil
+}
+
 func (s *Service) repairSehuatangRowMovieFields(ctx context.Context, row *moviex.TSehuatangMagnet) error {
 	if row == nil {
 		return nil

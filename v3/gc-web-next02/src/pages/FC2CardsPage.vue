@@ -1,0 +1,93 @@
+<template>
+  <PageShell
+    :class="['cards-page-shell', 'next02-pink-cards-page', 'next02-pink-cards-page-shell', pageClass]"
+    :title="title"
+    :note="pageNote"
+    eyebrow="FC2 MovieCard"
+  >
+    <LoadingState v-if="loading" />
+    <ErrorPanel v-else-if="error" :message="error" />
+    <template v-else>
+      <div class="sticky-toolbar cards-toolbar next02-pink-cards-toolbar" aria-label="FC2 Cards 控制栏">
+        <div class="cards-toolbar-sort">
+          <LinkStrip :items="cardLinks" />
+        </div>
+        <div class="toolbar-line cards-toolbar-bottom">
+          <div class="next02-pink-cards-toolbar-status">
+            <div class="next02-pink-cards-metrics" aria-label="FC2 Cards 页面摘要">
+              <span :title="`总数 ${total}`" :aria-label="`总数 ${total}`"><strong>{{ total }}</strong></span>
+              <span :title="`当前页 ${cards.length}`" :aria-label="`当前页 ${cards.length}`"><strong>{{ cards.length }}</strong></span>
+            </div>
+            <div class="cards-toolbar-pagination next02-pink-cards-pagination">
+              <PaginationBar :page-info="pageInfo" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="movie-grid-v2 next02-pink-movie-grid fc2-movie-card-grid">
+        <div v-for="(card, index) in cards" :key="cardKey(card, index)" class="col movie-grid-col-v2">
+          <FC2MovieCard :movie="card" />
+        </div>
+        <div v-if="cards.length === 0" class="movie-empty">暂无 FC2 影片数据</div>
+      </div>
+    </template>
+  </PageShell>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import { apiPathForRoute, getJSON } from "@/api/request";
+import ErrorPanel from "@/components/ErrorPanel.vue";
+import FC2MovieCard from "@/components/FC2MovieCard.vue";
+import LinkStrip from "@/components/LinkStrip.vue";
+import LoadingState from "@/components/LoadingState.vue";
+import PageShell from "@/components/PageShell.vue";
+import PaginationBar from "@/components/PaginationBar.vue";
+import type { AnyRecord, PageInfo } from "@/types/gc";
+import { asArray, asRecord, pick, text } from "@/utils/format";
+
+const route = useRoute();
+const payload = ref<AnyRecord>({});
+const loading = ref(false);
+const error = ref("");
+
+watch(() => route.fullPath, load, { immediate: true });
+
+async function load() {
+  loading.value = true;
+  error.value = "";
+  try {
+    payload.value = asRecord(await getJSON(apiPathForRoute(route)));
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+const pageTitles: Record<string, string> = {
+  "/fclistcard": "FC2 Cards",
+  "/fclistcardowned": "FC2 Cards MediaOwned",
+  "/fclistcardrandom": "FC2 Cards Random"
+};
+const title = computed(() => pageTitles[route.path] || text(payload.value, "Title") || "FC2 Cards");
+const pageClass = computed(() => `cards-route-${route.path.replace(/^\/+/, "")}`);
+const cards = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "Movies")));
+const total = computed(() => text(payload.value, "total", "Total") || "0");
+const pageInfo = computed(() => asRecord(pick(payload.value, "PageInfo", "pageInfo")) as PageInfo);
+const pageNote = computed(() => route.path === "/fclistcardrandom"
+  ? "随机展示 FC2 影片，卡片封面使用已生成截图。"
+  : "FC2 影片卡片，封面使用已生成截图。"
+);
+const cardLinks = computed(() => [
+  { label: "All", href: "/fclistcard", active: route.path === "/fclistcard" },
+  { label: "MediaOwned", href: "/fclistcardowned", active: route.path === "/fclistcardowned" },
+  { label: "Random", href: "/fclistcardrandom", active: route.path === "/fclistcardrandom" }
+]);
+
+function cardKey(card: AnyRecord, index: number): string {
+  return text(card, "FC2Key") || String(index);
+}
+</script>

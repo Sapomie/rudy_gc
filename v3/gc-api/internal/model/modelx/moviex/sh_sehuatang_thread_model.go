@@ -8,15 +8,22 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+
+	moviedomain "rudy_gc/internal/domain/movie"
 )
 
 type (
 	ShSehuatangThreadModel interface {
 		Insert(ctx context.Context, data *ShSehuatangThread) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*ShSehuatangThread, error)
+		ListByIDs(ctx context.Context, ids []int64) ([]*ShSehuatangThread, error)
 		FindOneByThreadTID(ctx context.Context, threadTID string) (*ShSehuatangThread, error)
 		FindExistingThreadTIDs(ctx context.Context, threadTIDs []string) (map[string]struct{}, error)
 		FindThreadAggTargetsByTIDs(ctx context.Context, threadTIDs []string) (map[string]ShThreadAggTarget, error)
+		DeleteByThreadTIDs(ctx context.Context, threadTIDs []string) (int64, error)
+		UpdateFC2MetaJSONByID(ctx context.Context, id int64, metaJSON string) error
+		UpdateFC2MovieIDByID(ctx context.Context, id, fc2MovieID int64) error
+		ListFetchedByFC2MovieID(ctx context.Context, fc2MovieID int64) ([]*ShSehuatangThread, error)
 		ListDistinctPostDayForumTargets(ctx context.Context) ([]ShThreadAggTarget, error)
 		CalcBucket(ctx context.Context, startUnix, endUnix int64, sourceForumID string) (*ShThreadBucketCalc, error)
 		ListPage(ctx context.Context, offset, limit int64, orderBy string, filter ShSehuatangThreadListFilter) ([]*ShSehuatangThread, error)
@@ -39,6 +46,11 @@ type (
 		ThreadTID       string `db:"thread_tid"`
 		ThreadURL       string `db:"thread_url"`
 		ThreadTitle     string `db:"thread_title"`
+		MovieJavId      string `db:"movie_jav_id"`
+		MovieName       string `db:"movie_name"`
+		MovieType       string `db:"movie_type"`
+		FC2MovieID      int64  `db:"fc2_movie_id"`
+		FC2Key          string `db:"fc2_key"`
 		AuthorName      string `db:"author_name"`
 		PostTime        int64  `db:"post_time"`
 		SourceForumID   string `db:"source_forum_id"`
@@ -51,6 +63,7 @@ type (
 		RawContentText  string `db:"raw_content_text"`
 		MagnetText      string `db:"magnet_text"`
 		InfoHashText    string `db:"info_hash_text"`
+		FC2MetaJSON     string `db:"fc2_meta_json"`
 		ContentHash     string `db:"content_hash"`
 		FirstSeenTime   int64  `db:"first_seen_time"`
 		LastSeenTime    int64  `db:"last_seen_time"`
@@ -63,6 +76,8 @@ type (
 		ThreadTID           string
 		AuthorName          string
 		InfoHash            string
+		MovieType           string
+		MovieTypes          []string
 		SourceForumID       string
 		SourceForumIDs      []string
 		DetailStatus        string
@@ -90,6 +105,7 @@ type (
 		ThreadTID     string `db:"thread_tid"`
 		PostTime      int64  `db:"post_time"`
 		SourceForumID string `db:"source_forum_id"`
+		DetailStatus  string `db:"detail_status"`
 	}
 
 	ShThreadBucketCalc struct {
@@ -103,7 +119,7 @@ type (
 	}
 )
 
-var shSehuatangThreadRows = "`id`,`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,COALESCE(`detail_error`, '') AS `detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`"
+var shSehuatangThreadRows = "`id`,`thread_tid`,`thread_url`,`thread_title`,`movie_jav_id`,`movie_name`,`movie_type`,`fc2_movie_id`,'' AS `fc2_key`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,COALESCE(`detail_error`, '') AS `detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,COALESCE(CAST(`fc2_meta_json` AS CHAR), '') AS `fc2_meta_json`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`"
 
 func NewShSehuatangThreadModel(conn sqlx.SqlConn) ShSehuatangThreadModel {
 	return &defaultShSehuatangThreadModel{
@@ -117,8 +133,9 @@ func (m *defaultShSehuatangThreadModel) TableName() string {
 }
 
 func (m *defaultShSehuatangThreadModel) Insert(ctx context.Context, data *ShSehuatangThread) (sql.Result, error) {
-	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	return m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
+	data.MovieType = moviedomain.ResolveSehuatangThreadMovieType(data.MovieName, data.MovieJavId)
+	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`movie_jav_id`,`movie_name`,`movie_type`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	return m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.MovieJavId, data.MovieName, data.MovieType, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn)
 }
 
 func (m *defaultShSehuatangThreadModel) FindOne(ctx context.Context, id int64) (*ShSehuatangThread, error) {
@@ -131,6 +148,26 @@ func (m *defaultShSehuatangThreadModel) FindOne(ctx context.Context, id int64) (
 		return nil, err
 	}
 	return &row, nil
+}
+
+func (m *defaultShSehuatangThreadModel) ListByIDs(ctx context.Context, ids []int64) ([]*ShSehuatangThread, error) {
+	values := uniquePositiveInt64s(ids)
+	if len(values) == 0 {
+		return []*ShSehuatangThread{}, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(values)), ",")
+	args := make([]any, len(values))
+	for index, id := range values {
+		args[index] = id
+	}
+	var rows []*ShSehuatangThread
+	if err := m.conn.QueryRowsCtx(ctx, &rows, "SELECT "+shSehuatangThreadRows+" FROM "+m.table+" WHERE `id` IN ("+placeholders+")", args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*ShSehuatangThread{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
 }
 
 func (m *defaultShSehuatangThreadModel) FindOneByThreadTID(ctx context.Context, threadTID string) (*ShSehuatangThread, error) {
@@ -200,7 +237,7 @@ func (m *defaultShSehuatangThreadModel) FindThreadAggTargetsByTIDs(ctx context.C
 		args[index] = value
 	}
 	var rows []ShThreadAggTarget
-	query := "select `thread_tid`,`post_time`,`source_forum_id` from " + m.table + " where `thread_tid` in (" + placeholders + ")"
+	query := "select `thread_tid`,`post_time`,`source_forum_id`,`detail_status` from " + m.table + " where `thread_tid` in (" + placeholders + ")"
 	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return map[string]ShThreadAggTarget{}, nil
@@ -212,6 +249,45 @@ func (m *defaultShSehuatangThreadModel) FindThreadAggTargetsByTIDs(ctx context.C
 		out[row.ThreadTID] = row
 	}
 	return out, nil
+}
+
+func (m *defaultShSehuatangThreadModel) DeleteByThreadTIDs(ctx context.Context, threadTIDs []string) (int64, error) {
+	values := normalizeShThreadTIDs(threadTIDs)
+	if len(values) == 0 {
+		return 0, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(values)), ",")
+	args := make([]any, len(values))
+	for index, value := range values {
+		args[index] = value
+	}
+	result, err := m.conn.ExecCtx(ctx, "delete from "+m.table+" where `thread_tid` in ("+placeholders+")", args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+func (m *defaultShSehuatangThreadModel) UpdateFC2MetaJSONByID(ctx context.Context, id int64, metaJSON string) error {
+	_, err := m.conn.ExecCtx(ctx, "UPDATE `sh_thread` SET `fc2_meta_json` = ? WHERE `id` = ?", metaJSON, id)
+	return err
+}
+
+func (m *defaultShSehuatangThreadModel) UpdateFC2MovieIDByID(ctx context.Context, id, fc2MovieID int64) error {
+	_, err := m.conn.ExecCtx(ctx, "UPDATE `sh_thread` SET `fc2_movie_id` = ? WHERE `id` = ?", fc2MovieID, id)
+	return err
+}
+
+func (m *defaultShSehuatangThreadModel) ListFetchedByFC2MovieID(ctx context.Context, fc2MovieID int64) ([]*ShSehuatangThread, error) {
+	var rows []*ShSehuatangThread
+	query := "SELECT " + shSehuatangThreadRows + " FROM `sh_thread` WHERE `movie_type` = ? AND `fc2_movie_id` = ? AND `detail_status` = 'fetched' ORDER BY `post_time` DESC, `id` DESC"
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, moviedomain.SehuatangThreadMovieTypeFC2PPV, fc2MovieID); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*ShSehuatangThread{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
 }
 
 func (m *defaultShSehuatangThreadModel) ListDistinctPostDayForumTargets(ctx context.Context) ([]ShThreadAggTarget, error) {
@@ -382,16 +458,18 @@ func (m *defaultShSehuatangThreadModel) UpdateDetailFailureByThreadTID(ctx conte
 }
 
 func (m *defaultShSehuatangThreadModel) UpsertListBasic(ctx context.Context, data *ShSehuatangThread) (*ShSehuatangThread, error) {
-	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = case when trim(coalesce(`detail_status`, '')) = '' then values(`detail_status`) else `detail_status` end, `first_seen_time` = case when `first_seen_time` = 0 then values(`first_seen_time`) else `first_seen_time` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
-	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
+	data.MovieType = moviedomain.ResolveSehuatangThreadMovieType(data.MovieName, data.MovieJavId)
+	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`movie_jav_id`,`movie_name`,`movie_type`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `movie_jav_id` = case when trim(coalesce(values(`movie_name`), '')) <> '' and values(`movie_name`) <> `movie_name` then values(`movie_jav_id`) when trim(coalesce(values(`movie_jav_id`), '')) <> '' then values(`movie_jav_id`) else `movie_jav_id` end, `movie_name` = case when trim(coalesce(values(`movie_name`), '')) <> '' then values(`movie_name`) else `movie_name` end, `movie_type` = case when trim(coalesce(values(`movie_type`), '')) <> '' then values(`movie_type`) else `movie_type` end, `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = case when trim(coalesce(`detail_status`, '')) = '' then values(`detail_status`) else `detail_status` end, `first_seen_time` = case when `first_seen_time` = 0 then values(`first_seen_time`) else `first_seen_time` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
+	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.MovieJavId, data.MovieName, data.MovieType, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
 		return nil, err
 	}
 	return m.FindOneByThreadTID(ctx, data.ThreadTID)
 }
 
 func (m *defaultShSehuatangThreadModel) Upsert(ctx context.Context, data *ShSehuatangThread) (*ShSehuatangThread, error) {
-	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = values(`detail_status`), `detail_fetched_on` = values(`detail_fetched_on`), `detail_failed_on` = values(`detail_failed_on`), `detail_error` = values(`detail_error`), `raw_content_text` = values(`raw_content_text`), `magnet_text` = values(`magnet_text`), `info_hash_text` = values(`info_hash_text`), `content_hash` = values(`content_hash`), `first_seen_time` = case when `first_seen_time` = 0 then values(`first_seen_time`) else `first_seen_time` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
-	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
+	data.MovieType = moviedomain.ResolveSehuatangThreadMovieType(data.MovieName, data.MovieJavId)
+	query := "insert into " + m.table + " (`thread_tid`,`thread_url`,`thread_title`,`movie_jav_id`,`movie_name`,`movie_type`,`author_name`,`post_time`,`source_forum_id`,`source_page`,`source_page_url`,`detail_status`,`detail_fetched_on`,`detail_failed_on`,`detail_error`,`raw_content_text`,`magnet_text`,`info_hash_text`,`content_hash`,`first_seen_time`,`last_seen_time`,`created_on`,`updated_on`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) on duplicate key update `thread_url` = values(`thread_url`), `thread_title` = values(`thread_title`), `movie_jav_id` = case when trim(coalesce(values(`movie_name`), '')) <> '' and values(`movie_name`) <> `movie_name` then values(`movie_jav_id`) when trim(coalesce(values(`movie_jav_id`), '')) <> '' then values(`movie_jav_id`) else `movie_jav_id` end, `movie_name` = case when trim(coalesce(values(`movie_name`), '')) <> '' then values(`movie_name`) else `movie_name` end, `movie_type` = values(`movie_type`), `author_name` = values(`author_name`), `post_time` = values(`post_time`), `source_forum_id` = values(`source_forum_id`), `source_page` = values(`source_page`), `source_page_url` = values(`source_page_url`), `detail_status` = values(`detail_status`), `detail_fetched_on` = values(`detail_fetched_on`), `detail_failed_on` = values(`detail_failed_on`), `detail_error` = values(`detail_error`), `raw_content_text` = values(`raw_content_text`), `magnet_text` = values(`magnet_text`), `info_hash_text` = values(`info_hash_text`), `content_hash` = values(`content_hash`), `first_seen_time` = case when `first_seen_time` = 0 then values(`first_seen_time`) else `first_seen_time` end, `last_seen_time` = values(`last_seen_time`), `updated_on` = values(`updated_on`)"
+	if _, err := m.conn.ExecCtx(ctx, query, data.ThreadTID, data.ThreadURL, data.ThreadTitle, data.MovieJavId, data.MovieName, data.MovieType, data.AuthorName, data.PostTime, data.SourceForumID, data.SourcePage, data.SourcePageURL, data.DetailStatus, data.DetailFetchedOn, data.DetailFailedOn, data.DetailError, data.RawContentText, data.MagnetText, data.InfoHashText, data.ContentHash, data.FirstSeenTime, data.LastSeenTime, data.CreatedOn, data.UpdatedOn); err != nil {
 		return nil, err
 	}
 	return m.FindOneByThreadTID(ctx, data.ThreadTID)
@@ -402,6 +480,8 @@ func applyShSehuatangThreadListFilter(builder squirrel.SelectBuilder, filter ShS
 		like := "%" + keyword + "%"
 		builder = builder.Where(squirrel.Or{
 			squirrel.Like{"thread_title": like},
+			squirrel.Like{"movie_name": like},
+			squirrel.Like{"movie_jav_id": like},
 			squirrel.Like{"raw_content_text": like},
 			squirrel.Like{"thread_tid": like},
 		})
@@ -414,6 +494,14 @@ func applyShSehuatangThreadListFilter(builder squirrel.SelectBuilder, filter ShS
 	}
 	if infoHash := strings.TrimSpace(filter.InfoHash); infoHash != "" {
 		builder = builder.Where(squirrel.Like{"info_hash_text": "%" + infoHash + "%"})
+	}
+	movieTypes := moviedomain.NormalizeSehuatangThreadMovieTypes(filter.MovieTypes...)
+	if len(movieTypes) > 0 {
+		builder = builder.Where(squirrel.Eq{"movie_type": movieTypes})
+	} else if movieType := strings.TrimSpace(filter.MovieType); movieType != "" {
+		if normalized := moviedomain.NormalizeSehuatangThreadMovieTypes(movieType); len(normalized) > 0 {
+			builder = builder.Where(squirrel.Eq{"movie_type": normalized[0]})
+		}
 	}
 	if sourceForumID := strings.TrimSpace(filter.SourceForumID); sourceForumID != "" {
 		builder = builder.Where(squirrel.Eq{"source_forum_id": sourceForumID})

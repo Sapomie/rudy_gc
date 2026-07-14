@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +24,7 @@ func NewScEventAPI(deps *dep.Dep) *ScEventAPI {
 }
 
 type scEventUpdateReq struct {
-	ComeMovieJavId  string `json:"comeMovieJavId"`
+	ComeGListId     int64  `json:"comeGListId"`
 	Kind            string `json:"kind"`
 	DurationMinutes int64  `json:"duration"`
 	Fg              string `json:"fg"`
@@ -55,7 +56,7 @@ func (h *ScEventAPI) Update(c *gin.Context) {
 
 	item, err := h.scSvc.UpdateEventMeta(c.Request.Context(), &types.ScEventEditForm{
 		Name:            name,
-		ComeMovieJavId:  strings.TrimSpace(req.ComeMovieJavId),
+		ComeGListId:     req.ComeGListId,
 		Kind:            strings.TrimSpace(req.Kind),
 		DurationMinutes: req.DurationMinutes,
 		Fg:              strings.TrimSpace(req.Fg),
@@ -86,9 +87,9 @@ func (h *ScEventAPI) Update(c *gin.Context) {
 
 func (h *ScEventAPI) UpdateMovieStatus(c *gin.Context) {
 	name := strings.TrimSpace(c.Param("name"))
-	movieJavID := strings.TrimSpace(c.Param("movie_jav_id"))
-	if name == "" || movieJavID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 SC 事件名或影片番号"})
+	gListID, parseErr := strconv.ParseInt(strings.TrimSpace(c.Param("g_list_id")), 10, 64)
+	if name == "" || parseErr != nil || gListID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "缺少 SC 事件名或影片记录"})
 		return
 	}
 
@@ -98,7 +99,7 @@ func (h *ScEventAPI) UpdateMovieStatus(c *gin.Context) {
 		return
 	}
 
-	item, err := h.scSvc.UpdateScEventMovieStatus(c.Request.Context(), name, movieJavID, req.IsSc)
+	item, err := h.scSvc.UpdateScEventMovieStatus(c.Request.Context(), name, gListID, req.IsSc)
 	if err != nil {
 		if errors.Is(err, types.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "SC 事件影片不存在"})

@@ -19,7 +19,7 @@
 
         <section class="d-seeds-list-panel">
           <div class="d-seeds-list-controls">
-            <form class="d-seeds-filter-row" id="dSeedFilterForm" method="get" action="/d-seeds">
+            <form class="d-seeds-filter-row" id="dSeedFilterForm" method="get" action="/seedlist">
               <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
               <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
 
@@ -63,15 +63,11 @@
               </label>
               <label class="d-seeds-filter-field is-page-size">
                 <span>每页</span>
-                <select class="form-select" name="ps" :value="String(queryValue('PageSize') || 50)">
-                  <option value="24">24</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
+                <input class="form-control" type="number" step="1" name="ps" :value="String(queryValue('PageSize') || 50)">
               </label>
               <div class="d-seeds-filter-actions">
                 <button class="btn d-seeds-apply-button" type="submit">筛选</button>
-                <a class="btn d-seeds-clear-button" href="/d-seeds">清空</a>
+                <a class="btn d-seeds-clear-button" href="/seedlist">清空</a>
               </div>
             </form>
 
@@ -148,11 +144,11 @@
                       <span v-else>-</span>
                     </td>
                     <td class="text-nowrap">{{ formatUnixDate(value(row, "MovieLatestReleasingDate")) }}</td>
-                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "MovieLastAddedTime")) }}</td>
+                    <td class="text-nowrap"><ScDateTime :value="value(row, 'MovieLastAddedTime')" unix /></td>
                     <td class="text-nowrap">{{ value(row, "LastInsertCount") }}</td>
                     <td class="text-nowrap">{{ value(row, "PageNow") }}</td>
                     <td class="text-nowrap">{{ value(row, "Offset") }} / {{ value(row, "StartPage") }}-{{ value(row, "EndPage") }}</td>
-                    <td class="text-nowrap">{{ formatUnixMinute(value(row, "LastQueryTime")) }}</td>
+                    <td class="text-nowrap"><ScDateTime :value="value(row, 'LastQueryTime')" unix /></td>
                     <td class="text-nowrap">
                       <button
                         type="button"
@@ -195,6 +191,7 @@ import { computed, defineComponent, h, reactive, ref, watch, type PropType } fro
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
@@ -285,13 +282,6 @@ function formatUnixDate(input: unknown): string {
   if (!n) return "-";
   const d = new Date(n * 1000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatUnixMinute(input: unknown): string {
-  const n = Number(input || 0);
-  if (!n) return "-";
-  const d = new Date(n * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function assignModel(next: Partial<EditModel>) {

@@ -5,7 +5,9 @@ type GList struct {
 	Id         int64
 	Name       string
 	ScName     string
+	MovieType  string
 	MovieJavId string
+	FC2MovieId int64
 	IsCome     int64
 	IsSc       int64
 	CreatedOn  int64

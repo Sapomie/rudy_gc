@@ -14,6 +14,8 @@ type rootLayout struct {
 	tmp       string
 	failed    string
 	rollback  string
+	removed   string
+	waitMovie string
 	media     string
 	watched   string
 }
@@ -27,6 +29,8 @@ func buildRootLayout(root string) rootLayout {
 		tmp:       filepath.Join(process, tmpDirName),
 		failed:    filepath.Join(process, failedDirName),
 		rollback:  filepath.Join(process, rollbackDirName),
+		removed:   filepath.Join(process, removedDirName),
+		waitMovie: filepath.Join(process, waitForMovieDirName),
 		media:     filepath.Join(root, mediaDirName),
 		watched:   filepath.Join(root, watchedDirName),
 	}
@@ -38,6 +42,8 @@ func ensureRootLayout(layout rootLayout) error {
 		layout.tmp,
 		layout.failed,
 		layout.rollback,
+		layout.removed,
+		layout.waitMovie,
 		layout.media,
 		layout.watched,
 	}

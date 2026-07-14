@@ -4,6 +4,8 @@ package moviex
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/zeromicro/go-zero/core/stores/cache"
@@ -29,6 +31,7 @@ type (
 		FindAll(ctx context.Context) ([]*GList, error)
 		ListByFilters(ctx context.Context, scName string, isCome *int64, offset, limit int64) ([]*GList, error)
 		ListByScName(ctx context.Context, scName string) ([]*GList, error)
+		ListByScNames(ctx context.Context, scNames []string) ([]*GList, error)
 
 		// 暴露只读能力，供 infra 构造 SQL（避免直接依赖未导出字段）
 		TableName() string
@@ -36,14 +39,20 @@ type (
 		QueryRowNoCacheCtx(ctx context.Context, v any, query string, args ...any) error
 		ListByMovieJavIds(ctx context.Context, javIds []string) ([]*GList, error)
 		ListByMovieJavId(ctx context.Context, javId string) ([]*GList, error)
+		ListByFC2MovieIDs(ctx context.Context, movieIDs []int64) ([]*GList, error)
+		ListByFC2MovieID(ctx context.Context, movieID int64) ([]*GList, error)
 		ListDistinctMovieJavIds(ctx context.Context) ([]string, error)
+		ListDistinctFC2MovieIDs(ctx context.Context) ([]int64, error)
 		ListAllScOnly(ctx context.Context) ([]*GList, error)
+		ListAllScOnlyByMovieType(ctx context.Context, movieType string) ([]*GList, error)
 		ListScOnlyByFilters(ctx context.Context, scName string, isCome *int64, offset, limit int64) ([]*GList, error)
 		ListScOnlyByScName(ctx context.Context, scName string) ([]*GList, error)
+		ListScOnlyByScNameAndMovieType(ctx context.Context, scName, movieType string) ([]*GList, error)
 		ListScOnlyByMovieJavIds(ctx context.Context, javIds []string) ([]*GList, error)
 		ListScOnlyByMovieJavId(ctx context.Context, javId string) ([]*GList, error)
 		ListDistinctScMovieJavIds(ctx context.Context) ([]string, error)
 		ListScNameStats(ctx context.Context, scNames []string) ([]*GListScNameStat, error)
+		Invalidate(ctx context.Context, rows ...*GList) error
 	}
 
 	customGListModel struct {
@@ -55,6 +64,23 @@ func NewGListModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) G
 	return &customGListModel{
 		defaultGListModel: newGListModel(conn, c, opts...),
 	}
+}
+
+func (m *customGListModel) Invalidate(ctx context.Context, rows ...*GList) error {
+	keys := make([]string, 0, len(rows)*2)
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		keys = append(keys,
+			fmt.Sprintf("%s%d", cacheRudyGcGListIdPrefix, row.Id),
+			fmt.Sprintf("%s%s", cacheRudyGcGListNamePrefix, row.Name),
+		)
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	return m.DelCacheCtx(ctx, keys...)
 }
 
 // ---- 只读辅助 ----
@@ -100,6 +126,25 @@ func (m *customGListModel) ListByFilters(ctx context.Context, scName string, isC
 		Limit(uint64(limit))
 
 	sqlStr, args, err := sb.ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*GList
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGListModel) ListByScNames(ctx context.Context, scNames []string) ([]*GList, error) {
+	scNames = uniqueStringsForWMedia(scNames)
+	if len(scNames) == 0 {
+		return []*GList{}, nil
+	}
+	sqlStr, args, err := squirrel.Select(gListRows).From(m.table).Where(squirrel.Eq{"sc_name": scNames}).ToSql()
 	if err != nil {
 		return nil, err
 	}
@@ -165,6 +210,30 @@ func (m *customGListModel) ListAllScOnly(ctx context.Context) ([]*GList, error) 
 	return rows, nil
 }
 
+func (m *customGListModel) ListAllScOnlyByMovieType(ctx context.Context, movieType string) ([]*GList, error) {
+	movieType = strings.TrimSpace(movieType)
+	if movieType == "" {
+		return []*GList{}, nil
+	}
+	sqlStr, args, err := squirrel.
+		Select(gListRows).
+		From(m.table).
+		Where(squirrel.Eq{"movie_type": movieType, "is_sc": consts.GListIsSc}).
+		OrderBy("sc_name ASC", "is_come DESC", "updated_on DESC", "id ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*GList
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
 // ✅ 新增：按 movie_jav_id 批量查询
 func (m *customGListModel) ListByMovieJavIds(ctx context.Context, javIds []string) ([]*GList, error) {
 	if len(javIds) == 0 {
@@ -173,7 +242,7 @@ func (m *customGListModel) ListByMovieJavIds(ctx context.Context, javIds []strin
 	sqlStr, args, err := squirrel.
 		Select(gListRows).
 		From(m.table).
-		Where(squirrel.Eq{"movie_jav_id": javIds}).
+		Where(squirrel.Eq{"movie_type": "jav", "movie_jav_id": javIds}).
 		ToSql()
 	if err != nil {
 		return nil, err
@@ -195,7 +264,7 @@ func (m *customGListModel) ListScOnlyByMovieJavIds(ctx context.Context, javIds [
 	sqlStr, args, err := squirrel.
 		Select(gListRows).
 		From(m.table).
-		Where(squirrel.Eq{"movie_jav_id": javIds}).
+		Where(squirrel.Eq{"movie_type": "jav", "movie_jav_id": javIds}).
 		Where(squirrel.Eq{"is_sc": consts.GListIsSc}).
 		ToSql()
 	if err != nil {
@@ -215,7 +284,7 @@ func (m *customGListModel) ListByMovieJavId(ctx context.Context, javId string) (
 	sqlStr, args, err := squirrel.
 		Select(gListRows).
 		From(m.table).
-		Where(squirrel.Eq{"movie_jav_id": javId}).
+		Where(squirrel.Eq{"movie_type": "jav", "movie_jav_id": javId}).
 		ToSql()
 	if err != nil {
 		return nil, err
@@ -234,7 +303,7 @@ func (m *customGListModel) ListScOnlyByMovieJavId(ctx context.Context, javId str
 	sqlStr, args, err := squirrel.
 		Select(gListRows).
 		From(m.table).
-		Where(squirrel.Eq{"movie_jav_id": javId}).
+		Where(squirrel.Eq{"movie_type": "jav", "movie_jav_id": javId}).
 		Where(squirrel.Eq{"is_sc": consts.GListIsSc}).
 		ToSql()
 	if err != nil {
@@ -254,6 +323,7 @@ func (m *customGListModel) ListDistinctMovieJavIds(ctx context.Context) ([]strin
 	sqlStr, args, err := squirrel.
 		Select("DISTINCT `movie_jav_id`").
 		From(m.table).
+		Where(squirrel.Eq{"movie_type": "jav"}).
 		Where("movie_jav_id <> ''").
 		Where("sc_name <> ''").
 		ToSql()
@@ -274,6 +344,7 @@ func (m *customGListModel) ListDistinctScMovieJavIds(ctx context.Context) ([]str
 	sqlStr, args, err := squirrel.
 		Select("DISTINCT `movie_jav_id`").
 		From(m.table).
+		Where(squirrel.Eq{"movie_type": "jav"}).
 		Where("movie_jav_id <> ''").
 		Where("sc_name <> ''").
 		Where(squirrel.Eq{"is_sc": consts.GListIsSc}).
@@ -328,6 +399,76 @@ func (m *customGListModel) ListScOnlyByScName(ctx context.Context, scName string
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGListModel) ListScOnlyByScNameAndMovieType(ctx context.Context, scName, movieType string) ([]*GList, error) {
+	movieType = strings.TrimSpace(movieType)
+	if movieType == "" {
+		return []*GList{}, nil
+	}
+	sqlStr, args, err := squirrel.
+		Select(gListRows).
+		From(m.table).
+		Where(squirrel.Eq{"sc_name": scName, "movie_type": movieType, "is_sc": consts.GListIsSc}).
+		OrderBy("is_come DESC", "updated_on DESC", "id ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*GList
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGListModel) ListByFC2MovieIDs(ctx context.Context, movieIDs []int64) ([]*GList, error) {
+	ids := uniquePositiveInt64s(movieIDs)
+	if len(ids) == 0 {
+		return []*GList{}, nil
+	}
+	sqlStr, args, err := squirrel.Select(gListRows).
+		From(m.table).
+		Where(squirrel.Eq{"movie_type": "fc2ppv", "fc2_movie_id": ids}).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []*GList
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*GList{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customGListModel) ListByFC2MovieID(ctx context.Context, movieID int64) ([]*GList, error) {
+	return m.ListByFC2MovieIDs(ctx, []int64{movieID})
+}
+
+func (m *customGListModel) ListDistinctFC2MovieIDs(ctx context.Context) ([]int64, error) {
+	sqlStr, args, err := squirrel.Select("DISTINCT `fc2_movie_id`").
+		From(m.table).
+		Where(squirrel.Eq{"movie_type": "fc2ppv"}).
+		Where("fc2_movie_id > 0").
+		Where("sc_name <> ''").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var rows []int64
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, sqlStr, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []int64{}, nil
 		}
 		return nil, err
 	}

@@ -10,7 +10,10 @@
             <h2>{{ pageTitle }}</h2>
             <p v-if="pageNote">{{ pageNote }}</p>
           </div>
-          <button type="button" class="btn albums-create-button" id="btnOpenCreateTorrentAlbumModal" @click="openModal('create')">新增相册</button>
+          <div class="albums-list-hero-actions">
+            <button type="button" class="btn albums-manage-button" id="btnOpenManageTorrentAlbumsModal" @click="openModal('manage')">管理相册</button>
+            <button type="button" class="btn albums-create-button" id="btnOpenCreateTorrentAlbumModal" @click="openModal('create')">新增相册</button>
+          </div>
         </header>
 
         <div id="torrentAlbumsMsg" class="alert albums-list-message" :class="messageClass" role="alert">
@@ -19,7 +22,7 @@
 
         <section class="albums-list-panel next02-sc-panel next02-sc-events-panel next02-sc-movie-table-card">
           <div class="albums-list-controls">
-            <form ref="filterForm" class="albums-filter-form torrent-albums-filter-form" id="torrentAlbumsFilterForm" method="get" action="/torrent-albums">
+            <form ref="filterForm" class="albums-filter-form torrent-albums-filter-form" id="torrentAlbumsFilterForm" method="get" action="/torrentalbumlist">
               <input v-if="queryValue('PageSize')" type="hidden" name="ps" :value="queryValue('PageSize')">
               <input v-if="queryValue('Sort')" type="hidden" name="sort" :value="queryValue('Sort')">
               <input v-if="queryValue('Order')" type="hidden" name="order" :value="queryValue('Order')">
@@ -80,23 +83,23 @@
               <div class="albums-filter-row is-secondary">
                 <label class="albums-filter-field is-date">
                   <span>发布开始</span>
-                <input class="form-control" type="date" name="publish_from" :value="queryValue('PublishFrom')">
+                <input class="form-control smart-pick-date-input" type="text" name="publish_from" :value="queryValue('PublishFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <label class="albums-filter-field is-date">
                   <span>发布结束</span>
-                <input class="form-control" type="date" name="publish_to" :value="queryValue('PublishTo')">
+                <input class="form-control smart-pick-date-input" type="text" name="publish_to" :value="queryValue('PublishTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <label class="albums-filter-field is-date">
                   <span>下载开始</span>
-                <input class="form-control" type="date" name="created_from" :value="queryValue('CreatedFrom')">
+                <input class="form-control smart-pick-date-input" type="text" name="created_from" :value="queryValue('CreatedFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <label class="albums-filter-field is-date">
                   <span>下载结束</span>
-                <input class="form-control" type="date" name="created_to" :value="queryValue('CreatedTo')">
+                <input class="form-control smart-pick-date-input" type="text" name="created_to" :value="queryValue('CreatedTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                 </label>
                 <div class="albums-filter-actions">
                   <button class="btn albums-apply-button" type="submit">筛选</button>
-                  <a class="btn albums-clear-button" href="/torrent-albums">清空</a>
+                  <a class="btn albums-clear-button" href="/torrentalbumlist">清空</a>
                 </div>
               </div>
             </form>
@@ -177,7 +180,7 @@
                     <td class="album-hash-cell"><code class="album-hash">{{ value(row, "InfoHash") }}</code></td>
                     <td class="sc-number text-nowrap">{{ value(row, "Size") || "-" }}</td>
                     <td class="sc-number text-nowrap">{{ formatUnixDate(value(row, "PublishTime")) }}</td>
-                    <td class="sc-number text-nowrap">{{ formatUnixMinute(value(row, "CreatedOn")) }}</td>
+                    <td class="sc-number text-nowrap"><ScDateTime :value="value(row, 'CreatedOn')" unix /></td>
                     <td class="text-nowrap">
                       <button type="button" class="btn btn-sm btn-outline-secondary js-copy-hash" :data-hash="value(row, 'InfoHash')" @click="copyHash(value(row, 'InfoHash'))">复制 Hash</button>
                       <button type="button" class="btn btn-sm btn-outline-danger js-remove-torrent-album-item ms-1" :data-item-id="value(row, 'ID')" @click="removeOne(row)">移除</button>
@@ -191,6 +194,8 @@
         <TorrentAlbumModals
           :active-modal="activeModal"
           :move-target-options="moveTargetOptions"
+          :album-options="manageAlbumOptions"
+          :selected-album-id="selectedAlbumID"
           :pending-count="pendingIDs.length"
           :create-name="createName"
           @close="closeModal"
@@ -198,6 +203,8 @@
           @confirm-move="batchMove"
           @update-create-name="createName = $event"
           @confirm-create="createAlbum"
+          @rename-album="renameManagedAlbum"
+          @delete-album="deleteManagedAlbum"
         />
       </div>
     </div>
@@ -209,6 +216,7 @@ import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
@@ -221,7 +229,7 @@ const loading = ref(false);
 const error = ref("");
 const messageText = ref("");
 const messageOk = ref(true);
-const activeModal = ref<"" | "remove" | "move" | "create">("");
+const activeModal = ref<"" | "remove" | "move" | "create" | "manage">("");
 const createName = ref("");
 const filterForm = ref<HTMLFormElement | null>(null);
 
@@ -229,7 +237,7 @@ const sourceOptions = [
   { value: "", label: "全部" },
   { value: "javbus_magnet", label: "JavBus 磁力" },
   { value: "sukebei_torrent", label: "Sukebei 种子" },
-  { value: "sehuatang_magnet", label: "Sehuatang 磁力" }
+  { value: "sh_magnet", label: "色花堂磁力" }
 ];
 
 watch(() => route.fullPath, load, { immediate: true });
@@ -275,6 +283,13 @@ const albumSelectOptions = computed(() => {
 const moveTargetOptions = computed(() => albums.value
   .filter((album) => Number(value(album, "ID")) > 0 && Number(value(album, "ID")) !== selectedAlbumID.value)
   .map((album) => ({ value: value(album, "ID"), label: value(album, "Name") })));
+const manageAlbumOptions = computed(() => albums.value
+  .filter((album) => Number(value(album, "ID")) > 0)
+  .map((album) => ({
+    value: value(album, "ID"),
+    label: value(album, "Name"),
+    protected: pick(album, "Protected") === true
+  })));
 
 function queryValue(key: string): string {
   return text(query.value, key);
@@ -300,7 +315,7 @@ function sourceBadgeText(row: AnyRecord): string {
   const sourceType = value(row, "SourceType");
   if (sourceType === "javbus_magnet") return "JavBus";
   if (sourceType === "sukebei_torrent") return "Sukebei";
-  if (sourceType === "sehuatang_magnet") return "Sehuatang";
+  if (sourceType === "sh_magnet") return "色花堂";
   return "未知";
 }
 
@@ -308,7 +323,7 @@ function sourceBadgeClass(row: AnyRecord): string {
   const sourceType = value(row, "SourceType");
   if (sourceType === "javbus_magnet") return "bg-primary-subtle text-primary";
   if (sourceType === "sukebei_torrent") return "bg-danger-subtle text-danger";
-  if (sourceType === "sehuatang_magnet") return "bg-warning-subtle text-warning";
+  if (sourceType === "sh_magnet") return "bg-warning-subtle text-warning";
   return "bg-secondary-subtle text-secondary";
 }
 
@@ -317,13 +332,6 @@ function formatUnixDate(input: unknown): string {
   if (!n) return "-";
   const d = new Date(n * 1000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatUnixMinute(input: unknown): string {
-  const n = Number(input || 0);
-  if (!n) return "-";
-  const d = new Date(n * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function rowID(row: AnyRecord): number {
@@ -352,7 +360,7 @@ function showMessage(message: string, ok = true) {
 }
 
 function quickFilter(albumName: string) {
-  const url = new URL("/torrent-albums", window.location.origin);
+  const url = new URL("/torrentalbumlist", window.location.origin);
   url.searchParams.set("album_name", albumName);
   window.location.href = `${url.pathname}${url.search}`;
 }
@@ -417,7 +425,7 @@ function removeRowsByIDs(ids: number[]) {
   selectedIDs.value = new Set([...selectedIDs.value].filter((id) => !idSet.has(id)));
 }
 
-function openModal(name: "remove" | "move" | "create") {
+function openModal(name: "remove" | "move" | "create" | "manage") {
   activeModal.value = name;
 }
 
@@ -488,11 +496,55 @@ async function createAlbum() {
     closeModal();
     showMessage(text(data, "message") || "相册创建成功");
     const albumName = text(data, "album_name") || name;
-    const url = new URL("/torrent-albums", window.location.origin);
+    const url = new URL("/torrentalbumlist", window.location.origin);
     url.searchParams.set("album_name", albumName);
     window.location.href = `${url.pathname}${url.search}`;
   } catch (err) {
     showMessage(err instanceof Error ? err.message : "新增相册失败", false);
+  }
+}
+
+async function renameManagedAlbum(input: { id: string; name: string }) {
+  const albumID = Number(input.id || 0);
+  const name = String(input.name || "").trim();
+  if (albumID <= 0 || !name) {
+    showMessage("相册名称不能为空", false);
+    return;
+  }
+  try {
+    const data = asRecord(await sendJSON(`/api/albums/${albumID}`, "PUT", { name }));
+    closeModal();
+    const updatedName = text(data, "album_name") || name;
+    if (albumID === selectedAlbumID.value) {
+      const url = new URL("/torrentalbumlist", window.location.origin);
+      url.searchParams.set("album_name", updatedName);
+      window.location.href = `${url.pathname}${url.search}`;
+      return;
+    }
+    window.location.reload();
+  } catch (err) {
+    closeModal();
+    showMessage(err instanceof Error ? err.message : "编辑相册失败", false);
+  }
+}
+
+async function deleteManagedAlbum(albumIDValue: string) {
+  const albumID = Number(albumIDValue || 0);
+  if (albumID <= 0) {
+    showMessage("相册 ID 无效", false);
+    return;
+  }
+  try {
+    await sendJSON(`/api/albums/${albumID}`, "DELETE");
+    closeModal();
+    if (albumID === selectedAlbumID.value) {
+      window.location.href = "/torrentalbumlist";
+      return;
+    }
+    window.location.reload();
+  } catch (err) {
+    closeModal();
+    showMessage(err instanceof Error ? err.message : "删除相册失败", false);
   }
 }
 
@@ -546,14 +598,110 @@ const TorrentAlbumModals = defineComponent({
   props: {
     activeModal: { type: String, required: true },
     moveTargetOptions: { type: Array as PropType<{ value: string; label: string }[]>, required: true },
+    albumOptions: { type: Array as PropType<{ value: string; label: string; protected: boolean }[]>, required: true },
+    selectedAlbumId: { type: Number, required: true },
     pendingCount: { type: Number, required: true },
     createName: { type: String, required: true }
   },
-  emits: ["close", "confirmRemove", "confirmMove", "updateCreateName", "confirmCreate"],
+  emits: ["close", "confirmRemove", "confirmMove", "updateCreateName", "confirmCreate", "renameAlbum", "deleteAlbum"],
   setup(props, { emit }) {
+    const editingAlbumID = ref("");
+    const editingAlbumName = ref("");
+    const deletingAlbumID = ref("");
+    const deletingAlbumName = ref("");
     const modalClass = (name: string) => ["modal", "fade", props.activeModal === name ? "show d-block" : ""];
     const ariaHidden = (name: string) => props.activeModal === name ? "false" : "true";
+    const resetManagement = () => {
+      editingAlbumID.value = "";
+      editingAlbumName.value = "";
+      deletingAlbumID.value = "";
+      deletingAlbumName.value = "";
+    };
+    const closeManagement = () => {
+      resetManagement();
+      emit("close");
+    };
     return () => h("div", [
+      h("div", {
+        class: modalClass("manage"),
+        id: "torrentAlbumManageModal",
+        tabindex: "-1",
+        "aria-labelledby": "torrentAlbumManageModalLabel",
+        "aria-hidden": ariaHidden("manage")
+      }, [h("div", { class: "modal-dialog modal-dialog-centered albums-manage-dialog" }, [h("div", { class: "modal-content" }, [
+        h("div", { class: "modal-header" }, [
+          h("h5", { class: "modal-title", id: "torrentAlbumManageModalLabel" }, "管理相册"),
+          h("button", { type: "button", class: "btn-close", "aria-label": "Close", onClick: closeManagement })
+        ]),
+        h("div", { class: "modal-body albums-manage-body" }, deletingAlbumID.value
+          ? [
+              h("div", { class: "albums-manage-delete-confirm" }, [
+                h("h6", "删除相册确认"),
+                h("p", ["确认删除相册“", h("strong", deletingAlbumName.value), "”吗？"]),
+                h("p", { class: "text-muted small mb-0" }, "仅空相册可以删除；相册中存在任何收纳记录时，删除操作会被拒绝。")
+              ])
+            ]
+          : [
+              h("p", { class: "text-muted small mb-2" }, "可编辑或删除自定义相册；系统相册由现有业务流程使用。"),
+              h("div", { class: "albums-manage-list" }, props.albumOptions.map((option) => {
+                const isEditing = editingAlbumID.value === option.value;
+                const isSelected = Number(option.value) === props.selectedAlbumId;
+                return h("div", { class: ["albums-manage-item", isSelected ? "is-selected" : ""], key: option.value }, [
+                  h("div", { class: "albums-manage-item-main" }, isEditing
+                    ? [h("input", {
+                        class: "form-control albums-manage-name-input",
+                        value: editingAlbumName.value,
+                        maxlength: "128",
+                        "aria-label": `编辑相册 ${option.label}`,
+                        onInput: (event: Event) => { editingAlbumName.value = (event.target as HTMLInputElement).value; }
+                      })]
+                    : [
+                        h("span", { class: "albums-manage-name" }, option.label),
+                        option.protected ? h("span", { class: "albums-manage-system-badge" }, "系统相册") : null,
+                        isSelected ? h("span", { class: "albums-manage-current-badge" }, "当前") : null
+                      ]),
+                  h("div", { class: "albums-manage-item-actions" }, isEditing
+                    ? [
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-primary btn-sm",
+                          disabled: !editingAlbumName.value.trim(),
+                          onClick: () => emit("renameAlbum", { id: option.value, name: editingAlbumName.value })
+                        }, "保存"),
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-light btn-sm",
+                          onClick: () => { editingAlbumID.value = ""; editingAlbumName.value = ""; }
+                        }, "取消")
+                      ]
+                    : [
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-outline-secondary btn-sm",
+                          disabled: option.protected,
+                          "aria-label": `编辑相册 ${option.label}`,
+                          onClick: () => { editingAlbumID.value = option.value; editingAlbumName.value = option.label; }
+                        }, "编辑"),
+                        h("button", {
+                          type: "button",
+                          class: "btn btn-outline-danger btn-sm",
+                          disabled: option.protected,
+                          "aria-label": `删除相册 ${option.label}`,
+                          onClick: () => { deletingAlbumID.value = option.value; deletingAlbumName.value = option.label; }
+                        }, "删除")
+                      ])
+                ]);
+              }))
+            ]),
+        h("div", { class: "modal-footer" }, [
+          deletingAlbumID.value
+            ? h("button", { type: "button", class: "btn btn-light", onClick: () => { deletingAlbumID.value = ""; deletingAlbumName.value = ""; } }, "返回管理")
+            : null,
+          deletingAlbumID.value
+            ? h("button", { type: "button", class: "btn btn-danger", id: "torrentAlbumDeleteConfirmBtn", onClick: () => emit("deleteAlbum", deletingAlbumID.value) }, "确认删除")
+            : h("button", { type: "button", class: "btn btn-light", onClick: closeManagement }, "关闭")
+        ])
+      ])])]),
       h("div", {
         class: modalClass("remove"),
         id: "torrentAlbumBatchRemoveModal",

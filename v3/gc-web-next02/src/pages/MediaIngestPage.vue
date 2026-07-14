@@ -14,9 +14,9 @@
                   <p>{{ pageNote }}</p>
                 </div>
                 <div class="next02-media-hero-actions">
-                  <a href="/torrent-albums?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
-                  <a href="/triggers/media-rescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
-                  <a href="/triggers/media-rollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
+                  <a href="/torrentalbumlist?album_name=%E4%B8%8B%E8%BD%BD%E4%B8%AD" class="btn btn-outline-primary btn-sm">下载中列表</a>
+                  <a href="/mediarescan" class="btn btn-outline-secondary btn-sm">媒体重扫</a>
+                  <a href="/mediarollback" class="btn btn-outline-secondary btn-sm">名称回滚</a>
                 </div>
               </section>
             </div>
@@ -67,7 +67,7 @@
                     <div class="text-muted small">状态</div>
                     <div id="statusText" class="fw-semibold">{{ statusText }}</div>
                   </div>
-                  <div class="mt-2 text-muted small" id="generatedAtText">{{ generatedAtText }}</div>
+                  <div v-if="generatedAt" class="mt-2 text-muted small" id="generatedAtText">预处理时间：<ScDateTime :value="generatedAt" /></div>
                 </div>
               </div>
 
@@ -129,6 +129,7 @@ import { computed, defineComponent, h, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/api/request";
 import PageShell from "@/components/PageShell.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord } from "@/types/gc";
 import { asArray, asRecord, formatValue, num, pick, text } from "@/utils/format";
 
@@ -182,12 +183,12 @@ const canCommit = computed(() => Boolean(pick(plan.value, "can_commit")));
 const showReturn = computed(() => Boolean(pick(plan.value, "partial_failed")) && Boolean(pick(plan.value, "has_plan")));
 const commitButtonText = computed(() => Boolean(pick(plan.value, "partial_failed")) ? "第二段：仅插入通过项" : "第二段：执行插入");
 const statusText = computed(() => text(plan.value, "message") || "等待操作");
-const generatedAtText = computed(() => {
+const generatedAt = computed(() => {
   if (commitPhase.value) {
     return "";
   }
-  const generatedAt = text(plan.value, "generated_at");
-  return generatedAt && generatedAt !== "0" ? `预处理时间：${generatedAt}` : "";
+  const value = text(plan.value, "generated_at");
+  return value && value !== "0" ? value : "";
 });
 const summary = computed(() => ({
   total: commitPhase.value ? num(plan.value, "total") : num(precheckSummary.value, "total"),

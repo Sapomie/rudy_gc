@@ -21,7 +21,7 @@
                 </template>
               </nav>
               <div class="next02-wdir-overview-metrics" aria-label="目录统计">
-                <span v-for="item in statCards" :key="item.label"><small>{{ item.label }}</small><strong>{{ item.value || "-" }}</strong></span>
+                <span v-for="item in statCards" :key="item.label"><small>{{ item.label }}</small><strong><ScDateTime v-if="item.dateTime" :value="item.value" unix /><template v-else>{{ item.value || "-" }}</template></strong></span>
               </div>
             </div>
             <ChildrenGrid :children="children" />
@@ -56,9 +56,9 @@
               <form class="row g-2 align-items-end" method="get" :action="filterAction">
                 <input v-if="filterValue('PageSize')" type="hidden" name="ps" :value="filterValue('PageSize')">
                 <input v-if="filterValue('OrderBy')" type="hidden" name="od" :value="filterValue('OrderBy')">
-                <div v-for="field in filterFields" :key="field.name" class="col-12 col-md-6 col-xl-2">
+                <div v-for="field in filterFields" :key="field.name" class="col-12 col-md-6 col-xl-2" :class="{ 'smart-pick-date-field': field.placeholder === 'YYYY-MM-DD' }">
                   <label class="form-label mb-1">{{ field.label }}</label>
-                  <input class="form-control" :name="field.name" :value="field.value" :placeholder="field.placeholder">
+                  <input class="form-control" :class="{ 'smart-pick-date-input': field.placeholder === 'YYYY-MM-DD' }" :name="field.name" :value="field.value" :placeholder="field.placeholder" :inputmode="field.placeholder === 'YYYY-MM-DD' ? 'numeric' : undefined" :maxlength="field.placeholder === 'YYYY-MM-DD' ? 10 : undefined" :pattern="field.placeholder === 'YYYY-MM-DD' ? '[0-9]{4}-[0-9]{2}-[0-9]{2}' : undefined">
                 </div>
                 <div class="col-12 d-flex gap-2">
                   <button class="btn btn-primary" type="submit">筛选</button>
@@ -104,6 +104,7 @@ import LoadingState from "@/components/LoadingState.vue";
 import MovieGrid from "@/components/MovieGrid.vue";
 import PageShell from "@/components/PageShell.vue";
 import PaginationBar from "@/components/PaginationBar.vue";
+import ScDateTime from "@/components/ScDateTime.vue";
 import type { AnyRecord, PageInfo } from "@/types/gc";
 import { asArray, asRecord, normalizeHref, pick, text } from "@/utils/format";
 
@@ -180,10 +181,10 @@ const filterFields = computed(() => [
   ["mbe", "Media 下载结束", "MediaBirthTimeEnd", "YYYY-MM-DD"]
 ].map(([name, label, key, placeholder]) => ({ name, label, value: filterValue(key), placeholder })));
 const statCards = computed(() => [
-  { label: "媒体数", value: text(stats.value, "film_count", "FilmCount") || "0" },
-  { label: "总大小", value: humanSize(pick(stats.value, "total_size", "TotalSize")) },
-  { label: "最近下载时间", value: formatUnix(pick(stats.value, "last_film_birth", "LastFilmBirth"), true) },
-  { label: "最近更新", value: formatUnix(pick(stats.value, "last_updated_on", "LastUpdatedOn"), true) }
+  { label: "媒体数", value: text(stats.value, "film_count", "FilmCount") || "0", dateTime: false },
+  { label: "总大小", value: humanSize(pick(stats.value, "total_size", "TotalSize")), dateTime: false },
+  { label: "最近下载时间", value: pick(stats.value, "last_film_birth", "LastFilmBirth"), dateTime: true },
+  { label: "最近更新", value: pick(stats.value, "last_updated_on", "LastUpdatedOn"), dateTime: true }
 ]);
 const sortButtons = computed(() => Object.entries(sortQuery.value).filter(([key]) => key !== "ByMediaBirthTime").map(([key, value]) => {
   const item = asRecord(value);
@@ -231,19 +232,6 @@ function humanSize(input: unknown): string {
   return `${value} B`;
 }
 
-function formatUnix(input: unknown, withTime = false): string {
-  const n = Number(input || 0);
-  if (!n) return "";
-  const d = new Date(n * 1000);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  if (!withTime) return `${yyyy}-${mm}-${dd}`;
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-}
-
 const ChildrenGrid = defineComponent({
   name: "WDirChildrenGrid",
   props: {
@@ -268,7 +256,7 @@ const ChildrenGrid = defineComponent({
               h("strong", { class: "next02-wdir-directory-name", title: name }, name),
               h("span", { class: "next02-wdir-directory-metric" }, [h("small", "媒体"), h("b", text(stat, "film_count", "FilmCount") || "0")]),
               h("span", { class: "next02-wdir-directory-metric" }, [h("small", "容量"), h("b", humanSize(pick(stat, "total_size", "TotalSize")))]),
-              h("time", { class: "next02-wdir-directory-updated" }, `更新 ${formatUnix(pick(summary, "updated_on", "UpdatedOn"), true) || "-"}`)
+              h("time", { class: "next02-wdir-directory-updated" }, ["更新 ", h(ScDateTime, { value: pick(summary, "updated_on", "UpdatedOn"), unix: true })])
             ]);
           }))
           : h("div", { class: "movie-empty next02-wdir-empty" }, "暂无子目录。")

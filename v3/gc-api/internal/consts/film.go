@@ -28,6 +28,12 @@ const (
 )
 
 const (
+	SHMagnetDownloadStateMissing    int64 = 0
+	SHMagnetDownloadStateDownloaded int64 = 1
+	SHMagnetDownloadStateRemoved    int64 = 2
+)
+
+const (
 	FilmNoSub = iota + 1
 	FilmHasSub
 )

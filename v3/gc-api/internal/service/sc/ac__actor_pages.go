@@ -276,7 +276,7 @@ func movieLastScTime(movieType *types.MovieType) int64 {
 }
 
 func buildActorPageHrefByName(name string) string {
-	return "/cast?name=" + url.QueryEscape(name)
+	return "/listcard?cn=" + url.QueryEscape(name)
 }
 
 func buildActorCardsHrefByName(name string) string {
@@ -353,7 +353,7 @@ func flattenActorScMovies(movieMap map[string]*types.ActorScEventMovie) []*types
 }
 
 func buildScEventHref(name string) string {
-	return "/sc-events/" + url.PathEscape(name)
+	return "/scevent/" + url.PathEscape(name)
 }
 
 func (s *ScService) buildActorRecentEventsFromSnapshot(ctx context.Context, personID int64, recentLimit int) ([]*types.ActorScEventItem, error) {
