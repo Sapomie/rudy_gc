@@ -69,6 +69,21 @@ func TestResolveFC2CoverImageRejectsUnusableRows(t *testing.T) {
 	}
 }
 
+func TestResolveFC2DetailCoverImageUsesNewestDetailSheetOnly(t *testing.T) {
+	dir := t.TempDir()
+	card := newFC2CoverTestImage(t, dir, 9, 7, FC2MediaImageTypeContactSheet, 300)
+	older := newFC2CoverTestImage(t, dir, 10, 7, FC2MediaImageTypeDetailContactSheet, 100)
+	newest := newFC2CoverTestImage(t, dir, 11, 7, FC2MediaImageTypeDetailContactSheet, 200)
+
+	got := ResolveFC2DetailCoverImage(7, []*moviex.FC2MediaImage{card, older, newest})
+	if got == nil || got.ID != newest.ID {
+		t.Fatalf("详情联系表 = %#v，期望图片 %d", got, newest.ID)
+	}
+	if cardCover := ResolveFC2CoverImage(7, 0, []*moviex.FC2MediaImage{newest, card}); cardCover == nil || cardCover.ID != card.ID {
+		t.Fatalf("详情联系表影响了卡片封面选择: %#v", cardCover)
+	}
+}
+
 func newFC2CoverTestImage(t *testing.T, dir string, id, mediaID int64, imageType string, createdOn int64) *moviex.FC2MediaImage {
 	t.Helper()
 	filePath := filepath.Join(dir, imageType+"-"+strconv.FormatInt(id, 10)+".png")

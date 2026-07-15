@@ -10,12 +10,12 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
-const fc2ScStatRows = "`id`,`fc2_movie_id`,`fc2_key`,`movie_name`,`sc_event_times`,`sc_times`,`come_times`,`last_sc_time`,`post_time`,`media_birth_time`,`created_on`,`updated_on`"
+const fc2ScStatRows = "`id`,`fc2_movie_id`,`fc2_key`,`movie_name`,`sc_event_times`,`sc_times`,`come_times`,`last_selected_sc_time`,`last_participated_sc_time`,`post_time`,`media_birth_time`,`created_on`,`updated_on`"
 
 const (
-	cacheRudyGcFC2ScStatIDPrefix      = "cache:rudyGc:fc2ScStat:id:"
-	cacheRudyGcFC2ScStatMovieIDPrefix = "cache:rudyGc:fc2ScStat:movieId:"
-	cacheRudyGcFC2ScStatKeyPrefix     = "cache:rudyGc:fc2ScStat:key:"
+	cacheRudyGcFC2ScStatIDPrefix      = "cache:rudyGc:fc2ScStat:v2:id:"
+	cacheRudyGcFC2ScStatMovieIDPrefix = "cache:rudyGc:fc2ScStat:v2:movieId:"
+	cacheRudyGcFC2ScStatKeyPrefix     = "cache:rudyGc:fc2ScStat:v2:key:"
 )
 
 type (
@@ -34,18 +34,19 @@ type (
 	}
 
 	FC2ScStat struct {
-		ID             int64  `db:"id"`
-		FC2MovieID     int64  `db:"fc2_movie_id"`
-		FC2Key         string `db:"fc2_key"`
-		MovieName      string `db:"movie_name"`
-		ScEventTimes   int64  `db:"sc_event_times"`
-		ScTimes        int64  `db:"sc_times"`
-		ComeTimes      int64  `db:"come_times"`
-		LastScTime     int64  `db:"last_sc_time"`
-		PostTime       int64  `db:"post_time"`
-		MediaBirthTime int64  `db:"media_birth_time"`
-		CreatedOn      int64  `db:"created_on"`
-		UpdatedOn      int64  `db:"updated_on"`
+		ID                     int64  `db:"id"`
+		FC2MovieID             int64  `db:"fc2_movie_id"`
+		FC2Key                 string `db:"fc2_key"`
+		MovieName              string `db:"movie_name"`
+		ScEventTimes           int64  `db:"sc_event_times"`
+		ScTimes                int64  `db:"sc_times"`
+		ComeTimes              int64  `db:"come_times"`
+		LastSelectedScTime     int64  `db:"last_selected_sc_time"`
+		LastParticipatedScTime int64  `db:"last_participated_sc_time"`
+		PostTime               int64  `db:"post_time"`
+		MediaBirthTime         int64  `db:"media_birth_time"`
+		CreatedOn              int64  `db:"created_on"`
+		UpdatedOn              int64  `db:"updated_on"`
 	}
 )
 
@@ -66,8 +67,8 @@ func (m *defaultFC2ScStatModel) cacheKeys(data *FC2ScStat) []string {
 
 func (m *defaultFC2ScStatModel) Insert(ctx context.Context, data *FC2ScStat) (sql.Result, error) {
 	return m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
-		query := "INSERT INTO " + m.table + " (`fc2_movie_id`,`fc2_key`,`movie_name`,`sc_event_times`,`sc_times`,`come_times`,`last_sc_time`,`post_time`,`media_birth_time`,`created_on`,`updated_on`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-		return conn.ExecCtx(ctx, query, data.FC2MovieID, data.FC2Key, data.MovieName, data.ScEventTimes, data.ScTimes, data.ComeTimes, data.LastScTime, data.PostTime, data.MediaBirthTime, data.CreatedOn, data.UpdatedOn)
+		query := "INSERT INTO " + m.table + " (`fc2_movie_id`,`fc2_key`,`movie_name`,`sc_event_times`,`sc_times`,`come_times`,`last_selected_sc_time`,`last_participated_sc_time`,`post_time`,`media_birth_time`,`created_on`,`updated_on`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		return conn.ExecCtx(ctx, query, data.FC2MovieID, data.FC2Key, data.MovieName, data.ScEventTimes, data.ScTimes, data.ComeTimes, data.LastSelectedScTime, data.LastParticipatedScTime, data.PostTime, data.MediaBirthTime, data.CreatedOn, data.UpdatedOn)
 	}, m.cacheKeys(data)...)
 }
 
@@ -129,8 +130,8 @@ func (m *defaultFC2ScStatModel) Update(ctx context.Context, data *FC2ScStat) err
 	}
 	keys := append(m.cacheKeys(old), m.cacheKeys(data)...)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
-		query := "UPDATE " + m.table + " SET `fc2_movie_id`=?,`fc2_key`=?,`movie_name`=?,`sc_event_times`=?,`sc_times`=?,`come_times`=?,`last_sc_time`=?,`post_time`=?,`media_birth_time`=?,`created_on`=?,`updated_on`=? WHERE `id`=?"
-		return conn.ExecCtx(ctx, query, data.FC2MovieID, data.FC2Key, data.MovieName, data.ScEventTimes, data.ScTimes, data.ComeTimes, data.LastScTime, data.PostTime, data.MediaBirthTime, data.CreatedOn, data.UpdatedOn, data.ID)
+		query := "UPDATE " + m.table + " SET `fc2_movie_id`=?,`fc2_key`=?,`movie_name`=?,`sc_event_times`=?,`sc_times`=?,`come_times`=?,`last_selected_sc_time`=?,`last_participated_sc_time`=?,`post_time`=?,`media_birth_time`=?,`created_on`=?,`updated_on`=? WHERE `id`=?"
+		return conn.ExecCtx(ctx, query, data.FC2MovieID, data.FC2Key, data.MovieName, data.ScEventTimes, data.ScTimes, data.ComeTimes, data.LastSelectedScTime, data.LastParticipatedScTime, data.PostTime, data.MediaBirthTime, data.CreatedOn, data.UpdatedOn, data.ID)
 	}, keys...)
 	return err
 }

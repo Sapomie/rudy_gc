@@ -35,16 +35,16 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 
 		stat := statsMap[id]
 		var (
-			movieNumber       int64
-			ownedMovieNumber  int64
-			ownedWMediaNumber int64
-			ownedWMediaRatio  int64
-			scTimes           int64
-			comeTimes         int64
-			lastScTime        int64
-			lastScEventTime   int64
-			highestRank       int64
-			rankTimes         int64
+			movieNumber            int64
+			ownedMovieNumber       int64
+			ownedWMediaNumber      int64
+			ownedWMediaRatio       int64
+			scTimes                int64
+			comeTimes              int64
+			lastSelectedScTime     int64
+			lastParticipatedScTime int64
+			highestRank            int64
+			rankTimes              int64
 		)
 		if stat != nil {
 			movieNumber = stat.MovieNumber
@@ -53,8 +53,8 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 			ownedWMediaRatio = calcOwnedWMediaRatio(ownedMovieNumber, ownedWMediaNumber)
 			scTimes = stat.ScTimes
 			comeTimes = stat.ComeTimes
-			lastScTime = stat.LastScTime
-			lastScEventTime = stat.LastScEventTime
+			lastSelectedScTime = stat.LastSelectedScTime
+			lastParticipatedScTime = stat.LastParticipatedScTime
 			highestRank = stat.HighestRank
 			rankTimes = stat.RankTimes
 		}
@@ -65,8 +65,8 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 			row.OwnedWMediaRatio == ownedWMediaRatio &&
 			row.ScTimes == scTimes &&
 			row.ComeTimes == comeTimes &&
-			row.LastScTime == lastScTime &&
-			row.LastScEventTime == lastScEventTime &&
+			row.LastSelectedScTime == lastSelectedScTime &&
+			row.LastParticipatedScTime == lastParticipatedScTime &&
 			row.HighestRank == highestRank &&
 			row.RankTimes == rankTimes {
 			continue
@@ -78,8 +78,8 @@ func (d *Deps) SyncPersonStatsByIDs(ctx context.Context, ids []int64, now int64)
 		row.OwnedWMediaRatio = ownedWMediaRatio
 		row.ScTimes = scTimes
 		row.ComeTimes = comeTimes
-		row.LastScTime = lastScTime
-		row.LastScEventTime = lastScEventTime
+		row.LastSelectedScTime = lastSelectedScTime
+		row.LastParticipatedScTime = lastParticipatedScTime
 		row.HighestRank = highestRank
 		row.RankTimes = rankTimes
 		row.UpdatedOn = now

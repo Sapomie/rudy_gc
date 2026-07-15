@@ -164,7 +164,6 @@ async function load() {
   message.value = "";
   try {
     payload.value = asRecord(await getJSON(apiPathForRoute(route)));
-    await loadPlan();
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -265,10 +264,6 @@ const tables = computed<ResultTableDef[]>(() => [
     rows: asArray<AnyRecord>(pick(plan.value, "commit_preview"))
   }
 ]);
-
-async function loadPlan() {
-  plan.value = asRecord(await getJSON("/api/triggers/media/plan"));
-}
 
 async function runAction(path: string, successMessage: string) {
   actionLoading.value = true;

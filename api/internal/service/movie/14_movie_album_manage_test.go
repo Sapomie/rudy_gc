@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	moviedomain "rudy_gc/internal/domain/movie"
+	"rudy_gc/internal/repository/moviex"
 )
 
 func TestIsProtectedMovieAlbumName(t *testing.T) {
@@ -47,5 +50,19 @@ func TestDeleteMovieAlbumRejectsInvalidID(t *testing.T) {
 	_, err := service.DeleteMovieAlbum(context.Background(), 0)
 	if !errors.Is(err, ErrMovieAlbumInvalidID) {
 		t.Fatalf("DeleteMovieAlbum error = %v, want %v", err, ErrMovieAlbumInvalidID)
+	}
+}
+
+func TestMovieAlbumItemTypeUsesFC2KeyIdentity(t *testing.T) {
+	row := &moviex.CMovieAlbumItem{FC2Key: "FC2PPV-4556413-1"}
+	if got := movieAlbumItemType(row); got != moviedomain.SehuatangThreadMovieTypeFC2PPV {
+		t.Fatalf("movieAlbumItemType() = %q, want %q", got, moviedomain.SehuatangThreadMovieTypeFC2PPV)
+	}
+}
+
+func TestMovieAlbumItemTypeDefaultsLegacyRowsToJAV(t *testing.T) {
+	row := &moviex.CMovieAlbumItem{MovieJavId: "ABP-123"}
+	if got := movieAlbumItemType(row); got != moviedomain.SehuatangThreadMovieTypeJAV {
+		t.Fatalf("movieAlbumItemType() = %q, want %q", got, moviedomain.SehuatangThreadMovieTypeJAV)
 	}
 }

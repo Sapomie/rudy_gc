@@ -81,7 +81,10 @@ func BuildSHProgressStatsText(result *SHFetchResult) map[string]string {
 	if result == nil {
 		return nil
 	}
-	stats := make(map[string]string, 3)
+	stats := make(map[string]string, 4)
+	if existingPolicy := strings.TrimSpace(result.ExistingPolicy); existingPolicy != "" {
+		stats["existing_policy"] = existingPolicy
+	}
 	if currentPageText := strings.TrimSpace(result.CurrentPageText); currentPageText != "" {
 		stats["current_page_text"] = currentPageText
 	}
@@ -166,6 +169,7 @@ func (s *Service) FetchSHThreads(ctx context.Context, req SHFetchRequest) (*SHFe
 	result := &SHFetchResult{
 		RunID:           runID,
 		FetchMode:       req.FetchMode,
+		ExistingPolicy:  req.ExistingPolicy,
 		Keyword:         req.Keyword,
 		TargetForumIDs:  targetForumIDs,
 		StartPage:       req.StartPage,
@@ -659,6 +663,7 @@ func normalizeSHFetchRequest(req SHFetchRequest) SHFetchRequest {
 		out.FetchMode = SHFetchModeSearch
 	}
 	out.Keyword = strings.TrimSpace(out.Keyword)
+	out.ExistingPolicy = NormalizeSHExistingPolicy(out.ExistingPolicy)
 	out.TargetForumIDs = normalizeSHTargetForumIDs(out.TargetForumIDs)
 	if out.StartPage <= 0 {
 		out.StartPage = DefaultStartPage
@@ -667,6 +672,14 @@ func normalizeSHFetchRequest(req SHFetchRequest) SHFetchRequest {
 		out.EndPage = DefaultEndPage
 	}
 	return out
+}
+
+func NormalizeSHExistingPolicy(raw string) string {
+	policy := strings.ToLower(strings.TrimSpace(raw))
+	if policy == "" {
+		return SHExistingPolicyUpsert
+	}
+	return policy
 }
 
 func normalizeSHTargetForumIDs(raw []string) []string {
@@ -694,6 +707,11 @@ func normalizeSHTargetForumIDs(raw []string) []string {
 }
 
 func validateSHFetchRequest(req SHFetchRequest) error {
+	switch req.ExistingPolicy {
+	case SHExistingPolicyUpsert, SHExistingPolicySkip:
+	default:
+		return fmt.Errorf("existing_policy 仅支持 %s 或 %s", SHExistingPolicyUpsert, SHExistingPolicySkip)
+	}
 	if req.FetchMode == SHFetchModeSearch && req.Keyword == "" {
 		return fmt.Errorf("keyword 不能为空")
 	}

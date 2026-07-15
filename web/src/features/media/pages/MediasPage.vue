@@ -97,7 +97,7 @@
                   <col class="medias-col-self-make">
                   <col class="medias-col-mask">
                   <col class="medias-col-sc">
-                  <col class="medias-col-last-sc">
+                  <col class="medias-col-last-selected-sc">
                   <col class="medias-col-birth">
                   <col class="medias-col-release">
                   <col class="medias-col-action">
@@ -115,7 +115,7 @@
                     <th class="next02-pink-list-sortable"><SortLink :link="sortLink('BySelfMake')" label="自制" /></th>
                     <th class="next02-pink-list-sortable"><SortLink :link="sortLink('ByHasMask')" label="遮罩" /></th>
                     <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByScTimes')" label="SC" /></th>
-                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByLastSc')" label="最后SC" /></th>
+                    <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByLastSelectedSc')" label="最近入选 SC" /></th>
                     <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByBirthTime')" label="下载时间" /></th>
                     <th class="next02-pink-list-sortable medias-number"><SortLink :link="sortLink('ByReleasingDate')" label="发行时间" /></th>
                     <th>操作</th>
@@ -149,7 +149,7 @@
                     <td>{{ value(item, "SelfMakeText") }}</td>
                     <td>{{ value(item, "HasMaskText") }}</td>
                     <td class="medias-number">{{ value(item, "ScTimes") }}</td>
-                    <td class="medias-number">{{ formatUnixDate(value(item, "LastScTime")) }}</td>
+                    <td class="medias-number">{{ formatUnixDate(value(item, "LastSelectedScTime")) }}</td>
                     <td class="medias-number">{{ formatUnixDate(value(item, "BirthTime")) }}</td>
                     <td class="medias-number">{{ formatUnixDate(value(item, "ReleasingDate")) }}</td>
                     <td>
@@ -194,7 +194,7 @@ const numberRangeFields = [
   { label: "SC 次数范围", minName: "sc_times_min", minKey: "ScTimesMin", maxName: "sc_times_max", maxKey: "ScTimesMax", type: "number", min: "0", step: undefined, minPlaceholder: "Min", maxPlaceholder: "Max" }
 ];
 const dateRangeFields = [
-  { label: "最后 SC 时间", minName: "last_sc_from", minKey: "LastScFrom", maxName: "last_sc_to", maxKey: "LastScTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" },
+  { label: "最近入选 SC 时间", minName: "last_selected_sc_from", minKey: "LastSelectedScFrom", maxName: "last_selected_sc_to", maxKey: "LastSelectedScTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" },
   { label: "下载时间", minName: "birth_from", minKey: "BirthFrom", maxName: "birth_to", maxKey: "BirthTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" },
   { label: "发行时间", minName: "releasing_from", minKey: "ReleasingFrom", maxName: "releasing_to", maxKey: "ReleasingTo", type: "text", minPlaceholder: "YYYY-MM-DD", maxPlaceholder: "YYYY-MM-DD" }
 ];

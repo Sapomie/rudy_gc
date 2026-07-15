@@ -44,11 +44,11 @@ type CardsAggGroups struct {
 }
 
 type CardsAggTimeline struct {
-	ReleaseYears     []*CardsAggItem
-	ReleaseMonths    []*CardsAggItem
-	MediaBirthYears  []*CardsAggItem
-	MediaBirthMonths []*CardsAggItem
-	LastScMonths     []*CardsAggItem
+	ReleaseYears         []*CardsAggItem
+	ReleaseMonths        []*CardsAggItem
+	MediaBirthYears      []*CardsAggItem
+	MediaBirthMonths     []*CardsAggItem
+	LastSelectedScMonths []*CardsAggItem
 }
 
 type CardsAggDistributions struct {
@@ -61,14 +61,14 @@ type CardsAggDistributions struct {
 }
 
 type CardsAggTopMovies struct {
-	ScTimes       []*CardsAggMovieItem
-	ComeTimes     []*CardsAggMovieItem
-	Viewers       []*CardsAggMovieItem
-	Scores        []*CardsAggMovieItem
-	HighestRanks  []*CardsAggMovieItem
-	RecentRelease []*CardsAggMovieItem
-	RecentMedia   []*CardsAggMovieItem
-	RecentSc      []*CardsAggMovieItem
+	ScTimes          []*CardsAggMovieItem
+	ComeTimes        []*CardsAggMovieItem
+	Viewers          []*CardsAggMovieItem
+	Scores           []*CardsAggMovieItem
+	HighestRanks     []*CardsAggMovieItem
+	RecentRelease    []*CardsAggMovieItem
+	RecentMedia      []*CardsAggMovieItem
+	RecentSelectedSc []*CardsAggMovieItem
 }
 
 type CardsAggItem struct {
@@ -147,7 +147,7 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 	releaseMonths := newCardsAggCounter(total)
 	mediaBirthYears := newCardsAggCounter(total)
 	mediaBirthMonths := newCardsAggCounter(total)
-	lastScMonths := newCardsAggCounter(total)
+	lastSelectedScMonths := newCardsAggCounter(total)
 
 	scores := newCardsAggCounter(total)
 	viewers := newCardsAggCounter(total)
@@ -199,7 +199,7 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 
 		addDateAgg(releaseYears, releaseMonths, mt.ReleasingDate, "rs", "re")
 		addDateAgg(mediaBirthYears, mediaBirthMonths, mt.FilmBirthDateWMedia, "mbs", "mbe")
-		addUnixMonthAgg(lastScMonths, mt.LastScTime)
+		addUnixMonthAgg(lastSelectedScMonths, mt.LastSelectedScTime)
 
 		scores.add(cardsAggFloatKey(mt.Score), cardsAggFloatLabel(mt.Score), "", mt.Score)
 		viewers.add(strconv.FormatInt(mt.ViewersNumberWatched, 10), strconv.FormatInt(mt.ViewersNumberWatched, 10), "", float64(mt.ViewersNumberWatched))
@@ -229,9 +229,9 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 		if unix := parseCardsAggDate(mt.FilmBirthDateWMedia); unix > 0 {
 			top.RecentMedia = append(top.RecentMedia, cardsAggMovieItem(mt, float64(unix), mt.FilmBirthDateWMedia, mt.FilmBirthDateWMedia))
 		}
-		if mt.LastScTime > 0 {
-			date := cardsAggUnixDate(mt.LastScTime)
-			top.RecentSc = append(top.RecentSc, cardsAggMovieItem(mt, float64(mt.LastScTime), date, date))
+		if mt.LastSelectedScTime > 0 {
+			date := cardsAggUnixDate(mt.LastSelectedScTime)
+			top.RecentSelectedSc = append(top.RecentSelectedSc, cardsAggMovieItem(mt, float64(mt.LastSelectedScTime), date, date))
 		}
 	}
 
@@ -242,7 +242,7 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 	sortCardsAggMoviesAsc(top.HighestRanks)
 	sortCardsAggMoviesDesc(top.RecentRelease)
 	sortCardsAggMoviesDesc(top.RecentMedia)
-	sortCardsAggMoviesDesc(top.RecentSc)
+	sortCardsAggMoviesDesc(top.RecentSelectedSc)
 
 	return &CardsAggView{
 		Total: total,
@@ -260,11 +260,11 @@ func buildCardsAggView(movies []*types.MovieType) *CardsAggView {
 			Labels:    labels.itemsByCount(),
 		},
 		Timeline: CardsAggTimeline{
-			ReleaseYears:     releaseYears.itemsByKeyDesc(),
-			ReleaseMonths:    releaseMonths.itemsByKeyDesc(),
-			MediaBirthYears:  mediaBirthYears.itemsByKeyDesc(),
-			MediaBirthMonths: mediaBirthMonths.itemsByKeyDesc(),
-			LastScMonths:     lastScMonths.itemsByKeyDesc(),
+			ReleaseYears:         releaseYears.itemsByKeyDesc(),
+			ReleaseMonths:        releaseMonths.itemsByKeyDesc(),
+			MediaBirthYears:      mediaBirthYears.itemsByKeyDesc(),
+			MediaBirthMonths:     mediaBirthMonths.itemsByKeyDesc(),
+			LastSelectedScMonths: lastSelectedScMonths.itemsByKeyDesc(),
 		},
 		Distributions: CardsAggDistributions{
 			Scores:       scores.itemsByValueDesc(),
@@ -492,7 +492,7 @@ func addUnixMonthAgg(months *cardsAggCounter, ts int64) {
 	}
 	t := time.Unix(ts, 0)
 	month := t.Format("2006-01")
-	months.add(month, month, "/listcard?lsctmin="+url.QueryEscape(month+"-01")+"&lsctmax="+url.QueryEscape(monthRangeEnd(month)), 0)
+	months.add(month, month, "/listcard?lsstmin="+url.QueryEscape(month+"-01")+"&lsstmax="+url.QueryEscape(monthRangeEnd(month)), 0)
 }
 
 func monthRange(month string) (string, string) {

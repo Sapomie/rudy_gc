@@ -92,4 +92,8 @@ func TestFC2ImageGenerationRoutesAreReducedToDefaultCoverTask(t *testing.T) {
 	if _, ok := routes[defaultCoverRoute]; !ok {
 		t.Fatalf("默认联系表封面任务路由缺失: %s", defaultCoverRoute)
 	}
+	movieAlbumRoute := http.MethodPost + " /api/fc2/movies/:fc2_key/movie-album-item"
+	if _, ok := routes[movieAlbumRoute]; !ok {
+		t.Fatalf("FC2电影相册路由缺失: %s", movieAlbumRoute)
+	}
 }

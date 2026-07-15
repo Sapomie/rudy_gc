@@ -102,3 +102,18 @@ func TestNormalizeScAddFC2KeyKeepsEncodedMediaNameSupport(t *testing.T) {
 		t.Fatalf("normalizeScAddFC2Key() = %q, %v", key, ok)
 	}
 }
+
+func TestAddFC2PreviewCandidateKeepsCardMovie(t *testing.T) {
+	movie := &moviex.FC2Movie{ID: 42, FC2Key: "FC2PPV-4556413-1", Title: "FC2 标题"}
+	candidates := make(map[string]*AddScPreviewMovie)
+
+	addFC2PreviewCandidate(candidates, &moviex.FC2Media{FC2MovieID: movie.ID}, map[int64]*moviex.FC2Movie{movie.ID: movie})
+
+	candidate := candidates["fc2ppv:42"]
+	if candidate == nil {
+		t.Fatal("FC2 preview candidate is nil")
+	}
+	if candidate.FC2Movie != movie {
+		t.Fatal("FC2 preview candidate did not keep card movie")
+	}
+}

@@ -9,6 +9,7 @@ import (
 
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/dep"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/service/movie"
 	"rudy_gc/internal/service/wdir"
 	"rudy_gc/internal/types"
@@ -127,6 +128,27 @@ func (h *WDirectoryAPI) dirDetail(c *gin.Context) {
 	}
 
 	q := buildWDirToggleQuery(c)
+	mediaType := directoryPageMediaType(out.Detail)
+	if mediaType == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+		cards, total, err := h.dirSvc.ListFC2CardsForDirPage(c.Request.Context(), &types.ListDirFilmsRequest{
+			DirID:     dirID,
+			Page:      req.Page,
+			PageSize:  req.PageSize,
+			Recursive: req.Recursive,
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "加载目录失败: " + err.Error()})
+			return
+		}
+		pageInfo := BuildPageInfo(c, total, req.Page, req.PageSize, pageWindow)
+		c.JSON(http.StatusOK, buildWDirDetailResponse(out, req, mediaType, cards, total, pageInfo, q))
+		return
+	}
+	if mediaType == directoryMediaTypeMixed || mediaType == directoryMediaTypeEmpty {
+		pageInfo := BuildPageInfo(c, 0, req.Page, req.PageSize, pageWindow)
+		c.JSON(http.StatusOK, buildWDirDetailResponse(out, req, mediaType, []any{}, 0, pageInfo, q))
+		return
+	}
 
 	baseReq := types.ListMovieFullRequest{
 		MediaOwned: consts.OwnedAllNotRemoved,
@@ -158,6 +180,7 @@ func (h *WDirectoryAPI) dirDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"Title":           out.Detail.Directory.Name,
 		"ViewType":        "wdir-detail",
+		"MediaType":       mediaType,
 		"Detail":          out.Detail,
 		"Recursive":       req.Recursive,
 		"CurrentSort":     cardReq.OrderBy,
@@ -181,6 +204,55 @@ func (h *WDirectoryAPI) dirDetail(c *gin.Context) {
 			"MoreURL": "",
 		},
 	})
+}
+
+const (
+	directoryMediaTypeMixed = "mixed"
+	directoryMediaTypeEmpty = "empty"
+)
+
+func directoryPageMediaType(detail *types.DirDetail) string {
+	if detail == nil || detail.Stats == nil {
+		return directoryMediaTypeEmpty
+	}
+	switch detail.Stats.MediaType {
+	case moviedomain.SehuatangThreadMovieTypeJAV,
+		moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		directoryMediaTypeMixed:
+		return detail.Stats.MediaType
+	default:
+		return directoryMediaTypeEmpty
+	}
+}
+
+func buildWDirDetailResponse(out *types.DirPageResult, req types.DirPageRequest, mediaType string, movies any, total int64, pageInfo any, query string) gin.H {
+	return gin.H{
+		"Title":           out.Detail.Directory.Name,
+		"ViewType":        "wdir-detail",
+		"MediaType":       mediaType,
+		"Detail":          out.Detail,
+		"Recursive":       req.Recursive,
+		"CurrentSort":     "",
+		"SortQuery":       "",
+		"sortQuery":       "",
+		"Movies":          movies,
+		"movies":          movies,
+		"Total":           total,
+		"total":           total,
+		"PageInfo":        pageInfo,
+		"pageInfo":        pageInfo,
+		"ownedQuery":      gin.H{},
+		"MovieCardFilter": gin.H{},
+		"Pagination": gin.H{
+			"PageInfo": pageInfo,
+		},
+		"Query": query,
+		"Children": gin.H{
+			"Title":   "子目录",
+			"Items":   out.Children,
+			"MoreURL": "",
+		},
+	}
 }
 
 func buildWDirFilterAction(dirID int64, recursive bool) string {

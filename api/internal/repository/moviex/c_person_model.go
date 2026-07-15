@@ -168,8 +168,8 @@ SELECT DISTINCT
 	p.owned_w_media_ratio AS owned_w_media_ratio,
 	p.sc_times AS sc_times,
 	p.come_times AS come_times,
-	p.last_sc_time AS last_sc_time,
-	p.last_sc_event_time AS last_sc_event_time,
+	p.last_selected_sc_time AS last_selected_sc_time,
+	p.last_participated_sc_time AS last_participated_sc_time,
 	p.highest_rank AS highest_rank,
 	p.rank_times AS rank_times,
 	p.created_on AS created_on,
@@ -235,8 +235,8 @@ func (m *customCPersonModel) ListPage(ctx context.Context, offset, limit int64, 
 			"p.owned_w_media_ratio",
 			"p.sc_times",
 			"p.come_times",
-			"p.last_sc_time",
-			"p.last_sc_event_time",
+			"p.last_selected_sc_time",
+			"p.last_participated_sc_time",
 			"p.highest_rank",
 			"p.rank_times",
 			"p.created_on",
@@ -374,27 +374,27 @@ func mapCPersonModelToTypes(v *CPerson) *types.Person {
 		return nil
 	}
 	return &types.Person{
-		Id:                v.Id,
-		Name:              v.Name,
-		Alias:             v.Alias,
-		Chinese:           v.Chinese,
-		BirthDay:          v.BirthDay,
-		Height:            v.Height,
-		Cup:               v.Cup,
-		Bwh:               v.Bwh,
-		Avatar:            v.Avatar,
-		MovieNumber:       v.MovieNumber,
-		OwnedMovieNumber:  v.OwnedWMediaNumber,
-		OwnedWMediaNumber: v.OwnedWMediaNumber,
-		OwnedWMediaRatio:  v.OwnedWMediaRatio,
-		ScTimes:           v.ScTimes,
-		ComeTimes:         v.ComeTimes,
-		LastScTime:        v.LastScTime,
-		LastScEventTime:   v.LastScEventTime,
-		HighestRank:       v.HighestRank,
-		RankTimes:         v.RankTimes,
-		CreatedOn:         v.CreatedOn,
-		UpdatedOn:         v.UpdatedOn,
+		Id:                     v.Id,
+		Name:                   v.Name,
+		Alias:                  v.Alias,
+		Chinese:                v.Chinese,
+		BirthDay:               v.BirthDay,
+		Height:                 v.Height,
+		Cup:                    v.Cup,
+		Bwh:                    v.Bwh,
+		Avatar:                 v.Avatar,
+		MovieNumber:            v.MovieNumber,
+		OwnedMovieNumber:       v.OwnedWMediaNumber,
+		OwnedWMediaNumber:      v.OwnedWMediaNumber,
+		OwnedWMediaRatio:       v.OwnedWMediaRatio,
+		ScTimes:                v.ScTimes,
+		ComeTimes:              v.ComeTimes,
+		LastSelectedScTime:     v.LastSelectedScTime,
+		LastParticipatedScTime: v.LastParticipatedScTime,
+		HighestRank:            v.HighestRank,
+		RankTimes:              v.RankTimes,
+		CreatedOn:              v.CreatedOn,
+		UpdatedOn:              v.UpdatedOn,
 	}
 }
 
@@ -427,11 +427,11 @@ func applyCPersonListFilter(filter types.PersonListFilter) squirrel.And {
 	if filter.HasComeTimesMax {
 		w = append(w, squirrel.LtOrEq{"p.come_times": filter.ComeTimesMax})
 	}
-	if filter.HasLastScFrom {
-		w = append(w, squirrel.GtOrEq{"p.last_sc_time": filter.LastScFrom})
+	if filter.HasLastSelectedScFrom {
+		w = append(w, squirrel.GtOrEq{"p.last_selected_sc_time": filter.LastSelectedScFrom})
 	}
-	if filter.HasLastScTo {
-		w = append(w, squirrel.LtOrEq{"p.last_sc_time": filter.LastScTo})
+	if filter.HasLastSelectedScTo {
+		w = append(w, squirrel.LtOrEq{"p.last_selected_sc_time": filter.LastSelectedScTo})
 	}
 	if filter.OnlyValidOwnedWMediaRatio {
 		w = append(w, squirrel.NotEq{"p.owned_w_media_number": 0})

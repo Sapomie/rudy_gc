@@ -50,11 +50,11 @@
                   </span>
                 </div>
                 <div class="casts-filter-field casts-filter-date">
-                  <span>Last SC</span>
+                  <span>最近入选 SC</span>
                   <span class="casts-filter-range">
-                    <input id="casts-last-sc-from" class="smart-pick-date-input" type="text" name="last_sc_from" aria-label="Last SC from" :value="queryValue('LastScFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                    <input id="casts-last-selected-sc-from" class="smart-pick-date-input" type="text" name="last_selected_sc_from" aria-label="最近入选 SC 起始日期" :value="queryValue('LastSelectedScFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     <span aria-hidden="true">–</span>
-                    <input id="casts-last-sc-to" class="smart-pick-date-input" type="text" name="last_sc_to" aria-label="Last SC to" :value="queryValue('LastScTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                    <input id="casts-last-selected-sc-to" class="smart-pick-date-input" type="text" name="last_selected_sc_to" aria-label="最近入选 SC 结束日期" :value="queryValue('LastSelectedScTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                   </span>
                 </div>
                 <button class="next02-pink-list-submit" type="submit">Apply</button>
@@ -82,7 +82,7 @@
                   <col class="casts-col-owned">
                   <col class="casts-col-sc-times">
                   <col class="casts-col-come-times">
-                  <col class="casts-col-last-sc">
+                  <col class="casts-col-last-selected-sc">
                   <col class="casts-col-highest-rank">
                 </colgroup>
                 <thead>
@@ -95,7 +95,7 @@
                     <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByWOwned')" label="WOwned" /></th>
                     <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByScTimes')" label="SC Times" /></th>
                     <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByComeTimes')" label="Come Times" /></th>
-                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByLastSc')" label="Last SC" /></th>
+                    <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByLastSelectedSc')" label="最近入选 SC" /></th>
                     <th class="next02-pink-list-sortable sc-sortable-head sc-number casts-number"><SortLink :link="sortLink('ByHighestRank')" label="Highest Rank" /></th>
                   </tr>
                 </thead>
@@ -112,7 +112,7 @@
                     <td class="sc-number casts-number">{{ value(row, "OwnedWMediaNumber") || 0 }}</td>
                     <td class="sc-number casts-number">{{ value(row, "ScTimes") || 0 }}</td>
                     <td class="sc-number casts-number">{{ value(row, "ComeTimes") || 0 }}</td>
-                    <td class="sc-number casts-number">{{ formatUnixDate(value(row, "LastScTime")) }}</td>
+                    <td class="sc-number casts-number">{{ formatUnixDate(value(row, "LastSelectedScTime")) }}</td>
                     <td class="sc-number casts-number">{{ formatRank(value(row, "HighestRank")) }}</td>
                   </tr>
                 </tbody>

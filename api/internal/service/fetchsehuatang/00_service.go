@@ -15,6 +15,9 @@ const (
 	SHFetchModeForumList = "forum_list"
 	SHFetchModeDetail    = "detail"
 
+	SHExistingPolicyUpsert = "upsert"
+	SHExistingPolicySkip   = "skip"
+
 	SHRunSourceFetch  = "fetch"
 	SHRunSourceList   = "list"
 	SHRunSourceDetail = "detail"
@@ -43,6 +46,7 @@ type Service struct {
 
 type SHFetchRequest struct {
 	FetchMode      string   `json:"fetch_mode"`
+	ExistingPolicy string   `json:"existing_policy"`
 	Keyword        string   `json:"keyword"`
 	TargetForumIDs []string `json:"target_forum_ids"`
 	StartPage      int64    `json:"start_page"`
@@ -52,6 +56,7 @@ type SHFetchRequest struct {
 type SHFetchResult struct {
 	RunID                int64    `json:"run_id"`
 	FetchMode            string   `json:"fetch_mode"`
+	ExistingPolicy       string   `json:"existing_policy"`
 	Keyword              string   `json:"keyword"`
 	TargetForumIDs       string   `json:"target_forum_ids"`
 	StartPage            int64    `json:"start_page"`

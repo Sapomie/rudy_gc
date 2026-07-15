@@ -37,6 +37,9 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateDropSukebeiRedundantColumns(db); err != nil {
 		return err
 	}
+	if err := migrateRenameScTimingColumns(db); err != nil {
+		return err
+	}
 	if err := migrateAddGScStatRedundantColumns(db); err != nil {
 		return err
 	}
@@ -97,7 +100,6 @@ func AutoMigrate(db *gorm.DB) error {
 		new(SehuatangThread),
 		new(ShMagnet),
 		new(FC2Movie),
-		new(FC2Folder),
 		new(FC2Media),
 		new(FC2MediaImage),
 		new(FC2ScStat),
@@ -157,10 +159,10 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateAddCPersonOwnedWMediaRatio(db); err != nil {
 		return err
 	}
-	if err := migrateAddAmCastLastScEventTime(db); err != nil {
+	if err := backfillAmCastLastParticipatedScTime(db); err != nil {
 		return err
 	}
-	if err := migrateAddCPersonLastScEventTime(db); err != nil {
+	if err := backfillFC2ScStatLastParticipatedScTime(db); err != nil {
 		return err
 	}
 	if err := migrateWMediaSourceType(db); err != nil {
@@ -175,10 +177,13 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := migrateCMovieAlbumItemReleasingDate(db); err != nil {
 		return err
 	}
+	if err := migrateCMovieAlbumItemMovieIdentity(db); err != nil {
+		return err
+	}
 	if err := migrateWFolderSourceType(db); err != nil {
 		return err
 	}
-	if err := migrateFC2FolderSourceType(db); err != nil {
+	if err := migrateDropLegacyFC2Folder(db); err != nil {
 		return err
 	}
 	if err := migrateDSeedMovieStatsColumns(db); err != nil {
@@ -646,71 +651,133 @@ UPDATE c_person
 SET owned_w_media_ratio = CASE
 	WHEN owned_w_media_number <> 0 THEN 10000
 	ELSE 0
-END`).Error
+	END`).Error
 }
 
-func migrateAddAmCastLastScEventTime(db *gorm.DB) error {
-	const tableName = "am_cast"
-
-	hasTableValue, err := hasTable(db, tableName)
-	if err != nil {
-		return err
+func migrateRenameScTimingColumns(db *gorm.DB) error {
+	columnRenames := []struct {
+		tableName string
+		oldName   string
+		newName   string
+	}{
+		{tableName: "g_sc_stat", oldName: "last_sc_time", newName: "last_selected_sc_time"},
+		{tableName: "am_cast", oldName: "last_sc_time", newName: "last_selected_sc_time"},
+		{tableName: "am_cast", oldName: "last_sc_event_time", newName: "last_participated_sc_time"},
+		{tableName: "c_person", oldName: "last_sc_time", newName: "last_selected_sc_time"},
+		{tableName: "c_person", oldName: "last_sc_event_time", newName: "last_participated_sc_time"},
+		{tableName: "fc2_sc_stat", oldName: "last_sc_time", newName: "last_selected_sc_time"},
+		{tableName: "fc2_sc_stat", oldName: "last_sc_event_time", newName: "last_participated_sc_time"},
 	}
-	if !hasTableValue {
-		return nil
-	}
-
-	hasColumnValue, err := hasColumn(db, tableName, "last_sc_event_time")
-	if err != nil {
-		return err
-	}
-	if !hasColumnValue {
-		if err := db.Exec("ALTER TABLE `am_cast` ADD COLUMN `last_sc_event_time` bigint NOT NULL DEFAULT 0 AFTER `last_sc_time`").Error; err != nil {
+	for _, item := range columnRenames {
+		if err := migrateRenameColumnPreservingData(db, item.tableName, item.oldName, item.newName); err != nil {
 			return err
 		}
 	}
 
+	indexRenames := []struct {
+		tableName string
+		oldName   string
+		newName   string
+	}{
+		{tableName: "g_sc_stat", oldName: "idx_sc_last_name", newName: "idx_sc_selected_name"},
+		{tableName: "g_sc_stat", oldName: "idx_come_last_name", newName: "idx_come_selected_name"},
+		{tableName: "g_sc_stat", oldName: "idx_lastsc_name", newName: "idx_selected_sc_name"},
+		{tableName: "fc2_sc_stat", oldName: "idx_fc2ss_sc_last_name", newName: "idx_fc2ss_sc_selected_name"},
+		{tableName: "fc2_sc_stat", oldName: "idx_fc2ss_come_last_name", newName: "idx_fc2ss_come_selected_name"},
+		{tableName: "fc2_sc_stat", oldName: "idx_fc2ss_last_name", newName: "idx_fc2ss_selected_name"},
+		{tableName: "am_cast", oldName: "idx_am_cast_last_sc_time", newName: "idx_am_cast_last_selected_sc_time"},
+		{tableName: "am_cast", oldName: "idx_am_cast_last_sc_event_time", newName: "idx_am_cast_last_participated_sc_time"},
+		{tableName: "c_person", oldName: "idx_c_person_last_sc_time", newName: "idx_c_person_last_selected_sc_time"},
+		{tableName: "c_person", oldName: "idx_c_person_last_sc_event_time", newName: "idx_c_person_last_participated_sc_time"},
+	}
+	for _, item := range indexRenames {
+		if err := migrateRenameIndexIfPresent(db, item.tableName, item.oldName, item.newName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateRenameColumnPreservingData(db *gorm.DB, tableName, oldName, newName string) error {
+	hasTableValue, err := hasTable(db, tableName)
+	if err != nil || !hasTableValue {
+		return err
+	}
+	hasOldColumn, err := hasColumn(db, tableName, oldName)
+	if err != nil || !hasOldColumn {
+		return err
+	}
+	hasNewColumn, err := hasColumn(db, tableName, newName)
+	if err != nil {
+		return err
+	}
+	if !hasNewColumn {
+		return db.Migrator().RenameColumn(tableName, oldName, newName)
+	}
+
+	mergeSQL := fmt.Sprintf(
+		"UPDATE `%s` SET `%s` = `%s` WHERE `%s` = 0 AND `%s` <> 0",
+		tableName,
+		newName,
+		oldName,
+		newName,
+		oldName,
+	)
+	if err := db.Exec(mergeSQL).Error; err != nil {
+		return err
+	}
+	return db.Migrator().DropColumn(tableName, oldName)
+}
+
+func migrateRenameIndexIfPresent(db *gorm.DB, tableName, oldName, newName string) error {
+	hasOldIndex, err := hasIndex(db, tableName, oldName)
+	if err != nil || !hasOldIndex {
+		return err
+	}
+	hasNewIndex, err := hasIndex(db, tableName, newName)
+	if err != nil {
+		return err
+	}
+	if hasNewIndex {
+		return db.Migrator().DropIndex(tableName, oldName)
+	}
+	return db.Migrator().RenameIndex(tableName, oldName, newName)
+}
+
+func backfillAmCastLastParticipatedScTime(db *gorm.DB) error {
 	return db.Exec(`
 UPDATE am_cast ac
 LEFT JOIN (
 	SELECT
 		amr.cast_id AS cast_id,
-		COALESCE(MAX(gs.sc_time), 0) AS last_sc_event_time
+		COALESCE(MAX(gs.sc_time), 0) AS last_participated_sc_time
 	FROM amr_movie_cast amr
 	JOIN g_list gl ON gl.movie_jav_id = amr.movie_jav_id
 	JOIN g_sc gs ON gs.name = gl.sc_name
 	WHERE gl.is_sc IN (?, ?)
 	GROUP BY amr.cast_id
 ) agg ON agg.cast_id = ac.id
-SET ac.last_sc_event_time = COALESCE(agg.last_sc_event_time, 0)
+SET ac.last_participated_sc_time = COALESCE(agg.last_participated_sc_time, 0)
 `,
 		consts.GListIsNotSc,
 		consts.GListIsSc,
 	).Error
 }
 
-func migrateAddCPersonLastScEventTime(db *gorm.DB) error {
-	const tableName = "c_person"
-
-	hasTableValue, err := hasTable(db, tableName)
-	if err != nil {
-		return err
-	}
-	if !hasTableValue {
-		return nil
-	}
-
-	hasColumnValue, err := hasColumn(db, tableName, "last_sc_event_time")
-	if err != nil {
-		return err
-	}
-	if !hasColumnValue {
-		if err := db.Exec("ALTER TABLE `c_person` ADD COLUMN `last_sc_event_time` bigint NOT NULL DEFAULT 0 AFTER `last_sc_time`").Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
+func backfillFC2ScStatLastParticipatedScTime(db *gorm.DB) error {
+	return db.Exec(`
+UPDATE fc2_sc_stat fss
+LEFT JOIN (
+	SELECT
+		gl.fc2_movie_id AS fc2_movie_id,
+		COALESCE(MAX(gs.sc_time), 0) AS last_participated_sc_time
+	FROM g_list gl
+	JOIN g_sc gs ON gs.name = gl.sc_name
+	WHERE gl.fc2_movie_id > 0
+	GROUP BY gl.fc2_movie_id
+) agg ON agg.fc2_movie_id = fss.fc2_movie_id
+SET fss.last_participated_sc_time = COALESCE(agg.last_participated_sc_time, 0)
+`).Error
 }
 
 func migrateDSeedMovieStatsColumns(db *gorm.DB) error {
@@ -1017,8 +1084,8 @@ LEFT JOIN (
 		COALESCE(SUM(CASE WHEN wm.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_w_media_number,
 		COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
 		COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
-		COALESCE(MAX(COALESCE(gss.last_sc_time, 0)), 0) AS last_sc_time,
-		COALESCE(MAX(COALESCE(gse.last_sc_event_time, 0)), 0) AS last_sc_event_time,
+		COALESCE(MAX(COALESCE(gss.last_selected_sc_time, 0)), 0) AS last_selected_sc_time,
+		COALESCE(MAX(COALESCE(gse.last_participated_sc_time, 0)), 0) AS last_participated_sc_time,
 		COALESCE(MIN(CASE WHEN mi.highest_rank > 0 AND mi.highest_rank < 1000 THEN mi.highest_rank END), 0) AS highest_rank,
 		COALESCE(SUM(CASE WHEN mi.days_in_rank > 0 THEN mi.days_in_rank ELSE 0 END), 0) AS rank_times
 	FROM (
@@ -1033,7 +1100,7 @@ LEFT JOIN (
 	LEFT JOIN (
 		SELECT
 			gl.movie_jav_id AS movie_jav_id,
-			COALESCE(MAX(gs.sc_time), 0) AS last_sc_event_time
+			COALESCE(MAX(gs.sc_time), 0) AS last_participated_sc_time
 		FROM g_list gl
 		JOIN g_sc gs ON gs.name = gl.sc_name
 		WHERE gl.is_sc IN (?, ?)
@@ -1052,8 +1119,8 @@ SET
 	END,
 	p.sc_times = COALESCE(agg.sc_times, 0),
 	p.come_times = COALESCE(agg.come_times, 0),
-	p.last_sc_time = COALESCE(agg.last_sc_time, 0),
-	p.last_sc_event_time = COALESCE(agg.last_sc_event_time, 0),
+	p.last_selected_sc_time = COALESCE(agg.last_selected_sc_time, 0),
+	p.last_participated_sc_time = COALESCE(agg.last_participated_sc_time, 0),
 	p.highest_rank = COALESCE(agg.highest_rank, 0),
 	p.rank_times = COALESCE(agg.rank_times, 0)`
 
@@ -1182,21 +1249,10 @@ func migrateCMovieAlbumItemReleasingDate(db *gorm.DB) error {
 		return err
 	}
 
-	indexMatches, err := hasIndexColumns(db, tableName, "idx_album_release_name", []string{"album_id", "releasing_date", "movie_name", "movie_jav_id"})
-	if err != nil {
+	if hasLegacyIndex, err := hasIndex(db, tableName, "idx_album_release_name"); err != nil {
 		return err
-	}
-	if !indexMatches {
-		hasIndexValue, err := hasIndex(db, tableName, "idx_album_release_name")
-		if err != nil {
-			return err
-		}
-		if hasIndexValue {
-			if err := db.Exec("ALTER TABLE `c_movie_album_item` DROP INDEX `idx_album_release_name`").Error; err != nil {
-				return err
-			}
-		}
-		if err := db.Exec("ALTER TABLE `c_movie_album_item` ADD INDEX `idx_album_release_name` (`album_id`, `releasing_date`, `movie_name`, `movie_jav_id`)").Error; err != nil {
+	} else if hasLegacyIndex {
+		if err := db.Exec("ALTER TABLE `c_movie_album_item` DROP INDEX `idx_album_release_name`").Error; err != nil {
 			return err
 		}
 	}
@@ -1206,7 +1262,116 @@ UPDATE c_movie_album_item cai
 LEFT JOIN a_movie am
   ON am.jav_id = cai.movie_jav_id
 SET cai.releasing_date = COALESCE(am.releasing_date, 0)
-WHERE cai.releasing_date <> COALESCE(am.releasing_date, 0)`).Error
+WHERE cai.movie_type = 'jav'
+  AND cai.fc2_key = ''
+  AND cai.releasing_date <> COALESCE(am.releasing_date, 0)`).Error
+}
+
+func migrateCMovieAlbumItemMovieIdentity(db *gorm.DB) error {
+	const tableName = "c_movie_album_item"
+
+	for _, columnName := range []string{"movie_type", "fc2_key"} {
+		hasColumnValue, err := hasColumn(db, tableName, columnName)
+		if err != nil {
+			return err
+		}
+		if !hasColumnValue {
+			return fmt.Errorf("%s.%s migration missing", tableName, columnName)
+		}
+	}
+	if err := db.Exec("ALTER TABLE `c_movie_album_item` MODIFY COLUMN `movie_name` varchar(500) NOT NULL AFTER `fc2_key`").Error; err != nil {
+		return err
+	}
+
+	if err := db.Exec(`
+UPDATE c_movie_album_item
+SET movie_type = ?, fc2_key = ''
+WHERE TRIM(movie_jav_id) <> ''`, moviedomain.SehuatangThreadMovieTypeJAV).Error; err != nil {
+		return err
+	}
+
+	var invalidCount int64
+	if err := db.Table(tableName).
+		Where(`NOT (
+			(movie_type = ? AND TRIM(movie_jav_id) <> '' AND TRIM(fc2_key) = '')
+			OR
+			(movie_type = ? AND TRIM(movie_jav_id) = '' AND TRIM(fc2_key) <> '')
+		)`, moviedomain.SehuatangThreadMovieTypeJAV, moviedomain.SehuatangThreadMovieTypeFC2PPV).
+		Count(&invalidCount).Error; err != nil {
+		return err
+	}
+	if invalidCount > 0 {
+		return fmt.Errorf("c_movie_album_item contains %d invalid movie identities", invalidCount)
+	}
+
+	type duplicateRow struct {
+		AlbumID    int64  `gorm:"column:album_id"`
+		MovieType  string `gorm:"column:movie_type"`
+		MovieJavID string `gorm:"column:movie_jav_id"`
+		FC2Key     string `gorm:"column:fc2_key"`
+		Total      int64  `gorm:"column:total"`
+	}
+	var duplicates []duplicateRow
+	if err := db.Table(tableName).
+		Select("album_id, movie_type, movie_jav_id, fc2_key, COUNT(*) AS total").
+		Group("album_id, movie_type, movie_jav_id, fc2_key").
+		Having("COUNT(*) > 1").
+		Find(&duplicates).Error; err != nil {
+		return err
+	}
+	if len(duplicates) > 0 {
+		return fmt.Errorf("c_movie_album_item contains duplicate movie identities: %+v", duplicates)
+	}
+
+	if hasOldIndex, err := hasIndex(db, tableName, "uk_album_movie"); err != nil {
+		return err
+	} else if hasOldIndex {
+		if err := db.Exec("ALTER TABLE `c_movie_album_item` DROP INDEX `uk_album_movie`").Error; err != nil {
+			return err
+		}
+	}
+
+	indexes := []struct {
+		name    string
+		columns []string
+		unique  bool
+	}{
+		{name: "uk_album_movie_identity", columns: []string{"album_id", "movie_type", "movie_jav_id", "fc2_key"}, unique: true},
+		{name: "idx_album_movie_jav", columns: []string{"album_id", "movie_type", "movie_jav_id"}},
+		{name: "idx_album_movie_fc2", columns: []string{"album_id", "movie_type", "fc2_key"}},
+		{name: "idx_album_release_identity", columns: []string{"album_id", "releasing_date", "movie_type", "movie_jav_id", "fc2_key"}},
+	}
+	for _, index := range indexes {
+		matches, err := hasIndexColumns(db, tableName, index.name, index.columns)
+		if err != nil {
+			return err
+		}
+		if matches {
+			continue
+		}
+		hasIndexValue, err := hasIndex(db, tableName, index.name)
+		if err != nil {
+			return err
+		}
+		if hasIndexValue {
+			if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` DROP INDEX `%s`", tableName, index.name)).Error; err != nil {
+				return err
+			}
+		}
+		keyword := "INDEX"
+		if index.unique {
+			keyword = "UNIQUE INDEX"
+		}
+		quotedColumns := make([]string, 0, len(index.columns))
+		for _, column := range index.columns {
+			quotedColumns = append(quotedColumns, "`"+column+"`")
+		}
+		if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` ADD %s `%s` (%s)", tableName, keyword, index.name, strings.Join(quotedColumns, ","))).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func migrateWMediaSourceType(db *gorm.DB) error {
@@ -1475,73 +1640,72 @@ func migrateWFolderSourceType(db *gorm.DB) error {
 		}
 	}
 
-	return rebuildWFolderTreesFromWMedia(db)
+	return rebuildWFolderTreesFromMedia(db)
 }
 
-func migrateFC2FolderSourceType(db *gorm.DB) error {
-	const tableName = "fc2_folder"
-	hasFC2FolderTable, err := hasTable(db, tableName)
-	if err != nil || !hasFC2FolderTable {
+func migrateDropLegacyFC2Folder(db *gorm.DB) error {
+	hasLegacyTable, err := hasTable(db, "fc2_folder")
+	if err != nil || !hasLegacyTable {
 		return err
 	}
-	hasSourceType, err := hasColumn(db, tableName, "source_type")
-	if err != nil {
+	if err := validateFC2MediaFolderReferences(db); err != nil {
 		return err
 	}
-	if !hasSourceType {
-		if err := db.Exec("ALTER TABLE `fc2_folder` ADD COLUMN `source_type` tinyint NOT NULL DEFAULT 2 AFTER `name`").Error; err != nil {
-			return err
-		}
-	}
-	if err := db.Exec("UPDATE `fc2_folder` SET `source_type` = 2 WHERE `source_type` = 0").Error; err != nil {
+	return db.Migrator().DropTable("fc2_folder")
+}
+
+func validateFC2MediaFolderReferences(db *gorm.DB) error {
+	var folders []folderMigrationRow
+	if err := db.Raw(`
+SELECT id, parent_id, name, source_type, depth, path, path_hash, created_on, updated_on
+FROM ` + "`w_folder`" + `
+ORDER BY id ASC`).Scan(&folders).Error; err != nil {
 		return err
 	}
-	for _, indexName := range []string{"uk_fc2_folder_parent_name", "uk_fc2_folder_path"} {
-		hasOldIndex, err := hasIndex(db, tableName, indexName)
-		if err != nil {
-			return err
-		}
-		if hasOldIndex {
-			if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` DROP INDEX `%s`", tableName, indexName)).Error; err != nil {
-				return err
+	foldersByID := make(map[int64]folderMigrationRow, len(folders))
+	for _, folder := range folders {
+		foldersByID[folder.ID] = folder
+	}
+
+	var mediaRows []struct {
+		ID          int64  `gorm:"column:id"`
+		DirectoryID int64  `gorm:"column:directory_id"`
+		RootDir     string `gorm:"column:root_dir"`
+		FullDir     string `gorm:"column:full_dir"`
+	}
+	if err := db.Raw(`
+SELECT id, directory_id, root_dir, full_dir
+FROM ` + "`fc2_media`" + `
+ORDER BY id ASC`).Scan(&mediaRows).Error; err != nil {
+		return err
+	}
+	for _, mediaRow := range mediaRows {
+		targetPath := normalizeManagedMediaFolderPath(consts.WFolderSourceNative, mediaRow.RootDir, mediaRow.FullDir)
+		if targetPath == "" {
+			if mediaRow.DirectoryID == 0 {
+				continue
 			}
+			return fmt.Errorf("merge fc2_folder: media id=%d has invalid directory path", mediaRow.ID)
 		}
-	}
-	indexes := []struct {
-		name    string
-		columns string
-		unique  bool
-	}{
-		{name: "uk_fc2_folder_parent_name_source_type", columns: "`parent_id`, `name`, `source_type`", unique: true},
-		{name: "uk_fc2_folder_path_source_type", columns: "`path`, `source_type`", unique: true},
-		{name: "idx_fc2_folder_source_type", columns: "`source_type`"},
-	}
-	for _, index := range indexes {
-		hasNewIndex, err := hasIndex(db, tableName, index.name)
-		if err != nil {
-			return err
-		}
-		if hasNewIndex {
-			continue
-		}
-		keyword := "INDEX"
-		if index.unique {
-			keyword = "UNIQUE INDEX"
-		}
-		if err := db.Exec(fmt.Sprintf("ALTER TABLE `%s` ADD %s `%s` (%s)", tableName, keyword, index.name, index.columns)).Error; err != nil {
-			return err
+		folder, ok := foldersByID[mediaRow.DirectoryID]
+		if !ok || folder.SourceType != consts.WFolderSourceNative || normalizeFolderNodePath(folder.Path) != targetPath {
+			return fmt.Errorf("merge fc2_folder: media id=%d directory_id=%d is not mapped to w_folder path=%s", mediaRow.ID, mediaRow.DirectoryID, targetPath)
 		}
 	}
 	return nil
 }
 
-func rebuildWFolderTreesFromWMedia(db *gorm.DB) error {
+func rebuildWFolderTreesFromMedia(db *gorm.DB) error {
 	hasWMediaTable, err := hasTable(db, "w_media")
 	if err != nil {
 		return err
 	}
 	if !hasWMediaTable {
 		return nil
+	}
+	hasFC2MediaTable, err := hasTable(db, "fc2_media")
+	if err != nil {
+		return err
 	}
 
 	var mediaRows []mediaFolderPathRow
@@ -1553,6 +1717,26 @@ WHERE source_type = ?
 ORDER BY source_type ASC, full_dir ASC
 `, consts.WFolderSourceNative).Scan(&mediaRows).Error; err != nil {
 		return err
+	}
+	if hasFC2MediaTable {
+		var fc2Rows []struct {
+			RootDir string `gorm:"column:root_dir"`
+			FullDir string `gorm:"column:full_dir"`
+		}
+		if err := db.Raw(`
+SELECT root_dir, full_dir
+FROM ` + "`fc2_media`" + `
+WHERE TRIM(full_dir) <> ''
+ORDER BY full_dir ASC`).Scan(&fc2Rows).Error; err != nil {
+			return err
+		}
+		for _, row := range fc2Rows {
+			mediaRows = append(mediaRows, mediaFolderPathRow{
+				SourceType: consts.WFolderSourceNative,
+				RootDir:    row.RootDir,
+				FullDir:    row.FullDir,
+			})
+		}
 	}
 
 	desiredNodes := buildDesiredFolderNodes(filterManagedMediaFolderRows(mediaRows))
@@ -1670,6 +1854,38 @@ ORDER BY id ASC
 			}
 			if err := tx.Exec("UPDATE `w_media` SET `directory_id` = ? WHERE `id` = ?", targetID, row.ID).Error; err != nil {
 				return err
+			}
+		}
+
+		if hasFC2MediaTable {
+			var fc2MappingRows []struct {
+				ID          int64  `gorm:"column:id"`
+				RootDir     string `gorm:"column:root_dir"`
+				FullDir     string `gorm:"column:full_dir"`
+				DirectoryID int64  `gorm:"column:directory_id"`
+			}
+			if err := tx.Raw(`
+SELECT id, root_dir, full_dir, directory_id
+FROM ` + "`fc2_media`" + `
+ORDER BY id ASC`).Scan(&fc2MappingRows).Error; err != nil {
+				return err
+			}
+			for _, row := range fc2MappingRows {
+				targetPath := normalizeManagedMediaFolderPath(consts.WFolderSourceNative, row.RootDir, row.FullDir)
+				targetID := int64(0)
+				if targetPath != "" {
+					targetRow, ok := activeByKey[folderSourcePathKey(consts.WFolderSourceNative, targetPath)]
+					if !ok {
+						return fmt.Errorf("rebuild w_folder: missing FC2 mapped folder path=%s", targetPath)
+					}
+					targetID = targetRow.ID
+				}
+				if row.DirectoryID == targetID {
+					continue
+				}
+				if err := tx.Exec("UPDATE `fc2_media` SET `directory_id` = ? WHERE `id` = ?", targetID, row.ID).Error; err != nil {
+					return err
+				}
 			}
 		}
 
@@ -1893,7 +2109,7 @@ func migrateAddGScStatRedundantColumns(db *gorm.DB) error {
 	columns := []columnDef{
 		{
 			name:     "releasing_date",
-			ddl:      "ALTER TABLE `g_sc_stat` ADD COLUMN `releasing_date` bigint NOT NULL DEFAULT 0 AFTER `last_sc_time`",
+			ddl:      "ALTER TABLE `g_sc_stat` ADD COLUMN `releasing_date` bigint NOT NULL DEFAULT 0 AFTER `last_selected_sc_time`",
 			indexDDL: "ALTER TABLE `g_sc_stat` ADD INDEX `idx_gss_release_name` (`releasing_date` DESC, `movie_name` DESC)",
 		},
 		{

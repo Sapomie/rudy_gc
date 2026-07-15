@@ -26,11 +26,41 @@ func TestFC2MovieOrderBy(t *testing.T) {
 	if len(birthOrder) == 0 || birthOrder[0] != "`media_birth_time` DESC" {
 		t.Fatalf("birth order = %#v", birthOrder)
 	}
+	statOrders := map[string]string{
+		"sc_times":              "COALESCE(`fss`.`sc_times`, 0) ASC",
+		"come_times":            "COALESCE(`fss`.`come_times`, 0) ASC",
+		"last_selected_sc_time": "COALESCE(`fss`.`last_selected_sc_time`, 0) ASC",
+	}
+	for field, expected := range statOrders {
+		order := fc2MovieOrderBy(field, "asc")
+		if len(order) == 0 || order[0] != expected {
+			t.Fatalf("%s order = %#v", field, order)
+		}
+	}
 	for _, order := range append(playOrder, birthOrder...) {
 		upper := strings.ToUpper(order)
 		if strings.Contains(upper, "JOIN") || strings.Contains(upper, "EXISTS") || strings.Contains(upper, "SELECT") {
 			t.Fatalf("关联查询残留: %s", order)
 		}
+	}
+}
+
+func TestBuildFC2MovieListQueryJoinsStatsBeforePagination(t *testing.T) {
+	query, args, err := buildFC2MovieListQuery(50, 50, "FC2PPV", "ready", "come_times", "desc").ToSql()
+	if err != nil {
+		t.Fatalf("build FC2 stat sort query: %v", err)
+	}
+	for _, fragment := range []string{
+		"LEFT JOIN `fc2_sc_stat` AS `fss` ON `fss`.`fc2_movie_id` = `fm`.`id`",
+		"ORDER BY COALESCE(`fss`.`come_times`, 0) DESC",
+		"LIMIT 50 OFFSET 50",
+	} {
+		if !strings.Contains(query, fragment) {
+			t.Fatalf("query missing %q: %s", fragment, query)
+		}
+	}
+	if len(args) != 5 {
+		t.Fatalf("args = %#v", args)
 	}
 }
 
@@ -112,15 +142,15 @@ func TestNativeMediaBaseQueryHasNoJoin(t *testing.T) {
 
 func TestSortAndFilterNativeMediaStats(t *testing.T) {
 	rows := []*NativeMediaListRow{
-		{Id: 1, MovieName: "A", ScTimes: 1, LastScTime: 100},
-		{Id: 2, MovieName: "B", ScTimes: 3, LastScTime: 90},
-		{Id: 3, MovieName: "C", ScTimes: 3, LastScTime: 110},
+		{Id: 1, MovieName: "A", ScTimes: 1, LastSelectedScTime: 100},
+		{Id: 2, MovieName: "B", ScTimes: 3, LastSelectedScTime: 90},
+		{Id: 3, MovieName: "C", ScTimes: 3, LastSelectedScTime: 110},
 	}
 	filtered := filterNativeMediaStats(rows, types.MediaListFilter{HasScTimesMin: true, ScTimesMin: 2})
 	if len(filtered) != 2 {
 		t.Fatalf("filtered count = %d", len(filtered))
 	}
-	sortNativeMediaRows(filtered, "COALESCE(gss.sc_times, 0) DESC, COALESCE(gss.last_sc_time, 0) DESC")
+	sortNativeMediaRows(filtered, "COALESCE(gss.sc_times, 0) DESC, COALESCE(gss.last_selected_sc_time, 0) DESC")
 	if filtered[0].Id != 3 || filtered[1].Id != 2 {
 		t.Fatalf("sorted ids = %d,%d", filtered[0].Id, filtered[1].Id)
 	}

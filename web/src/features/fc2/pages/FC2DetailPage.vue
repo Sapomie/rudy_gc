@@ -22,7 +22,7 @@
               <div class="card shadow-sm movie-section-card movie-poster-card fc2-cover-card">
                 <template v-if="primaryCoverImageID">
                   <a class="movie-poster-frame fc2-detail-cover-frame" :href="rowText(primaryCoverImage, 'ImageURL')" target="_blank" rel="noopener noreferrer">
-                    <img class="card-img-bottom img-fluid movie-poster-image fc2-detail-cover-image" :src="rowText(primaryCoverImage, 'ImageURL')" alt="默认联系表封面">
+					<img class="card-img-bottom img-fluid movie-poster-image fc2-detail-cover-image" :src="rowText(primaryCoverImage, 'ImageURL')" alt="5×5 详情联系表封面">
                     <div class="badge-stack">
                       <span class="badge-come">❤ {{ scStatText("ComeTimes") || "0" }}</span>
                       <span class="badge-times">× {{ scStatText("ScTimes") || "0" }}</span>
@@ -31,7 +31,7 @@
                   </a>
                   <div class="fc2-cover-toolbar">
                     <div class="fc2-cover-file">
-                      <span>默认联系表封面</span>
+					  <span>5×5 详情联系表封面</span>
                       <a :href="rowText(primaryCoverImage, 'ImageURL')" target="_blank" rel="noopener noreferrer" :title="rowText(primaryCoverImage, 'FilePath')">{{ imageFileName(primaryCoverImage) }}</a>
                       <ScDateTime :value="rowValue(primaryCoverImage, 'CreatedOn')" unix />
                     </div>
@@ -51,7 +51,7 @@
                     </div>
                   </div>
                 </template>
-                <div v-else class="detail-poster-empty fc2-cover-empty">默认联系表封面尚未生成</div>
+				<div v-else class="detail-poster-empty fc2-cover-empty">5×5 详情联系表封面尚未生成</div>
                 <div v-if="captureFeedback || captureError" class="movie-action-feedback fc2-cover-feedback">
                   <span v-if="captureFeedback" class="movie-action-feedback-ok" role="status">{{ captureFeedback }}</span>
                   <span v-if="captureError" class="movie-action-feedback-error" role="alert">{{ captureError }}</span>
@@ -63,12 +63,11 @@
               <div class="card shadow-sm movie-section-card movie-info-card fc2-info-card">
                 <div class="card-body">
                   <ul class="nav nav-tabs nav-tabs-custom nav-justified movie-detail-tabs" role="tablist">
-                    <li class="nav-item" role="presentation"><button type="button" class="nav-link movie-detail-tab" :class="{ active: activeDetailTab === 'info' }" role="tab" @click="activeDetailTab = 'info'">Info</button></li>
-                    <li class="nav-item" role="presentation"><button type="button" class="nav-link movie-detail-tab" :class="{ active: activeDetailTab === 'sc' }" role="tab" @click="activeDetailTab = 'sc'">SC</button></li>
+                    <li class="nav-item" role="presentation"><button type="button" class="nav-link movie-detail-tab active" role="tab">Info</button></li>
                   </ul>
 
                   <div class="tab-content movie-detail-tab-content">
-                    <div v-show="activeDetailTab === 'info'" class="tab-pane p-3 active movie-info-pane" role="tabpanel">
+                    <div class="tab-pane p-3 active movie-info-pane" role="tabpanel">
                       <table class="table table-bordered dt-responsive nowrap movie-info-table fc2-info-table" style="width:100%">
                         <tbody>
                           <tr class="table-light">
@@ -83,19 +82,37 @@
                           <tr class="table-light"><th>发布时间</th><td><span class="movie-info-value movie-tag-date"><ScDateTime v-if="movieText('PostTime')" :value="movieText('PostTime')" unix /><template v-else>-</template></span></td></tr>
                           <tr class="table-light"><th>资料来源</th><td><a v-if="metadataResource" class="movie-tag-link fc2-thread-link" :href="`/shthread/${encodeURIComponent(rowText(metadataResource, 'ThreadTID'))}`">帖子 {{ rowText(metadataResource, "ThreadTID") }}</a><span v-else>-</span></td></tr>
                           <tr class="table-light"><th>媒体文件</th><td><span class="fc2-info-file" :title="mediaText('FileName')">{{ mediaText("FileName") || "-" }}</span></td></tr>
+                          <tr class="table-light">
+                            <th>Sc</th>
+                            <td>
+                              <div v-if="scRows.length" class="movie-info-tag-group">
+                                <a v-for="row in scRows" :key="row.href + row.name" class="tag movie-tag-event" :href="row.href" target="_blank" rel="noopener noreferrer">{{ row.name }}</a>
+                              </div>
+                              <span v-else class="movie-info-empty">-</span>
+                            </td>
+                          </tr>
+                          <tr class="table-light">
+                            <th>电影相册</th>
+                            <td>
+                              <div class="movie-info-album-cell">
+                                <button type="button" class="btn btn-sm btn-outline-primary movie-album-primary-action" id="btnOpenFC2MovieAlbumModal" @click="openMovieAlbumModal">加入电影相册</button>
+                                <a
+                                  v-for="album in selectedAlbums"
+                                  :key="album.name"
+                                  class="tag movie-album-badge movie-tag-album"
+                                  :href="`/moviealbumlist?album_name=${encodeURIComponent(album.name)}`"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >{{ album.name }}</a>
+                                <span v-if="!selectedAlbums.length" class="movie-info-empty">-</span>
+                              </div>
+                            </td>
+                          </tr>
                           <tr class="table-light"><th>导航</th><td><div class="movie-info-tag-group movie-info-links"><a class="movie-tag-link" href="/fclist">FC2 列表</a><a class="movie-tag-link" href="/shpool" target="_blank" rel="noopener noreferrer">SH 帖子池</a></div></td></tr>
                         </tbody>
                       </table>
                     </div>
 
-                    <div v-show="activeDetailTab === 'sc'" class="tab-pane p-3 active movie-rank-panel fc2-sc-panel" role="tabpanel">
-                      <div class="fc2-sc-detail-grid">
-                        <div><span>SC 次数</span><strong>{{ scStatText("ScTimes") || "0" }}</strong></div>
-                        <div><span>Come 次数</span><strong>{{ scStatText("ComeTimes") || "0" }}</strong></div>
-                        <div><span>最近 SC</span><strong><ScDateTime v-if="scStatValue('LastScTime')" :value="scStatValue('LastScTime')" unix /><template v-else>-</template></strong></div>
-                        <div><span>最近事件</span><strong><a v-if="lastScEventHref" :href="lastScEventHref">{{ lastScEventName }}</a><template v-else>-</template></strong></div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -116,7 +133,20 @@
                     <div class="movie-film-item"><span class="movie-film-label">Source</span><strong class="movie-film-value">FC2Media</strong></div>
                     <div class="movie-film-item movie-film-item-wide movie-film-hash"><span class="movie-film-label">TorrentHash</span><div class="movie-film-value-line"><strong class="text-monospace movie-film-value" :title="mediaText('SourceTorrentHash')">{{ mediaText("SourceTorrentHash") || "-" }}</strong><button v-if="mediaText('SourceTorrentHash')" class="btn btn-sm btn-outline-secondary" type="button" @click="copyText(mediaText('SourceTorrentHash'), '来源 Hash')">复制</button></div></div>
                     <div class="movie-film-item"><span class="movie-film-label">BirthTime</span><strong class="movie-film-value"><ScDateTime :value="mediaValue('BirthTime')" unix /></strong></div>
-                    <div class="movie-film-item"><span class="movie-film-label">Size</span><strong class="movie-film-value">{{ formatMediaSize(mediaValue("Size")) }}</strong></div>
+                    <div class="movie-film-item movie-film-size">
+                      <span class="movie-film-label">Size</span>
+                      <div class="movie-film-value-line">
+                        <strong class="movie-film-value">{{ formatMediaSize(mediaValue("Size")) }}</strong>
+                        <button
+                          v-if="!mediaRemoved"
+                          type="button"
+                          class="btn btn-sm js-move-wmedia-removed"
+                          :class="movieDeleteAlbumMarked ? 'btn-danger' : 'btn-outline-danger'"
+                          :disabled="moveRemovedBusy"
+                          @click="openMoveRemovedModal"
+                        >{{ movieDeleteAlbumMarked ? "已在待删除" : "加入待删除" }}</button>
+                      </div>
+                    </div>
                     <div class="movie-film-item"><span class="movie-film-label">Resolution</span><strong class="movie-film-value">{{ mediaResolution }}</strong></div>
                     <div class="movie-film-item"><span class="movie-film-label">Duration</span><strong class="movie-film-value">{{ formatMediaDuration(mediaValue("Duration")) }}</strong></div>
                     <div class="movie-film-item"><span class="movie-film-label">BitRate</span><strong class="movie-film-value">{{ formatMediaBitRate(mediaValue("BitRate")) }}</strong></div>
@@ -171,6 +201,56 @@
             </div>
           </div>
         </div>
+
+        <div class="modal fade" id="fc2MovieAlbumModal" tabindex="-1" :class="{ show: showMovieAlbumModal }" :aria-hidden="showMovieAlbumModal ? 'false' : 'true'">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">加入电影相册</h5>
+                <button type="button" class="btn-close" aria-label="Close" @click="showMovieAlbumModal = false"></button>
+              </div>
+              <div class="modal-body">
+                <div v-if="movieAlbumMessage" id="fc2MovieAlbumMsg" class="alert mb-3" :class="movieAlbumMessageOk ? 'alert-success' : 'alert-danger'" role="alert">{{ movieAlbumMessage }}</div>
+                <div class="mb-3">
+                  <label class="form-label mb-1" for="fc2MovieAlbumSelect">选择相册</label>
+                  <select v-model="selectedMovieAlbumName" class="form-select" id="fc2MovieAlbumSelect" :disabled="movieAlbumBusy">
+                    <option v-for="album in albumOptions" :key="album.name" :value="album.name">{{ album.name }}{{ album.selected ? "（已在相册）" : "" }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label mb-1" for="fc2MovieAlbumNewName">新建相册</label>
+                  <div class="d-flex gap-2">
+                    <input v-model="newMovieAlbumName" type="text" class="form-control" id="fc2MovieAlbumNewName" maxlength="128" placeholder="输入新相册名称后创建" :disabled="movieAlbumBusy">
+                    <button type="button" class="btn btn-outline-secondary" id="btnCreateFC2MovieAlbumInline" :disabled="movieAlbumBusy" @click="createMovieAlbumInline">{{ movieAlbumBusy ? "处理中" : "创建" }}</button>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-light" @click="showMovieAlbumModal = false">取消</button>
+                <button type="button" class="btn btn-primary" id="btnAddFC2MovieToAlbum" :disabled="movieAlbumBusy || !selectedMovieAlbumName" @click="addMovieToAlbum">{{ movieAlbumBusy ? "处理中" : "加入" }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal fade" id="moveFC2MediaRemovedModal" tabindex="-1" aria-labelledby="moveFC2MediaRemovedModalLabel" :class="{ show: showMoveRemovedModal }" :aria-hidden="showMoveRemovedModal ? 'false' : 'true'">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="moveFC2MediaRemovedModalLabel">加入待删除</h5>
+                <button type="button" class="btn-close" aria-label="Close" @click="showMoveRemovedModal = false"></button>
+              </div>
+              <div class="modal-body">
+                将当前FC2影片加入默认电影相册“待删除”。真正删除会在电影相册页统一执行。
+                <div v-if="moveRemovedMessage" class="small mt-2" :class="moveRemovedMessageOk ? 'text-success' : 'text-danger'">{{ moveRemovedMessage }}</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-light" :disabled="moveRemovedBusy" @click="showMoveRemovedModal = false">取消</button>
+                <button type="button" class="btn btn-danger" id="btnMoveFC2MediaRemovedDo" :disabled="moveRemovedBusy" @click="addToDeleteAlbum">{{ moveRemovedBusy ? "处理中" : "加入待删除" }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </template>
     </div>
   </PageShell>
@@ -189,7 +269,6 @@ const route = useRoute();
 const payload = ref<AnyRecord>({});
 const loading = ref(false);
 const error = ref("");
-const activeDetailTab = ref("info");
 const expandedThreadTID = ref("");
 const copyFeedback = ref("");
 const captureFeedback = ref("");
@@ -197,13 +276,22 @@ const captureError = ref("");
 const coverBusyImageID = ref("");
 const deleteConfirmImageID = ref("");
 const deleteBusyImageID = ref("");
+const showMovieAlbumModal = ref(false);
+const selectedMovieAlbumName = ref("");
+const newMovieAlbumName = ref("");
+const movieAlbumBusy = ref(false);
+const movieAlbumMessage = ref("");
+const movieAlbumMessageOk = ref(true);
+const showMoveRemovedModal = ref(false);
+const moveRemovedBusy = ref(false);
+const moveRemovedMessage = ref("");
+const moveRemovedMessageOk = ref(true);
 
 watch(() => route.fullPath, load, { immediate: true });
 
 async function load() {
   loading.value = true;
   error.value = "";
-  activeDetailTab.value = "info";
   expandedThreadTID.value = "";
   copyFeedback.value = "";
   captureFeedback.value = "";
@@ -211,6 +299,11 @@ async function load() {
   coverBusyImageID.value = "";
   deleteConfirmImageID.value = "";
   deleteBusyImageID.value = "";
+  showMovieAlbumModal.value = false;
+  movieAlbumMessage.value = "";
+  showMoveRemovedModal.value = false;
+  moveRemovedBusy.value = false;
+  moveRemovedMessage.value = "";
   try {
     await refreshPayload();
   } catch (err) {
@@ -229,13 +322,22 @@ const pageNote = computed(() => text(payload.value, "PageNote"));
 const movie = computed(() => asRecord(pick(payload.value, "Movie", "movie")));
 const media = computed(() => asRecord(pick(payload.value, "Media", "media")));
 const scStat = computed(() => asRecord(pick(payload.value, "ScStat", "scStat")));
-const lastScEventName = computed(() => text(payload.value, "LastScEventName"));
-const lastScEventHref = computed(() => text(payload.value, "LastScEventHref"));
+const scRows = computed(() => asArray<AnyRecord>(pick(payload.value, "SC", "sc")).map((row) => ({
+  name: text(row, "ScName"),
+  href: text(row, "Href")
+})).filter((row) => row.name));
 const hasMedia = computed(() => Boolean(mediaText("ID")));
-const mediaImages = computed(() => asArray<AnyRecord>(pick(payload.value, "MediaImages", "mediaImages")));
-const primaryCoverImage = computed<AnyRecord>(() => mediaImages.value.find((image) => imageIsCover(image)) || mediaImages.value[0] || {});
+const primaryCoverImage = computed<AnyRecord>(() => asRecord(pick(payload.value, "DetailCoverImage", "detailCoverImage")));
 const primaryCoverImageID = computed(() => imageID(primaryCoverImage.value));
 const resources = computed(() => asArray<AnyRecord>(pick(payload.value, "Resources", "resources")));
+const albums = computed(() => asArray<AnyRecord>(pick(payload.value, "MovieAlbums", "movieAlbums")));
+const albumOptions = computed(() => albums.value.map((album) => ({
+  name: text(album, "Name", "name"),
+  selected: Boolean(pick(album, "Selected", "selected"))
+})).filter((album) => album.name));
+const selectedAlbums = computed(() => albumOptions.value.filter((album) => album.selected));
+const movieDeleteAlbumMarked = computed(() => albumOptions.value.some((album) => album.name === "待删除" && album.selected));
+const mediaRemoved = computed(() => Number(mediaValue("IsRemoved") || 0) === 2);
 const metadataResource = computed(() => resources.value.find((resource) => rowText(resource, "ID") === movieText("MetadataThreadID")));
 const allHashes = computed(() => uniqueLines(resources.value.flatMap((resource) => lines(rowText(resource, "InfoHashText")))));
 const allMagnets = computed(() => uniqueLines(resources.value.flatMap((resource) => lines(rowText(resource, "MagnetText")))));
@@ -247,12 +349,21 @@ const mediaResolution = computed(() => {
 });
 const mediaMaskText = computed(() => mediaText("HasMask") === "2" ? "去码" : mediaText("HasMask") === "3" ? "无码" : "有码");
 
+watch(albumOptions, (options) => {
+  if (!options.length) {
+    selectedMovieAlbumName.value = "";
+    return;
+  }
+  if (!options.some((album) => album.name === selectedMovieAlbumName.value)) {
+    selectedMovieAlbumName.value = options[0].name;
+  }
+}, { immediate: true });
+
 function rowValue(row: AnyRecord, key: string): unknown { return pick(row, key); }
 function rowText(row: AnyRecord, key: string): string { return text(row, key); }
 function movieText(key: string): string { return text(movie.value, key); }
 function mediaValue(key: string): unknown { return pick(media.value, key); }
 function mediaText(key: string): string { return text(media.value, key); }
-function scStatValue(key: string): unknown { return pick(scStat.value, key); }
 function scStatText(key: string): string { return text(scStat.value, key); }
 function resourceMeta(resource: AnyRecord): AnyRecord { return asRecord(pick(resource, "Meta", "meta")); }
 function metaText(resource: AnyRecord, key: string): string { return text(resourceMeta(resource), key); }
@@ -262,7 +373,7 @@ function uniqueLines(values: string[]): string[] { return [...new Set(values)]; 
 function compactLines(value: string): string { return lines(value).join(" · "); }
 function statusClass(status: string): string { return status === "conflict" ? "is-conflict" : status === "ready" ? "is-ready" : "is-neutral"; }
 function mediaStateClass(value: string, activeValue: string): string { return value === activeValue ? "is-ready" : "is-neutral"; }
-function imageTypeText(_image: AnyRecord): string { return "联系表封面"; }
+function imageTypeText(image: AnyRecord): string { return rowText(image, "ImageType") === "detail_contact_sheet" ? "5×5 详情联系表封面" : "2×5 卡片联系表封面"; }
 function imageFileName(image: AnyRecord): string { return rowText(image, "FilePath").split(/[\\/]/).pop() || "打开原图"; }
 function imageID(image: AnyRecord): string { return rowText(image, "ID").trim(); }
 function imageCanBeCover(image: AnyRecord): boolean {
@@ -292,6 +403,113 @@ function formatMediaFrame(value: unknown): string {
 function toggleAttachments(resource: AnyRecord) {
   const threadTID = rowText(resource, "ThreadTID");
   expandedThreadTID.value = expandedThreadTID.value === threadTID ? "" : threadTID;
+}
+function openMovieAlbumModal() {
+  movieAlbumMessage.value = "";
+  newMovieAlbumName.value = "";
+  if (!selectedMovieAlbumName.value && albumOptions.value.length) {
+    selectedMovieAlbumName.value = albumOptions.value[0].name;
+  }
+  showMovieAlbumModal.value = true;
+}
+function openMoveRemovedModal() {
+  moveRemovedMessage.value = "";
+  showMoveRemovedModal.value = true;
+}
+async function addToDeleteAlbum() {
+  const fc2Key = movieText("FC2Key");
+  if (!fc2Key) {
+    moveRemovedMessage.value = "缺少FC2影片标识";
+    moveRemovedMessageOk.value = false;
+    return;
+  }
+  moveRemovedBusy.value = true;
+  moveRemovedMessage.value = "";
+  try {
+    const data = asRecord(await sendJSON(`/api/fc2/movies/${encodeURIComponent(fc2Key)}/movie-album-item`, "POST", {
+      fc2_key: fc2Key,
+      album_name: "待删除"
+    }));
+    const albumName = text(data, "album_name", "AlbumName") || "待删除";
+    upsertMovieAlbumOption(albumName, true);
+    moveRemovedMessage.value = text(data, "message") || "已加入待删除相册";
+    moveRemovedMessageOk.value = true;
+    await refreshPayload();
+    showMoveRemovedModal.value = false;
+  } catch (err) {
+    moveRemovedMessage.value = err instanceof Error ? err.message : "加入待删除相册失败";
+    moveRemovedMessageOk.value = false;
+  } finally {
+    moveRemovedBusy.value = false;
+  }
+}
+function upsertMovieAlbumOption(name: string, selected: boolean) {
+  const nextPayload: AnyRecord = { ...payload.value };
+  const key = Array.isArray(nextPayload.MovieAlbums) ? "MovieAlbums" : "movieAlbums";
+  const rows = asArray<AnyRecord>(nextPayload[key]).map((album) => ({ ...album }));
+  const found = rows.find((album) => text(album, "Name", "name") === name);
+  if (found) {
+    found.Name = name;
+    found.name = name;
+    found.Selected = selected || Boolean(pick(found, "Selected", "selected"));
+    found.selected = found.Selected;
+  } else {
+    rows.push({ Name: name, name, Selected: selected, selected });
+  }
+  nextPayload[key] = rows;
+  payload.value = nextPayload;
+}
+async function createMovieAlbumInline() {
+  const name = newMovieAlbumName.value.trim();
+  if (!name) {
+    movieAlbumMessage.value = "请输入电影相册名称";
+    movieAlbumMessageOk.value = false;
+    return;
+  }
+  movieAlbumBusy.value = true;
+  movieAlbumMessage.value = "";
+  try {
+    const data = asRecord(await sendJSON("/api/movie-albums", "POST", { name }));
+    const albumName = text(data, "album_name", "AlbumName") || name;
+    upsertMovieAlbumOption(albumName, false);
+    selectedMovieAlbumName.value = albumName;
+    newMovieAlbumName.value = "";
+    movieAlbumMessage.value = text(data, "message") || "电影相册创建成功";
+    movieAlbumMessageOk.value = true;
+  } catch (err) {
+    movieAlbumMessage.value = err instanceof Error ? err.message : "电影相册创建失败";
+    movieAlbumMessageOk.value = false;
+  } finally {
+    movieAlbumBusy.value = false;
+  }
+}
+async function addMovieToAlbum() {
+  const fc2Key = movieText("FC2Key");
+  const albumName = selectedMovieAlbumName.value.trim();
+  if (!fc2Key || !albumName) {
+    movieAlbumMessage.value = !fc2Key ? "缺少FC2影片标识" : "请选择电影相册";
+    movieAlbumMessageOk.value = false;
+    return;
+  }
+  movieAlbumBusy.value = true;
+  movieAlbumMessage.value = "";
+  try {
+    const data = asRecord(await sendJSON(`/api/fc2/movies/${encodeURIComponent(fc2Key)}/movie-album-item`, "POST", {
+      fc2_key: fc2Key,
+      album_name: albumName
+    }));
+    const responseAlbumName = text(data, "album_name", "AlbumName") || albumName;
+    upsertMovieAlbumOption(responseAlbumName, true);
+    movieAlbumMessage.value = text(data, "message") || "已加入电影相册";
+    movieAlbumMessageOk.value = true;
+    await refreshPayload();
+    showMovieAlbumModal.value = false;
+  } catch (err) {
+    movieAlbumMessage.value = err instanceof Error ? err.message : "加入电影相册失败";
+    movieAlbumMessageOk.value = false;
+  } finally {
+    movieAlbumBusy.value = false;
+  }
 }
 async function setCoverImage(image: AnyRecord) {
   const id = imageID(image);

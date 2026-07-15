@@ -32,7 +32,7 @@ type MovieType struct {
 	EncodeName           string      `json:"encode_name"`
 	ScTimes              int64       `json:"sc_times"`
 	ComeTimes            int64       `json:"come_times"`
-	LastScTime           int64       `json:"last_sc_time"`
+	LastSelectedScTime   int64       `json:"last_selected_sc_time"`
 	VideoUrlWMedia       string      `json:"video_url_w_media"`
 	FilmBirthDateWMedia  string      `json:"film_birth_date_w_media"`
 	HighestRank          int64       `json:"highest_rank"`
@@ -44,11 +44,11 @@ type MovieType struct {
 }
 
 type CastInfo struct {
-	PersonId        int64
-	Name            string
-	DisplayName     string
-	NameShow        string
-	LastScTime      int64
-	LastScEventTime int64
-	Url             string
+	PersonId               int64
+	Name                   string
+	DisplayName            string
+	NameShow               string
+	LastSelectedScTime     int64
+	LastParticipatedScTime int64
+	Url                    string
 }

@@ -71,7 +71,6 @@ type Deps struct {
 	ShMagnetModel                        moviex.ShMagnetModel
 	ShForumModel                         moviex.ShForumModel
 	FC2MovieModel                        moviex.FC2MovieModel
-	FC2FolderModel                       moviex.FC2FolderModel
 	FC2MediaModel                        moviex.FC2MediaModel
 	FC2MediaImageModel                   moviex.FC2MediaImageModel
 	FC2ScStatModel                       moviex.FC2ScStatModel
@@ -126,7 +125,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		shMagnetModel                        = moviex.NewShMagnetModel(conn)
 		shForumModel                         = moviex.NewShForumModel(conn)
 		fc2MovieModel                        = moviex.NewFC2MovieModel(conn)
-		fc2FolderModel                       = moviex.NewFC2FolderModel(conn)
 		fc2MediaModel                        = moviex.NewFC2MediaModel(conn)
 		fc2MediaImageModel                   = moviex.NewFC2MediaImageModel(conn)
 		fc2ScStatModel                       = moviex.NewFC2ScStatModel(conn, c)
@@ -243,7 +241,6 @@ func NewDeps(cfg config.Config) (*Deps, error) {
 		ShMagnetModel:                        shMagnetModel,
 		ShForumModel:                         shForumModel,
 		FC2MovieModel:                        fc2MovieModel,
-		FC2FolderModel:                       fc2FolderModel,
 		FC2MediaModel:                        fc2MediaModel,
 		FC2MediaImageModel:                   fc2MediaImageModel,
 		FC2ScStatModel:                       fc2ScStatModel,

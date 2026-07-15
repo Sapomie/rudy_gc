@@ -70,7 +70,7 @@ func (s *Service) scListPage(ctx context.Context, page, pageSize int, sortField,
 	offset := int64((page - 1) * pageSize)
 	field := normalizeScSortField(sortField)
 	var rows []*moviex.GSc
-	if field == "total_movie_count" || field == "sc_movie_count" {
+	if field == "total_movie_count" || field == "sc_movie_count" || field == "jav_movie_count" || field == "fc2_movie_count" {
 		rows, err = s.deps.ScModel.ListPageByScTimeRangeWithMovieStats(ctx, offset, int64(pageSize), field, sortOrder, startTime, endTime)
 	} else {
 		rows, err = s.deps.ScModel.ListPageByScTimeRange(ctx, offset, int64(pageSize), buildScOrderBy(field, sortOrder), startTime, endTime)
@@ -432,8 +432,8 @@ func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName strin
 			old.ComeTimes = info.ComeTimes
 			changed = true
 		}
-		if old.LastScTime != info.LastScTime {
-			old.LastScTime = info.LastScTime
+		if old.LastSelectedScTime != info.LastSelectedScTime {
+			old.LastSelectedScTime = info.LastSelectedScTime
 			changed = true
 		}
 		if old.ReleasingDate != releasingDate {
@@ -455,16 +455,16 @@ func (s *Service) gScStatUpsert(ctx context.Context, movieJavID, movieName strin
 	}
 
 	row := &moviex.GScStat{
-		MovieJavId:     movieJavID,
-		MovieName:      movieName,
-		ScEventTimes:   info.ScEventTimes,
-		ScTimes:        info.ScTimes,
-		ComeTimes:      info.ComeTimes,
-		LastScTime:     info.LastScTime,
-		ReleasingDate:  releasingDate,
-		MediaBirthTime: mediaBirthTime,
-		CreatedOn:      now,
-		UpdatedOn:      now,
+		MovieJavId:         movieJavID,
+		MovieName:          movieName,
+		ScEventTimes:       info.ScEventTimes,
+		ScTimes:            info.ScTimes,
+		ComeTimes:          info.ComeTimes,
+		LastSelectedScTime: info.LastSelectedScTime,
+		ReleasingDate:      releasingDate,
+		MediaBirthTime:     mediaBirthTime,
+		CreatedOn:          now,
+		UpdatedOn:          now,
 	}
 	if _, err := s.deps.GScStatModel.Insert(ctx, row); err != nil {
 		if again, e2 := s.gScStatFindOneByMovieJavID(ctx, movieJavID); e2 == nil && again != nil {
@@ -514,8 +514,12 @@ func (s *Service) fc2ScStatUpsert(ctx context.Context, movie *moviex.FC2Movie, m
 			old.ComeTimes = info.ComeTimes
 			changed = true
 		}
-		if old.LastScTime != info.LastScTime {
-			old.LastScTime = info.LastScTime
+		if old.LastSelectedScTime != info.LastSelectedScTime {
+			old.LastSelectedScTime = info.LastSelectedScTime
+			changed = true
+		}
+		if old.LastParticipatedScTime != info.LastParticipatedScTime {
+			old.LastParticipatedScTime = info.LastParticipatedScTime
 			changed = true
 		}
 		if old.PostTime != movie.PostTime {
@@ -537,17 +541,18 @@ func (s *Service) fc2ScStatUpsert(ctx context.Context, movie *moviex.FC2Movie, m
 	}
 
 	row := &moviex.FC2ScStat{
-		FC2MovieID:     movie.ID,
-		FC2Key:         movie.FC2Key,
-		MovieName:      movieName,
-		ScEventTimes:   info.ScEventTimes,
-		ScTimes:        info.ScTimes,
-		ComeTimes:      info.ComeTimes,
-		LastScTime:     info.LastScTime,
-		PostTime:       movie.PostTime,
-		MediaBirthTime: mediaBirthTime,
-		CreatedOn:      now,
-		UpdatedOn:      now,
+		FC2MovieID:             movie.ID,
+		FC2Key:                 movie.FC2Key,
+		MovieName:              movieName,
+		ScEventTimes:           info.ScEventTimes,
+		ScTimes:                info.ScTimes,
+		ComeTimes:              info.ComeTimes,
+		LastSelectedScTime:     info.LastSelectedScTime,
+		LastParticipatedScTime: info.LastParticipatedScTime,
+		PostTime:               movie.PostTime,
+		MediaBirthTime:         mediaBirthTime,
+		CreatedOn:              now,
+		UpdatedOn:              now,
 	}
 	if _, err := s.deps.FC2ScStatModel.Insert(ctx, row); err != nil {
 		return nil, 0, err
@@ -635,8 +640,8 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 		old.OwnedWMediaNumber = in.OwnedWMediaNumber
 		old.ScTimes = in.ScTimes
 		old.ComeTimes = in.ComeTimes
-		old.LastScTime = in.LastScTime
-		old.LastScEventTime = in.LastScEventTime
+		old.LastSelectedScTime = in.LastSelectedScTime
+		old.LastParticipatedScTime = in.LastParticipatedScTime
 		old.Rank500MovieNumber = in.Rank500MovieNumber
 		old.Rank20MovieNumber = in.Rank20MovieNumber
 		old.Rank1MovieNumber = in.Rank1MovieNumber
@@ -656,23 +661,23 @@ func (s *Service) castUpsert(ctx context.Context, in *types.Cast) (*types.Cast, 
 	}
 
 	row := &moviex.AmCast{
-		PersonId:           in.PersonId,
-		Name:               in.Name,
-		JavId:              in.JavId,
-		MovieNumber:        in.MovieNumber,
-		OwnedMovieNumber:   in.OwnedWMediaNumber,
-		OwnedWMediaNumber:  in.OwnedWMediaNumber,
-		ScTimes:            in.ScTimes,
-		ComeTimes:          in.ComeTimes,
-		LastScTime:         in.LastScTime,
-		LastScEventTime:    in.LastScEventTime,
-		Rank500MovieNumber: in.Rank500MovieNumber,
-		Rank20MovieNumber:  in.Rank20MovieNumber,
-		Rank1MovieNumber:   in.Rank1MovieNumber,
-		HighestRank:        in.HighestRank,
-		RankTimes:          in.RankTimes,
-		CreatedOn:          ifElseInt64(in.CreatedOn > 0, in.CreatedOn, now),
-		UpdatedOn:          now,
+		PersonId:               in.PersonId,
+		Name:                   in.Name,
+		JavId:                  in.JavId,
+		MovieNumber:            in.MovieNumber,
+		OwnedMovieNumber:       in.OwnedWMediaNumber,
+		OwnedWMediaNumber:      in.OwnedWMediaNumber,
+		ScTimes:                in.ScTimes,
+		ComeTimes:              in.ComeTimes,
+		LastSelectedScTime:     in.LastSelectedScTime,
+		LastParticipatedScTime: in.LastParticipatedScTime,
+		Rank500MovieNumber:     in.Rank500MovieNumber,
+		Rank20MovieNumber:      in.Rank20MovieNumber,
+		Rank1MovieNumber:       in.Rank1MovieNumber,
+		HighestRank:            in.HighestRank,
+		RankTimes:              in.RankTimes,
+		CreatedOn:              ifElseInt64(in.CreatedOn > 0, in.CreatedOn, now),
+		UpdatedOn:              now,
 	}
 	if row.PersonId <= 0 {
 		personID, err := s.insertPersonForCast(ctx, in, now)
@@ -810,27 +815,27 @@ func mapCastModelToTypes(v *moviex.AmCast) *types.Cast {
 		return nil
 	}
 	return &types.Cast{
-		Id:                 v.Id,
-		PersonId:           v.PersonId,
-		Name:               v.Name,
-		JavId:              v.JavId,
-		Chinese:            "",
-		BirthDay:           0,
-		Height:             0,
-		MovieNumber:        v.MovieNumber,
-		OwnedMovieNumber:   v.OwnedWMediaNumber,
-		OwnedWMediaNumber:  v.OwnedWMediaNumber,
-		ScTimes:            v.ScTimes,
-		ComeTimes:          v.ComeTimes,
-		LastScTime:         v.LastScTime,
-		LastScEventTime:    v.LastScEventTime,
-		Rank500MovieNumber: v.Rank500MovieNumber,
-		Rank20MovieNumber:  v.Rank20MovieNumber,
-		Rank1MovieNumber:   v.Rank1MovieNumber,
-		HighestRank:        v.HighestRank,
-		RankTimes:          v.RankTimes,
-		CreatedOn:          v.CreatedOn,
-		UpdatedOn:          v.UpdatedOn,
+		Id:                     v.Id,
+		PersonId:               v.PersonId,
+		Name:                   v.Name,
+		JavId:                  v.JavId,
+		Chinese:                "",
+		BirthDay:               0,
+		Height:                 0,
+		MovieNumber:            v.MovieNumber,
+		OwnedMovieNumber:       v.OwnedWMediaNumber,
+		OwnedWMediaNumber:      v.OwnedWMediaNumber,
+		ScTimes:                v.ScTimes,
+		ComeTimes:              v.ComeTimes,
+		LastSelectedScTime:     v.LastSelectedScTime,
+		LastParticipatedScTime: v.LastParticipatedScTime,
+		Rank500MovieNumber:     v.Rank500MovieNumber,
+		Rank20MovieNumber:      v.Rank20MovieNumber,
+		Rank1MovieNumber:       v.Rank1MovieNumber,
+		HighestRank:            v.HighestRank,
+		RankTimes:              v.RankTimes,
+		CreatedOn:              v.CreatedOn,
+		UpdatedOn:              v.UpdatedOn,
 	}
 }
 
@@ -839,26 +844,26 @@ func mapPersonModelToTypes(v *moviex.CPerson) *types.Person {
 		return nil
 	}
 	return &types.Person{
-		Id:                v.Id,
-		Name:              v.Name,
-		Alias:             v.Alias,
-		Chinese:           v.Chinese,
-		BirthDay:          v.BirthDay,
-		Height:            v.Height,
-		Cup:               v.Cup,
-		Bwh:               v.Bwh,
-		Avatar:            v.Avatar,
-		MovieNumber:       v.MovieNumber,
-		OwnedMovieNumber:  v.OwnedWMediaNumber,
-		OwnedWMediaNumber: v.OwnedWMediaNumber,
-		ScTimes:           v.ScTimes,
-		ComeTimes:         v.ComeTimes,
-		LastScTime:        v.LastScTime,
-		LastScEventTime:   v.LastScEventTime,
-		HighestRank:       v.HighestRank,
-		RankTimes:         v.RankTimes,
-		CreatedOn:         v.CreatedOn,
-		UpdatedOn:         v.UpdatedOn,
+		Id:                     v.Id,
+		Name:                   v.Name,
+		Alias:                  v.Alias,
+		Chinese:                v.Chinese,
+		BirthDay:               v.BirthDay,
+		Height:                 v.Height,
+		Cup:                    v.Cup,
+		Bwh:                    v.Bwh,
+		Avatar:                 v.Avatar,
+		MovieNumber:            v.MovieNumber,
+		OwnedMovieNumber:       v.OwnedWMediaNumber,
+		OwnedWMediaNumber:      v.OwnedWMediaNumber,
+		ScTimes:                v.ScTimes,
+		ComeTimes:              v.ComeTimes,
+		LastSelectedScTime:     v.LastSelectedScTime,
+		LastParticipatedScTime: v.LastParticipatedScTime,
+		HighestRank:            v.HighestRank,
+		RankTimes:              v.RankTimes,
+		CreatedOn:              v.CreatedOn,
+		UpdatedOn:              v.UpdatedOn,
 	}
 }
 
@@ -878,25 +883,25 @@ func (s *Service) insertPersonForCast(ctx context.Context, cast *types.Cast, now
 		return personRow.Id, nil
 	}
 	row := &moviex.CPerson{
-		Name:              name,
-		Alias:             "",
-		Chinese:           "",
-		BirthDay:          0,
-		Height:            0,
-		Cup:               "",
-		Bwh:               "",
-		Avatar:            "",
-		MovieNumber:       cast.MovieNumber,
-		OwnedMovieNumber:  cast.OwnedWMediaNumber,
-		OwnedWMediaNumber: cast.OwnedWMediaNumber,
-		ScTimes:           cast.ScTimes,
-		ComeTimes:         cast.ComeTimes,
-		LastScTime:        cast.LastScTime,
-		LastScEventTime:   cast.LastScEventTime,
-		HighestRank:       cast.HighestRank,
-		RankTimes:         cast.RankTimes,
-		CreatedOn:         ifElseInt64(cast.CreatedOn > 0, cast.CreatedOn, now),
-		UpdatedOn:         now,
+		Name:                   name,
+		Alias:                  "",
+		Chinese:                "",
+		BirthDay:               0,
+		Height:                 0,
+		Cup:                    "",
+		Bwh:                    "",
+		Avatar:                 "",
+		MovieNumber:            cast.MovieNumber,
+		OwnedMovieNumber:       cast.OwnedWMediaNumber,
+		OwnedWMediaNumber:      cast.OwnedWMediaNumber,
+		ScTimes:                cast.ScTimes,
+		ComeTimes:              cast.ComeTimes,
+		LastSelectedScTime:     cast.LastSelectedScTime,
+		LastParticipatedScTime: cast.LastParticipatedScTime,
+		HighestRank:            cast.HighestRank,
+		RankTimes:              cast.RankTimes,
+		CreatedOn:              ifElseInt64(cast.CreatedOn > 0, cast.CreatedOn, now),
+		UpdatedOn:              now,
 	}
 	res, err := s.deps.PersonModel.Insert(ctx, row)
 	if err != nil {
@@ -969,7 +974,7 @@ func buildScOrderBy(sortField, sortOrder string) string {
 
 func normalizeScSortField(sortField string) string {
 	switch strings.ToLower(strings.TrimSpace(sortField)) {
-	case "total_movie_count", "sc_movie_count", "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
+	case "total_movie_count", "sc_movie_count", "jav_movie_count", "fc2_movie_count", "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
 		return strings.ToLower(strings.TrimSpace(sortField))
 	default:
 		return "sc_time"

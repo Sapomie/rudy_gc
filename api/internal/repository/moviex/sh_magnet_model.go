@@ -15,6 +15,7 @@ type (
 	ShMagnetModel interface {
 		Upsert(ctx context.Context, data *ShMagnet) error
 		FindOne(ctx context.Context, id int64) (*ShMagnet, error)
+		ListByIDs(ctx context.Context, ids []int64) ([]*ShMagnet, error)
 		ListByMovieKey(ctx context.Context, movieJavID string, movieName string) ([]*ShMagnet, error)
 		ListMissingMovieJavIDByMovieName(ctx context.Context, movieName string) ([]*ShMagnet, error)
 		UpdateMovieFields(ctx context.Context, id int64, movieJavID string, movieName string, updatedOn int64) error
@@ -110,6 +111,44 @@ func (m *defaultShMagnetModel) FindOne(ctx context.Context, id int64) (*ShMagnet
 		return nil, err
 	}
 	return &row, nil
+}
+
+func (m *defaultShMagnetModel) ListByIDs(ctx context.Context, ids []int64) ([]*ShMagnet, error) {
+	uniqueIDs := make([]int64, 0, len(ids))
+	seen := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniqueIDs = append(uniqueIDs, id)
+	}
+	if len(uniqueIDs) == 0 {
+		return []*ShMagnet{}, nil
+	}
+
+	builder := squirrel.
+		Select(shMagnetSelectRows).
+		From(m.table + " m").
+		LeftJoin("`sh_thread` t ON t.thread_tid = m.thread_tid").
+		LeftJoin("`fc2_movie` fm ON fm.id = t.fc2_movie_id").
+		Where(squirrel.Eq{"m.id": uniqueIDs}).
+		OrderBy("m.id ASC")
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]*ShMagnet, 0, len(uniqueIDs))
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if err == sqlx.ErrNotFound {
+			return []*ShMagnet{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
 }
 
 func (m *defaultShMagnetModel) ListByMovieKey(ctx context.Context, movieJavID string, movieName string) ([]*ShMagnet, error) {

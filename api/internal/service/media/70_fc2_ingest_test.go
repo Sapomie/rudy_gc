@@ -72,6 +72,22 @@ func (m *fakeFC2MediaModel) ListByMovieIDs(context.Context, []int64) ([]*moviex.
 	return []*moviex.FC2Media{}, nil
 }
 
+func (m *fakeFC2MediaModel) CountByDirectoryID(context.Context, int64) (int64, error) {
+	return 0, nil
+}
+
+func (m *fakeFC2MediaModel) CountActiveByDirectoryIDs(context.Context, []int64) (int64, error) {
+	return 0, nil
+}
+
+func (m *fakeFC2MediaModel) ListByDirectoryIDs(context.Context, []int64) ([]*moviex.FC2Media, error) {
+	return []*moviex.FC2Media{}, nil
+}
+
+func (m *fakeFC2MediaModel) ListPageByDirectoryIDs(context.Context, []int64, int64, int64) ([]*moviex.FC2Media, error) {
+	return []*moviex.FC2Media{}, nil
+}
+
 func (m *fakeFC2MediaModel) ListByFullDirPrefixes(context.Context, []string) ([]*moviex.FC2Media, error) {
 	return []*moviex.FC2Media{}, nil
 }

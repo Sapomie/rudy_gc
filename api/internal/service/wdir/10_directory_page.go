@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/repository/moviex"
+	mediaservice "rudy_gc/internal/service/media"
 	"rudy_gc/internal/types"
 )
 
@@ -55,11 +57,9 @@ func (s *DirectoryService) GetDirDetail(ctx context.Context, id int64) (*types.D
 }
 
 func (s *DirectoryService) ListFilmsForDirPage(ctx context.Context, req *types.ListDirFilmsRequest) (mts []*types.MovieType, stats *types.DirStats, allFilms []*types.Film, total int64, err error) {
-	dirIDs := []int64{req.DirID}
-	if req.Recursive {
-		if subIDs, e := s.folderListSubtreeIDs(ctx, req.DirID); e == nil && len(subIDs) > 0 {
-			dirIDs = subIDs
-		}
+	dirIDs, err := s.directoryScopeIDs(ctx, req.DirID, req.Recursive)
+	if err != nil {
+		return nil, nil, nil, 0, err
 	}
 
 	all, mediaRows, total, err := s.mediaListByDirectories(ctx, dirIDs, int(req.Page), int(req.PageSize), req.OrderBy)
@@ -79,6 +79,66 @@ func (s *DirectoryService) ListFilmsForDirPage(ctx context.Context, req *types.L
 
 	stats = buildDirStatsFromAll(all, req.Recursive)
 	return mts, stats, all, total, nil
+}
+
+func (s *DirectoryService) ListFC2CardsForDirPage(ctx context.Context, req *types.ListDirFilmsRequest) ([]*mediaservice.FC2CardView, int64, error) {
+	dirIDs, err := s.directoryScopeIDs(ctx, req.DirID, req.Recursive)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.deps.FC2MediaModel.CountActiveByDirectoryIDs(ctx, dirIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	offset := (req.Page - 1) * req.PageSize
+	mediaRows, err := s.deps.FC2MediaModel.ListPageByDirectoryIDs(ctx, dirIDs, offset, req.PageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	movieIDs := make([]int64, 0, len(mediaRows))
+	for _, row := range mediaRows {
+		if row != nil && row.FC2MovieID > 0 {
+			movieIDs = append(movieIDs, row.FC2MovieID)
+		}
+	}
+	movieRows, err := s.deps.FC2MovieModel.ListByIDs(ctx, movieIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	movieByID := make(map[int64]*moviex.FC2Movie, len(movieRows))
+	for _, row := range movieRows {
+		if row != nil {
+			movieByID[row.ID] = row
+		}
+	}
+	orderedRows := make([]*moviex.FC2Movie, 0, len(mediaRows))
+	for _, mediaRow := range mediaRows {
+		if mediaRow == nil {
+			continue
+		}
+		if movieRow := movieByID[mediaRow.FC2MovieID]; movieRow != nil {
+			orderedRows = append(orderedRows, movieRow)
+		}
+	}
+	cards, err := s.mediaSvc.BuildFC2CardViews(ctx, orderedRows)
+	if err != nil {
+		return nil, 0, err
+	}
+	return cards, total, nil
+}
+
+func (s *DirectoryService) directoryScopeIDs(ctx context.Context, dirID int64, recursive bool) ([]int64, error) {
+	if !recursive {
+		return []int64{dirID}, nil
+	}
+	dirIDs, err := s.folderListSubtreeIDs(ctx, dirID)
+	if err != nil {
+		return nil, err
+	}
+	if len(dirIDs) == 0 {
+		return []int64{dirID}, nil
+	}
+	return dirIDs, nil
 }
 
 func (s *DirectoryService) GetDirectoryPage(ctx context.Context, in *types.DirPageRequest) (*types.DirPageResult, error) {
@@ -118,7 +178,7 @@ func (s *DirectoryService) GetDirectoryPage(ctx context.Context, in *types.DirPa
 				ds = aggregateDirStatsForIDs(allFilms, subIDs, true)
 			}
 			if ds == nil {
-				ds = &types.DirStats{Recursive: true}
+				ds = newDirStats(true)
 			}
 		}
 		if ds.FilmCount <= 0 {

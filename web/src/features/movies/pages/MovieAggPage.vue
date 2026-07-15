@@ -206,7 +206,7 @@ const sortLabels: [string, string][] = [
   ["ByDaysInRank", "在榜天数"],
   ["ByHighestRank", "最高排名"],
   ["ByBirthTime", "下载时间"],
-  ["ByLastScTime", "最后sc"],
+  ["ByLastSelectedScTime", "最近入选 SC"],
   ["ByScTimes", "sc次数"],
   ["ByComeTimes", "co次数"]
 ];

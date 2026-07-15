@@ -230,10 +230,10 @@ func sortMoviesForScDisplay(movies []*types.MovieType) {
 			return leftOwned > rightOwned
 		}
 
-		leftLastSc := movieLastScTime(left)
-		rightLastSc := movieLastScTime(right)
-		if leftLastSc != rightLastSc {
-			return leftLastSc > rightLastSc
+		leftLastSelectedSc := movieLastSelectedScTime(left)
+		rightLastSelectedSc := movieLastSelectedScTime(right)
+		if leftLastSelectedSc != rightLastSelectedSc {
+			return leftLastSelectedSc > rightLastSelectedSc
 		}
 
 		if left.ScTimes != right.ScTimes {
@@ -268,11 +268,11 @@ func movieOwnedRank(movieType *types.MovieType) int {
 	return 0
 }
 
-func movieLastScTime(movieType *types.MovieType) int64 {
+func movieLastSelectedScTime(movieType *types.MovieType) int64 {
 	if movieType == nil {
 		return 0
 	}
-	return movieType.LastScTime
+	return movieType.LastSelectedScTime
 }
 
 func buildActorPageHrefByName(name string) string {
@@ -296,21 +296,21 @@ func personFromCast(cast *types.Cast) *types.Person {
 		return nil
 	}
 	return &types.Person{
-		Id:                cast.PersonId,
-		Name:              cast.Name,
-		Chinese:           cast.Chinese,
-		BirthDay:          cast.BirthDay,
-		Height:            cast.Height,
-		MovieNumber:       cast.MovieNumber,
-		OwnedMovieNumber:  cast.OwnedWMediaNumber,
-		OwnedWMediaNumber: cast.OwnedWMediaNumber,
-		ScTimes:           cast.ScTimes,
-		ComeTimes:         cast.ComeTimes,
-		LastScTime:        cast.LastScTime,
-		HighestRank:       cast.HighestRank,
-		RankTimes:         cast.RankTimes,
-		CreatedOn:         cast.CreatedOn,
-		UpdatedOn:         cast.UpdatedOn,
+		Id:                 cast.PersonId,
+		Name:               cast.Name,
+		Chinese:            cast.Chinese,
+		BirthDay:           cast.BirthDay,
+		Height:             cast.Height,
+		MovieNumber:        cast.MovieNumber,
+		OwnedMovieNumber:   cast.OwnedWMediaNumber,
+		OwnedWMediaNumber:  cast.OwnedWMediaNumber,
+		ScTimes:            cast.ScTimes,
+		ComeTimes:          cast.ComeTimes,
+		LastSelectedScTime: cast.LastSelectedScTime,
+		HighestRank:        cast.HighestRank,
+		RankTimes:          cast.RankTimes,
+		CreatedOn:          cast.CreatedOn,
+		UpdatedOn:          cast.UpdatedOn,
 	}
 }
 

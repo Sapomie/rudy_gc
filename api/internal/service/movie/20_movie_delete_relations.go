@@ -50,10 +50,10 @@ type deletedMovieSnapshot struct {
 }
 
 type castScInfo struct {
-	ScTimes         int64
-	ComeTimes       int64
-	LastScTime      int64
-	LastScEventTime int64
+	ScTimes                int64
+	ComeTimes              int64
+	LastSelectedScTime     int64
+	LastParticipatedScTime int64
 }
 
 type castRankInfo struct {
@@ -405,8 +405,8 @@ func (s *Service) rebuildCastStatsByID(ctx context.Context, castID, now int64) e
 		castRow.OwnedWMediaNumber == ownedWMediaNumber &&
 		castRow.ScTimes == scInfo.ScTimes &&
 		castRow.ComeTimes == scInfo.ComeTimes &&
-		castRow.LastScTime == scInfo.LastScTime &&
-		castRow.LastScEventTime == scInfo.LastScEventTime &&
+		castRow.LastSelectedScTime == scInfo.LastSelectedScTime &&
+		castRow.LastParticipatedScTime == scInfo.LastParticipatedScTime &&
 		castRow.Rank500MovieNumber == rankInfo.Rank500MovieNumber &&
 		castRow.Rank20MovieNumber == rankInfo.Rank20MovieNumber &&
 		castRow.Rank1MovieNumber == rankInfo.Rank1MovieNumber &&
@@ -420,8 +420,8 @@ func (s *Service) rebuildCastStatsByID(ctx context.Context, castID, now int64) e
 	castRow.OwnedWMediaNumber = ownedWMediaNumber
 	castRow.ScTimes = scInfo.ScTimes
 	castRow.ComeTimes = scInfo.ComeTimes
-	castRow.LastScTime = scInfo.LastScTime
-	castRow.LastScEventTime = scInfo.LastScEventTime
+	castRow.LastSelectedScTime = scInfo.LastSelectedScTime
+	castRow.LastParticipatedScTime = scInfo.LastParticipatedScTime
 	castRow.Rank500MovieNumber = rankInfo.Rank500MovieNumber
 	castRow.Rank20MovieNumber = rankInfo.Rank20MovieNumber
 	castRow.Rank1MovieNumber = rankInfo.Rank1MovieNumber
@@ -499,8 +499,8 @@ func (s *Service) buildCastScInfo(ctx context.Context, movieJavIDs []string) (ca
 		if len(parts) != 2 {
 			continue
 		}
-		if scTimeMap[parts[1]] > out.LastScEventTime {
-			out.LastScEventTime = scTimeMap[parts[1]]
+		if scTimeMap[parts[1]] > out.LastParticipatedScTime {
+			out.LastParticipatedScTime = scTimeMap[parts[1]]
 		}
 	}
 
@@ -513,8 +513,8 @@ func (s *Service) buildCastScInfo(ctx context.Context, movieJavIDs []string) (ca
 		if isCome == consts.GListIsCome {
 			out.ComeTimes++
 		}
-		if scTimeMap[parts[1]] > out.LastScTime {
-			out.LastScTime = scTimeMap[parts[1]]
+		if scTimeMap[parts[1]] > out.LastSelectedScTime {
+			out.LastSelectedScTime = scTimeMap[parts[1]]
 		}
 	}
 

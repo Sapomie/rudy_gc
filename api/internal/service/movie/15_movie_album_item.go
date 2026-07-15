@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"rudy_gc/internal/consts"
+	fc2domain "rudy_gc/internal/domain/fc2"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/repository/moviex"
 )
 
@@ -21,7 +23,9 @@ var (
 type MovieAlbumItemRow struct {
 	ID            int64
 	AlbumID       int64
+	MovieType     string
 	MovieJavID    string
+	FC2Key        string
 	MovieName     string
 	ReleasingDate int64
 	SortNo        int64
@@ -35,7 +39,9 @@ type RemoveDownloadedMovieAlbumItemsResult struct {
 
 type RemoveDownloadedMovieAlbumPreviewItem struct {
 	ItemID     int64
+	MovieType  string
 	MovieJavID string
+	FC2Key     string
 	MovieName  string
 }
 
@@ -64,13 +70,44 @@ func (s *Service) AddMovieToAlbum(ctx context.Context, albumName string, movieJa
 	if err != nil {
 		return false, normalizedAlbumName, err
 	}
+	return s.addMovieIdentityToAlbum(ctx, normalizedAlbumName, moviedomain.SehuatangThreadMovieTypeJAV, normalizedMovieJavID, "", movieName, releasingDate)
+}
+
+func (s *Service) AddFC2MovieToAlbum(ctx context.Context, albumName string, fc2Key string) (bool, string, error) {
+	normalizedAlbumName := normalizeMovieAlbumName(albumName)
+	normalizedFC2Key, _, _, _, ok := fc2domain.NormalizeKey(fc2Key)
+	if normalizedAlbumName == "" {
+		return false, normalizedAlbumName, ErrMovieAlbumNameEmpty
+	}
+	if !ok {
+		return false, normalizedAlbumName, ErrInvalidSourceRow
+	}
+
+	movieRow, err := s.deps.FC2MovieModel.FindOneByKey(ctx, normalizedFC2Key)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return false, normalizedAlbumName, ErrInvalidSourceRow
+		}
+		return false, normalizedAlbumName, err
+	}
+	movieName := strings.TrimSpace(movieRow.Title)
+	if movieName == "" {
+		movieName = normalizedFC2Key
+	}
+	return s.addMovieIdentityToAlbum(ctx, normalizedAlbumName, moviedomain.SehuatangThreadMovieTypeFC2PPV, "", normalizedFC2Key, movieName, movieRow.PostTime)
+}
+
+func (s *Service) addMovieIdentityToAlbum(ctx context.Context, albumName string, movieType string, movieJavID string, fc2Key string, movieName string, releasingDate int64) (bool, string, error) {
+	normalizedAlbumName := normalizeMovieAlbumName(albumName)
+	movieJavID = strings.TrimSpace(movieJavID)
+	fc2Key = strings.TrimSpace(fc2Key)
 
 	albumID, err := s.getMovieAlbumIDByName(ctx, normalizedAlbumName, true)
 	if err != nil {
 		return false, normalizedAlbumName, err
 	}
 
-	_, err = s.deps.MovieAlbumItemModel.FindOneByAlbumIdMovieJavId(ctx, albumID, normalizedMovieJavID)
+	_, err = s.deps.MovieAlbumItemModel.FindOneByIdentity(ctx, albumID, movieType, movieJavID, fc2Key)
 	if err == nil {
 		return false, normalizedAlbumName, nil
 	}
@@ -85,8 +122,10 @@ func (s *Service) AddMovieToAlbum(ctx context.Context, albumName string, movieJa
 	now := time.Now().Unix()
 	_, err = s.deps.MovieAlbumItemModel.Insert(ctx, &moviex.CMovieAlbumItem{
 		AlbumId:       albumID,
-		MovieJavId:    normalizedMovieJavID,
-		MovieName:     movieName,
+		MovieType:     movieType,
+		MovieJavId:    movieJavID,
+		FC2Key:        fc2Key,
+		MovieName:     strings.TrimSpace(movieName),
 		ReleasingDate: releasingDate,
 		SortNo:        sortNo,
 		CreatedOn:     now,
@@ -170,7 +209,8 @@ func (s *Service) transferMovieAlbumItemsByIDs(ctx context.Context, sourceAlbumI
 			continue
 		}
 
-		existing, findErr := s.deps.MovieAlbumItemModel.FindOneByAlbumIdMovieJavId(ctx, targetAlbumID, row.MovieJavId)
+		movieType := movieAlbumItemType(row)
+		existing, findErr := s.deps.MovieAlbumItemModel.FindOneByIdentity(ctx, targetAlbumID, movieType, row.MovieJavId, row.FC2Key)
 		if findErr == nil && existing != nil {
 			if !move {
 				result.SkippedCount++
@@ -190,6 +230,7 @@ func (s *Service) transferMovieAlbumItemsByIDs(ctx context.Context, sourceAlbumI
 
 		if move {
 			row.AlbumId = targetAlbumID
+			row.MovieType = movieType
 			row.SortNo = nextSortNo
 			row.UpdatedOn = now
 			if err := s.deps.MovieAlbumItemModel.Update(ctx, row); err != nil {
@@ -199,7 +240,9 @@ func (s *Service) transferMovieAlbumItemsByIDs(ctx context.Context, sourceAlbumI
 		} else {
 			if _, err := s.deps.MovieAlbumItemModel.Insert(ctx, &moviex.CMovieAlbumItem{
 				AlbumId:       targetAlbumID,
+				MovieType:     movieType,
 				MovieJavId:    row.MovieJavId,
+				FC2Key:        row.FC2Key,
 				MovieName:     row.MovieName,
 				ReleasingDate: row.ReleasingDate,
 				SortNo:        nextSortNo,
@@ -309,6 +352,34 @@ func (s *Service) ListMovieAlbumsByMovieJavID(ctx context.Context, movieJavID st
 	return options, nil
 }
 
+func (s *Service) ListMovieAlbumsByFC2Key(ctx context.Context, fc2Key string) ([]*MovieAlbumOption, error) {
+	options, err := s.ListMovieAlbumOptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	normalizedFC2Key, _, _, _, ok := fc2domain.NormalizeKey(fc2Key)
+	if !ok || len(options) == 0 {
+		return options, nil
+	}
+	rows, err := s.deps.MovieAlbumItemModel.ListByFC2Key(ctx, normalizedFC2Key)
+	if err != nil {
+		return nil, err
+	}
+	selected := make(map[int64]struct{}, len(rows))
+	for _, row := range rows {
+		if row != nil {
+			selected[row.AlbumId] = struct{}{}
+		}
+	}
+	for _, option := range options {
+		if option == nil {
+			continue
+		}
+		_, option.Selected = selected[option.ID]
+	}
+	return options, nil
+}
+
 func (s *Service) GetMovieNeedDownloadStatus(ctx context.Context, movieJavID string) (int64, error) {
 	inAlbum, err := s.IsMovieInMovieAlbum(ctx, normalizeMovieNeedDownloadAlbumName(), movieJavID)
 	if err != nil {
@@ -339,7 +410,7 @@ func (s *Service) IsMovieInMovieAlbum(ctx context.Context, albumName string, mov
 		return false, nil
 	}
 
-	_, err = s.deps.MovieAlbumItemModel.FindOneByAlbumIdMovieJavId(ctx, albumID, normalizedMovieJavID)
+	_, err = s.deps.MovieAlbumItemModel.FindOneByIdentity(ctx, albumID, moviedomain.SehuatangThreadMovieTypeJAV, normalizedMovieJavID, "")
 	if err == nil {
 		return true, nil
 	}
@@ -435,9 +506,23 @@ func (s *Service) listDownloadedMovieAlbumItemsForRemoval(ctx context.Context, a
 	}
 
 	uniqJavIDs := make([]string, 0, len(rows))
+	uniqFC2Keys := make([]string, 0, len(rows))
 	seenJavIDs := make(map[string]struct{}, len(rows))
+	seenFC2Keys := make(map[string]struct{}, len(rows))
 	for _, row := range rows {
 		if row == nil {
+			continue
+		}
+		if movieAlbumItemType(row) == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+			fc2Key := strings.TrimSpace(row.FC2Key)
+			if fc2Key == "" {
+				continue
+			}
+			if _, ok := seenFC2Keys[fc2Key]; ok {
+				continue
+			}
+			seenFC2Keys[fc2Key] = struct{}{}
+			uniqFC2Keys = append(uniqFC2Keys, fc2Key)
 			continue
 		}
 		javID := strings.TrimSpace(row.MovieJavId)
@@ -452,6 +537,7 @@ func (s *Service) listDownloadedMovieAlbumItemsForRemoval(ctx context.Context, a
 	}
 
 	downloadedByJavID := make(map[string]struct{}, len(uniqJavIDs))
+	downloadedByFC2Key := make(map[string]struct{}, len(uniqFC2Keys))
 	if len(uniqJavIDs) > 0 {
 		mediaRows, err := s.deps.WMediaModel.ListByMovieJavIds(ctx, uniqJavIDs)
 		if err != nil {
@@ -468,10 +554,39 @@ func (s *Service) listDownloadedMovieAlbumItemsForRemoval(ctx context.Context, a
 			downloadedByJavID[javID] = struct{}{}
 		}
 	}
+	if len(uniqFC2Keys) > 0 {
+		mediaRows, err := s.deps.FC2MediaModel.ListByKeys(ctx, uniqFC2Keys)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range mediaRows {
+			if row == nil || row.IsRemoved != int64(consts.FilmIsNotRemoved) {
+				continue
+			}
+			fc2Key := strings.TrimSpace(row.FC2Key)
+			if fc2Key != "" {
+				downloadedByFC2Key[fc2Key] = struct{}{}
+			}
+		}
+	}
 
 	out := make([]*RemoveDownloadedMovieAlbumPreviewItem, 0, len(rows))
 	for _, row := range rows {
 		if row == nil {
+			continue
+		}
+		movieType := movieAlbumItemType(row)
+		if movieType == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+			fc2Key := strings.TrimSpace(row.FC2Key)
+			if _, ok := downloadedByFC2Key[fc2Key]; !ok {
+				continue
+			}
+			out = append(out, &RemoveDownloadedMovieAlbumPreviewItem{
+				ItemID:    row.Id,
+				MovieType: movieType,
+				FC2Key:    fc2Key,
+				MovieName: strings.TrimSpace(row.MovieName),
+			})
 			continue
 		}
 		javID := strings.TrimSpace(row.MovieJavId)
@@ -480,9 +595,24 @@ func (s *Service) listDownloadedMovieAlbumItemsForRemoval(ctx context.Context, a
 		}
 		out = append(out, &RemoveDownloadedMovieAlbumPreviewItem{
 			ItemID:     row.Id,
+			MovieType:  movieType,
 			MovieJavID: javID,
 			MovieName:  strings.TrimSpace(row.MovieName),
 		})
 	}
 	return out, nil
+}
+
+func movieAlbumItemType(row *moviex.CMovieAlbumItem) string {
+	if row == nil {
+		return ""
+	}
+	movieType := strings.TrimSpace(row.MovieType)
+	if movieType != "" {
+		return movieType
+	}
+	if strings.TrimSpace(row.FC2Key) != "" {
+		return moviedomain.SehuatangThreadMovieTypeFC2PPV
+	}
+	return moviedomain.SehuatangThreadMovieTypeJAV
 }

@@ -12,9 +12,18 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
 	"rudy_gc/internal/consts"
+	moviedomain "rudy_gc/internal/domain/movie"
 )
 
 var _ GScModel = (*customGScModel)(nil)
+
+type scEventMovieSortStat struct {
+	ScName          string `db:"sc_name"`
+	TotalMovieCount int64  `db:"total_movie_count"`
+	ScMovieCount    int64  `db:"sc_movie_count"`
+	JavMovieCount   int64  `db:"jav_movie_count"`
+	FC2MovieCount   int64  `db:"fc2_movie_count"`
+}
 
 type (
 	// GScModel is an interface to be customized, add more methods here,
@@ -245,40 +254,33 @@ func (m *customGScModel) ListPageByScTimeRangeWithMovieStats(ctx context.Context
 		"sc_name",
 		"COUNT(*) AS total_movie_count",
 		"SUM(CASE WHEN is_sc = ? THEN 1 ELSE 0 END) AS sc_movie_count",
+		"SUM(CASE WHEN movie_type = ? THEN 1 ELSE 0 END) AS jav_movie_count",
+		"SUM(CASE WHEN movie_type = ? THEN 1 ELSE 0 END) AS fc2_movie_count",
 	).From("`g_list`").Where(squirrel.Eq{"sc_name": names}).GroupBy("sc_name").ToSql()
 	if err != nil {
 		return nil, err
 	}
-	statsArgs = append([]any{consts.GListIsSc}, statsArgs...)
-	var statRows []*GListScNameStat
+	statsArgs = append([]any{
+		consts.GListIsSc,
+		moviedomain.SehuatangThreadMovieTypeJAV,
+		moviedomain.SehuatangThreadMovieTypeFC2PPV,
+	}, statsArgs...)
+	var statRows []*scEventMovieSortStat
 	if err := m.QueryRowsNoCacheCtx(ctx, &statRows, statsQuery, statsArgs...); err != nil && !errors.Is(err, sqlx.ErrNotFound) {
 		return nil, err
 	}
-	stats := make(map[string]*GListScNameStat, len(statRows))
+	stats := make(map[string]*scEventMovieSortStat, len(statRows))
 	for _, row := range statRows {
 		if row != nil {
 			stats[row.ScName] = row
 		}
 	}
 	ascending := strings.EqualFold(strings.TrimSpace(sortOrder), "asc")
-	totalSort := strings.EqualFold(strings.TrimSpace(sortField), "total_movie_count")
+	normalizedSortField := strings.ToLower(strings.TrimSpace(sortField))
 	sort.SliceStable(rows, func(i, j int) bool {
 		left, right := stats[rows[i].Name], stats[rows[j].Name]
-		leftValue, rightValue := int64(0), int64(0)
-		if left != nil {
-			if totalSort {
-				leftValue = left.TotalMovieCount
-			} else {
-				leftValue = left.ScMovieCount
-			}
-		}
-		if right != nil {
-			if totalSort {
-				rightValue = right.TotalMovieCount
-			} else {
-				rightValue = right.ScMovieCount
-			}
-		}
+		leftValue := scEventMovieStatValue(left, normalizedSortField)
+		rightValue := scEventMovieStatValue(right, normalizedSortField)
 		if leftValue != rightValue {
 			if ascending {
 				return leftValue < rightValue
@@ -301,6 +303,22 @@ func (m *customGScModel) ListPageByScTimeRangeWithMovieStats(ctx context.Context
 		end = offset + limit
 	}
 	return rows[int(offset):int(end)], nil
+}
+
+func scEventMovieStatValue(stat *scEventMovieSortStat, sortField string) int64 {
+	if stat == nil {
+		return 0
+	}
+	switch sortField {
+	case "total_movie_count":
+		return stat.TotalMovieCount
+	case "jav_movie_count":
+		return stat.JavMovieCount
+	case "fc2_movie_count":
+		return stat.FC2MovieCount
+	default:
+		return stat.ScMovieCount
+	}
 }
 
 func (m *customGScModel) CountAll(ctx context.Context) (int64, error) {

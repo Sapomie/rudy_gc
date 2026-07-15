@@ -38,12 +38,12 @@ type ListMovieFullRequest struct {
 	ScoreMin       float64 `form:"smin"`
 	ScoreMax       float64 `form:"smax"`
 
-	LastScTimeMin string `form:"lsctmin"`
-	LastScTimeMax string `form:"lsctmax"`
-	ScTimesMin    int64  `form:"scmin"`
-	ScTimesMax    *int64 `form:"scmax"`
-	ComeTimesMin  int64  `form:"comin"`
-	ComeTimesMax  *int64 `form:"comax"`
+	LastSelectedScTimeMin string `form:"lsstmin"`
+	LastSelectedScTimeMax string `form:"lsstmax"`
+	ScTimesMin            int64  `form:"scmin"`
+	ScTimesMax            *int64 `form:"scmax"`
+	ComeTimesMin          int64  `form:"comin"`
+	ComeTimesMax          *int64 `form:"comax"`
 
 	MediaDir1    string `form:"md1"`
 	MediaDir2    string `form:"md2"`

@@ -166,7 +166,7 @@ func (s *Service) processOneFC2IngestFile(ctx context.Context, layout rootLayout
 		processErr = err
 		return item
 	}
-	targetDir, folderID, err := ensureFC2TargetDirectory(ctx, s.deps.FC2FolderModel, prepared.root.rootDir, now)
+	targetDir, folderID, err := ensureFC2TargetDirectory(ctx, s.deps.WFolderModel, prepared.root.rootDir, now)
 	if err != nil {
 		processErr = err
 		return item

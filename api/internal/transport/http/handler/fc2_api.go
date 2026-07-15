@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -17,11 +18,19 @@ import (
 	fc2domain "rudy_gc/internal/domain/fc2"
 	"rudy_gc/internal/repository/moviex"
 	"rudy_gc/internal/service/media"
+	movieservice "rudy_gc/internal/service/movie"
+	"rudy_gc/internal/types"
 )
 
 type FC2API struct {
 	deps     *dep.Dep
 	mediaSvc *media.Service
+	movieSvc *movieservice.Service
+}
+
+type addFC2MovieToAlbumReq struct {
+	FC2Key    string `json:"fc2_key"`
+	AlbumName string `json:"album_name"`
 }
 
 type fc2ListQuery struct {
@@ -46,14 +55,14 @@ type fc2ResourceView struct {
 
 type fc2ListRow struct {
 	*moviex.FC2Movie
-	VideoURL        string
-	PlayButtonClass string
-	PlayButtonText  string
-	ShowPlayButton  bool
-	DownloadTime    int64
-	ScTimes         int64
-	ComeTimes       int64
-	LastScTime      int64
+	VideoURL           string
+	PlayButtonClass    string
+	PlayButtonText     string
+	ShowPlayButton     bool
+	DownloadTime       int64
+	ScTimes            int64
+	ComeTimes          int64
+	LastSelectedScTime int64
 }
 
 type fc2MediaView struct {
@@ -71,7 +80,7 @@ type fc2MediaImageView struct {
 }
 
 func NewFC2API(deps *dep.Dep) *FC2API {
-	return &FC2API{deps: deps, mediaSvc: media.NewService(deps)}
+	return &FC2API{deps: deps, mediaSvc: media.NewService(deps), movieSvc: movieservice.NewService(deps)}
 }
 
 func (h *FC2API) List(c *gin.Context) {
@@ -155,7 +164,7 @@ func (h *FC2API) List(c *gin.Context) {
 		if statRow := statByMovieID[row.ID]; statRow != nil {
 			item.ScTimes = statRow.ScTimes
 			item.ComeTimes = statRow.ComeTimes
-			item.LastScTime = statRow.LastScTime
+			item.LastSelectedScTime = statRow.LastSelectedScTime
 		}
 		listRows = append(listRows, item)
 	}
@@ -220,6 +229,10 @@ func buildFC2MediaImageView(image *moviex.FC2MediaImage, coverImageIDs ...int64)
 	}
 }
 
+func buildFC2DetailCoverImageView(mediaID int64, imageRows []*moviex.FC2MediaImage) *fc2MediaImageView {
+	return buildFC2MediaImageView(media.ResolveFC2DetailCoverImage(mediaID, imageRows))
+}
+
 func (h *FC2API) Detail(c *gin.Context) {
 	fc2Key, _, _, _, ok := fc2domain.NormalizeKey(c.Param("fc2_key"))
 	if !ok {
@@ -245,13 +258,14 @@ func (h *FC2API) Detail(c *gin.Context) {
 		jsonServerError(c, "FC2影片 SC 统计加载失败", err)
 		return
 	}
-	lastScEventName, err := h.findLastFC2ScEventName(c.Request.Context(), movie.ID)
+	scEvents, err := h.findFC2ScEvents(c.Request.Context(), movie.ID)
 	if err != nil {
-		jsonServerError(c, "FC2影片最近 SC 事件加载失败", err)
+		jsonServerError(c, "FC2影片 SC 记录加载失败", err)
 		return
 	}
 	mediaImages := make([]*fc2MediaImageView, 0)
 	effectiveCoverImageID := int64(0)
+	var detailCoverImage *fc2MediaImageView
 	if mediaRow != nil {
 		imageRows, imageErr := h.deps.FC2MediaImageModel.ListByMediaID(c.Request.Context(), mediaRow.ID)
 		if imageErr != nil {
@@ -261,6 +275,7 @@ func (h *FC2API) Detail(c *gin.Context) {
 		if coverImage := media.ResolveFC2CoverImage(mediaRow.ID, movie.CoverImageID, imageRows); coverImage != nil {
 			effectiveCoverImageID = coverImage.ID
 		}
+		detailCoverImage = buildFC2DetailCoverImageView(mediaRow.ID, imageRows)
 		mediaImages = make([]*fc2MediaImageView, 0, len(imageRows))
 		for _, imageRow := range imageRows {
 			if imageView := buildFC2MediaImageView(imageRow, effectiveCoverImageID); imageView != nil {
@@ -288,6 +303,11 @@ func (h *FC2API) Detail(c *gin.Context) {
 			MagnetText: thread.MagnetText, InfoHashText: thread.InfoHashText, Meta: meta,
 		})
 	}
+	movieAlbums, err := h.movieSvc.ListMovieAlbumsByFC2Key(c.Request.Context(), fc2Key)
+	if err != nil {
+		jsonServerError(c, "FC2影片相册状态加载失败", err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"Title":                 fc2Key,
 		"PageTitle":             fc2Key,
@@ -296,39 +316,131 @@ func (h *FC2API) Detail(c *gin.Context) {
 		"Media":                 buildFC2MediaView(mediaRow),
 		"MediaImages":           mediaImages,
 		"EffectiveCoverImageID": effectiveCoverImageID,
+		"DetailCoverImage":      detailCoverImage,
 		"ScStat":                stat,
-		"LastScEventName":       lastScEventName,
-		"LastScEventHref":       buildScEventDetailHrefByName(lastScEventName),
+		"SC":                    scEvents,
 		"Resources":             resources,
 		"Total":                 len(resources),
 		"ResourceCountText":     strconv.Itoa(len(resources)),
+		"MovieAlbums":           movieAlbums,
 	})
 }
 
-func (h *FC2API) findLastFC2ScEventName(ctx context.Context, movieID int64) (string, error) {
+func (h *FC2API) AddMovieToAlbum(c *gin.Context) {
+	fc2Key, _, _, _, ok := fc2domain.NormalizeKey(c.Param("fc2_key"))
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "FC2影片标识格式无效"})
+		return
+	}
+
+	var req addFC2MovieToAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+	if strings.TrimSpace(req.FC2Key) != "" {
+		reqFC2Key, _, _, _, reqOK := fc2domain.NormalizeKey(req.FC2Key)
+		if !reqOK || reqFC2Key != fc2Key {
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "FC2影片参数不匹配"})
+			return
+		}
+	}
+
+	created, albumName, err := h.movieSvc.AddFC2MovieToAlbum(c.Request.Context(), req.AlbumName, fc2Key)
+	if err != nil {
+		switch {
+		case errors.Is(err, movieservice.ErrMovieAlbumNameEmpty),
+			errors.Is(err, movieservice.ErrMovieAlbumNameTooLong),
+			errors.Is(err, movieservice.ErrInvalidSourceRow):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		}
+		return
+	}
+	message := "该FC2影片已在相册：" + albumName
+	if created {
+		message = "已加入电影相册：" + albumName
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"ok":         true,
+		"created":    created,
+		"album_name": albumName,
+		"message":    message,
+	})
+}
+
+func (h *FC2API) findFC2ScEvents(ctx context.Context, movieID int64) ([]*types.MovieScEvent, error) {
 	rows, err := h.deps.GListModel.ListByFC2MovieID(ctx, movieID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	names := make([]string, 0, len(rows))
+	seen := make(map[string]struct{}, len(rows))
 	for _, row := range rows {
-		if row != nil && row.IsSc == consts.GListIsSc && strings.TrimSpace(row.ScName) != "" {
-			names = append(names, row.ScName)
+		if row == nil || row.IsSc != consts.GListIsSc {
+			continue
 		}
+		name := strings.TrimSpace(row.ScName)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
 	}
 	events, err := h.deps.ScModel.ListByNames(ctx, names)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	lastName := ""
-	lastTime := int64(0)
+	return buildFC2ScEvents(rows, events), nil
+}
+
+func buildFC2ScEvents(rows []*moviex.GList, events []*moviex.GSc) []*types.MovieScEvent {
+	eventByName := make(map[string]*moviex.GSc, len(events))
 	for _, event := range events {
-		if event != nil && event.ScTime >= lastTime {
-			lastTime = event.ScTime
-			lastName = event.Name
+		if event == nil {
+			continue
 		}
+		eventByName[strings.TrimSpace(event.Name)] = event
 	}
-	return lastName, nil
+
+	out := make([]*types.MovieScEvent, 0, len(rows))
+	seen := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		if row == nil || row.IsSc != consts.GListIsSc {
+			continue
+		}
+		name := strings.TrimSpace(row.ScName)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+
+		item := &types.MovieScEvent{
+			ScName: name,
+			IsCome: row.IsCome == consts.GListIsCome,
+			Href:   buildScEventDetailHrefByName(name),
+		}
+		if event := eventByName[name]; event != nil {
+			item.ScTime = event.ScTime
+			item.Cooldown = event.Cooldown
+		}
+		out = append(out, item)
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ScTime == out[j].ScTime {
+			return out[i].ScName > out[j].ScName
+		}
+		return out[i].ScTime > out[j].ScTime
+	})
+	return out
 }
 
 func buildScEventDetailHrefByName(name string) string {
@@ -425,7 +537,7 @@ func normalizeFC2Status(value string) string {
 
 func normalizeFC2Sort(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "fc2_key", "title", "performer_text", "post_time", "play", "birth_time":
+	case "fc2_key", "title", "performer_text", "post_time", "play", "birth_time", "sc_times", "come_times", "last_selected_sc_time":
 		return strings.ToLower(strings.TrimSpace(value))
 	default:
 		return "post_time"

@@ -612,6 +612,37 @@ function renderSehuatangTime(value: unknown): string {
   return `<span class="sc-event-time"><span class="sc-event-date">${escapeHtml(date)}</span>${time ? `<small class="sc-event-hour">${escapeHtml(time)}</small>` : ""}</span>`;
 }
 
+function sehuatangDayKey(row: AnyRecord): string {
+  const date = formatUnix(pick(row, "PostTime"), "date");
+  return date === "-" ? "" : date;
+}
+
+function sehuatangDayClass(rows: AnyRecord[], index: number): string {
+  const day = sehuatangDayKey(rows[index]);
+  if (!day) {
+    return "sehuatang-day-neutral";
+  }
+
+  let groupIndex = 0;
+  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
+    const currentDay = sehuatangDayKey(rows[rowIndex]);
+    const previousDay = sehuatangDayKey(rows[rowIndex - 1]);
+    if (currentDay && previousDay && currentDay !== previousDay) {
+      groupIndex += 1;
+    }
+  }
+  return `sehuatang-day-group-${(groupIndex % 2) + 1}`;
+}
+
+function isSehuatangDayStart(rows: AnyRecord[], index: number): boolean {
+  if (index <= 0) {
+    return false;
+  }
+  const currentDay = sehuatangDayKey(rows[index]);
+  const previousDay = sehuatangDayKey(rows[index - 1]);
+  return Boolean(currentDay && previousDay && currentDay !== previousDay);
+}
+
 function lineCount(value: unknown): number {
   const current = String(value || "").trim();
   return current ? current.split(/\r?\n/).filter((line) => line.trim() !== "").length : 0;
@@ -738,9 +769,9 @@ function renderSHThreadRow(row: AnyRecord, index: number, rows: AnyRecord[]): st
     ? `<a class="btn btn-outline-primary" href="${attr(threadURL)}" target="_blank" rel="noopener noreferrer">原帖</a>`
     : `<button type="button" class="btn btn-outline-primary" disabled title="缺少原帖地址">原帖</button>`;
   const movieNameHTML = movieType === "jav" && movieName
-    ? `<a class="next02-sh-movie-name" href="/moviedetail/${attr(encodeURIComponent(movieName))}">${escapeHtml(movieName)}</a>`
+    ? `<a class="next02-sh-movie-name" href="/moviedetail/${attr(encodeURIComponent(movieName))}" target="_blank" rel="noopener noreferrer">${escapeHtml(movieName)}</a>`
     : movieType === "fc2ppv" && fc2Key
-      ? `<a class="next02-sh-movie-name" href="/fcdetail/${attr(encodeURIComponent(fc2Key))}">${escapeHtml(fc2Key)}</a>`
+      ? `<a class="next02-sh-movie-name" href="/fcdetail/${attr(encodeURIComponent(fc2Key))}" target="_blank" rel="noopener noreferrer">${escapeHtml(fc2Key)}</a>`
       : `<span class="next02-sh-movie-name">${escapeHtml(movieName || "-")}</span>`;
   const magnetCount = lineCount(pick(row, "MagnetText"));
   const status = readText(row, "DetailStatus");

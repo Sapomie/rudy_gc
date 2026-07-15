@@ -22,6 +22,10 @@ type FC2MediaModel interface {
 	ListByFileNames(ctx context.Context, fileNames []string) ([]*FC2Media, error)
 	ListByKeys(ctx context.Context, keys []string) ([]*FC2Media, error)
 	ListByMovieIDs(ctx context.Context, movieIDs []int64) ([]*FC2Media, error)
+	CountByDirectoryID(ctx context.Context, directoryID int64) (int64, error)
+	CountActiveByDirectoryIDs(ctx context.Context, directoryIDs []int64) (int64, error)
+	ListByDirectoryIDs(ctx context.Context, directoryIDs []int64) ([]*FC2Media, error)
+	ListPageByDirectoryIDs(ctx context.Context, directoryIDs []int64, offset, limit int64) ([]*FC2Media, error)
 	ListByFullDirPrefixes(ctx context.Context, prefixes []string) ([]*FC2Media, error)
 	ListSmartPickCandidates(ctx context.Context, filter FC2SmartPickMediaFilter) ([]*FC2Media, error)
 	Update(ctx context.Context, data *FC2Media) error
@@ -218,6 +222,85 @@ func (m *defaultFC2MediaModel) ListByMovieIDs(ctx context.Context, movieIDs []in
 	}
 	rows := make([]*FC2Media, 0, len(ids))
 	if err := m.conn.QueryRowsCtx(ctx, &rows, "SELECT "+fc2MediaRows+" FROM `fc2_media` WHERE `fc2_movie_id` IN ("+placeholders+")", args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*FC2Media{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *defaultFC2MediaModel) CountByDirectoryID(ctx context.Context, directoryID int64) (int64, error) {
+	if directoryID <= 0 {
+		return 0, nil
+	}
+	var count int64
+	if err := m.conn.QueryRowCtx(ctx, &count, "SELECT COUNT(*) FROM `fc2_media` WHERE `directory_id` = ?", directoryID); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (m *defaultFC2MediaModel) CountActiveByDirectoryIDs(ctx context.Context, directoryIDs []int64) (int64, error) {
+	ids := uniquePositiveInt64s(directoryIDs)
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, 0, len(ids)+1)
+	args = append(args, int64(consts.FilmIsNotRemoved))
+	for _, directoryID := range ids {
+		args = append(args, directoryID)
+	}
+	var count int64
+	query := "SELECT COUNT(*) FROM `fc2_media` WHERE `is_removed` = ? AND `directory_id` IN (" + placeholders + ")"
+	if err := m.conn.QueryRowCtx(ctx, &count, query, args...); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (m *defaultFC2MediaModel) ListByDirectoryIDs(ctx context.Context, directoryIDs []int64) ([]*FC2Media, error) {
+	ids := uniquePositiveInt64s(directoryIDs)
+	if len(ids) == 0 {
+		return []*FC2Media{}, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, 0, len(ids)+1)
+	args = append(args, int64(consts.FilmIsNotRemoved))
+	for _, directoryID := range ids {
+		args = append(args, directoryID)
+	}
+	rows := make([]*FC2Media, 0)
+	query := "SELECT " + fc2MediaRows + " FROM `fc2_media` WHERE `is_removed` = ? AND `directory_id` IN (" + placeholders + ") ORDER BY `birth_time` DESC, `id` DESC"
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*FC2Media{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *defaultFC2MediaModel) ListPageByDirectoryIDs(ctx context.Context, directoryIDs []int64, offset, limit int64) ([]*FC2Media, error) {
+	ids := uniquePositiveInt64s(directoryIDs)
+	if len(ids) == 0 || limit <= 0 {
+		return []*FC2Media{}, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, 0, len(ids)+3)
+	args = append(args, int64(consts.FilmIsNotRemoved))
+	for _, directoryID := range ids {
+		args = append(args, directoryID)
+	}
+	args = append(args, limit)
+	query := "SELECT " + fc2MediaRows + " FROM `fc2_media` WHERE `is_removed` = ? AND `directory_id` IN (" + placeholders + ") ORDER BY `birth_time` DESC, `id` DESC LIMIT ?"
+	if offset > 0 {
+		query += " OFFSET ?"
+		args = append(args, offset)
+	}
+	rows := make([]*FC2Media, 0)
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
 			return []*FC2Media{}, nil
 		}

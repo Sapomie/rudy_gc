@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"rudy_gc/internal/consts"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/repository/moviex"
 	"rudy_gc/internal/types"
 )
@@ -129,14 +130,27 @@ func (s *Service) mediaListByDirectories(ctx context.Context, dirIDs []int64, pa
 	if err != nil {
 		return nil, nil, 0, err
 	}
+	fc2Rows, err := s.deps.FC2MediaModel.ListByDirectoryIDs(ctx, dirIDs)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 
-	all = make([]*types.Film, 0, len(rowsAll))
+	all = make([]*types.Film, 0, len(rowsAll)+len(fc2Rows))
 	for _, row := range rowsAll {
-		all = append(all, mapMediaModelToFilmTypes(row))
+		if film := mapMediaModelToFilmTypes(row); film != nil {
+			all = append(all, film)
+		}
+	}
+	for _, row := range fc2Rows {
+		if film := mapFC2MediaModelToFilmTypes(row); film != nil {
+			all = append(all, film)
+		}
 	}
 	paged = make([]*types.Film, 0, len(rowsPaged))
 	for _, row := range rowsPaged {
-		paged = append(paged, mapMediaModelToFilmTypes(row))
+		if film := mapMediaModelToFilmTypes(row); film != nil {
+			paged = append(paged, film)
+		}
 	}
 	return all, paged, total, nil
 }
@@ -162,6 +176,7 @@ func mapMediaModelToFilmTypes(v *moviex.WMedia) *types.Film {
 	}
 	return &types.Film{
 		Id:            v.Id,
+		MovieType:     moviedomain.SehuatangThreadMovieTypeJAV,
 		MovieJavId:    v.MovieJavId,
 		MovieName:     v.MovieName,
 		FileName:      v.FileName,
@@ -185,5 +200,36 @@ func mapMediaModelToFilmTypes(v *moviex.WMedia) *types.Film {
 		ReleasingDate: v.ReleasingDate,
 		CreatedOn:     v.CreatedOn,
 		UpdatedOn:     v.UpdatedOn,
+	}
+}
+
+func mapFC2MediaModelToFilmTypes(v *moviex.FC2Media) *types.Film {
+	if v == nil {
+		return nil
+	}
+	return &types.Film{
+		Id:           v.ID,
+		MovieType:    moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		MovieName:    v.FC2Key,
+		FileName:     v.FileName,
+		DirectoryId:  v.DirectoryID,
+		RootDir:      v.RootDir,
+		FullDir:      v.FullDir,
+		Alias:        v.Alias,
+		Size:         v.Size,
+		Width:        v.Width,
+		Height:       v.Height,
+		BitRate:      v.BitRate,
+		Duration:     v.Duration,
+		FrameAverage: v.FrameAverage,
+		HasSub:       v.HasSub,
+		SelfMake:     v.SelfMake,
+		HasMask:      v.HasMask,
+		NeedScanMeta: v.NeedScanMeta,
+		IsRemoved:    v.IsRemoved,
+		RemoveTime:   v.RemoveTime,
+		BirthTime:    v.BirthTime,
+		CreatedOn:    v.CreatedOn,
+		UpdatedOn:    v.UpdatedOn,
 	}
 }

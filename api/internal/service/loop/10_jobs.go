@@ -53,6 +53,7 @@ type StartTaskRequest struct {
 	AutoFetchSite   string               `json:"auto_fetch_site"`
 	Keyword         string               `json:"keyword"`
 	FetchMode       string               `json:"fetch_mode"`
+	ExistingPolicy  string               `json:"existing_policy"`
 	TargetForumIDs  []string             `json:"target_forum_ids"`
 	ThreadTIDs      []string             `json:"thread_tids"`
 	Sort            string               `json:"sort"`
@@ -113,8 +114,8 @@ type StartTaskRequest struct {
 	ViewWatchedMax          string `json:"vwmax"`
 	ScoreMin                string `json:"smin"`
 	ScoreMax                string `json:"smax"`
-	LastScTimeMin           string `json:"lsctmin"`
-	LastScTimeMax           string `json:"lsctmax"`
+	LastSelectedScTimeMin   string `json:"lsstmin"`
+	LastSelectedScTimeMax   string `json:"lsstmax"`
 	ScTimesMin              string `json:"scmin"`
 	ScTimesMax              string `json:"scmax"`
 	ComeTimesMin            string `json:"comin"`
@@ -723,6 +724,7 @@ func (l *FetchLoopService) StartFetchSukebeiFilteredResources(req StartTaskReque
 }
 
 func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (string, error) {
+	existingPolicy := normalizeSHFetchAllExistingPolicy(req.ExistingPolicy)
 	return l.startManagedTask(TaskSpiderFetchSehuatangSH, taskRuntimePolicy{}, func(ctx context.Context) error {
 		startPage := req.StartPage
 		endPage := req.EndPage
@@ -735,7 +737,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:             "pipeline_pre",
-			Message:           fmt.Sprintf("开始色花堂一体抓取，先执行列表建池，页码=%d-%d，版块=%s", startPage, endPage, strings.Join(req.TargetForumIDs, ",")),
+			Message:           fmt.Sprintf("开始色花堂一体抓取，先执行列表建池，页码=%d-%d，版块=%s，已有帖子策略=%s", startPage, endPage, strings.Join(req.TargetForumIDs, ","), existingPolicy),
 			CurrentPhaseKey:   "list",
 			PhaseKey:          "list",
 			PhaseHandledCount: 0,
@@ -743,6 +745,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 
 		listResult, err := l.fetchSehuatangSvc.FetchSHThreadList(ctx, fetchsehuatang.SHFetchRequest{
 			FetchMode:      fetchsehuatang.SHFetchModeForum,
+			ExistingPolicy: existingPolicy,
 			TargetForumIDs: req.TargetForumIDs,
 			StartPage:      startPage,
 			EndPage:        endPage,
@@ -771,6 +774,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 		if len(detailTargets) > 0 {
 			selectionCriteria, marshalErr := json.Marshal(map[string]any{
 				"trigger_source":   "shfetchall",
+				"existing_policy":  existingPolicy,
 				"target_forum_ids": req.TargetForumIDs,
 				"detail_statuses":  []string{fetchsehuatang.SHDetailStatusPending, fetchsehuatang.SHDetailStatusFailed},
 				"list_start_page":  startPage,
@@ -818,7 +822,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:             "fetch_sehuatang_sh_done",
-			Message:           fmt.Sprintf("色花堂一体抓取完成：列表页面成功=%d，页面失败=%d，新增=%d，更新已有=%d，详情目标=%d，详情成功=%d，详情失败=%d", listResult.SuccessPageCount, listResult.FailedPageCount, listResult.InsertedCount, listResult.ExistingCount, detailMatched, detailFetched, detailFailed),
+			Message:           fmt.Sprintf("色花堂一体抓取完成：列表页面成功=%d，页面失败=%d，新增=%d，更新已有=%d，跳过已有=%d，详情目标=%d，详情成功=%d，详情失败=%d", listResult.SuccessPageCount, listResult.FailedPageCount, listResult.InsertedCount, listResult.ExistingCount, listResult.SkippedExistingCount, detailMatched, detailFetched, detailFailed),
 			HandledCount:      int(listResult.MatchedCount + detailMatched),
 			SuccessCount:      int(listResult.FetchedCount + detailFetched),
 			FailedCount:       int(listResult.FailedCount + detailFailed),
@@ -833,6 +837,13 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 		})
 		return nil
 	})
+}
+
+func normalizeSHFetchAllExistingPolicy(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return fetchsehuatang.SHExistingPolicySkip
+	}
+	return fetchsehuatang.NormalizeSHExistingPolicy(raw)
 }
 
 func (l *FetchLoopService) StartFetchSehuatangSHThreadList(req StartTaskRequest) (string, error) {

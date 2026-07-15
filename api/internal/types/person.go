@@ -1,28 +1,28 @@
 package types
 
 type Person struct {
-	Id                   int64
-	Name                 string
-	Alias                string
-	Chinese              string
-	BirthDay             int64
-	Height               int64
-	Cup                  string
-	Bwh                  string
-	Avatar               string
-	MovieNumber          int64
-	OwnedMovieNumber     int64
-	OwnedWMediaNumber    int64
-	OwnedWMediaRatio     int64
-	OwnedWMediaRatioText string
-	ScTimes              int64
-	ComeTimes            int64
-	LastScTime           int64
-	LastScEventTime      int64
-	HighestRank          int64
-	RankTimes            int64
-	CreatedOn            int64
-	UpdatedOn            int64
+	Id                     int64
+	Name                   string
+	Alias                  string
+	Chinese                string
+	BirthDay               int64
+	Height                 int64
+	Cup                    string
+	Bwh                    string
+	Avatar                 string
+	MovieNumber            int64
+	OwnedMovieNumber       int64
+	OwnedWMediaNumber      int64
+	OwnedWMediaRatio       int64
+	OwnedWMediaRatioText   string
+	ScTimes                int64
+	ComeTimes              int64
+	LastSelectedScTime     int64
+	LastParticipatedScTime int64
+	HighestRank            int64
+	RankTimes              int64
+	CreatedOn              int64
+	UpdatedOn              int64
 }
 
 type PersonListFilter struct {
@@ -39,9 +39,9 @@ type PersonListFilter struct {
 	HasComeTimesMin           bool
 	ComeTimesMax              int64
 	HasComeTimesMax           bool
-	LastScFrom                int64
-	HasLastScFrom             bool
-	LastScTo                  int64
-	HasLastScTo               bool
+	LastSelectedScFrom        int64
+	HasLastSelectedScFrom     bool
+	LastSelectedScTo          int64
+	HasLastSelectedScTo       bool
 	OnlyValidOwnedWMediaRatio bool
 }

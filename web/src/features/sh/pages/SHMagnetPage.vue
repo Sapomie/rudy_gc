@@ -322,7 +322,7 @@ function filterHref(overrides: Record<string, string | number>): string {
     else params.set(key, value);
   }
   const encoded = params.toString();
-  return `/shmagnets${encoded ? `?${encoded}` : ""}`;
+  return `/shmagnetlist${encoded ? `?${encoded}` : ""}`;
 }
 
 function pageHref(item: AnyRecord): string {
@@ -340,15 +340,31 @@ function sortMark(field: string): string {
   return queryText("Order") === "asc" ? " ↑" : " ↓";
 }
 
-function bucketRowClass(index: number): Record<string, boolean> {
+function bucketDayKey(index: number): string {
   const timestamp = Number(rowValue(rows.value[index], "PostTime") || 0);
-  const month = timestamp > 0 ? new Date(timestamp * 1000).getMonth() : -1;
-  const previousTimestamp = index > 0 ? Number(rowValue(rows.value[index - 1], "PostTime") || 0) : 0;
-  const previousMonth = previousTimestamp > 0 ? new Date(previousTimestamp * 1000).getMonth() : -2;
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return "";
+  const date = new Date(timestamp * 1000);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function bucketRowClass(index: number): Record<string, boolean> {
+  const day = bucketDayKey(index);
+  if (!day) return { "sehuatang-day-neutral": true };
+
+  let groupIndex = 0;
+  for (let rowIndex = 1; rowIndex <= index; rowIndex += 1) {
+    const currentDay = bucketDayKey(rowIndex);
+    const previousDay = bucketDayKey(rowIndex - 1);
+    if (currentDay && previousDay && currentDay !== previousDay) {
+      groupIndex += 1;
+    }
+  }
+  const previousDay = index > 0 ? bucketDayKey(index - 1) : "";
   return {
-    "sc-running-month-neutral": month < 0,
-    [`sc-running-month-${(month % 3) + 1}`]: month >= 0,
-    "sc-running-month-start": month !== previousMonth
+    [`sehuatang-day-group-${(groupIndex % 2) + 1}`]: true,
+    "sehuatang-day-start": Boolean(previousDay && day !== previousDay)
   };
 }
 

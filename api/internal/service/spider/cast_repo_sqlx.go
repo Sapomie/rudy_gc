@@ -100,7 +100,7 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		old.OwnedWMediaNumber = in.OwnedWMediaNumber
 		old.ScTimes = in.ScTimes
 		old.ComeTimes = in.ComeTimes
-		old.LastScTime = in.LastScTime
+		old.LastSelectedScTime = in.LastSelectedScTime
 		old.Rank500MovieNumber = in.Rank500MovieNumber
 		old.Rank20MovieNumber = in.Rank20MovieNumber
 		old.Rank1MovieNumber = in.Rank1MovieNumber
@@ -130,7 +130,7 @@ func (r *CastRepoSqlx) Upsert(ctx context.Context, in *types.Cast) (*types.Cast,
 		OwnedWMediaNumber:  in.OwnedWMediaNumber,
 		ScTimes:            in.ScTimes,
 		ComeTimes:          in.ComeTimes,
-		LastScTime:         in.LastScTime,
+		LastSelectedScTime: in.LastSelectedScTime,
 		Rank500MovieNumber: in.Rank500MovieNumber,
 		Rank20MovieNumber:  in.Rank20MovieNumber,
 		Rank1MovieNumber:   in.Rank1MovieNumber,
@@ -185,7 +185,7 @@ func mapAmCastToTypes(v *moviex.AmCast) *types.Cast {
 		OwnedWMediaNumber:  v.OwnedWMediaNumber,
 		ScTimes:            v.ScTimes,
 		ComeTimes:          v.ComeTimes,
-		LastScTime:         v.LastScTime,
+		LastSelectedScTime: v.LastSelectedScTime,
 		Rank500MovieNumber: v.Rank500MovieNumber,
 		Rank20MovieNumber:  v.Rank20MovieNumber,
 		Rank1MovieNumber:   v.Rank1MovieNumber,
@@ -255,7 +255,7 @@ func (r *CastRepoSqlx) insertPerson(ctx context.Context, name string, cast *type
 		row.OwnedWMediaNumber = cast.OwnedWMediaNumber
 		row.ScTimes = cast.ScTimes
 		row.ComeTimes = cast.ComeTimes
-		row.LastScTime = cast.LastScTime
+		row.LastSelectedScTime = cast.LastSelectedScTime
 		row.HighestRank = cast.HighestRank
 		row.RankTimes = cast.RankTimes
 	}
@@ -368,8 +368,8 @@ func buildCastOrderBy(sortField, sortOrder string) string {
 		column = "ac.sc_times"
 	case "come_times":
 		column = "ac.come_times"
-	case "last_sc_time":
-		column = "ac.last_sc_time"
+	case "last_selected_sc_time":
+		column = "ac.last_selected_sc_time"
 	case "highest_rank":
 		column = "ac.highest_rank"
 	}
@@ -390,7 +390,7 @@ func normalizeCastSortField(sortField string) string {
 	switch strings.ToLower(strings.TrimSpace(sortField)) {
 	case "owned_movie_number":
 		return "owned_w_media_number"
-	case "name", "chinese", "age", "height", "movie_number", "owned_w_media_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
+	case "name", "chinese", "age", "height", "movie_number", "owned_w_media_number", "sc_times", "come_times", "last_selected_sc_time", "highest_rank":
 		return strings.ToLower(strings.TrimSpace(sortField))
 	default:
 		return "owned_w_media_number"

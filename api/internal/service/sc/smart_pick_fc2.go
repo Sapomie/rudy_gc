@@ -15,12 +15,12 @@ import (
 )
 
 type FC2SmartPickRequest struct {
-	PostTimeStart       string `json:"PostTimeStart"`
-	PostTimeEnd         string `json:"PostTimeEnd"`
-	MediaBirthTimeStart string `json:"MediaBirthTimeStart"`
-	MediaBirthTimeEnd   string `json:"MediaBirthTimeEnd"`
-	LastScTimeMin       string `json:"LastScTimeMin"`
-	LastScTimeMax       string `json:"LastScTimeMax"`
+	PostTimeStart         string `json:"PostTimeStart"`
+	PostTimeEnd           string `json:"PostTimeEnd"`
+	MediaBirthTimeStart   string `json:"MediaBirthTimeStart"`
+	MediaBirthTimeEnd     string `json:"MediaBirthTimeEnd"`
+	LastSelectedScTimeMin string `json:"LastSelectedScTimeMin"`
+	LastSelectedScTimeMax string `json:"LastSelectedScTimeMax"`
 
 	ScTimesMin   *int64 `json:"ScTimesMin"`
 	ScTimesMax   *int64 `json:"ScTimesMax"`
@@ -48,27 +48,30 @@ type FC2PickRequestWithWeight struct {
 }
 
 type FC2SmartPickOptions struct {
-	LastScBlockDays        int     `json:"lastScBlockDays"`
-	LastScPenaltyAlpha     float64 `json:"lastScPenaltyAlpha"`
-	MovieHasScPenaltyAlpha float64 `json:"movieHasScPenaltyAlpha"`
-	RandomSeed             int64   `json:"randomSeed,omitempty"`
+	MovieSelectedScBlockDays       int     `json:"movieSelectedScBlockDays"`
+	MovieParticipatedScBlockDays   int     `json:"movieParticipatedScBlockDays"`
+	MovieSelectedScPenaltyAlpha    float64 `json:"movieSelectedScPenaltyAlpha"`
+	MovieHasSelectedScPenaltyAlpha float64 `json:"movieHasSelectedScPenaltyAlpha"`
+	RandomSeed                     int64   `json:"randomSeed,omitempty"`
 }
 
 type FC2SmartPickInfo struct {
-	RawCandidateMovieCount  int    `json:"raw_candidate_movie_count"`
-	AfterBlockMovieCount    int    `json:"after_block_movie_count"`
-	LastScBlockedMovieCount int    `json:"last_sc_blocked_movie_count"`
-	SelectedMovieCount      int    `json:"selected_movie_count"`
-	TotalSizeGB             string `json:"total_size_gb,omitempty"`
+	RawCandidateMovieCount          int    `json:"raw_candidate_movie_count"`
+	AfterBlockMovieCount            int    `json:"after_block_movie_count"`
+	SelectedScBlockedMovieCount     int    `json:"selected_sc_blocked_movie_count"`
+	ParticipatedScBlockedMovieCount int    `json:"participated_sc_blocked_movie_count"`
+	SelectedMovieCount              int    `json:"selected_movie_count"`
+	TotalSizeGB                     string `json:"total_size_gb,omitempty"`
 }
 
 type FC2SmartPickMovie struct {
 	*moviex.FC2Movie
-	VideoURL   string
-	MediaSize  int64
-	ScTimes    int64
-	ComeTimes  int64
-	LastScTime int64
+	VideoURL               string
+	MediaSize              int64
+	ScTimes                int64
+	ComeTimes              int64
+	LastSelectedScTime     int64
+	LastParticipatedScTime int64
 }
 
 type FC2SmartPickResult struct {
@@ -77,12 +80,12 @@ type FC2SmartPickResult struct {
 }
 
 type fc2SmartPickNormalizedRequest struct {
-	req             FC2SmartPickRequest
-	postTimeStart   int64
-	postTimeEnd     int64
-	lastScTimeStart int64
-	lastScTimeEnd   int64
-	mediaFilter     moviex.FC2SmartPickMediaFilter
+	req                     FC2SmartPickRequest
+	postTimeStart           int64
+	postTimeEnd             int64
+	lastSelectedScTimeStart int64
+	lastSelectedScTimeEnd   int64
+	mediaFilter             moviex.FC2SmartPickMediaFilter
 }
 
 type fc2SmartPickPreparedGroup struct {
@@ -127,10 +130,13 @@ func (l *ScService) SmartPickFC2WithInfoFromRequests(ctx context.Context, reqs [
 }
 
 func validateFC2SmartPickOptions(opt FC2SmartPickOptions) error {
-	if opt.LastScBlockDays < 0 {
-		return errors.New("lastScBlockDays must be >= 0")
+	if opt.MovieSelectedScBlockDays < 0 {
+		return errors.New("movieSelectedScBlockDays must be >= 0")
 	}
-	if opt.LastScPenaltyAlpha < 0 || opt.MovieHasScPenaltyAlpha < 0 {
+	if opt.MovieParticipatedScBlockDays < 0 {
+		return errors.New("movieParticipatedScBlockDays must be >= 0")
+	}
+	if opt.MovieSelectedScPenaltyAlpha < 0 || opt.MovieHasSelectedScPenaltyAlpha < 0 {
 		return errors.New("penalty alpha must be >= 0")
 	}
 	return nil
@@ -225,11 +231,11 @@ func normalizeFC2SmartPickRequest(req FC2SmartPickRequest) (fc2SmartPickNormaliz
 	if out.postTimeEnd, err = parseFC2SmartPickDate(req.PostTimeEnd, true); err != nil {
 		return out, fmt.Errorf("PostTimeEnd: %w", err)
 	}
-	if out.lastScTimeStart, err = parseFC2SmartPickDate(req.LastScTimeMin, false); err != nil {
-		return out, fmt.Errorf("LastScTimeMin: %w", err)
+	if out.lastSelectedScTimeStart, err = parseFC2SmartPickDate(req.LastSelectedScTimeMin, false); err != nil {
+		return out, fmt.Errorf("LastSelectedScTimeMin: %w", err)
 	}
-	if out.lastScTimeEnd, err = parseFC2SmartPickDate(req.LastScTimeMax, true); err != nil {
-		return out, fmt.Errorf("LastScTimeMax: %w", err)
+	if out.lastSelectedScTimeEnd, err = parseFC2SmartPickDate(req.LastSelectedScTimeMax, true); err != nil {
+		return out, fmt.Errorf("LastSelectedScTimeMax: %w", err)
 	}
 	if out.mediaFilter.BirthTimeStart, err = parseFC2SmartPickDate(req.MediaBirthTimeStart, false); err != nil {
 		return out, fmt.Errorf("MediaBirthTimeStart: %w", err)
@@ -294,14 +300,14 @@ func matchesFC2SmartPickRequest(req fc2SmartPickNormalizedRequest, movie *moviex
 	if word := strings.TrimSpace(req.req.Word); word != "" && !containsFold(movie.FC2Key, word) && !containsFold(movie.Code, word) && !containsFold(movie.Title, word) && !containsFold(movie.PerformerText, word) {
 		return false
 	}
-	scTimes, comeTimes, lastScTime := int64(0), int64(0), int64(0)
+	scTimes, comeTimes, lastSelectedScTime := int64(0), int64(0), int64(0)
 	if stat != nil {
-		scTimes, comeTimes, lastScTime = stat.ScTimes, stat.ComeTimes, stat.LastScTime
+		scTimes, comeTimes, lastSelectedScTime = stat.ScTimes, stat.ComeTimes, stat.LastSelectedScTime
 	}
 	if !int64InOptionalRange(scTimes, req.req.ScTimesMin, req.req.ScTimesMax) || !int64InOptionalRange(comeTimes, req.req.ComeTimesMin, req.req.ComeTimesMax) {
 		return false
 	}
-	if req.lastScTimeStart > 0 && lastScTime < req.lastScTimeStart || req.lastScTimeEnd > 0 && lastScTime > req.lastScTimeEnd {
+	if req.lastSelectedScTimeStart > 0 && lastSelectedScTime < req.lastSelectedScTimeStart || req.lastSelectedScTimeEnd > 0 && lastSelectedScTime > req.lastSelectedScTimeEnd {
 		return false
 	}
 	return true
@@ -325,7 +331,8 @@ func newFC2SmartPickMovie(movie *moviex.FC2Movie, media *moviex.FC2Media, stat *
 	if stat != nil {
 		item.ScTimes = stat.ScTimes
 		item.ComeTimes = stat.ComeTimes
-		item.LastScTime = stat.LastScTime
+		item.LastSelectedScTime = stat.LastSelectedScTime
+		item.LastParticipatedScTime = stat.LastParticipatedScTime
 	}
 	return item
 }
@@ -333,15 +340,26 @@ func newFC2SmartPickMovie(movie *moviex.FC2Movie, media *moviex.FC2Media, stat *
 func analyzeFC2SmartPickInfo(groups []*fc2SmartPickGroup, opt FC2SmartPickOptions, now time.Time) FC2SmartPickInfo {
 	unique := collectUniqueFC2SmartPickMovies(groups)
 	blocked := 0
+	selectedScBlocked := 0
+	participatedScBlocked := 0
 	for _, movie := range unique {
-		if fc2SmartMovieBlocked(movie, opt, now) {
+		blockedBySelectedSc := fc2SmartMovieSelectedScBlocked(movie, opt, now)
+		blockedByParticipatedSc := fc2SmartMovieParticipatedScBlocked(movie, opt, now)
+		if blockedBySelectedSc {
+			selectedScBlocked++
+		}
+		if blockedByParticipatedSc {
+			participatedScBlocked++
+		}
+		if blockedBySelectedSc || blockedByParticipatedSc {
 			blocked++
 		}
 	}
 	return FC2SmartPickInfo{
-		RawCandidateMovieCount:  len(unique),
-		AfterBlockMovieCount:    len(unique) - blocked,
-		LastScBlockedMovieCount: blocked,
+		RawCandidateMovieCount:          len(unique),
+		AfterBlockMovieCount:            len(unique) - blocked,
+		SelectedScBlockedMovieCount:     selectedScBlocked,
+		ParticipatedScBlockedMovieCount: participatedScBlocked,
 	}
 }
 
@@ -381,7 +399,7 @@ func pickFC2SmartMovies(groups []*fc2SmartPickGroup, n int, opt FC2SmartPickOpti
 		group.alive = alive
 	}
 	if countFC2SmartPickEligible(groups) < n {
-		return nil, errors.New("FC2 candidates insufficient after filters and Last SC block")
+		return nil, errors.New("FC2 candidates insufficient after filters and participated/selected SC blocks")
 	}
 
 	targets := allocateFC2SmartPickTargets(groups, n)
@@ -422,7 +440,15 @@ func pickFC2SmartMovies(groups []*fc2SmartPickGroup, n int, opt FC2SmartPickOpti
 }
 
 func fc2SmartMovieBlocked(movie *FC2SmartPickMovie, opt FC2SmartPickOptions, now time.Time) bool {
-	return movie != nil && opt.LastScBlockDays > 0 && movie.LastScTime > 0 && ageInDays(movie.LastScTime, now) < float64(opt.LastScBlockDays)
+	return fc2SmartMovieSelectedScBlocked(movie, opt, now) || fc2SmartMovieParticipatedScBlocked(movie, opt, now)
+}
+
+func fc2SmartMovieSelectedScBlocked(movie *FC2SmartPickMovie, opt FC2SmartPickOptions, now time.Time) bool {
+	return movie != nil && opt.MovieSelectedScBlockDays > 0 && movie.LastSelectedScTime > 0 && ageInDays(movie.LastSelectedScTime, now) < float64(opt.MovieSelectedScBlockDays)
+}
+
+func fc2SmartMovieParticipatedScBlocked(movie *FC2SmartPickMovie, opt FC2SmartPickOptions, now time.Time) bool {
+	return movie != nil && opt.MovieParticipatedScBlockDays > 0 && movie.LastParticipatedScTime > 0 && ageInDays(movie.LastParticipatedScTime, now) < float64(opt.MovieParticipatedScBlockDays)
 }
 
 func fc2SmartMovieWeight(movie *FC2SmartPickMovie, opt FC2SmartPickOptions, now time.Time) float64 {
@@ -431,11 +457,11 @@ func fc2SmartMovieWeight(movie *FC2SmartPickMovie, opt FC2SmartPickOptions, now 
 	}
 	weight := 1.0
 	if movie.ScTimes > 0 {
-		weight *= 1 - opt.MovieHasScPenaltyAlpha
+		weight *= 1 - opt.MovieHasSelectedScPenaltyAlpha
 	}
-	if movie.LastScTime > 0 {
-		recentness := math.Exp(-ageInDays(movie.LastScTime, now) / 90.0)
-		weight *= 1 - opt.LastScPenaltyAlpha*recentness
+	if movie.LastSelectedScTime > 0 {
+		recentness := math.Exp(-ageInDays(movie.LastSelectedScTime, now) / 90.0)
+		weight *= 1 - opt.MovieSelectedScPenaltyAlpha*recentness
 	}
 	if weight < 0.0001 {
 		return 0.0001

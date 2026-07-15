@@ -23,8 +23,8 @@ var (
 	amCastRowsExpectAutoSet   = strings.Join(stringx.Remove(amCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	amCastRowsWithPlaceHolder = strings.Join(stringx.Remove(amCastFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcAmCastIdPrefix   = "cache:rudyGc:amCast:id:"
-	cacheRudyGcAmCastNamePrefix = "cache:rudyGc:amCast:name:"
+	cacheRudyGcAmCastIdPrefix   = "cache:rudyGc:amCast:v2:id:"
+	cacheRudyGcAmCastNamePrefix = "cache:rudyGc:amCast:v2:name:"
 )
 
 type (
@@ -42,24 +42,24 @@ type (
 	}
 
 	AmCast struct {
-		Id                 int64  `db:"id"`
-		Name               string `db:"name"`
-		JavId              string `db:"jav_id"`
-		MovieNumber        int64  `db:"movie_number"`
-		OwnedMovieNumber   int64  `db:"owned_movie_number"`
-		OwnedWMediaNumber  int64  `db:"owned_w_media_number"`
-		ScTimes            int64  `db:"sc_times"`
-		ComeTimes          int64  `db:"come_times"`
-		LastScTime         int64  `db:"last_sc_time"`
-		LastScEventTime    int64  `db:"last_sc_event_time"`
-		Rank500MovieNumber int64  `db:"rank500_movie_number"`
-		Rank20MovieNumber  int64  `db:"rank20_movie_number"`
-		Rank1MovieNumber   int64  `db:"rank1_movie_number"`
-		HighestRank        int64  `db:"highest_rank"`
-		RankTimes          int64  `db:"rank_times"`
-		CreatedOn          int64  `db:"created_on"`
-		UpdatedOn          int64  `db:"updated_on"`
-		PersonId           int64  `db:"person_id"`
+		Id                     int64  `db:"id"`
+		Name                   string `db:"name"`
+		JavId                  string `db:"jav_id"`
+		MovieNumber            int64  `db:"movie_number"`
+		OwnedMovieNumber       int64  `db:"owned_movie_number"`
+		OwnedWMediaNumber      int64  `db:"owned_w_media_number"`
+		ScTimes                int64  `db:"sc_times"`
+		ComeTimes              int64  `db:"come_times"`
+		LastSelectedScTime     int64  `db:"last_selected_sc_time"`
+		LastParticipatedScTime int64  `db:"last_participated_sc_time"`
+		Rank500MovieNumber     int64  `db:"rank500_movie_number"`
+		Rank20MovieNumber      int64  `db:"rank20_movie_number"`
+		Rank1MovieNumber       int64  `db:"rank1_movie_number"`
+		HighestRank            int64  `db:"highest_rank"`
+		RankTimes              int64  `db:"rank_times"`
+		CreatedOn              int64  `db:"created_on"`
+		UpdatedOn              int64  `db:"updated_on"`
+		PersonId               int64  `db:"person_id"`
 	}
 )
 
@@ -127,7 +127,7 @@ func (m *defaultAmCastModel) Insert(ctx context.Context, data *AmCast) (sql.Resu
 	rudyGcAmCastNameKey := fmt.Sprintf("%s%v", cacheRudyGcAmCastNamePrefix, data.Name)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, amCastRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Name, data.JavId, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.ScTimes, data.ComeTimes, data.LastScTime, data.LastScEventTime, data.Rank500MovieNumber, data.Rank20MovieNumber, data.Rank1MovieNumber, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn, data.PersonId)
+		return conn.ExecCtx(ctx, query, data.Name, data.JavId, data.MovieNumber, data.OwnedMovieNumber, data.OwnedWMediaNumber, data.ScTimes, data.ComeTimes, data.LastSelectedScTime, data.LastParticipatedScTime, data.Rank500MovieNumber, data.Rank20MovieNumber, data.Rank1MovieNumber, data.HighestRank, data.RankTimes, data.CreatedOn, data.UpdatedOn, data.PersonId)
 	}, rudyGcAmCastIdKey, rudyGcAmCastNameKey)
 	return ret, err
 }
@@ -142,7 +142,7 @@ func (m *defaultAmCastModel) Update(ctx context.Context, newData *AmCast) error 
 	rudyGcAmCastNameKey := fmt.Sprintf("%s%v", cacheRudyGcAmCastNamePrefix, data.Name)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, amCastRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.Name, newData.JavId, newData.MovieNumber, newData.OwnedMovieNumber, newData.OwnedWMediaNumber, newData.ScTimes, newData.ComeTimes, newData.LastScTime, newData.LastScEventTime, newData.Rank500MovieNumber, newData.Rank20MovieNumber, newData.Rank1MovieNumber, newData.HighestRank, newData.RankTimes, newData.CreatedOn, newData.UpdatedOn, newData.PersonId, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.Name, newData.JavId, newData.MovieNumber, newData.OwnedMovieNumber, newData.OwnedWMediaNumber, newData.ScTimes, newData.ComeTimes, newData.LastSelectedScTime, newData.LastParticipatedScTime, newData.Rank500MovieNumber, newData.Rank20MovieNumber, newData.Rank1MovieNumber, newData.HighestRank, newData.RankTimes, newData.CreatedOn, newData.UpdatedOn, newData.PersonId, newData.Id)
 	}, rudyGcAmCastIdKey, rudyGcAmCastNameKey)
 	return err
 }

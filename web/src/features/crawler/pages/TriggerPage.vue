@@ -171,6 +171,28 @@
                         </div>
                       </div>
 
+                      <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHExistingPolicyFieldWrap" :class="{ 'is-hidden': !showSHExistingPolicyField }">
+                        <label>已有帖子处理</label>
+                        <input type="hidden" name="existing_policy" :value="form.existingPolicy">
+                        <div class="sh-forum-single-toggle" role="radiogroup" aria-label="已有帖子处理">
+                          <button
+                            type="button"
+                            class="sh-forum-toggle-button"
+                            :class="{ 'is-active': form.existingPolicy === 'upsert' }"
+                            :aria-pressed="form.existingPolicy === 'upsert'"
+                            @click="form.existingPolicy = 'upsert'"
+                          >Upsert（更新已有）</button>
+                          <button
+                            type="button"
+                            class="sh-forum-toggle-button"
+                            :class="{ 'is-active': form.existingPolicy === 'skip' }"
+                            :aria-pressed="form.existingPolicy === 'skip'"
+                            @click="form.existingPolicy = 'skip'"
+                          >跳过已有</button>
+                        </div>
+                        <div class="text-muted small mt-1">{{ form.existingPolicy === "skip" ? "已有帖子不更新、不补全详情，只处理本次发现的新帖子。" : "已有帖子更新基础信息，并补全待抓或失败的详情。" }}</div>
+                      </div>
+
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHDetailStatusFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
                         <label class="d-block mb-2">详情状态</label>
                         <div class="status-check-grid sh-detail-status-toggle">
@@ -577,6 +599,7 @@ const form = reactive({
   endPage: 0,
   keyword: "",
   fetchMode: "search",
+  existingPolicy: "skip",
   postTimeFrom: "",
   postTimeTo: "",
   detailLimit: undefined as number | undefined
@@ -606,7 +629,7 @@ const fetchSiteOrderOptions = [
   { value: "hrk", label: "最高排名" },
   { value: "bt", label: "下载时间" },
   { value: "mbt", label: "Media下载时间" },
-  { value: "lsct", label: "最后sc" },
+  { value: "lsst", label: "最近入选 SC" },
   { value: "sc", label: "sc次数" },
   { value: "co", label: "co次数" }
 ];
@@ -618,7 +641,7 @@ const movieFilterFieldNames = [
   "srds", "srde",
   "drkmin", "nd", "wd", "mowned",
   "vwmin", "vwmax", "smin", "smax",
-  "lsctmin", "lsctmax", "scmin", "scmax", "comin", "comax",
+  "lsstmin", "lsstmax", "scmin", "scmax", "comin", "comax",
   "md1", "md2", "md3", "md4",
   "od", "order"
 ];
@@ -668,6 +691,7 @@ async function load() {
     form.startPage = Number(text(payload.value, "FetchSehuatangStartPage") || 0);
     form.endPage = Number(text(payload.value, "FetchSehuatangEndPage") || 0);
     form.fetchMode = text(payload.value, "FetchSehuatangSHMode") === "forum" ? "forum" : "search";
+    form.existingPolicy = "skip";
     targetForumIDs.value = initialTargetForumIDs();
     shDetailStatusValues.value = initialSHDetailStatusValues();
     form.number = 1000000;
@@ -753,6 +777,7 @@ const showNumberField = computed(() => [
 ].includes(currentTaskType.value));
 const showActorNameField = computed(() => currentTaskType.value === "spider_rebuild_actor_rank");
 const showSHModeField = computed(() => isSehuatangSHTask.value && route.path !== "/shfetchall");
+const showSHExistingPolicyField = computed(() => isSehuatangSHTask.value && route.path === "/shfetchall");
 const showSHForumsField = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value || isSehuatangSHDetailTask.value);
 const showSHDetailFields = computed(() => isSehuatangSHDetailTask.value);
 const showPagingFields = computed(() => isSehuatangSHTask.value || isSehuatangSHListTask.value);
@@ -952,6 +977,7 @@ watch(shDetailFilterSignature, (signature) => {
 const shHeroMetrics = computed(() => [
   { label: "目标版块", value: shForumNames(shForums.value, targetForumIDs.value) },
   { label: "起止页", value: showPagingFields.value ? `${form.startPage || "-"}-${form.endPage || "-"}` : "-" },
+  { label: "已有帖子", value: showSHExistingPolicyField.value ? shExistingPolicyLabel(form.existingPolicy) : "-" },
   { label: "当前任务", value: taskLabelByType(currentTaskType.value) }
 ]);
 const shListRuntimeContext = computed(() => {
@@ -964,6 +990,7 @@ const shListRuntimeContext = computed(() => {
   const endPage = jobStatNumber(job, "end_page") || Number(form.endPage || 0);
   return [
     { label: "当前阶段", value: currentPhaseLabel(job) },
+    { label: "已有帖子", value: shExistingPolicyLabel(jobStatText(job, "existing_policy") || form.existingPolicy) },
     { label: "目标版块", value: shForumNames(shForums.value, targetForumText) },
     { label: "页码范围", value: startPage > 0 && endPage > 0 ? `${startPage}-${endPage}` : "-" },
     { label: "当前抓取", value: currentPage > 0 ? `${shForumName(shForums.value, currentForumID)} · 第 ${currentPage} 页` : "准备中" },
@@ -1095,6 +1122,7 @@ const overviewItems = computed(() => {
       { label: "去重帖子", value: String(jobStatNumber(job, "matched_count")) },
       { label: "新增帖子", value: String(jobStatNumber(job, "inserted_count")) },
       { label: "更新已有", value: String(jobStatNumber(job, "existing_count")) },
+      { label: "跳过已有", value: String(jobStatNumber(job, "skipped_existing_count")) },
       { label: "入库失败", value: String(jobStatNumber(job, "persist_failed_count")) },
       { label: "跳过置顶", value: String(jobStatNumber(job, "skipped_top_count")) }
     ];
@@ -1286,6 +1314,10 @@ function jobStatNumber(job: AnyRecord, key: string): number {
 
 function jobStatText(job: AnyRecord, key: string): string {
   return String(jobStatsText(job)[key] || "").trim();
+}
+
+function shExistingPolicyLabel(policy: string): string {
+  return String(policy || "").trim().toLowerCase() === "skip" ? "跳过已有" : "Upsert（更新已有）";
 }
 
 function sehuatangPageCounts(job: AnyRecord): { completed: number; total: number } {
@@ -1846,6 +1878,7 @@ function buildTaskPayload(type: string): Record<string, unknown> {
       throw new Error("请选择目标版块");
     }
     body.fetch_mode = "forum";
+    body.existing_policy = form.existingPolicy;
     body.keyword = "";
     body.start_page = form.startPage;
     body.end_page = form.endPage;

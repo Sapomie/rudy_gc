@@ -10,6 +10,7 @@ import (
 func TestBuildSHProgressStatsIncludesListRunMetrics(t *testing.T) {
 	result := &SHFetchResult{
 		RunID:              12,
+		ExistingPolicy:     SHExistingPolicySkip,
 		TargetForumIDs:     "103",
 		StartPage:          3,
 		EndPage:            4,
@@ -56,11 +57,44 @@ func TestBuildSHProgressStatsIncludesListRunMetrics(t *testing.T) {
 		"current_page_text": "forum=103 page=4",
 		"current_forum_id":  "103",
 		"target_forum_ids":  "103",
+		"existing_policy":   SHExistingPolicySkip,
 	}
 	for key, want := range wantText {
 		if got := statsText[key]; got != want {
 			t.Fatalf("statsText[%q] = %q, want %q", key, got, want)
 		}
+	}
+}
+
+func TestNormalizeSHExistingPolicy(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "default", raw: "", want: SHExistingPolicyUpsert},
+		{name: "upsert", raw: " UPSERT ", want: SHExistingPolicyUpsert},
+		{name: "skip", raw: " Skip ", want: SHExistingPolicySkip},
+		{name: "invalid", raw: "ignore", want: "ignore"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := NormalizeSHExistingPolicy(test.raw); got != test.want {
+				t.Fatalf("NormalizeSHExistingPolicy(%q) = %q, want %q", test.raw, got, test.want)
+			}
+		})
+	}
+}
+
+func TestValidateSHFetchRequestRejectsInvalidExistingPolicy(t *testing.T) {
+	req := normalizeSHFetchRequest(SHFetchRequest{
+		FetchMode:      SHFetchModeForum,
+		ExistingPolicy: "ignore",
+		StartPage:      1,
+		EndPage:        1,
+	})
+	if err := validateSHFetchRequest(req); err == nil {
+		t.Fatal("validateSHFetchRequest() error = nil, want invalid existing_policy error")
 	}
 }
 
@@ -80,6 +114,27 @@ func TestSHListTopicNeedsDetail(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := shListTopicNeedsDetail(test.existed, test.status); got != test.expected {
 				t.Fatalf("shListTopicNeedsDetail(%v, %q) = %v, want %v", test.existed, test.status, got, test.expected)
+			}
+		})
+	}
+}
+
+func TestSHListTopicShouldSkip(t *testing.T) {
+	tests := []struct {
+		name     string
+		policy   string
+		existed  bool
+		expected bool
+	}{
+		{name: "skip existing", policy: SHExistingPolicySkip, existed: true, expected: true},
+		{name: "skip new", policy: SHExistingPolicySkip, existed: false, expected: false},
+		{name: "upsert existing", policy: SHExistingPolicyUpsert, existed: true, expected: false},
+		{name: "default existing", policy: "", existed: true, expected: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := shListTopicShouldSkip(test.policy, test.existed); got != test.expected {
+				t.Fatalf("shListTopicShouldSkip(%q, %v) = %v, want %v", test.policy, test.existed, got, test.expected)
 			}
 		})
 	}

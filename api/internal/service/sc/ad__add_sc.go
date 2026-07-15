@@ -62,6 +62,8 @@ type AddScPreviewMovie struct {
 	MovieHref  string
 	JacketImg  string
 	Casts      []string
+	JAVCard    *types.MovieType
+	FC2Movie   *moviex.FC2Movie
 }
 
 func (l *ScService) AddSc(ctx context.Context, in AddScInput) error {
@@ -367,6 +369,7 @@ func (l *ScService) buildAddScPreview(ctx context.Context, dir string) (*AddScPr
 				MovieHref:  buildMovieHref(wm.MovieName),
 				JacketImg:  strings.TrimSpace(mt.JacketImg),
 				Casts:      collectCastNames(mt),
+				JAVCard:    mt,
 			}
 		}
 		if len(candidates) == 0 {
@@ -409,6 +412,7 @@ func addFC2PreviewCandidate(candidates map[string]*AddScPreviewMovie, media *mov
 		Title:      movie.Title,
 		MovieHref:  "/fcdetail/" + movie.FC2Key,
 		Casts:      []string{},
+		FC2Movie:   movie,
 	}
 }
 

@@ -108,16 +108,16 @@ func (m *customAmCastModel) AggregatePersonStatsByIDs(ctx context.Context, ids [
 	}
 
 	type row struct {
-		PersonId          int64 `db:"person_id"`
-		MovieNumber       int64 `db:"movie_number"`
-		OwnedMovieNumber  int64 `db:"owned_movie_number"`
-		OwnedWMediaNumber int64 `db:"owned_w_media_number"`
-		ScTimes           int64 `db:"sc_times"`
-		ComeTimes         int64 `db:"come_times"`
-		LastScTime        int64 `db:"last_sc_time"`
-		LastScEventTime   int64 `db:"last_sc_event_time"`
-		HighestRank       int64 `db:"highest_rank"`
-		RankTimes         int64 `db:"rank_times"`
+		PersonId               int64 `db:"person_id"`
+		MovieNumber            int64 `db:"movie_number"`
+		OwnedMovieNumber       int64 `db:"owned_movie_number"`
+		OwnedWMediaNumber      int64 `db:"owned_w_media_number"`
+		ScTimes                int64 `db:"sc_times"`
+		ComeTimes              int64 `db:"come_times"`
+		LastSelectedScTime     int64 `db:"last_selected_sc_time"`
+		LastParticipatedScTime int64 `db:"last_participated_sc_time"`
+		HighestRank            int64 `db:"highest_rank"`
+		RankTimes              int64 `db:"rank_times"`
 	}
 
 	placeholders := strings.TrimRight(strings.Repeat("?,", len(uniq)), ",")
@@ -129,8 +129,8 @@ SELECT
 	COALESCE(SUM(CASE WHEN wm.is_removed = ? THEN 1 ELSE 0 END), 0) AS owned_w_media_number,
 	COALESCE(SUM(COALESCE(gss.sc_times, 0)), 0) AS sc_times,
 	COALESCE(SUM(COALESCE(gss.come_times, 0)), 0) AS come_times,
-	COALESCE(MAX(COALESCE(gss.last_sc_time, 0)), 0) AS last_sc_time,
-	COALESCE(MAX(COALESCE(gse.last_sc_event_time, 0)), 0) AS last_sc_event_time,
+	COALESCE(MAX(COALESCE(gss.last_selected_sc_time, 0)), 0) AS last_selected_sc_time,
+	COALESCE(MAX(COALESCE(gse.last_participated_sc_time, 0)), 0) AS last_participated_sc_time,
 	COALESCE(MIN(CASE WHEN mi.highest_rank > 0 AND mi.highest_rank < 1000 THEN mi.highest_rank END), 0) AS highest_rank,
 	COALESCE(SUM(CASE WHEN mi.days_in_rank > 0 THEN mi.days_in_rank ELSE 0 END), 0) AS rank_times
 FROM (
@@ -145,7 +145,7 @@ LEFT JOIN g_sc_stat gss ON gss.movie_jav_id = pm.movie_jav_id
 LEFT JOIN (
 	SELECT
 		gl.movie_jav_id AS movie_jav_id,
-		COALESCE(MAX(gs.sc_time), 0) AS last_sc_event_time
+		COALESCE(MAX(gs.sc_time), 0) AS last_participated_sc_time
 	FROM g_list gl
 	JOIN g_sc gs ON gs.name = gl.sc_name
 	WHERE gl.is_sc IN (?, ?)
@@ -176,16 +176,16 @@ GROUP BY pm.person_id
 			continue
 		}
 		out[item.PersonId] = &types.Person{
-			Id:                item.PersonId,
-			MovieNumber:       item.MovieNumber,
-			OwnedMovieNumber:  item.OwnedWMediaNumber,
-			OwnedWMediaNumber: item.OwnedWMediaNumber,
-			ScTimes:           item.ScTimes,
-			ComeTimes:         item.ComeTimes,
-			LastScTime:        item.LastScTime,
-			LastScEventTime:   item.LastScEventTime,
-			HighestRank:       item.HighestRank,
-			RankTimes:         item.RankTimes,
+			Id:                     item.PersonId,
+			MovieNumber:            item.MovieNumber,
+			OwnedMovieNumber:       item.OwnedWMediaNumber,
+			OwnedWMediaNumber:      item.OwnedWMediaNumber,
+			ScTimes:                item.ScTimes,
+			ComeTimes:              item.ComeTimes,
+			LastSelectedScTime:     item.LastSelectedScTime,
+			LastParticipatedScTime: item.LastParticipatedScTime,
+			HighestRank:            item.HighestRank,
+			RankTimes:              item.RankTimes,
 		}
 	}
 	return out, nil
@@ -247,27 +247,27 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 	}
 
 	type castListRow struct {
-		Id                 int64  `db:"id"`
-		PersonId           int64  `db:"person_id"`
-		Name               string `db:"name"`
-		JavId              string `db:"jav_id"`
-		Chinese            string `db:"chinese"`
-		BirthDay           int64  `db:"birth_day"`
-		Height             int64  `db:"height"`
-		MovieNumber        int64  `db:"movie_number"`
-		OwnedMovieNumber   int64  `db:"owned_movie_number"`
-		OwnedWMediaNumber  int64  `db:"owned_w_media_number"`
-		ScTimes            int64  `db:"sc_times"`
-		ComeTimes          int64  `db:"come_times"`
-		LastScTime         int64  `db:"last_sc_time"`
-		LastScEventTime    int64  `db:"last_sc_event_time"`
-		Rank500MovieNumber int64  `db:"rank500_movie_number"`
-		Rank20MovieNumber  int64  `db:"rank20_movie_number"`
-		Rank1MovieNumber   int64  `db:"rank1_movie_number"`
-		HighestRank        int64  `db:"highest_rank"`
-		RankTimes          int64  `db:"rank_times"`
-		CreatedOn          int64  `db:"created_on"`
-		UpdatedOn          int64  `db:"updated_on"`
+		Id                     int64  `db:"id"`
+		PersonId               int64  `db:"person_id"`
+		Name                   string `db:"name"`
+		JavId                  string `db:"jav_id"`
+		Chinese                string `db:"chinese"`
+		BirthDay               int64  `db:"birth_day"`
+		Height                 int64  `db:"height"`
+		MovieNumber            int64  `db:"movie_number"`
+		OwnedMovieNumber       int64  `db:"owned_movie_number"`
+		OwnedWMediaNumber      int64  `db:"owned_w_media_number"`
+		ScTimes                int64  `db:"sc_times"`
+		ComeTimes              int64  `db:"come_times"`
+		LastSelectedScTime     int64  `db:"last_selected_sc_time"`
+		LastParticipatedScTime int64  `db:"last_participated_sc_time"`
+		Rank500MovieNumber     int64  `db:"rank500_movie_number"`
+		Rank20MovieNumber      int64  `db:"rank20_movie_number"`
+		Rank1MovieNumber       int64  `db:"rank1_movie_number"`
+		HighestRank            int64  `db:"highest_rank"`
+		RankTimes              int64  `db:"rank_times"`
+		CreatedOn              int64  `db:"created_on"`
+		UpdatedOn              int64  `db:"updated_on"`
 	}
 
 	builder := squirrel.
@@ -284,8 +284,8 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			"ac.owned_w_media_number AS owned_w_media_number",
 			"ac.sc_times AS sc_times",
 			"ac.come_times AS come_times",
-			"ac.last_sc_time AS last_sc_time",
-			"ac.last_sc_event_time AS last_sc_event_time",
+			"ac.last_selected_sc_time AS last_selected_sc_time",
+			"ac.last_participated_sc_time AS last_participated_sc_time",
 			"ac.rank500_movie_number AS rank500_movie_number",
 			"ac.rank20_movie_number AS rank20_movie_number",
 			"ac.rank1_movie_number AS rank1_movie_number",
@@ -322,27 +322,27 @@ func (m *customAmCastModel) ListPage(ctx context.Context, offset, limit int64, o
 			continue
 		}
 		out = append(out, &types.Cast{
-			Id:                 row.Id,
-			PersonId:           row.PersonId,
-			Name:               row.Name,
-			JavId:              row.JavId,
-			Chinese:            row.Chinese,
-			BirthDay:           row.BirthDay,
-			Height:             row.Height,
-			MovieNumber:        row.MovieNumber,
-			OwnedMovieNumber:   row.OwnedWMediaNumber,
-			OwnedWMediaNumber:  row.OwnedWMediaNumber,
-			ScTimes:            row.ScTimes,
-			ComeTimes:          row.ComeTimes,
-			LastScTime:         row.LastScTime,
-			LastScEventTime:    row.LastScEventTime,
-			Rank500MovieNumber: row.Rank500MovieNumber,
-			Rank20MovieNumber:  row.Rank20MovieNumber,
-			Rank1MovieNumber:   row.Rank1MovieNumber,
-			HighestRank:        row.HighestRank,
-			RankTimes:          row.RankTimes,
-			CreatedOn:          row.CreatedOn,
-			UpdatedOn:          row.UpdatedOn,
+			Id:                     row.Id,
+			PersonId:               row.PersonId,
+			Name:                   row.Name,
+			JavId:                  row.JavId,
+			Chinese:                row.Chinese,
+			BirthDay:               row.BirthDay,
+			Height:                 row.Height,
+			MovieNumber:            row.MovieNumber,
+			OwnedMovieNumber:       row.OwnedWMediaNumber,
+			OwnedWMediaNumber:      row.OwnedWMediaNumber,
+			ScTimes:                row.ScTimes,
+			ComeTimes:              row.ComeTimes,
+			LastSelectedScTime:     row.LastSelectedScTime,
+			LastParticipatedScTime: row.LastParticipatedScTime,
+			Rank500MovieNumber:     row.Rank500MovieNumber,
+			Rank20MovieNumber:      row.Rank20MovieNumber,
+			Rank1MovieNumber:       row.Rank1MovieNumber,
+			HighestRank:            row.HighestRank,
+			RankTimes:              row.RankTimes,
+			CreatedOn:              row.CreatedOn,
+			UpdatedOn:              row.UpdatedOn,
 		})
 	}
 	return out, nil
@@ -374,24 +374,24 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 	}
 
 	type castRow struct {
-		Id                 int64  `db:"id"`
-		PersonId           int64  `db:"person_id"`
-		Name               string `db:"name"`
-		JavId              string `db:"jav_id"`
-		MovieNumber        int64  `db:"movie_number"`
-		OwnedMovieNumber   int64  `db:"owned_movie_number"`
-		OwnedWMediaNumber  int64  `db:"owned_w_media_number"`
-		ScTimes            int64  `db:"sc_times"`
-		ComeTimes          int64  `db:"come_times"`
-		LastScTime         int64  `db:"last_sc_time"`
-		LastScEventTime    int64  `db:"last_sc_event_time"`
-		Rank500MovieNumber int64  `db:"rank500_movie_number"`
-		Rank20MovieNumber  int64  `db:"rank20_movie_number"`
-		Rank1MovieNumber   int64  `db:"rank1_movie_number"`
-		HighestRank        int64  `db:"highest_rank"`
-		RankTimes          int64  `db:"rank_times"`
-		CreatedOn          int64  `db:"created_on"`
-		UpdatedOn          int64  `db:"updated_on"`
+		Id                     int64  `db:"id"`
+		PersonId               int64  `db:"person_id"`
+		Name                   string `db:"name"`
+		JavId                  string `db:"jav_id"`
+		MovieNumber            int64  `db:"movie_number"`
+		OwnedMovieNumber       int64  `db:"owned_movie_number"`
+		OwnedWMediaNumber      int64  `db:"owned_w_media_number"`
+		ScTimes                int64  `db:"sc_times"`
+		ComeTimes              int64  `db:"come_times"`
+		LastSelectedScTime     int64  `db:"last_selected_sc_time"`
+		LastParticipatedScTime int64  `db:"last_participated_sc_time"`
+		Rank500MovieNumber     int64  `db:"rank500_movie_number"`
+		Rank20MovieNumber      int64  `db:"rank20_movie_number"`
+		Rank1MovieNumber       int64  `db:"rank1_movie_number"`
+		HighestRank            int64  `db:"highest_rank"`
+		RankTimes              int64  `db:"rank_times"`
+		CreatedOn              int64  `db:"created_on"`
+		UpdatedOn              int64  `db:"updated_on"`
 	}
 
 	sqlStr, args, err := squirrel.
@@ -405,8 +405,8 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 			"owned_w_media_number",
 			"sc_times",
 			"come_times",
-			"last_sc_time",
-			"last_sc_event_time",
+			"last_selected_sc_time",
+			"last_participated_sc_time",
 			"rank500_movie_number",
 			"rank20_movie_number",
 			"rank1_movie_number",
@@ -436,24 +436,24 @@ func (m *customAmCastModel) FindByNames(ctx context.Context, names []string) ([]
 			continue
 		}
 		out = append(out, &types.Cast{
-			Id:                 row.Id,
-			PersonId:           row.PersonId,
-			Name:               row.Name,
-			JavId:              row.JavId,
-			MovieNumber:        row.MovieNumber,
-			OwnedMovieNumber:   row.OwnedWMediaNumber,
-			OwnedWMediaNumber:  row.OwnedWMediaNumber,
-			ScTimes:            row.ScTimes,
-			ComeTimes:          row.ComeTimes,
-			LastScTime:         row.LastScTime,
-			LastScEventTime:    row.LastScEventTime,
-			Rank500MovieNumber: row.Rank500MovieNumber,
-			Rank20MovieNumber:  row.Rank20MovieNumber,
-			Rank1MovieNumber:   row.Rank1MovieNumber,
-			HighestRank:        row.HighestRank,
-			RankTimes:          row.RankTimes,
-			CreatedOn:          row.CreatedOn,
-			UpdatedOn:          row.UpdatedOn,
+			Id:                     row.Id,
+			PersonId:               row.PersonId,
+			Name:                   row.Name,
+			JavId:                  row.JavId,
+			MovieNumber:            row.MovieNumber,
+			OwnedMovieNumber:       row.OwnedWMediaNumber,
+			OwnedWMediaNumber:      row.OwnedWMediaNumber,
+			ScTimes:                row.ScTimes,
+			ComeTimes:              row.ComeTimes,
+			LastSelectedScTime:     row.LastSelectedScTime,
+			LastParticipatedScTime: row.LastParticipatedScTime,
+			Rank500MovieNumber:     row.Rank500MovieNumber,
+			Rank20MovieNumber:      row.Rank20MovieNumber,
+			Rank1MovieNumber:       row.Rank1MovieNumber,
+			HighestRank:            row.HighestRank,
+			RankTimes:              row.RankTimes,
+			CreatedOn:              row.CreatedOn,
+			UpdatedOn:              row.UpdatedOn,
 		})
 	}
 	return out, nil
@@ -528,11 +528,11 @@ func applyCastListFilter(builder squirrel.SelectBuilder, filter types.CastListFi
 	if filter.HasComeTimesMax {
 		builder = builder.Where(squirrel.LtOrEq{"ac.come_times": filter.ComeTimesMax})
 	}
-	if filter.HasLastScFrom {
-		builder = builder.Where(squirrel.GtOrEq{"ac.last_sc_time": filter.LastScFrom})
+	if filter.HasLastSelectedScFrom {
+		builder = builder.Where(squirrel.GtOrEq{"ac.last_selected_sc_time": filter.LastSelectedScFrom})
 	}
-	if filter.HasLastScTo {
-		builder = builder.Where(squirrel.LtOrEq{"ac.last_sc_time": filter.LastScTo})
+	if filter.HasLastSelectedScTo {
+		builder = builder.Where(squirrel.LtOrEq{"ac.last_selected_sc_time": filter.LastSelectedScTo})
 	}
 
 	return builder

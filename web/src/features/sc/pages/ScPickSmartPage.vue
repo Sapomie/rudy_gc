@@ -119,12 +119,15 @@
               <div><span class="next02-sc-panel-kicker">COPY STATUS</span><h5>Copy 进度</h5></div>
               <button type="button" class="btn btn-sm btn-outline-danger" id="btnStopCopy" :disabled="!copyRunning" @click="stopCopy">停止 Copy</button>
             </div>
-            <div class="text-muted small mb-2" id="copyMeta">{{ copyMeta }}</div>
-            <div class="progress mb-2 smart-pick-progress">
-              <div class="progress-bar" role="progressbar" id="copyProgress" :style="{ width: `${copyPercent}%` }" :aria-valuenow="copyPercent" aria-valuemin="0" aria-valuemax="100">{{ copyPercent ? `${copyPercent}%` : '' }}</div>
+            <div class="smart-pick-copy-status-row">
+              <span class="smart-pick-copy-meta" id="copyMeta">{{ copyMeta }}</span>
+              <span class="smart-pick-copy-percent">{{ copyPercent }}%</span>
             </div>
-            <div class="small text-muted" id="copyCurrent">{{ copyCurrent }}</div>
-            <div v-if="copyError" class="small text-danger mt-1" id="copyError">{{ copyError }}</div>
+            <div class="progress smart-pick-progress">
+              <div class="progress-bar" role="progressbar" id="copyProgress" :style="{ width: `${copyPercent}%` }" :aria-valuenow="copyPercent" :aria-valuetext="`${copyPercent}%`" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="smart-pick-copy-current" id="copyCurrent" :title="copyCurrent">{{ copyCurrent }}</div>
+            <div v-if="copyError" class="smart-pick-copy-error" id="copyError">{{ copyError }}</div>
           </div>
         </div>
 
@@ -260,20 +263,21 @@ const globalBasicFields = computed<FieldConfig[]>(() => [
   { id: "fc2PickCount", label: "FC2 数量", type: "number", min: "0", value: "2", placeholder: "输入数量", required: true }
 ]);
 const javGlobalAdvancedFields = computed<FieldConfig[]>(() => [
-  { id: "castLastScBlockDays", label: "Cast LastSc 阻断天数", type: "number", min: "0", value: "60", required: true },
-  { id: "lastScEventBlockDays", label: "LastSc Event 阻断天数", type: "number", min: "0", value: "30", required: true },
+  { id: "castParticipatedScBlockDays", label: "主演参与阻断天", type: "number", min: "0", value: "30", required: true },
+  { id: "castSelectedScBlockDays", label: "主演入选阻断天", type: "number", min: "0", value: "60", required: true },
   { id: "rank20Min", label: "Rank20 至少", type: "number", min: "0", value: "0", required: true },
   { id: "rank100Min", label: "Rank100 至少", type: "number", min: "0" },
   { id: "rank500Min", label: "Rank500 至少", type: "number", min: "0" },
-  { id: "castLastScPenaltyAlpha", label: "Cast LastSc 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
-  { id: "lastScEventPenaltyAlpha", label: "LastSc Event 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
-  { id: "castOwnedScRatioPenaltyAlpha", label: "Cast SC Ratio 惩罚系数", type: "number", min: "0", step: "0.1", value: castOwnedScRatioPenaltyAlpha.value, required: true },
-  { id: "movieHasScPenaltyAlpha", label: "Movie Has SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
+  { id: "castParticipatedScPenaltyAlpha", label: "主演参与惩罚", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
+  { id: "castSelectedScPenaltyAlpha", label: "主演入选惩罚", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
+  { id: "castOwnedScRatioPenaltyAlpha", label: "主演入选比例惩罚", type: "number", min: "0", step: "0.1", value: castOwnedScRatioPenaltyAlpha.value, required: true },
+  { id: "movieHasSelectedScPenaltyAlpha", label: "影片已入选惩罚", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
 ]);
 const fc2GlobalAdvancedFields: FieldConfig[] = [
-  { id: "fc2LastScBlockDays", label: "影片 Last SC 阻断天数", type: "number", min: "0", value: "30", required: true },
-  { id: "fc2LastScPenaltyAlpha", label: "影片 Last SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
-  { id: "fc2MovieHasScPenaltyAlpha", label: "影片已有 SC 惩罚系数", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
+  { id: "fc2MovieParticipatedScBlockDays", label: "影片参与阻断天", type: "number", min: "0", value: "30", required: true },
+  { id: "fc2MovieSelectedScBlockDays", label: "影片入选阻断天", type: "number", min: "0", value: "30", required: true },
+  { id: "fc2MovieSelectedScPenaltyAlpha", label: "影片入选惩罚", type: "number", min: "0", step: "0.1", value: "0.7", required: true },
+  { id: "fc2MovieHasSelectedScPenaltyAlpha", label: "影片已入选惩罚", type: "number", min: "0", step: "0.1", value: "0.7", required: true }
 ];
 
 const javSortButtons: SortButton[] = [
@@ -415,27 +419,28 @@ function buildReqFromGroup(group: Element, movieType: MovieType): AnyRecord {
 }
 
 function buildFC2Options(): AnyRecord | null {
-  const lastScBlockDays = parseNumber(inputValue("fc2LastScBlockDays"));
-  const lastScPenaltyAlpha = parseNumber(inputValue("fc2LastScPenaltyAlpha"), true);
-  const movieHasScPenaltyAlpha = parseNumber(inputValue("fc2MovieHasScPenaltyAlpha"), true);
-  if ([lastScBlockDays, lastScPenaltyAlpha, movieHasScPenaltyAlpha].some((value) => value === null)) {
+  const movieParticipatedScBlockDays = parseNumber(inputValue("fc2MovieParticipatedScBlockDays"));
+  const movieSelectedScBlockDays = parseNumber(inputValue("fc2MovieSelectedScBlockDays"));
+  const movieSelectedScPenaltyAlpha = parseNumber(inputValue("fc2MovieSelectedScPenaltyAlpha"), true);
+  const movieHasSelectedScPenaltyAlpha = parseNumber(inputValue("fc2MovieHasSelectedScPenaltyAlpha"), true);
+  if ([movieParticipatedScBlockDays, movieSelectedScBlockDays, movieSelectedScPenaltyAlpha, movieHasSelectedScPenaltyAlpha].some((value) => value === null)) {
     showMessage("FC2 全局抽取策略参数不完整", false);
     return null;
   }
-  return { lastScBlockDays, lastScPenaltyAlpha, movieHasScPenaltyAlpha };
+  return { movieParticipatedScBlockDays, movieSelectedScBlockDays, movieSelectedScPenaltyAlpha, movieHasSelectedScPenaltyAlpha };
 }
 
 function buildJAVOptions(n: number): AnyRecord | null {
-  const castLastScBlockDays = parseNumber(inputValue("castLastScBlockDays"));
-  const lastScEventBlockDays = parseNumber(inputValue("lastScEventBlockDays"));
+  const castParticipatedScBlockDays = parseNumber(inputValue("castParticipatedScBlockDays"));
+  const castSelectedScBlockDays = parseNumber(inputValue("castSelectedScBlockDays"));
   const rank20Min = parseNumber(inputValue("rank20Min") || "0");
   let rank100Min = inputValue("rank100Min") ? parseNumber(inputValue("rank100Min")) : rank20Min;
   let rank500Min = inputValue("rank500Min") ? parseNumber(inputValue("rank500Min")) : rank100Min;
-  const castLastScPenaltyAlpha = parseNumber(inputValue("castLastScPenaltyAlpha"), true);
-  const lastScEventPenaltyAlpha = parseNumber(inputValue("lastScEventPenaltyAlpha"), true);
+  const castParticipatedScPenaltyAlpha = parseNumber(inputValue("castParticipatedScPenaltyAlpha"), true);
+  const castSelectedScPenaltyAlpha = parseNumber(inputValue("castSelectedScPenaltyAlpha"), true);
   const castOwnedScRatioPenaltyAlphaValue = parseNumber(inputValue("castOwnedScRatioPenaltyAlpha"), true);
-  const movieHasScPenaltyAlpha = parseNumber(inputValue("movieHasScPenaltyAlpha"), true);
-  if ([castLastScBlockDays, lastScEventBlockDays, rank20Min, rank100Min, rank500Min, castLastScPenaltyAlpha, lastScEventPenaltyAlpha, castOwnedScRatioPenaltyAlphaValue, movieHasScPenaltyAlpha].some((value) => value === null)) {
+  const movieHasSelectedScPenaltyAlpha = parseNumber(inputValue("movieHasSelectedScPenaltyAlpha"), true);
+  if ([castParticipatedScBlockDays, castSelectedScBlockDays, rank20Min, rank100Min, rank500Min, castParticipatedScPenaltyAlpha, castSelectedScPenaltyAlpha, castOwnedScRatioPenaltyAlphaValue, movieHasSelectedScPenaltyAlpha].some((value) => value === null)) {
     showMessage("全局抽取策略参数不完整", false);
     return null;
   }
@@ -446,15 +451,15 @@ function buildJAVOptions(n: number): AnyRecord | null {
     return null;
   }
   return {
-    castLastScBlockDays,
-    lastScEventBlockDays,
+    castParticipatedScBlockDays,
+    castSelectedScBlockDays,
     rank20Min,
     rank100Min,
     rank500Min,
-    castLastScPenaltyAlpha,
-    lastScEventPenaltyAlpha,
+    castParticipatedScPenaltyAlpha,
+    castSelectedScPenaltyAlpha,
     castOwnedScRatioPenaltyAlpha: castOwnedScRatioPenaltyAlphaValue,
-    movieHasScPenaltyAlpha
+    movieHasSelectedScPenaltyAlpha
   };
 }
 
@@ -715,12 +720,12 @@ const PickGroup = defineComponent({
       { reqField: "HighestRankMax", label: "最高排名最大", type: "number", dataType: "int-opt", colClass: "col-md-3" },
       { reqField: "ViewWatchedMin", label: "观看最小 (vwmin)", type: "number", dataType: "int", colClass: "col-md-3" },
       { reqField: "ViewWatchedMax", label: "观看最大 (vwmax)", type: "number", dataType: "int-opt", colClass: "col-md-3" },
-      { reqField: "LastScTimeMin", label: "最后评分起 (lsctmin)", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
-      { reqField: "LastScTimeMax", label: "最后评分止 (lsctmax)", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "LastSelectedScTimeMin", label: "最近入选 SC 起 (lsstmin)", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "LastSelectedScTimeMax", label: "最近入选 SC 止 (lsstmax)", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
       { reqField: dynamicField(props.payload, "Dir1Field", "MediaDir1"), label: dynamicLabel(props.payload, "Dir1Label", "MediaDir1 (md1)"), colClass: "col-md-3" },
       { reqField: dynamicField(props.payload, "Dir2Field", "MediaDir2"), label: dynamicLabel(props.payload, "Dir2Label", "MediaDir2 (md2)"), colClass: "col-md-3" },
       { reqField: dynamicField(props.payload, "Dir3Field", "MediaDir3"), label: dynamicLabel(props.payload, "Dir3Label", "MediaDir3 (md3)"), colClass: "col-md-3" },
-      { reqField: "OrderBy", label: "排序 (od)", placeholder: "sc/lsct/bt...", colClass: "col-md-3" }
+      { reqField: "OrderBy", label: "排序 (od)", placeholder: "sc/lsst/bt...", colClass: "col-md-3" }
     ];
     const fc2AdvancedFields = (): FieldConfig[] => [
       { reqField: "MediaBirthTimeStart", label: "下载日期起", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
@@ -729,8 +734,8 @@ const PickGroup = defineComponent({
       { reqField: "ScTimesMax", label: "SC 次数最大", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
       { reqField: "ComeTimesMin", label: "Come 次数最小", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
       { reqField: "ComeTimesMax", label: "Come 次数最大", type: "number", min: "0", dataType: "int-opt", placeholder: "可为空", colClass: "col-md-3" },
-      { reqField: "LastScTimeMin", label: "最后 SC 起", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
-      { reqField: "LastScTimeMax", label: "最后 SC 止", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "LastSelectedScTimeMin", label: "最近入选 SC 起", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
+      { reqField: "LastSelectedScTimeMax", label: "最近入选 SC 止", placeholder: "YYYY-MM-DD", colClass: "col-md-3" },
       { reqField: "FC2Key", label: "FC2 Key", placeholder: "支持包含匹配" },
       { reqField: "Code", label: "FC2 Code", placeholder: "支持包含匹配" },
       { reqField: "Title", label: "标题", placeholder: "支持包含匹配" },

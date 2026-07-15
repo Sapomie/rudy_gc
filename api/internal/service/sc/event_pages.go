@@ -561,7 +561,7 @@ func (l *ScService) loadFC2ScEventMovieMap(ctx context.Context, rows []*types.GL
 		if stat := statByMovieID[movie.ID]; stat != nil {
 			item.ScTimes = stat.ScTimes
 			item.ComeTimes = stat.ComeTimes
-			item.LastScTime = stat.LastScTime
+			item.LastSelectedScTime = stat.LastSelectedScTime
 		}
 		out[movie.ID] = item
 	}

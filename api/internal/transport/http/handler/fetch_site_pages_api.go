@@ -314,6 +314,20 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		jsonServerError(c, "Sehuatang SH 列表加载失败", err)
 		return
 	}
+	fc2MovieIDs := make([]int64, 0)
+	for _, row := range rows {
+		if row != nil && row.FC2MovieID > 0 {
+			fc2MovieIDs = append(fc2MovieIDs, row.FC2MovieID)
+		}
+	}
+	if len(fc2MovieIDs) > 0 {
+		fc2MovieRows, err := h.deps.FC2MovieModel.ListByIDs(c.Request.Context(), fc2MovieIDs)
+		if err != nil {
+			jsonServerError(c, "Sehuatang SH 列表 FC2 影片信息加载失败", err)
+			return
+		}
+		applySHThreadFC2Keys(rows, fc2MovieRows)
+	}
 	runs, err := h.deps.ShSehuatangFetchRunModel.ListRecent(c.Request.Context(), 10)
 	if err != nil {
 		jsonServerError(c, "Sehuatang SH 抓取记录加载失败", err)
@@ -336,6 +350,22 @@ func (h *CrawlerPagesAPI) FetchSiteSehuatangSHListPageMain(c *gin.Context) {
 		"DetailTaskPageURL": "/shfill",
 		"TasksPageURL":      "/crawltasklist",
 	})
+}
+
+func applySHThreadFC2Keys(rows []*moviex.ShSehuatangThread, movieRows []*moviex.FC2Movie) {
+	keyByMovieID := make(map[int64]string, len(movieRows))
+	for _, movieRow := range movieRows {
+		if movieRow == nil || movieRow.ID <= 0 || strings.TrimSpace(movieRow.FC2Key) == "" {
+			continue
+		}
+		keyByMovieID[movieRow.ID] = strings.TrimSpace(movieRow.FC2Key)
+	}
+	for _, row := range rows {
+		if row == nil || row.FC2MovieID <= 0 {
+			continue
+		}
+		row.FC2Key = keyByMovieID[row.FC2MovieID]
+	}
 }
 
 func (h *CrawlerPagesAPI) FetchSiteSehuatangSHDetailPageMain(c *gin.Context) {

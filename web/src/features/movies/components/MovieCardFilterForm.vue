@@ -378,7 +378,7 @@ const datePairs: PairField[] = [
   { label: "上映日期", startName: "rs", startKey: "ReleasingDateStart", endName: "re", endKey: "ReleasingDateEnd" },
   { label: "Media 下载时间", startName: "mbs", startKey: "MediaBirthTimeStart", endName: "mbe", endKey: "MediaBirthTimeEnd" },
   { label: "上榜日期", startName: "srds", startKey: "StartRankingDateStart", endName: "srde", endKey: "StartRankingDateEnd" },
-  { label: "最后 SC 时间", startName: "lsctmin", startKey: "LastScTimeMin", endName: "lsctmax", endKey: "LastScTimeMax" }
+  { label: "最近入选 SC 时间", startName: "lsstmin", startKey: "LastSelectedScTimeMin", endName: "lsstmax", endKey: "LastSelectedScTimeMax" }
 ];
 
 const numberPairs: PairField[] = [

@@ -29,13 +29,14 @@
         <span v-if="performerText" class="person-tag movie-card-tag-person movie-card-tag-cast" :title="performerText">{{ performerText }}</span>
       </li>
       <li class="list-group-item movie-card-sc-history fc2-card-sc-history">
-        <span class="movie-card-sc-history-label">最近 SC</span>
-        <span class="movie-card-sc-history-value">{{ lastScTime ? formatUnix(lastScTime) : "-" }}</span>
+        <span class="movie-card-sc-history-label">最近入选 SC</span>
+        <span class="movie-card-sc-history-value">{{ lastSelectedScTime ? formatUnix(lastSelectedScTime) : "-" }}</span>
       </li>
       <li class="list-group-item d-flex align-items-center small card-link-row movie-card-footer">
         <span class="movie-card-source source-fc2">FC2</span>
         <span v-if="postTime" class="movie-card-tag-date ms-auto text-muted">发布 {{ formatUnix(postTime) }}</span>
       </li>
+      <slot name="actions" />
     </ul>
   </article>
 </template>
@@ -59,7 +60,7 @@ const playButtonText = computed(() => text(props.movie, "PlayButtonText") || "Pl
 const downloadTime = computed(() => num(props.movie, "DownloadTime"));
 const scTimes = computed(() => num(props.movie, "ScTimes"));
 const comeTimes = computed(() => num(props.movie, "ComeTimes"));
-const lastScTime = computed(() => num(props.movie, "LastScTime"));
+const lastSelectedScTime = computed(() => num(props.movie, "LastSelectedScTime"));
 const postTime = computed(() => num(props.movie, "PostTime"));
 
 function formatUnix(value: number): string {

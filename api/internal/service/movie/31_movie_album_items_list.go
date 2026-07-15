@@ -100,7 +100,9 @@ func (s *Service) BuildMovieAlbumItemsPage(ctx context.Context, query MovieAlbum
 		items = append(items, &MovieAlbumItemRow{
 			ID:            row.Id,
 			AlbumID:       row.AlbumId,
+			MovieType:     movieAlbumItemType(row),
 			MovieJavID:    strings.TrimSpace(row.MovieJavId),
+			FC2Key:        strings.TrimSpace(row.FC2Key),
 			MovieName:     strings.TrimSpace(row.MovieName),
 			ReleasingDate: row.ReleasingDate,
 			SortNo:        row.SortNo,
@@ -147,7 +149,7 @@ func mapMovieAlbumItemSortColumn(sortField string) string {
 	case "movie_name":
 		return "`movie_name`"
 	case "movie_jav_id":
-		return "`movie_jav_id`"
+		return "COALESCE(NULLIF(`movie_jav_id`, ''), `fc2_key`)"
 	case "sort_no":
 		return "`sort_no`"
 	case "releasing_date":

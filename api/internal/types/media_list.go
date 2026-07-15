@@ -39,10 +39,10 @@ type MediaListFilter struct {
 	ScTimesMax    int64
 	HasScTimesMax bool
 
-	LastScFrom    int64
-	HasLastScFrom bool
-	LastScTo      int64
-	HasLastScTo   bool
+	LastSelectedScFrom    int64
+	HasLastSelectedScFrom bool
+	LastSelectedScTo      int64
+	HasLastSelectedScTo   bool
 
 	BirthTimeFrom    int64
 	HasBirthTimeFrom bool
@@ -56,26 +56,26 @@ type MediaListFilter struct {
 }
 
 type MediaListItem struct {
-	Id              int64
-	MovieName       string
-	MovieHref       string
-	CastName        string
-	Casts           []*MediaListCastItem
-	SizeGB          string
-	Height          int64
-	DurationMinutes int64
-	BitRate         int64
-	FrameAverage    string
-	VideoURL        string
-	PlayButtonClass string
-	PlayButtonText  string
-	ShowPlayButton  bool
-	SelfMakeText    string
-	HasMaskText     string
-	ScTimes         int64
-	LastScTime      int64
-	BirthTime       int64
-	ReleasingDate   int64
+	Id                 int64
+	MovieName          string
+	MovieHref          string
+	CastName           string
+	Casts              []*MediaListCastItem
+	SizeGB             string
+	Height             int64
+	DurationMinutes    int64
+	BitRate            int64
+	FrameAverage       string
+	VideoURL           string
+	PlayButtonClass    string
+	PlayButtonText     string
+	ShowPlayButton     bool
+	SelfMakeText       string
+	HasMaskText        string
+	ScTimes            int64
+	LastSelectedScTime int64
+	BirthTime          int64
+	ReleasingDate      int64
 }
 
 type MediaListCastItem struct {

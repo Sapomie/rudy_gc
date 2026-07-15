@@ -22,7 +22,7 @@ type FC2CardView struct {
 	DownloadTime          int64
 	ScTimes               int64
 	ComeTimes             int64
-	LastScTime            int64
+	LastSelectedScTime    int64
 }
 
 // BuildFC2CardViews loads card data with separate batch queries and preserves
@@ -95,7 +95,7 @@ func AssembleFC2CardViews(movieRows []*moviex.FC2Movie, mediaRows []*moviex.FC2M
 		if statRow := statByMovieID[movieRow.ID]; statRow != nil {
 			item.ScTimes = statRow.ScTimes
 			item.ComeTimes = statRow.ComeTimes
-			item.LastScTime = statRow.LastScTime
+			item.LastSelectedScTime = statRow.LastSelectedScTime
 		}
 		items = append(items, item)
 	}

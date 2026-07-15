@@ -287,5 +287,19 @@ func (s *Service) deleteFolderRowByPathIfExists(ctx context.Context, path string
 	if row == nil || row.Id <= 0 {
 		return nil
 	}
+	wMediaCount, err := s.deps.WMediaModel.CountByDirectoryID(ctx, row.Id)
+	if err != nil {
+		return err
+	}
+	if wMediaCount > 0 {
+		return nil
+	}
+	fc2MediaCount, err := s.deps.FC2MediaModel.CountByDirectoryID(ctx, row.Id)
+	if err != nil {
+		return err
+	}
+	if fc2MediaCount > 0 {
+		return nil
+	}
 	return s.deps.WFolderModel.Delete(ctx, row.Id)
 }

@@ -60,12 +60,13 @@ func TestPickFC2SmartMoviesBlocksRecentAndDeduplicatesAcrossGroups(t *testing.T)
 	shared := testFC2SmartPickMovie(1, 0)
 	second := testFC2SmartPickMovie(2, 0)
 	third := testFC2SmartPickMovie(3, 0)
-	blocked := testFC2SmartPickMovie(4, now.Add(-24*time.Hour).Unix())
+	blockedBySelectedSc := testFC2SmartPickMovie(4, now.Add(-24*time.Hour).Unix())
+	blockedByParticipatedSc := testFC2SmartPickMovieWithTimes(5, 0, now.Add(-24*time.Hour).Unix())
 	groups := []*fc2SmartPickGroup{
-		testFC2SmartPickGroup(2, shared, second, blocked),
-		testFC2SmartPickGroup(1, shared, third),
+		testFC2SmartPickGroup(2, shared, second, blockedBySelectedSc),
+		testFC2SmartPickGroup(1, shared, third, blockedByParticipatedSc),
 	}
-	selected, err := pickFC2SmartMovies(groups, 3, FC2SmartPickOptions{LastScBlockDays: 7, RandomSeed: 7}, now)
+	selected, err := pickFC2SmartMovies(groups, 3, FC2SmartPickOptions{MovieSelectedScBlockDays: 7, MovieParticipatedScBlockDays: 7, RandomSeed: 7}, now)
 	if err != nil {
 		t.Fatalf("pick FC2 movies: %v", err)
 	}
@@ -74,13 +75,67 @@ func TestPickFC2SmartMoviesBlocksRecentAndDeduplicatesAcrossGroups(t *testing.T)
 	}
 	seen := make(map[int64]struct{}, len(selected))
 	for _, movie := range selected {
-		if movie.ID == blocked.ID {
-			t.Fatal("recently SC movie was selected")
+		if movie.ID == blockedBySelectedSc.ID || movie.ID == blockedByParticipatedSc.ID {
+			t.Fatal("recently SC blocked movie was selected")
 		}
 		if _, ok := seen[movie.ID]; ok {
 			t.Fatalf("duplicate movie selected: %d", movie.ID)
 		}
 		seen[movie.ID] = struct{}{}
+	}
+}
+
+func TestFC2SmartMovieBlockRules(t *testing.T) {
+	now := time.Date(2026, time.July, 15, 12, 0, 0, 0, time.Local)
+	recent := now.Add(-24 * time.Hour).Unix()
+	old := now.Add(-31 * 24 * time.Hour).Unix()
+
+	tests := []struct {
+		name  string
+		movie *FC2SmartPickMovie
+		opt   FC2SmartPickOptions
+		want  bool
+	}{
+		{name: "selected SC blocks independently", movie: testFC2SmartPickMovieWithTimes(1, recent, old), opt: FC2SmartPickOptions{MovieSelectedScBlockDays: 30}, want: true},
+		{name: "participated SC blocks independently", movie: testFC2SmartPickMovieWithTimes(2, old, recent), opt: FC2SmartPickOptions{MovieParticipatedScBlockDays: 30}, want: true},
+		{name: "zero disables both blocks", movie: testFC2SmartPickMovieWithTimes(3, recent, recent), opt: FC2SmartPickOptions{}, want: false},
+		{name: "old timestamps remain eligible", movie: testFC2SmartPickMovieWithTimes(4, old, old), opt: FC2SmartPickOptions{MovieSelectedScBlockDays: 30, MovieParticipatedScBlockDays: 30}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := fc2SmartMovieBlocked(tt.movie, tt.opt, now); got != tt.want {
+				t.Fatalf("blocked = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAnalyzeFC2SmartPickInfoCountsBlockReasonsAndUnion(t *testing.T) {
+	now := time.Date(2026, time.July, 15, 12, 0, 0, 0, time.Local)
+	recent := now.Add(-24 * time.Hour).Unix()
+	old := now.Add(-31 * 24 * time.Hour).Unix()
+	groups := []*fc2SmartPickGroup{testFC2SmartPickGroup(1,
+		testFC2SmartPickMovieWithTimes(1, recent, old),
+		testFC2SmartPickMovieWithTimes(2, old, recent),
+		testFC2SmartPickMovieWithTimes(3, recent, recent),
+		testFC2SmartPickMovieWithTimes(4, old, old),
+	)}
+
+	info := analyzeFC2SmartPickInfo(groups, FC2SmartPickOptions{MovieSelectedScBlockDays: 30, MovieParticipatedScBlockDays: 30}, now)
+	if info.RawCandidateMovieCount != 4 || info.AfterBlockMovieCount != 1 || info.SelectedScBlockedMovieCount != 2 || info.ParticipatedScBlockedMovieCount != 2 {
+		t.Fatalf("pick info = %#v", info)
+	}
+}
+
+func TestValidateFC2SmartPickOptionsRejectsNegativeBlockDays(t *testing.T) {
+	for _, opt := range []FC2SmartPickOptions{
+		{MovieSelectedScBlockDays: -1},
+		{MovieParticipatedScBlockDays: -1},
+	} {
+		if err := validateFC2SmartPickOptions(opt); err == nil {
+			t.Fatalf("negative block option accepted: %#v", opt)
+		}
 	}
 }
 
@@ -95,8 +150,16 @@ func TestSmartPickFC2CopyFileName(t *testing.T) {
 	}
 }
 
-func testFC2SmartPickMovie(id, lastScTime int64) *FC2SmartPickMovie {
-	return &FC2SmartPickMovie{FC2Movie: &moviex.FC2Movie{ID: id, FC2Key: "FC2PPV"}, LastScTime: lastScTime}
+func testFC2SmartPickMovie(id, lastSelectedScTime int64) *FC2SmartPickMovie {
+	return testFC2SmartPickMovieWithTimes(id, lastSelectedScTime, 0)
+}
+
+func testFC2SmartPickMovieWithTimes(id, lastSelectedScTime, lastParticipatedScTime int64) *FC2SmartPickMovie {
+	return &FC2SmartPickMovie{
+		FC2Movie:               &moviex.FC2Movie{ID: id, FC2Key: "FC2PPV"},
+		LastSelectedScTime:     lastSelectedScTime,
+		LastParticipatedScTime: lastParticipatedScTime,
+	}
 }
 
 func testFC2SmartPickGroup(weight float64, movies ...*FC2SmartPickMovie) *fc2SmartPickGroup {

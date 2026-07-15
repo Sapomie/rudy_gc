@@ -47,22 +47,22 @@ func (s *Service) ListMediaPageWithFilter(ctx context.Context, page, pageSize in
 
 func (s *Service) buildMediaListItem(ctx context.Context, row *moviex.NativeMediaListRow) *types.MediaListItem {
 	item := &types.MediaListItem{
-		Id:              row.Id,
-		MovieName:       row.MovieName,
-		MovieHref:       "/moviedetail/" + url.PathEscape(row.MovieName),
-		CastName:        "-",
-		Casts:           []*types.MediaListCastItem{},
-		SizeGB:          formatMediaSizeGB(row.Size),
-		Height:          row.Height,
-		DurationMinutes: formatMediaDurationMinutes(row.Duration),
-		BitRate:         row.BitRate,
-		FrameAverage:    formatMediaFrameAverage(row.FrameAverage),
-		SelfMakeText:    formatMediaSelfMake(row.SelfMake),
-		HasMaskText:     formatMediaHasMask(row.HasMask),
-		ScTimes:         row.ScTimes,
-		LastScTime:      row.LastScTime,
-		BirthTime:       row.BirthTime,
-		ReleasingDate:   row.ReleasingDate,
+		Id:                 row.Id,
+		MovieName:          row.MovieName,
+		MovieHref:          "/moviedetail/" + url.PathEscape(row.MovieName),
+		CastName:           "-",
+		Casts:              []*types.MediaListCastItem{},
+		SizeGB:             formatMediaSizeGB(row.Size),
+		Height:             row.Height,
+		DurationMinutes:    formatMediaDurationMinutes(row.Duration),
+		BitRate:            row.BitRate,
+		FrameAverage:       formatMediaFrameAverage(row.FrameAverage),
+		SelfMakeText:       formatMediaSelfMake(row.SelfMake),
+		HasMaskText:        formatMediaHasMask(row.HasMask),
+		ScTimes:            row.ScTimes,
+		LastSelectedScTime: row.LastSelectedScTime,
+		BirthTime:          row.BirthTime,
+		ReleasingDate:      row.ReleasingDate,
 	}
 
 	if strings.TrimSpace(row.MovieJavId) == "" {
@@ -83,7 +83,7 @@ func (s *Service) buildMediaListItem(ctx context.Context, row *moviex.NativeMedi
 		item.CastName = buildMediaListCastName(casts)
 	}
 	item.ScTimes = mt.ScTimes
-	item.LastScTime = mt.LastScTime
+	item.LastSelectedScTime = mt.LastSelectedScTime
 	item.VideoURL, item.PlayButtonClass, item.PlayButtonText, item.ShowPlayButton = buildMediaListPlayButton(mt)
 	return item
 }

@@ -77,14 +77,14 @@
                 </label>
                 <label class="albums-filter-field is-keyword">
                   <span>影片编号 / 标题</span>
-                <input class="form-control" type="text" name="keyword" :value="queryValue('Keyword')" placeholder="movie_name 或 movie_jav_id">
+                <input class="form-control" type="text" name="keyword" :value="queryValue('Keyword')" placeholder="标题、JAV ID 或 FC2 Key">
                 </label>
                 <div class="albums-filter-field movie-albums-release-range">
-                  <span>上映日期</span>
+                  <span>发布日期</span>
                   <div class="movie-albums-release-range-inputs">
-                    <input class="form-control smart-pick-date-input" type="text" name="releasing_from" aria-label="上映开始日期" :value="queryValue('ReleasingFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                    <input class="form-control smart-pick-date-input" type="text" name="releasing_from" aria-label="发布开始日期" :value="queryValue('ReleasingFrom')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                     <span class="movie-albums-release-range-separator" aria-hidden="true">—</span>
-                    <input class="form-control smart-pick-date-input" type="text" name="releasing_to" aria-label="上映结束日期" :value="queryValue('ReleasingTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
+                    <input class="form-control smart-pick-date-input" type="text" name="releasing_to" aria-label="发布结束日期" :value="queryValue('ReleasingTo')" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}">
                   </div>
                 </div>
                 <div class="albums-filter-actions">
@@ -164,7 +164,7 @@
                       >
                     </th>
                     <th class="sc-sortable-head"><SortLink :link="sortLink('ByMovieName')" label="影片" /></th>
-                    <th class="sc-sortable-head sc-number"><SortLink :link="sortLink('ByReleasingDate')" label="上映日期" /></th>
+                    <th class="sc-sortable-head sc-number"><SortLink :link="sortLink('ByReleasingDate')" label="发布日期" /></th>
                     <th class="sc-sortable-head"><SortLink :link="sortLink('ByCreated')" label="加入时间" /></th>
                     <th class="text-nowrap">操作</th>
                   </tr>
@@ -184,8 +184,8 @@
                         @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
                       >
                     </td>
-                    <td class="sc-content-cell text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
-                      <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
+                    <td class="sc-content-cell text-nowrap" :title="value(row, 'MovieName')">
+                      <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") }}</a>
                     </td>
                     <td class="sc-number text-nowrap">{{ formatUnixDate(value(row, "ReleasingDate")) }}</td>
                     <td class="sc-number text-nowrap"><ScDateTime :value="value(row, 'CreatedOn')" unix /></td>
@@ -313,7 +313,7 @@ function value(row: AnyRecord, key: string): string {
 }
 
 function rowKey(row: AnyRecord): string {
-  return [value(row, "ID"), value(row, "MovieName"), value(row, "MovieJavID")].join(":");
+  return value(row, "ID");
 }
 
 function sortLink(key: string): AnyRecord {
@@ -321,7 +321,14 @@ function sortLink(key: string): AnyRecord {
 }
 
 function movieHref(row: AnyRecord): string {
+  if (movieType(row) === "fc2ppv") {
+    return `/fcdetail/${encodeURIComponent(value(row, "FC2Key"))}`;
+  }
   return `/moviedetail/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
+}
+
+function movieType(row: AnyRecord): "jav" | "fc2ppv" {
+  return value(row, "MovieType") === "fc2ppv" || Boolean(value(row, "FC2Key")) ? "fc2ppv" : "jav";
 }
 
 function formatUnixDate(input: unknown): string {
@@ -535,8 +542,14 @@ async function executeRemove() {
   try {
     const data = asRecord(await sendJSON(`/api/movie-albums/${selectedAlbumID.value}/execute-remove`, "POST", { item_ids: ids }));
     closeModal();
-    showMessage(text(data, "message") || "统一删除完成");
-    window.setTimeout(() => window.location.reload(), 500);
+    const removedCount = Number(pick(data, "removed_count", "RemovedCount") || 0);
+    const removedJAVCount = Number(pick(data, "removed_jav_count", "RemovedJAVCount") || 0);
+    const removedFC2Count = Number(pick(data, "removed_fc2_count", "RemovedFC2Count") || 0);
+    const failedCount = Number(pick(data, "failed_count", "FailedCount") || 0);
+    await load();
+    const details = [`统一删除完成：成功 ${removedCount} 条（JAV ${removedJAVCount} 条，FC2 ${removedFC2Count} 条）`];
+    if (failedCount > 0) details.push(`失败 ${failedCount} 条，失败条目已保留`);
+    showMessage(details.join("，"), failedCount === 0);
   } catch (err) {
     showMessage(err instanceof Error ? err.message : "统一删除失败", false);
   }
@@ -663,11 +676,11 @@ const MovieAlbumModals = defineComponent({
     const previewList = () => props.downloadedItems.length
       ? props.downloadedItems.map((item) => {
         const row = asRecord(item);
-        const title = text(row, "MovieName") || text(row, "MovieJavID") || "-";
-        const javID = text(row, "MovieJavID");
+        const title = text(row, "MovieName") || text(row, "MovieJavID") || text(row, "FC2Key") || "-";
+        const identity = text(row, "MovieJavID") || text(row, "FC2Key");
         return h("div", { class: "list-group-item px-0 py-2 border-0 border-bottom" }, [
           h("div", { class: "fw-semibold" }, title),
-          javID ? h("div", { class: "small text-muted" }, [h("code", javID)]) : null
+          identity ? h("div", { class: "small text-muted" }, [h("code", identity)]) : null
         ]);
       })
       : [h("div", { id: "movieAlbumRemoveDownloadedEmpty", class: "small text-muted" }, props.loadingDownloaded ? "正在加载预览..." : "没有可移除的已下载条目。")];
@@ -795,7 +808,7 @@ const MovieAlbumModals = defineComponent({
           h("h5", { class: "modal-title" }, "统一删除确认"),
           h("button", { type: "button", class: "btn-close", "aria-label": "Close", onClick: () => emit("close") })
         ]),
-        h("div", { class: "modal-body" }, ["确认执行已选中的 ", h("span", { id: "movieAlbumExecuteRemoveCount" }, String(props.selectedCount)), " 项吗？这会移动对应的 native w_media 到 `001_process/005_removed`。"]),
+        h("div", { class: "modal-body" }, ["确认执行已选中的 ", h("span", { id: "movieAlbumExecuteRemoveCount" }, String(props.selectedCount)), " 项吗？这会按影片类型将对应的 w_media 或 fc2_media 移动到 `001_process/005_removed`。"]),
         h("div", { class: "modal-footer" }, [
           h("button", { type: "button", class: "btn btn-light", onClick: () => emit("close") }, "取消"),
           h("button", { type: "button", class: "btn btn-danger", id: "movieAlbumExecuteRemoveConfirmBtn", onClick: () => emit("confirmExecute") }, "确认删除")

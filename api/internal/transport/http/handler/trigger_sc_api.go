@@ -110,6 +110,7 @@ type scAddPreviewMovieResp struct {
 	MovieHref  string   `json:"movieHref"`
 	JacketImg  string   `json:"jacketImg"`
 	Casts      []string `json:"casts"`
+	Card       any      `json:"card"`
 }
 
 type scAddPreviewResp struct {
@@ -134,6 +135,20 @@ func (h *ScTriggerAPI) AddPreview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	fc2MovieRows := make([]*moviex.FC2Movie, 0, len(preview.Movies))
+	for _, movie := range preview.Movies {
+		if movie != nil && movie.FC2Movie != nil {
+			fc2MovieRows = append(fc2MovieRows, movie.FC2Movie)
+		}
+	}
+	fc2CardViews := make([]*mediaservice.FC2CardView, 0, len(fc2MovieRows))
+	if len(fc2MovieRows) > 0 {
+		fc2CardViews, err = h.mediaSvc.BuildFC2CardViews(c.Request.Context(), fc2MovieRows)
+		if err != nil {
+			jsonServerError(c, "SC预览 FC2 卡片数据加载失败", err)
+			return
+		}
+	}
 
 	resp := scAddPreviewResp{
 		Dir:        preview.Dir,
@@ -142,13 +157,30 @@ func (h *ScTriggerAPI) AddPreview(c *gin.Context) {
 		MovieCount: preview.MovieCount,
 		ImageFound: preview.ImageFound,
 		ImageName:  preview.ImageName,
-		Movies:     make([]scAddPreviewMovieResp, 0, len(preview.Movies)),
+		Movies:     buildScAddPreviewMovieResponses(preview.Movies, fc2CardViews),
 	}
-	for _, movie := range preview.Movies {
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func buildScAddPreviewMovieResponses(movies []*sc.AddScPreviewMovie, fc2CardViews []*mediaservice.FC2CardView) []scAddPreviewMovieResp {
+	fc2CardsByMovieID := make(map[int64]*mediaservice.FC2CardView, len(fc2CardViews))
+	for _, card := range fc2CardViews {
+		if card != nil && card.FC2Movie != nil && card.ID > 0 {
+			fc2CardsByMovieID[card.ID] = card
+		}
+	}
+
+	responses := make([]scAddPreviewMovieResp, 0, len(movies))
+	for _, movie := range movies {
 		if movie == nil {
 			continue
 		}
-		resp.Movies = append(resp.Movies, scAddPreviewMovieResp{
+		var card any = movie.JAVCard
+		if movie.MovieType == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+			card = fc2CardsByMovieID[movie.FC2MovieId]
+		}
+		responses = append(responses, scAddPreviewMovieResp{
 			MovieType:  movie.MovieType,
 			MovieName:  movie.MovieName,
 			MovieJavId: movie.MovieJavId,
@@ -158,10 +190,10 @@ func (h *ScTriggerAPI) AddPreview(c *gin.Context) {
 			MovieHref:  movie.MovieHref,
 			JacketImg:  movie.JacketImg,
 			Casts:      movie.Casts,
+			Card:       card,
 		})
 	}
-
-	c.JSON(http.StatusOK, resp)
+	return responses
 }
 
 func resolveSingleScEventDir(root string) (string, error) {

@@ -1,9 +1,17 @@
 package wdir
 
-import "rudy_gc/internal/types"
+import (
+	moviedomain "rudy_gc/internal/domain/movie"
+	"rudy_gc/internal/types"
+)
+
+const (
+	directoryMediaTypeEmpty = "empty"
+	directoryMediaTypeMixed = "mixed"
+)
 
 func buildDirStatsFromAll(all []*types.Film, recursive bool) *types.DirStats {
-	st := &types.DirStats{Recursive: recursive}
+	st := newDirStats(recursive)
 	if len(all) == 0 {
 		return st
 	}
@@ -14,6 +22,11 @@ func buildDirStatsFromAll(all []*types.Film, recursive bool) *types.DirStats {
 		maxUpdatedOn int64
 	)
 	for _, film := range all {
+		if film == nil {
+			continue
+		}
+		st.MediaType = mergeDirectoryMediaType(st.MediaType, film.MovieType)
+		st.FilmCount++
 		sumSize += film.Size
 		if film.BirthTime > maxBirthTime {
 			maxBirthTime = film.BirthTime
@@ -22,7 +35,6 @@ func buildDirStatsFromAll(all []*types.Film, recursive bool) *types.DirStats {
 			maxUpdatedOn = film.UpdatedOn
 		}
 	}
-	st.FilmCount = int64(len(all))
 	st.TotalSize = sumSize
 	st.LastFilmBirth = maxBirthTime
 	st.LastUpdatedOn = maxUpdatedOn
@@ -37,9 +49,10 @@ func aggregateDirStatsByLeaf(all []*types.Film) map[int64]*types.DirStats {
 		}
 		ds := res[film.DirectoryId]
 		if ds == nil {
-			ds = &types.DirStats{Recursive: false}
+			ds = newDirStats(false)
 			res[film.DirectoryId] = ds
 		}
+		ds.MediaType = mergeDirectoryMediaType(ds.MediaType, film.MovieType)
 		ds.FilmCount++
 		ds.TotalSize += film.Size
 		if film.BirthTime > ds.LastFilmBirth {
@@ -71,8 +84,9 @@ func aggregateDirStatsForIDs(all []*types.Film, ids []int64, recursive bool) *ty
 			continue
 		}
 		if ds == nil {
-			ds = &types.DirStats{Recursive: recursive}
+			ds = newDirStats(recursive)
 		}
+		ds.MediaType = mergeDirectoryMediaType(ds.MediaType, film.MovieType)
 		ds.FilmCount++
 		ds.TotalSize += film.Size
 		if film.BirthTime > ds.LastFilmBirth {
@@ -83,4 +97,36 @@ func aggregateDirStatsForIDs(all []*types.Film, ids []int64, recursive bool) *ty
 		}
 	}
 	return ds
+}
+
+func newDirStats(recursive bool) *types.DirStats {
+	return &types.DirStats{
+		Recursive: recursive,
+		MediaType: directoryMediaTypeEmpty,
+	}
+}
+
+func mergeDirectoryMediaType(current, next string) string {
+	if next != moviedomain.SehuatangThreadMovieTypeJAV && next != moviedomain.SehuatangThreadMovieTypeFC2PPV {
+		return normalizeDirectoryMediaType(current)
+	}
+	current = normalizeDirectoryMediaType(current)
+	if current == directoryMediaTypeEmpty {
+		return next
+	}
+	if current == next {
+		return current
+	}
+	return directoryMediaTypeMixed
+}
+
+func normalizeDirectoryMediaType(value string) string {
+	switch value {
+	case moviedomain.SehuatangThreadMovieTypeJAV,
+		moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		directoryMediaTypeMixed:
+		return value
+	default:
+		return directoryMediaTypeEmpty
+	}
 }

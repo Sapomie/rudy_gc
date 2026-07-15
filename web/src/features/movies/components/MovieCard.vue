@@ -66,8 +66,9 @@
         <a v-if="busUrl" :href="busUrl" class="movie-card-tag-link me-2" target="_blank" rel="noopener noreferrer">Bus</a>
         <a v-if="searchUrl" :href="searchUrl" class="movie-card-tag-link me-2" target="_blank" rel="noopener noreferrer">Suk</a>
         <a v-if="javUrl" :href="javUrl" class="movie-card-tag-link me-2" target="_blank" rel="noopener noreferrer">Lib</a>
-        <span v-if="releaseDate" class="movie-card-tag-date ms-auto text-muted">上映 {{ releaseDate }}</span>
+        <span v-if="releaseDate" class="movie-card-tag-date ms-auto text-muted">{{ releaseDate }}</span>
       </li>
+      <slot name="actions" />
     </ul>
   </article>
 </template>

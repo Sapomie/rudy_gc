@@ -258,7 +258,7 @@ const sortLabels = [
   ["ByDaysInRank", "在榜天数"],
   ["ByHighestRank", "最高排名"],
   ["ByBirthTime", "下载时间"],
-  ["ByLastScTime", "最后sc"],
+  ["ByLastSelectedScTime", "最近入选 SC"],
   ["ByScTimes", "sc次数"],
   ["ByComeTimes", "co次数"]
 ];
@@ -317,8 +317,8 @@ const metricItems = computed(() => [
   { label: "已拥有", value: text(actor.value, "OwnedWMediaNumber", "ownedWMediaNumber") || "0" },
   { label: "SC 次数", value: text(actor.value, "ScTimes", "scTimes") || "0" },
   { label: "COME 次数", value: text(actor.value, "ComeTimes", "comeTimes") || "0" },
-  { label: "最后 SC", value: formatUnixDate(text(actor.value, "LastScTime", "lastScTime")) },
-  { label: "最后 SC 事件", value: formatUnixDate(text(actor.value, "LastScEventTime", "lastScEventTime")) },
+  { label: "最近入选 SC", value: formatUnixDate(text(actor.value, "LastSelectedScTime", "lastSelectedScTime")) },
+  { label: "最近参与 SC", value: formatUnixDate(text(actor.value, "LastParticipatedScTime", "lastParticipatedScTime")) },
   { label: "最高排名", value: rankText(text(actor.value, "HighestRank", "highestRank")) },
   { label: "别名", value: String(actorAliases.value.length) },
   { label: "Person Merge", value: personID.value > 0 ? `#${personID.value}` : "-", merge: personID.value > 0 }

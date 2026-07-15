@@ -173,9 +173,10 @@
                         @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
                       >
                     </td>
-                    <td class="sc-content-cell text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
-                      <a class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ value(row, "MovieName") || value(row, "MovieJavID") }}</a>
-                    </td>
+					<td class="sc-content-cell text-nowrap" :title="value(row, 'MovieName') || value(row, 'MovieJavID')">
+					  <a v-if="movieHref(row)" class="album-entry-link" :href="movieHref(row)" target="_blank" rel="noopener noreferrer">{{ movieLabel(row) }}</a>
+					  <span v-else>{{ movieLabel(row) }}</span>
+					</td>
                     <td class="text-nowrap"><span class="badge" :class="sourceBadgeClass(row)">{{ sourceBadgeText(row) }}</span></td>
                     <td class="album-hash-cell"><code class="album-hash">{{ value(row, "InfoHash") }}</code></td>
                     <td class="sc-number text-nowrap">{{ value(row, "Size") || "-" }}</td>
@@ -308,7 +309,16 @@ function sortLink(key: string): AnyRecord {
 }
 
 function movieHref(row: AnyRecord): string {
-  return `/moviedetail/${encodeURIComponent(value(row, "MovieName") || value(row, "MovieJavID"))}`;
+	if (value(row, "MovieType") === "fc2ppv") {
+		const fc2Key = value(row, "FC2Key");
+		return fc2Key ? `/fcdetail/${encodeURIComponent(fc2Key)}` : "";
+	}
+	const movieKey = value(row, "MovieName") || value(row, "MovieJavID");
+	return movieKey ? `/moviedetail/${encodeURIComponent(movieKey)}` : "";
+}
+
+function movieLabel(row: AnyRecord): string {
+	return value(row, "FC2Key") || value(row, "MovieName") || value(row, "MovieJavID") || "-";
 }
 
 function sourceBadgeText(row: AnyRecord): string {

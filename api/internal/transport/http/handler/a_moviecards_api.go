@@ -258,7 +258,7 @@ func hasMovieCardAggEffectiveFilter(c *gin.Context) bool {
 	q := c.Request.URL.Query()
 	filterKeys := []string{
 		"cn", "pid", "gn", "dn", "pn", "mn", "ln", "lj", "an", "wd",
-		"rs", "re", "mbs", "mbe", "srds", "srde", "lsctmin", "lsctmax",
+		"rs", "re", "mbs", "mbe", "srds", "srde", "lsstmin", "lsstmax",
 		"cay", "cao", "vwmin", "vwmax", "smin", "smax",
 		"drkmin", "nd", "mowned", "scmin", "scmax", "comin", "comax",
 		"md1", "md2", "md3", "md4",
@@ -730,19 +730,19 @@ func max(a, b int64) int64 {
 }
 
 var allowedOrderBy = map[string]struct{}{
-	consts.OrderByDetailUpdateTime: {},
-	consts.OrderByCastAgeDesc:      {},
-	consts.OrderByCastAgeAsc:       {},
-	consts.OrderByViewerWatched:    {},
-	consts.OrderByReleasingDate:    {},
-	consts.OrderByRankDate:         {},
-	consts.OrderByHighestRank:      {},
-	consts.OrderByDaysInRank:       {},
-	consts.OrderByBirthTime:        {},
-	consts.OrderByMediaBirthTime:   {},
-	consts.OrderByScTimes:          {},
-	consts.OrderByComeTimes:        {},
-	consts.OrderByLastScTime:       {},
+	consts.OrderByDetailUpdateTime:   {},
+	consts.OrderByCastAgeDesc:        {},
+	consts.OrderByCastAgeAsc:         {},
+	consts.OrderByViewerWatched:      {},
+	consts.OrderByReleasingDate:      {},
+	consts.OrderByRankDate:           {},
+	consts.OrderByHighestRank:        {},
+	consts.OrderByDaysInRank:         {},
+	consts.OrderByBirthTime:          {},
+	consts.OrderByMediaBirthTime:     {},
+	consts.OrderByScTimes:            {},
+	consts.OrderByComeTimes:          {},
+	consts.OrderByLastSelectedScTime: {},
 }
 
 func normalizeOrderBy(od string, fallback string) string {
@@ -767,19 +767,19 @@ type SortLink struct {
 }
 
 type SortQuery struct {
-	ByDetailUpdate   SortLink
-	ByReleasing      SortLink
-	ByViewer         SortLink
-	ByDaysInRank     SortLink
-	ByHighestRank    SortLink
-	ByRankDate       SortLink
-	ByScTimes        SortLink
-	ByLastScTime     SortLink
-	ByBirthTime      SortLink
-	ByMediaBirthTime SortLink
-	ByCastAgeDesc    SortLink
-	ByCastAgeAsc     SortLink
-	ByComeTimes      SortLink
+	ByDetailUpdate       SortLink
+	ByReleasing          SortLink
+	ByViewer             SortLink
+	ByDaysInRank         SortLink
+	ByHighestRank        SortLink
+	ByRankDate           SortLink
+	ByScTimes            SortLink
+	ByLastSelectedScTime SortLink
+	ByBirthTime          SortLink
+	ByMediaBirthTime     SortLink
+	ByCastAgeDesc        SortLink
+	ByCastAgeAsc         SortLink
+	ByComeTimes          SortLink
 }
 
 func buildSortQuery(c *gin.Context, currentOD string) *SortQuery {
@@ -801,7 +801,7 @@ func buildSortQuery(c *gin.Context, currentOD string) *SortQuery {
 	hrk, a4 := makeHref(consts.OrderByHighestRank)
 	rk, a5 := makeHref(consts.OrderByRankDate)
 	sc, a6 := makeHref(consts.OrderByScTimes)
-	lsct, a7 := makeHref(consts.OrderByLastScTime)
+	lsst, a7 := makeHref(consts.OrderByLastSelectedScTime)
 	bt, a8 := makeHref(consts.OrderByBirthTime)
 	mbt, a9 := makeHref(consts.OrderByMediaBirthTime)
 	cad, a10 := makeHref(consts.OrderByCastAgeDesc)
@@ -809,19 +809,19 @@ func buildSortQuery(c *gin.Context, currentOD string) *SortQuery {
 	co, a12 := makeHref(consts.OrderByComeTimes)
 
 	return &SortQuery{
-		ByDetailUpdate:   SortLink{Href: du, Active: a0},
-		ByReleasing:      SortLink{Href: rd, Active: a1},
-		ByViewer:         SortLink{Href: vw, Active: a2},
-		ByDaysInRank:     SortLink{Href: drk, Active: a3},
-		ByHighestRank:    SortLink{Href: hrk, Active: a4},
-		ByRankDate:       SortLink{Href: rk, Active: a5},
-		ByScTimes:        SortLink{Href: sc, Active: a6},
-		ByLastScTime:     SortLink{Href: lsct, Active: a7},
-		ByBirthTime:      SortLink{Href: bt, Active: a8},
-		ByMediaBirthTime: SortLink{Href: mbt, Active: a9},
-		ByCastAgeDesc:    SortLink{Href: cad, Active: a10},
-		ByCastAgeAsc:     SortLink{Href: caa, Active: a11},
-		ByComeTimes:      SortLink{Href: co, Active: a12},
+		ByDetailUpdate:       SortLink{Href: du, Active: a0},
+		ByReleasing:          SortLink{Href: rd, Active: a1},
+		ByViewer:             SortLink{Href: vw, Active: a2},
+		ByDaysInRank:         SortLink{Href: drk, Active: a3},
+		ByHighestRank:        SortLink{Href: hrk, Active: a4},
+		ByRankDate:           SortLink{Href: rk, Active: a5},
+		ByScTimes:            SortLink{Href: sc, Active: a6},
+		ByLastSelectedScTime: SortLink{Href: lsst, Active: a7},
+		ByBirthTime:          SortLink{Href: bt, Active: a8},
+		ByMediaBirthTime:     SortLink{Href: mbt, Active: a9},
+		ByCastAgeDesc:        SortLink{Href: cad, Active: a10},
+		ByCastAgeAsc:         SortLink{Href: caa, Active: a11},
+		ByComeTimes:          SortLink{Href: co, Active: a12},
 	}
 }
 
@@ -880,12 +880,12 @@ type movieCardFilterView struct {
 	ScoreMin       string
 	ScoreMax       string
 
-	LastScTimeMin string
-	LastScTimeMax string
-	ScTimesMin    string
-	ScTimesMax    string
-	ComeTimesMin  string
-	ComeTimesMax  string
+	LastSelectedScTimeMin string
+	LastSelectedScTimeMax string
+	ScTimesMin            string
+	ScTimesMax            string
+	ComeTimesMin          string
+	ComeTimesMax          string
 
 	MediaDir1 string
 	MediaDir2 string
@@ -936,12 +936,12 @@ func buildMovieCardFilterView(c *gin.Context, req types.ListMovieFullRequest, cu
 		ScoreMin:       queryOrFallbackFloat(c, "smin", req.ScoreMin),
 		ScoreMax:       queryOrFallbackFloat(c, "smax", req.ScoreMax),
 
-		LastScTimeMin: queryOrFallbackString(c, "lsctmin", req.LastScTimeMin),
-		LastScTimeMax: queryOrFallbackString(c, "lsctmax", req.LastScTimeMax),
-		ScTimesMin:    queryOrFallbackInt(c, "scmin", req.ScTimesMin, false),
-		ScTimesMax:    queryOrFallbackIntPtr(c, "scmax", req.ScTimesMax),
-		ComeTimesMin:  queryOrFallbackInt(c, "comin", req.ComeTimesMin, false),
-		ComeTimesMax:  queryOrFallbackIntPtr(c, "comax", req.ComeTimesMax),
+		LastSelectedScTimeMin: queryOrFallbackString(c, "lsstmin", req.LastSelectedScTimeMin),
+		LastSelectedScTimeMax: queryOrFallbackString(c, "lsstmax", req.LastSelectedScTimeMax),
+		ScTimesMin:            queryOrFallbackInt(c, "scmin", req.ScTimesMin, false),
+		ScTimesMax:            queryOrFallbackIntPtr(c, "scmax", req.ScTimesMax),
+		ComeTimesMin:          queryOrFallbackInt(c, "comin", req.ComeTimesMin, false),
+		ComeTimesMax:          queryOrFallbackIntPtr(c, "comax", req.ComeTimesMax),
 
 		MediaDir1: queryOrFallbackString(c, "md1", req.MediaDir1),
 		MediaDir2: queryOrFallbackString(c, "md2", req.MediaDir2),
@@ -962,7 +962,7 @@ func buildMovieCardFilterExplicit(c *gin.Context, hasRandom bool) map[string]boo
 		"nd", "drkmin",
 		"mowned",
 		"md1", "md2", "md3", "md4",
-		"rs", "re", "mbs", "mbe", "srds", "srde", "lsctmin", "lsctmax",
+		"rs", "re", "mbs", "mbe", "srds", "srde", "lsstmin", "lsstmax",
 		"cay", "cao", "vwmin", "vwmax", "smin", "smax", "scmin", "scmax", "comin", "comax",
 	}
 	if hasRandom {

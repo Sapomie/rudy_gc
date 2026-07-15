@@ -35,42 +35,42 @@ type (
 	}
 
 	MissingScNativeMediaRow struct {
-		MovieJavId     string `db:"movie_jav_id"`
-		MovieName      string `db:"movie_name"`
-		ScTimes        int64  `db:"sc_times"`
-		LastScTime     int64  `db:"last_sc_time"`
-		ReleasingDate  int64  `db:"releasing_date"`
-		MediaBirthTime int64  `db:"media_birth_time"`
+		MovieJavId         string `db:"movie_jav_id"`
+		MovieName          string `db:"movie_name"`
+		ScTimes            int64  `db:"sc_times"`
+		LastSelectedScTime int64  `db:"last_selected_sc_time"`
+		ReleasingDate      int64  `db:"releasing_date"`
+		MediaBirthTime     int64  `db:"media_birth_time"`
 	}
 
 	NativeMediaListRow struct {
-		Id            int64   `db:"id"`
-		MovieJavId    string  `db:"movie_jav_id"`
-		MovieName     string  `db:"movie_name"`
-		FileName      string  `db:"file_name"`
-		DirectoryId   int64   `db:"directory_id"`
-		RootDir       string  `db:"root_dir"`
-		FullDir       string  `db:"full_dir"`
-		Alias         string  `db:"alias"`
-		Size          int64   `db:"size"`
-		Width         int64   `db:"width"`
-		Height        int64   `db:"height"`
-		BitRate       int64   `db:"bit_rate"`
-		Duration      int64   `db:"duration"`
-		FrameAverage  float64 `db:"frame_average"`
-		HasSub        int64   `db:"has_sub"`
-		SelfMake      int64   `db:"self_make"`
-		HasMask       int64   `db:"has_mask"`
-		NeedScanMeta  int64   `db:"need_scan_meta"`
-		IsRemoved     int64   `db:"is_removed"`
-		RemoveTime    int64   `db:"remove_time"`
-		ScTimes       int64   `db:"sc_times"`
-		ComeTimes     int64   `db:"come_times"`
-		LastScTime    int64   `db:"last_sc_time"`
-		BirthTime     int64   `db:"birth_time"`
-		ReleasingDate int64   `db:"releasing_date"`
-		CreatedOn     int64   `db:"created_on"`
-		UpdatedOn     int64   `db:"updated_on"`
+		Id                 int64   `db:"id"`
+		MovieJavId         string  `db:"movie_jav_id"`
+		MovieName          string  `db:"movie_name"`
+		FileName           string  `db:"file_name"`
+		DirectoryId        int64   `db:"directory_id"`
+		RootDir            string  `db:"root_dir"`
+		FullDir            string  `db:"full_dir"`
+		Alias              string  `db:"alias"`
+		Size               int64   `db:"size"`
+		Width              int64   `db:"width"`
+		Height             int64   `db:"height"`
+		BitRate            int64   `db:"bit_rate"`
+		Duration           int64   `db:"duration"`
+		FrameAverage       float64 `db:"frame_average"`
+		HasSub             int64   `db:"has_sub"`
+		SelfMake           int64   `db:"self_make"`
+		HasMask            int64   `db:"has_mask"`
+		NeedScanMeta       int64   `db:"need_scan_meta"`
+		IsRemoved          int64   `db:"is_removed"`
+		RemoveTime         int64   `db:"remove_time"`
+		ScTimes            int64   `db:"sc_times"`
+		ComeTimes          int64   `db:"come_times"`
+		LastSelectedScTime int64   `db:"last_selected_sc_time"`
+		BirthTime          int64   `db:"birth_time"`
+		ReleasingDate      int64   `db:"releasing_date"`
+		CreatedOn          int64   `db:"created_on"`
+		UpdatedOn          int64   `db:"updated_on"`
 	}
 
 	// WMediaModel is an interface to be customized, add more methods here,
@@ -91,6 +91,7 @@ type (
 		ListByMovieNames(ctx context.Context, movieNames []string) ([]*WMedia, error)
 		FindOneByFileNameSourceType(ctx context.Context, fileName string, sourceType int64) (*WMedia, error)
 		ListScMissingNativeMedia(ctx context.Context) ([]*MissingScNativeMediaRow, error)
+		CountByDirectoryID(ctx context.Context, directoryID int64) (int64, error)
 		ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*WMedia, total int64, err error)
 		ListDistinctBirthDays(ctx context.Context) ([]int64, error)
 		ListByFullDirPrefixes(ctx context.Context, prefixes []string) ([]*WMedia, error)
@@ -119,6 +120,17 @@ func (m *customWMediaModel) QueryRowsNoCacheCtx(ctx context.Context, dest any, q
 
 func (m *customWMediaModel) QueryRowNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error {
 	return m.CachedConn.QueryRowNoCacheCtx(ctx, dest, query, args...)
+}
+
+func (m *customWMediaModel) CountByDirectoryID(ctx context.Context, directoryID int64) (int64, error) {
+	if directoryID <= 0 {
+		return 0, nil
+	}
+	var count int64
+	if err := m.QueryRowNoCacheCtx(ctx, &count, "SELECT COUNT(*) FROM "+m.table+" WHERE `directory_id` = ?", directoryID); err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (m *customWMediaModel) FindOneByMovieJavId(ctx context.Context, movieJavId string) (*WMedia, error) {
@@ -233,7 +245,7 @@ func nativeMediaListColumns(alias string) []string {
 		alias + ".remove_time AS remove_time",
 		"0 AS sc_times",
 		"0 AS come_times",
-		"0 AS last_sc_time",
+		"0 AS last_selected_sc_time",
 		alias + ".birth_time AS birth_time",
 		alias + ".releasing_date AS releasing_date",
 		alias + ".created_on AS created_on",
@@ -399,12 +411,12 @@ SELECT
 	movie_jav_id,
 	movie_name,
 	sc_times,
-	last_sc_time,
+	last_selected_sc_time,
 	releasing_date,
 	media_birth_time
 FROM g_sc_stat
 WHERE media_birth_time = 0
-ORDER BY sc_times DESC, last_sc_time DESC, movie_name DESC, movie_jav_id DESC`
+ORDER BY sc_times DESC, last_selected_sc_time DESC, movie_name DESC, movie_jav_id DESC`
 
 	var rows []*MissingScNativeMediaRow
 	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query); err != nil {
@@ -417,7 +429,7 @@ ORDER BY sc_times DESC, last_sc_time DESC, movie_name DESC, movie_jav_id DESC`
 }
 
 func nativeMediaHasStatFilter(filter types.MediaListFilter) bool {
-	return filter.HasScTimesMin || filter.HasScTimesMax || filter.HasLastScFrom || filter.HasLastScTo
+	return filter.HasScTimesMin || filter.HasScTimesMax || filter.HasLastSelectedScFrom || filter.HasLastSelectedScTo
 }
 
 func nativeMediaNeedsStatScope(orderBy string, filter types.MediaListFilter) bool {
@@ -472,7 +484,7 @@ func (m *customWMediaModel) attachNativeMediaStats(ctx context.Context, rows []*
 		if stat := stats[row.MovieJavId]; stat != nil {
 			row.ScTimes = stat.ScTimes
 			row.ComeTimes = stat.ComeTimes
-			row.LastScTime = stat.LastScTime
+			row.LastSelectedScTime = stat.LastSelectedScTime
 		}
 	}
 	return nil
@@ -490,10 +502,10 @@ func filterNativeMediaStats(rows []*NativeMediaListRow, filter types.MediaListFi
 		if filter.HasScTimesMax && row.ScTimes > filter.ScTimesMax {
 			continue
 		}
-		if filter.HasLastScFrom && row.LastScTime < filter.LastScFrom {
+		if filter.HasLastSelectedScFrom && row.LastSelectedScTime < filter.LastSelectedScFrom {
 			continue
 		}
-		if filter.HasLastScTo && row.LastScTime > filter.LastScTo {
+		if filter.HasLastSelectedScTo && row.LastSelectedScTime > filter.LastSelectedScTo {
 			continue
 		}
 		out = append(out, row)
@@ -541,8 +553,8 @@ func compareNativeMediaRows(left, right *NativeMediaListRow, orderPart string) i
 	switch {
 	case strings.Contains(part, "sc_times"):
 		return compareInt64(left.ScTimes, right.ScTimes)
-	case strings.Contains(part, "last_sc_time"):
-		return compareInt64(left.LastScTime, right.LastScTime)
+	case strings.Contains(part, "last_selected_sc_time"):
+		return compareInt64(left.LastSelectedScTime, right.LastSelectedScTime)
 	case strings.Contains(part, "movie_name"):
 		return strings.Compare(left.MovieName, right.MovieName)
 	case strings.Contains(part, "frame_average"):
@@ -954,11 +966,11 @@ func mapWMediaOrderBy(orderBy string) string {
 	case consts.OrderByMediaBirthTime:
 		order = "wm.birth_time DESC,wm.movie_name DESC"
 	case consts.OrderByScTimes:
-		order = "COALESCE(gss.sc_times, 0) DESC,COALESCE(gss.last_sc_time, 0) DESC,wm.movie_name DESC"
+		order = "COALESCE(gss.sc_times, 0) DESC,COALESCE(gss.last_selected_sc_time, 0) DESC,wm.movie_name DESC"
 	case consts.OrderByComeTimes:
-		order = "COALESCE(gss.come_times, 0) DESC,COALESCE(gss.last_sc_time, 0) DESC,wm.movie_name DESC"
-	case consts.OrderByLastScTime:
-		order = "COALESCE(gss.last_sc_time, 0) DESC,wm.movie_name DESC"
+		order = "COALESCE(gss.come_times, 0) DESC,COALESCE(gss.last_selected_sc_time, 0) DESC,wm.movie_name DESC"
+	case consts.OrderByLastSelectedScTime:
+		order = "COALESCE(gss.last_selected_sc_time, 0) DESC,wm.movie_name DESC"
 	case consts.OrderByReleasingDate:
 		order = "wm.releasing_date DESC,wm.movie_name DESC"
 	}

@@ -176,6 +176,10 @@ func (h *ScPagesAPI) ScEventDetail(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "未找到 SC 事件: " + name})
 		return
 	}
+	if err := h.attachScEventMovieCards(c.Request.Context(), detail.Items); err != nil {
+		jsonServerError(c, "加载 SC 事件影片卡片失败", err)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":                     detail.Event.Name,
@@ -204,6 +208,46 @@ func (h *ScPagesAPI) ScEventDetail(c *gin.Context) {
 		"MovieFilterJAVHref":        buildScEventDetailMovieFilterHref(c, "jav"),
 		"MovieFilterFC2Href":        buildScEventDetailMovieFilterHref(c, "fc2"),
 	})
+}
+
+func (h *ScPagesAPI) attachScEventMovieCards(ctx context.Context, items []*types.ScEventMovie) error {
+	fc2MovieIDs := make([]int64, 0)
+	for _, item := range items {
+		if item != nil && item.Entry != nil && item.Entry.FC2MovieId > 0 {
+			fc2MovieIDs = append(fc2MovieIDs, item.Entry.FC2MovieId)
+		}
+	}
+	fc2CardViews := make([]*media.FC2CardView, 0, len(fc2MovieIDs))
+	if len(fc2MovieIDs) > 0 {
+		movieRows, err := h.deps.FC2MovieModel.ListByIDs(ctx, fc2MovieIDs)
+		if err != nil {
+			return fmt.Errorf("FC2MovieModel.ListByIDs: %w", err)
+		}
+		fc2CardViews, err = h.mediaSvc.BuildFC2CardViews(ctx, movieRows)
+		if err != nil {
+			return fmt.Errorf("BuildFC2CardViews: %w", err)
+		}
+	}
+	applyScEventMovieCards(items, fc2CardViews)
+	return nil
+}
+
+func applyScEventMovieCards(items []*types.ScEventMovie, fc2CardViews []*media.FC2CardView) {
+	fc2CardsByMovieID := make(map[int64]*media.FC2CardView, len(fc2CardViews))
+	for _, card := range fc2CardViews {
+		if card != nil && card.FC2Movie != nil && card.ID > 0 {
+			fc2CardsByMovieID[card.ID] = card
+		}
+	}
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		item.Card = item.MovieType
+		if item.Entry != nil && item.Entry.FC2MovieId > 0 {
+			item.Card = fc2CardsByMovieID[item.Entry.FC2MovieId]
+		}
+	}
 }
 
 func normalizeScEventDetailMovieFilter(v string) string {
@@ -242,6 +286,8 @@ type scEventSortQuery struct {
 	ByTime          scEventSortLink
 	ByTotalMovieCnt scEventSortLink
 	ByMovieCnt      scEventSortLink
+	ByJavMovieCnt   scEventSortLink
+	ByFC2MovieCnt   scEventSortLink
 	ByComeMovie     scEventSortLink
 	ByCooldown      scEventSortLink
 	ByDuration      scEventSortLink
@@ -279,6 +325,8 @@ func buildScEventSortQuery(c *gin.Context, currentField, currentOrder string) *s
 		ByTime:          makeHref("sc_time"),
 		ByTotalMovieCnt: makeHref("total_movie_count"),
 		ByMovieCnt:      makeHref("sc_movie_count"),
+		ByJavMovieCnt:   makeHref("jav_movie_count"),
+		ByFC2MovieCnt:   makeHref("fc2_movie_count"),
 		ByComeMovie:     makeHref("come_movie_name"),
 		ByCooldown:      makeHref("cooldown"),
 		ByDuration:      makeHref("duration"),
@@ -291,7 +339,7 @@ func buildScEventSortQuery(c *gin.Context, currentField, currentOrder string) *s
 
 func normalizeScEventSortField(v string) string {
 	switch v {
-	case "total_movie_count", "sc_movie_count", "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
+	case "total_movie_count", "sc_movie_count", "jav_movie_count", "fc2_movie_count", "movie_number", "come_movie_name", "cooldown", "duration", "kind", "movie_cast", "vessel", "fg", "sc_time":
 		return v
 	default:
 		return "sc_time"
@@ -379,7 +427,7 @@ func (h *ScPagesAPI) FC2MediaPage(c *gin.Context) {
 		"Title":        "FC2媒体入库",
 		"ViewType":     "fc2-media-ingest",
 		"PageTitle":    "FC2媒体入库（两段执行）",
-		"PageNote":     "第一段从下载中相册反查 FC2影片、来源帖子和 Info Hash；第二段探测视频元数据并写入 fc2_folder、fc2_media，随后将来源条目移入 FcMedia。",
+		"PageNote":     "第一段从下载中相册反查 FC2影片、来源帖子和 Info Hash；第二段探测视频元数据并写入 w_folder、fc2_media，随后将来源条目移入 FcMedia。",
 		"RootDirs":     h.deps.Config.FC2Media.RootDirs,
 		"FavoriteRows": favoriteRows,
 	})

@@ -68,6 +68,34 @@ func TestBuildFC2MediaView(t *testing.T) {
 	}
 }
 
+func TestBuildFC2ScEvents(t *testing.T) {
+	rows := []*moviex.GList{
+		{ScName: "SC 旧", IsSc: consts.GListIsSc, IsCome: consts.GListIsNotCome},
+		{ScName: "SC 新/1", IsSc: consts.GListIsSc, IsCome: consts.GListIsCome},
+		{ScName: "SC 旧", IsSc: consts.GListIsSc, IsCome: consts.GListIsCome},
+		{ScName: "忽略", IsSc: consts.GListIsNotSc},
+		{ScName: "  ", IsSc: consts.GListIsSc},
+	}
+	events := []*moviex.GSc{
+		{Name: "SC 旧", ScTime: 100, Cooldown: 5},
+		{Name: "SC 新/1", ScTime: 200, Cooldown: 10},
+	}
+
+	got := buildFC2ScEvents(rows, events)
+	if len(got) != 2 {
+		t.Fatalf("SC 事件数量 = %d，期望 2", len(got))
+	}
+	if got[0].ScName != "SC 新/1" || got[0].ScTime != 200 || got[0].Cooldown != 10 || !got[0].IsCome {
+		t.Fatalf("第一条 SC 事件异常: %+v", got[0])
+	}
+	if got[0].Href != "/scevent/SC%20%E6%96%B0%2F1" {
+		t.Fatalf("SC 事件链接 = %q", got[0].Href)
+	}
+	if got[1].ScName != "SC 旧" || got[1].ScTime != 100 || got[1].IsCome {
+		t.Fatalf("第二条 SC 事件异常: %+v", got[1])
+	}
+}
+
 func TestBuildFC2MediaImageView(t *testing.T) {
 	if buildFC2MediaImageView(nil) != nil {
 		t.Fatal("空图片记录应返回空视图")
@@ -91,8 +119,29 @@ func TestBuildFC2MediaImageView(t *testing.T) {
 	}
 }
 
+func TestBuildFC2DetailCoverImageViewSelectsDetailSheet(t *testing.T) {
+	dir := t.TempDir()
+	cardPath := filepath.Join(dir, "contact-sheet.png")
+	detailPath := filepath.Join(dir, "detail-contact-sheet.png")
+	for _, path := range []string{cardPath, detailPath} {
+		if err := os.WriteFile(path, []byte("image"), 0o644); err != nil {
+			t.Fatalf("创建测试图片失败: %v", err)
+		}
+	}
+	view := buildFC2DetailCoverImageView(7, []*moviex.FC2MediaImage{
+		{ID: 9, FC2MediaID: 7, ImageType: mediaservice.FC2MediaImageTypeContactSheet, FilePath: cardPath, CreatedOn: 200},
+		{ID: 10, FC2MediaID: 7, ImageType: mediaservice.FC2MediaImageTypeDetailContactSheet, FilePath: detailPath, CreatedOn: 100},
+	})
+	if view == nil || view.ID != 10 || view.ImageURL != filepath.ToSlash(detailPath) {
+		t.Fatalf("详情封面视图 = %#v", view)
+	}
+	if view.IsCover {
+		t.Fatal("详情联系表不应标记为卡片封面")
+	}
+}
+
 func TestNormalizeFC2Sort(t *testing.T) {
-	for _, field := range []string{"fc2_key", "title", "performer_text", "post_time", "play", "birth_time"} {
+	for _, field := range []string{"fc2_key", "title", "performer_text", "post_time", "play", "birth_time", "sc_times", "come_times", "last_selected_sc_time"} {
 		if got := normalizeFC2Sort(field); got != field {
 			t.Fatalf("normalizeFC2Sort(%q) = %q", field, got)
 		}
@@ -108,7 +157,7 @@ func TestNormalizeFC2Sort(t *testing.T) {
 func TestBuildFC2CardRowsUsesSelectedCover(t *testing.T) {
 	dir := t.TempDir()
 	paths := map[int64]string{}
-	for _, id := range []int64{9, 10, 11, 12, 13} {
+	for _, id := range []int64{9, 10, 11, 12, 13, 14} {
 		paths[id] = filepath.Join(dir, "contact-sheet-"+strconv.FormatInt(id, 10)+".png")
 		if err := os.WriteFile(paths[id], []byte("image"), 0o644); err != nil {
 			t.Fatalf("创建测试联系表失败: %v", err)
@@ -125,13 +174,14 @@ func TestBuildFC2CardRowsUsesSelectedCover(t *testing.T) {
 		{ID: 8, FC2MovieID: 29, FullDir: "/removed", FileName: "4664062.mp4", BirthTime: 101, IsRemoved: int64(consts.FilmIsRemoved)},
 		{ID: 9, FC2MovieID: 30},
 	}
-	statRows := []*moviex.FC2ScStat{{FC2MovieID: 28, ScTimes: 3, ComeTimes: 2, LastScTime: 200}}
+	statRows := []*moviex.FC2ScStat{{FC2MovieID: 28, ScTimes: 3, ComeTimes: 2, LastSelectedScTime: 200}}
 	imageRows := []*moviex.FC2MediaImage{
 		{ID: 9, FC2MediaID: 7, ImageType: "legacy", FilePath: paths[9], CreatedOn: 100},
 		{ID: 10, FC2MediaID: 7, ImageType: "contact_sheet", FilePath: paths[10], CreatedOn: 300},
 		{ID: 11, FC2MediaID: 7, ImageType: "contact_sheet", FilePath: paths[11], CreatedOn: 200},
 		{ID: 12, FC2MediaID: 8, ImageType: "contact_sheet", FilePath: paths[12], CreatedOn: 300},
 		{ID: 13, FC2MediaID: 9, ImageType: "contact_sheet", FilePath: paths[13], CreatedOn: 400},
+		{ID: 14, FC2MediaID: 7, ImageType: "detail_contact_sheet", FilePath: paths[14], CreatedOn: 500},
 	}
 
 	rows := mediaservice.AssembleFC2CardViews(movieRows, mediaRows, statRows, imageRows)
@@ -147,7 +197,7 @@ func TestBuildFC2CardRowsUsesSelectedCover(t *testing.T) {
 	if rows[2].CoverImageURL != filepath.ToSlash(paths[13]) || rows[2].EffectiveCoverImageID != 13 {
 		t.Fatalf("失效关联回退封面 = %#v", rows[2])
 	}
-	if rows[0].ScTimes != 3 || rows[0].ComeTimes != 2 || rows[0].LastScTime != 200 {
+	if rows[0].ScTimes != 3 || rows[0].ComeTimes != 2 || rows[0].LastSelectedScTime != 200 {
 		t.Fatalf("sc stats = %#v", rows[0])
 	}
 	if !rows[0].ShowPlayButton || rows[0].PlayButtonClass != "btn-success" || rows[0].DownloadTime != 100 {

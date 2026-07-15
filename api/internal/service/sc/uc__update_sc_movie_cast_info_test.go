@@ -22,10 +22,10 @@ func TestAggregateFC2MovieScInfo(t *testing.T) {
 	}
 
 	got := aggregateFC2MovieScInfo(movieIDs, rows, scTimes)
-	if info := got[10]; info.ScEventTimes != 2 || info.ScTimes != 1 || info.ComeTimes != 1 || info.LastScTime != 100 || info.LastScEventTime != 200 {
+	if info := got[10]; info.ScEventTimes != 2 || info.ScTimes != 1 || info.ComeTimes != 1 || info.LastSelectedScTime != 100 || info.LastParticipatedScTime != 200 {
 		t.Fatalf("movie 10 stats = %#v", info)
 	}
-	if info := got[20]; info.ScEventTimes != 2 || info.ScTimes != 2 || info.ComeTimes != 1 || info.LastScTime != 300 || info.LastScEventTime != 300 {
+	if info := got[20]; info.ScEventTimes != 2 || info.ScTimes != 2 || info.ComeTimes != 1 || info.LastSelectedScTime != 300 || info.LastParticipatedScTime != 300 {
 		t.Fatalf("movie 20 stats = %#v", info)
 	}
 	if info := got[30]; info != (movieScInfo{}) {

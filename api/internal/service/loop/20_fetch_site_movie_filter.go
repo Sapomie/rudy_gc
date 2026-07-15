@@ -10,18 +10,18 @@ import (
 )
 
 var allowedFetchSiteOrderBy = map[string]struct{}{
-	consts.OrderByDetailUpdateTime: {},
-	consts.OrderByCastAgeDesc:      {},
-	consts.OrderByCastAgeAsc:       {},
-	consts.OrderByViewerWatched:    {},
-	consts.OrderByReleasingDate:    {},
-	consts.OrderByRankDate:         {},
-	consts.OrderByHighestRank:      {},
-	consts.OrderByDaysInRank:       {},
-	consts.OrderByMediaBirthTime:   {},
-	consts.OrderByScTimes:          {},
-	consts.OrderByComeTimes:        {},
-	consts.OrderByLastScTime:       {},
+	consts.OrderByDetailUpdateTime:   {},
+	consts.OrderByCastAgeDesc:        {},
+	consts.OrderByCastAgeAsc:         {},
+	consts.OrderByViewerWatched:      {},
+	consts.OrderByReleasingDate:      {},
+	consts.OrderByRankDate:           {},
+	consts.OrderByHighestRank:        {},
+	consts.OrderByDaysInRank:         {},
+	consts.OrderByMediaBirthTime:     {},
+	consts.OrderByScTimes:            {},
+	consts.OrderByComeTimes:          {},
+	consts.OrderByLastSelectedScTime: {},
 }
 
 const (
@@ -45,8 +45,8 @@ func buildFetchSiteMovieRequest(req StartTaskRequest) (*types.ListMovieFullReque
 		StartRankingDateStart: strings.TrimSpace(req.StartRankingDateFrom),
 		StartRankingDateEnd:   strings.TrimSpace(req.StartRankingDateTo),
 		Word:                  strings.TrimSpace(req.Word),
-		LastScTimeMin:         strings.TrimSpace(req.LastScTimeMin),
-		LastScTimeMax:         strings.TrimSpace(req.LastScTimeMax),
+		LastSelectedScTimeMin: strings.TrimSpace(req.LastSelectedScTimeMin),
+		LastSelectedScTimeMax: strings.TrimSpace(req.LastSelectedScTimeMax),
 		MediaDir1:             strings.TrimSpace(req.MediaDir1),
 		MediaDir2:             strings.TrimSpace(req.MediaDir2),
 		MediaDir3:             strings.TrimSpace(req.MediaDir3),

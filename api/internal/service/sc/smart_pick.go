@@ -14,16 +14,16 @@ import (
 )
 
 type SmartPickOptions struct {
-	CastLastScBlockDays          int     `json:"castLastScBlockDays"`
-	LastScEventBlockDays         int     `json:"lastScEventBlockDays"`
-	Rank20Min                    int     `json:"rank20Min"`
-	Rank100Min                   int     `json:"rank100Min"`
-	Rank500Min                   int     `json:"rank500Min"`
-	CastLastScPenaltyAlpha       float64 `json:"castLastScPenaltyAlpha"`
-	LastScEventPenaltyAlpha      float64 `json:"lastScEventPenaltyAlpha"`
-	CastOwnedScRatioPenaltyAlpha float64 `json:"castOwnedScRatioPenaltyAlpha"`
-	MovieHasScPenaltyAlpha       float64 `json:"movieHasScPenaltyAlpha"`
-	RandomSeed                   int64   `json:"randomSeed,omitempty"`
+	CastSelectedScBlockDays        int     `json:"castSelectedScBlockDays"`
+	CastParticipatedScBlockDays    int     `json:"castParticipatedScBlockDays"`
+	Rank20Min                      int     `json:"rank20Min"`
+	Rank100Min                     int     `json:"rank100Min"`
+	Rank500Min                     int     `json:"rank500Min"`
+	CastSelectedScPenaltyAlpha     float64 `json:"castSelectedScPenaltyAlpha"`
+	CastParticipatedScPenaltyAlpha float64 `json:"castParticipatedScPenaltyAlpha"`
+	CastOwnedScRatioPenaltyAlpha   float64 `json:"castOwnedScRatioPenaltyAlpha"`
+	MovieHasSelectedScPenaltyAlpha float64 `json:"movieHasSelectedScPenaltyAlpha"`
+	RandomSeed                     int64   `json:"randomSeed,omitempty"`
 }
 
 const (
@@ -39,23 +39,23 @@ type smartPickGroup struct {
 }
 
 type smartCastStat struct {
-	LastScTime         int64
-	LastScEventTime    int64
-	OwnedWMediaNumber  int64
-	OwnedScMovieNumber int64
+	LastSelectedScTime     int64
+	LastParticipatedScTime int64
+	OwnedWMediaNumber      int64
+	OwnedScMovieNumber     int64
 }
 
 type SmartPickInfo struct {
-	RawCandidateMovieCount         int    `json:"raw_candidate_movie_count"`
-	CastCount                      int    `json:"cast_count"`
-	AfterBlockCastCount            int    `json:"after_block_cast_count"`
-	AfterBlockMovieCount           int    `json:"after_block_movie_count"`
-	CastLastScBlockedCastCount     int    `json:"cast_last_sc_blocked_cast_count"`
-	LastScEventBlockedCastCount    int    `json:"last_sc_event_blocked_cast_count"`
-	CastLastScBlockedMovieCount    int    `json:"cast_last_sc_blocked_movie_count"`
-	LastScEventBlockedMovieCount   int    `json:"last_sc_event_blocked_movie_count"`
-	SelectedActorSkippedMovieCount int    `json:"selected_actor_skipped_movie_count"`
-	TotalSizeGB                    string `json:"total_size_gb,omitempty"`
+	RawCandidateMovieCount              int    `json:"raw_candidate_movie_count"`
+	CastCount                           int    `json:"cast_count"`
+	AfterBlockCastCount                 int    `json:"after_block_cast_count"`
+	AfterBlockMovieCount                int    `json:"after_block_movie_count"`
+	CastSelectedScBlockedCastCount      int    `json:"cast_selected_sc_blocked_cast_count"`
+	CastParticipatedScBlockedCastCount  int    `json:"cast_participated_sc_blocked_cast_count"`
+	CastSelectedScBlockedMovieCount     int    `json:"cast_selected_sc_blocked_movie_count"`
+	CastParticipatedScBlockedMovieCount int    `json:"cast_participated_sc_blocked_movie_count"`
+	SelectedActorSkippedMovieCount      int    `json:"selected_actor_skipped_movie_count"`
+	TotalSizeGB                         string `json:"total_size_gb,omitempty"`
 }
 
 type SmartPickResult struct {
@@ -167,11 +167,11 @@ func (l *ScService) SmartPickWithInfoFromRequests(ctx context.Context, reqs []Pi
 }
 
 func normalizeSmartPickOptions(n int, opt SmartPickOptions) (SmartPickOptions, error) {
-	if opt.CastLastScBlockDays < 0 {
-		return opt, errors.New("castLastScBlockDays must be >= 0")
+	if opt.CastSelectedScBlockDays < 0 {
+		return opt, errors.New("castSelectedScBlockDays must be >= 0")
 	}
-	if opt.LastScEventBlockDays < 0 {
-		return opt, errors.New("lastScEventBlockDays must be >= 0")
+	if opt.CastParticipatedScBlockDays < 0 {
+		return opt, errors.New("castParticipatedScBlockDays must be >= 0")
 	}
 	if opt.Rank20Min < 0 || opt.Rank100Min < 0 || opt.Rank500Min < 0 {
 		return opt, errors.New("rank min values must be >= 0")
@@ -179,7 +179,7 @@ func normalizeSmartPickOptions(n int, opt SmartPickOptions) (SmartPickOptions, e
 	if opt.Rank20Min > opt.Rank100Min || opt.Rank100Min > opt.Rank500Min || opt.Rank500Min > n {
 		return opt, errors.New("require 0 <= rank20Min <= rank100Min <= rank500Min <= pickN")
 	}
-	if opt.CastLastScPenaltyAlpha < 0 || opt.LastScEventPenaltyAlpha < 0 || opt.CastOwnedScRatioPenaltyAlpha < 0 || opt.MovieHasScPenaltyAlpha < 0 {
+	if opt.CastSelectedScPenaltyAlpha < 0 || opt.CastParticipatedScPenaltyAlpha < 0 || opt.CastOwnedScRatioPenaltyAlpha < 0 || opt.MovieHasSelectedScPenaltyAlpha < 0 {
 		return opt, errors.New("penalty alpha must be >= 0")
 	}
 	return opt, nil
@@ -263,10 +263,10 @@ func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickG
 			continue
 		}
 		stats["p:"+fmt.Sprintf("%d", row.Id)] = smartCastStat{
-			LastScTime:         row.LastScTime,
-			LastScEventTime:    row.LastScEventTime,
-			OwnedWMediaNumber:  row.OwnedWMediaNumber,
-			OwnedScMovieNumber: personOwnedScMap[row.Id],
+			LastSelectedScTime:     row.LastSelectedScTime,
+			LastParticipatedScTime: row.LastParticipatedScTime,
+			OwnedWMediaNumber:      row.OwnedWMediaNumber,
+			OwnedScMovieNumber:     personOwnedScMap[row.Id],
 		}
 	}
 
@@ -283,10 +283,10 @@ func (l *ScService) loadSmartCastStats(ctx context.Context, groups []*smartPickG
 			continue
 		}
 		stats["n:"+row.Name] = smartCastStat{
-			LastScTime:         row.LastScTime,
-			LastScEventTime:    row.LastScEventTime,
-			OwnedWMediaNumber:  row.OwnedWMediaNumber,
-			OwnedScMovieNumber: ownedScMap[row.Name],
+			LastSelectedScTime:     row.LastSelectedScTime,
+			LastParticipatedScTime: row.LastParticipatedScTime,
+			OwnedWMediaNumber:      row.OwnedWMediaNumber,
+			OwnedScMovieNumber:     ownedScMap[row.Name],
 		}
 	}
 
@@ -319,7 +319,7 @@ func computeSmartBaseWeights(cands []*types.MovieType, castStats map[string]smar
 func smartMovieBaseWeight(movie *types.MovieType, castStats map[string]smartCastStat, opt SmartPickOptions, now time.Time) float64 {
 	movieHasScFactor := 1.0
 	if movie != nil && movie.ScTimes > 0 {
-		movieHasScFactor = 1.0 - opt.MovieHasScPenaltyAlpha
+		movieHasScFactor = 1.0 - opt.MovieHasSelectedScPenaltyAlpha
 		if movieHasScFactor < 0.0001 {
 			movieHasScFactor = 0.0001
 		}
@@ -334,31 +334,31 @@ func smartMovieBaseWeight(movie *types.MovieType, castStats map[string]smartCast
 	count := 0.0
 	for _, name := range actors {
 		stat := castStats[name]
-		if opt.CastLastScBlockDays > 0 && stat.LastScTime > 0 && ageInDays(stat.LastScTime, now) < float64(opt.CastLastScBlockDays) {
+		if opt.CastSelectedScBlockDays > 0 && stat.LastSelectedScTime > 0 && ageInDays(stat.LastSelectedScTime, now) < float64(opt.CastSelectedScBlockDays) {
 			return 0.0001
 		}
-		if opt.LastScEventBlockDays > 0 && stat.LastScEventTime > 0 && ageInDays(stat.LastScEventTime, now) < float64(opt.LastScEventBlockDays) {
+		if opt.CastParticipatedScBlockDays > 0 && stat.LastParticipatedScTime > 0 && ageInDays(stat.LastParticipatedScTime, now) < float64(opt.CastParticipatedScBlockDays) {
 			return 0.0001
 		}
 
 		recentPenalty := 0.0
-		if stat.LastScTime > 0 {
-			daysSince := ageInDays(stat.LastScTime, now)
-			shifted := daysSince - float64(opt.CastLastScBlockDays)
+		if stat.LastSelectedScTime > 0 {
+			daysSince := ageInDays(stat.LastSelectedScTime, now)
+			shifted := daysSince - float64(opt.CastSelectedScBlockDays)
 			if shifted < 0 {
 				shifted = 0
 			}
 			recentPenalty = math.Exp(-shifted / 90.0)
 		}
 
-		lastScEventPenalty := 0.0
-		if stat.LastScEventTime > 0 {
-			daysSince := ageInDays(stat.LastScEventTime, now)
-			shifted := daysSince - float64(opt.LastScEventBlockDays)
+		participatedScPenalty := 0.0
+		if stat.LastParticipatedScTime > 0 {
+			daysSince := ageInDays(stat.LastParticipatedScTime, now)
+			shifted := daysSince - float64(opt.CastParticipatedScBlockDays)
 			if shifted < 0 {
 				shifted = 0
 			}
-			lastScEventPenalty = math.Exp(-shifted / 90.0)
+			participatedScPenalty = math.Exp(-shifted / 90.0)
 		}
 
 		ownedScRatio := 0.0
@@ -366,8 +366,8 @@ func smartMovieBaseWeight(movie *types.MovieType, castStats map[string]smartCast
 			ownedScRatio = float64(stat.OwnedScMovieNumber) / float64(stat.OwnedWMediaNumber)
 		}
 
-		factor := (1.0 - opt.CastLastScPenaltyAlpha*recentPenalty) *
-			(1.0 - opt.LastScEventPenaltyAlpha*lastScEventPenalty) *
+		factor := (1.0 - opt.CastSelectedScPenaltyAlpha*recentPenalty) *
+			(1.0 - opt.CastParticipatedScPenaltyAlpha*participatedScPenalty) *
 			(1.0 - opt.CastOwnedScRatioPenaltyAlpha*ownedScRatio)
 		if factor < 0.0001 {
 			factor = 0.0001
@@ -607,10 +607,10 @@ func smartMovieEligible(
 			return false
 		}
 		stat := castStats[name]
-		if opt.CastLastScBlockDays > 0 && stat.LastScTime > 0 && ageInDays(stat.LastScTime, now) < float64(opt.CastLastScBlockDays) {
+		if opt.CastSelectedScBlockDays > 0 && stat.LastSelectedScTime > 0 && ageInDays(stat.LastSelectedScTime, now) < float64(opt.CastSelectedScBlockDays) {
 			return false
 		}
-		if opt.LastScEventBlockDays > 0 && stat.LastScEventTime > 0 && ageInDays(stat.LastScEventTime, now) < float64(opt.LastScEventBlockDays) {
+		if opt.CastParticipatedScBlockDays > 0 && stat.LastParticipatedScTime > 0 && ageInDays(stat.LastParticipatedScTime, now) < float64(opt.CastParticipatedScBlockDays) {
 			return false
 		}
 	}
@@ -677,10 +677,10 @@ func analyzeSmartPickInfo(groups []*smartPickGroup, castStats map[string]smartCa
 	movies := collectSmartUniqueMovies(groups)
 	actorSeen := make(map[string]struct{}, 128)
 	afterBlockActorSeen := make(map[string]struct{}, 128)
-	blockedByLastScActors := make(map[string]struct{}, 64)
-	blockedByLastScEventActors := make(map[string]struct{}, 64)
-	blockedByLastScMovies := make(map[string]struct{}, 64)
-	blockedByLastScEventMovies := make(map[string]struct{}, 64)
+	blockedBySelectedScActors := make(map[string]struct{}, 64)
+	blockedByParticipatedScActors := make(map[string]struct{}, 64)
+	blockedBySelectedScMovies := make(map[string]struct{}, 64)
+	blockedByParticipatedScMovies := make(map[string]struct{}, 64)
 
 	for _, movie := range movies {
 		actorKeys := primaryActorKeys(movie)
@@ -688,27 +688,27 @@ func analyzeSmartPickInfo(groups []*smartPickGroup, castStats map[string]smartCa
 			actorSeen[key] = struct{}{}
 		}
 
-		blockedByLastSc := false
-		blockedByLastScEvent := false
+		blockedBySelectedSc := false
+		blockedByParticipatedSc := false
 		for _, key := range actorKeys {
 			stat := castStats[key]
-			if opt.CastLastScBlockDays > 0 && stat.LastScTime > 0 && ageInDays(stat.LastScTime, now) < float64(opt.CastLastScBlockDays) {
-				blockedByLastSc = true
-				blockedByLastScActors[key] = struct{}{}
+			if opt.CastSelectedScBlockDays > 0 && stat.LastSelectedScTime > 0 && ageInDays(stat.LastSelectedScTime, now) < float64(opt.CastSelectedScBlockDays) {
+				blockedBySelectedSc = true
+				blockedBySelectedScActors[key] = struct{}{}
 			}
-			if opt.LastScEventBlockDays > 0 && stat.LastScEventTime > 0 && ageInDays(stat.LastScEventTime, now) < float64(opt.LastScEventBlockDays) {
-				blockedByLastScEvent = true
-				blockedByLastScEventActors[key] = struct{}{}
+			if opt.CastParticipatedScBlockDays > 0 && stat.LastParticipatedScTime > 0 && ageInDays(stat.LastParticipatedScTime, now) < float64(opt.CastParticipatedScBlockDays) {
+				blockedByParticipatedSc = true
+				blockedByParticipatedScActors[key] = struct{}{}
 			}
 		}
 
-		if blockedByLastSc {
-			blockedByLastScMovies[movie.JavId] = struct{}{}
+		if blockedBySelectedSc {
+			blockedBySelectedScMovies[movie.JavId] = struct{}{}
 		}
-		if blockedByLastScEvent {
-			blockedByLastScEventMovies[movie.JavId] = struct{}{}
+		if blockedByParticipatedSc {
+			blockedByParticipatedScMovies[movie.JavId] = struct{}{}
 		}
-		if blockedByLastSc || blockedByLastScEvent {
+		if blockedBySelectedSc || blockedByParticipatedSc {
 			continue
 		}
 
@@ -721,10 +721,10 @@ func analyzeSmartPickInfo(groups []*smartPickGroup, castStats map[string]smartCa
 	info.RawCandidateMovieCount = len(movies)
 	info.CastCount = len(actorSeen)
 	info.AfterBlockCastCount = len(afterBlockActorSeen)
-	info.CastLastScBlockedCastCount = len(blockedByLastScActors)
-	info.LastScEventBlockedCastCount = len(blockedByLastScEventActors)
-	info.CastLastScBlockedMovieCount = len(blockedByLastScMovies)
-	info.LastScEventBlockedMovieCount = len(blockedByLastScEventMovies)
+	info.CastSelectedScBlockedCastCount = len(blockedBySelectedScActors)
+	info.CastParticipatedScBlockedCastCount = len(blockedByParticipatedScActors)
+	info.CastSelectedScBlockedMovieCount = len(blockedBySelectedScMovies)
+	info.CastParticipatedScBlockedMovieCount = len(blockedByParticipatedScMovies)
 	return info
 }
 

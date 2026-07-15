@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/repository/moviex"
 )
 
@@ -53,6 +54,8 @@ type TorrentAlbumPageRow struct {
 	AlbumID        int64
 	MovieJavID     string
 	MovieName      string
+	MovieType      string
+	FC2Key         string
 	SourceType     string
 	SourceTypeText string
 	InfoHash       string
@@ -142,17 +145,38 @@ func (s *Service) BuildTorrentAlbumsPage(ctx context.Context, query TorrentAlbum
 	if err != nil {
 		return nil, err
 	}
+	shMagnetIDs := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if row != nil && strings.TrimSpace(row.SourceType) == albumSourceTypeSehuatang && row.SourceRowId > 0 {
+			shMagnetIDs = append(shMagnetIDs, row.SourceRowId)
+		}
+	}
+	shMagnetsByID := make(map[int64]*moviex.ShMagnet, len(shMagnetIDs))
+	if len(shMagnetIDs) > 0 {
+		shMagnets, listErr := s.deps.ShMagnetModel.ListByIDs(ctx, shMagnetIDs)
+		if listErr != nil {
+			return nil, listErr
+		}
+		for _, magnet := range shMagnets {
+			if magnet != nil {
+				shMagnetsByID[magnet.Id] = magnet
+			}
+		}
+	}
 
 	items := make([]*TorrentAlbumPageRow, 0, len(rows))
 	for _, row := range rows {
 		if row == nil {
 			continue
 		}
+		movieType, fc2Key := torrentAlbumMovieIdentity(row, shMagnetsByID[row.SourceRowId])
 		items = append(items, &TorrentAlbumPageRow{
 			ID:             row.Id,
 			AlbumID:        row.AlbumId,
 			MovieJavID:     strings.TrimSpace(row.MovieJavId),
 			MovieName:      strings.TrimSpace(row.MovieName),
+			MovieType:      movieType,
+			FC2Key:         fc2Key,
 			SourceType:     strings.TrimSpace(row.SourceType),
 			SourceTypeText: torrentAlbumSourceTypeText(row.SourceType),
 			InfoHash:       strings.TrimSpace(row.InfoHash),
@@ -165,6 +189,28 @@ func (s *Service) BuildTorrentAlbumsPage(ctx context.Context, query TorrentAlbum
 	result.Items = items
 	result.Total = total
 	return result, nil
+}
+
+func torrentAlbumMovieIdentity(row *moviex.TmAlbumItem, magnet *moviex.ShMagnet) (string, string) {
+	if row == nil {
+		return moviedomain.SehuatangThreadMovieTypeJAV, ""
+	}
+	movieName := strings.TrimSpace(row.MovieName)
+	movieJavID := strings.TrimSpace(row.MovieJavId)
+	if strings.TrimSpace(row.SourceType) != albumSourceTypeSehuatang {
+		return moviedomain.SehuatangThreadMovieTypeJAV, ""
+	}
+	if magnet != nil {
+		movieName = strings.TrimSpace(magnet.MovieName)
+		movieJavID = strings.TrimSpace(magnet.MovieJavId)
+		if normalized := moviedomain.NormalizeSehuatangThreadMovieTypes(magnet.MovieType); len(normalized) == 1 {
+			if normalized[0] == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+				return normalized[0], strings.TrimSpace(magnet.FC2Key)
+			}
+			return normalized[0], ""
+		}
+	}
+	return moviedomain.ResolveSehuatangThreadMovieType(movieName, movieJavID), ""
 }
 
 func buildTorrentAlbumOptions(rows []*moviex.TAlbum, selectedAlbumName string) []*TorrentAlbumOption {

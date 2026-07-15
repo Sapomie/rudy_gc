@@ -16,29 +16,68 @@ import (
 )
 
 const (
-	FC2MediaImageTypeContactSheet = "contact_sheet"
-	fc2DefaultCoverColumns        = 2
-	fc2DefaultCoverRows           = 5
-	fc2DefaultCoverCellWidth      = 400
+	FC2MediaImageTypeContactSheet       = "contact_sheet"
+	FC2MediaImageTypeDetailContactSheet = "detail_contact_sheet"
+	fc2DefaultCoverColumns              = 2
+	fc2DefaultCoverRows                 = 5
+	fc2DefaultCoverCellWidth            = 400
+	fc2DetailCoverColumns               = 5
+	fc2DetailCoverRows                  = 5
+	fc2DetailCoverCellWidth             = 300
+)
+
+type fc2ContactSheetSpec struct {
+	imageType     string
+	columns       int
+	rows          int
+	cellWidth     int
+	setMovieCover bool
+}
+
+var (
+	fc2DefaultCoverSpec = fc2ContactSheetSpec{
+		imageType:     FC2MediaImageTypeContactSheet,
+		columns:       fc2DefaultCoverColumns,
+		rows:          fc2DefaultCoverRows,
+		cellWidth:     fc2DefaultCoverCellWidth,
+		setMovieCover: true,
+	}
+	fc2DetailCoverSpec = fc2ContactSheetSpec{
+		imageType: FC2MediaImageTypeDetailContactSheet,
+		columns:   fc2DetailCoverColumns,
+		rows:      fc2DetailCoverRows,
+		cellWidth: fc2DetailCoverCellWidth,
+	}
 )
 
 var ErrInvalidFC2CaptureRequest = errors.New("FC2视频图片生成参数无效")
 
 func (s *Service) GenerateFC2DefaultCover(ctx context.Context, mediaRow *moviex.FC2Media) (*moviex.FC2MediaImage, error) {
+	return s.generateFC2ContactSheet(ctx, mediaRow, fc2DefaultCoverSpec)
+}
+
+func (s *Service) GenerateFC2DetailCover(ctx context.Context, mediaRow *moviex.FC2Media) (*moviex.FC2MediaImage, error) {
+	return s.generateFC2ContactSheet(ctx, mediaRow, fc2DetailCoverSpec)
+}
+
+func (s *Service) generateFC2ContactSheet(ctx context.Context, mediaRow *moviex.FC2Media, spec fc2ContactSheetSpec) (*moviex.FC2MediaImage, error) {
 	if err := validateFC2DefaultCoverMedia(mediaRow); err != nil {
 		return nil, err
+	}
+	if spec.imageType == "" || spec.columns <= 0 || spec.rows <= 0 || spec.cellWidth <= 0 {
+		return nil, fmt.Errorf("%w: FC2联系表参数无效", ErrInvalidFC2CaptureRequest)
 	}
 	sourcePath, captureDir, err := s.prepareFC2Capture(mediaRow)
 	if err != nil {
 		return nil, err
 	}
-	buildDir, err := os.MkdirTemp(captureDir, ".contact-sheet-build-*")
+	buildDir, err := os.MkdirTemp(captureDir, "."+strings.ReplaceAll(spec.imageType, "_", "-")+"-build-*")
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(buildDir)
 
-	frameCount := fc2DefaultCoverColumns * fc2DefaultCoverRows
+	frameCount := spec.columns * spec.rows
 	timestamps := buildFC2ContactSheetTimestamps(float64(mediaRow.Duration), frameCount)
 	for index, timestamp := range timestamps {
 		framePath := filepath.Join(buildDir, fmt.Sprintf("frame-%06d.png", index))
@@ -47,7 +86,7 @@ func (s *Service) GenerateFC2DefaultCover(ctx context.Context, mediaRow *moviex.
 			"-ss", formatFFmpegSeconds(timestamp),
 			"-i", sourcePath,
 			"-map", "0:v:0", "-frames:v", "1", "-an",
-			"-vf", fmt.Sprintf("scale=%d:-2", fc2DefaultCoverCellWidth),
+			"-vf", fmt.Sprintf("scale=%d:-2", spec.cellWidth),
 			framePath,
 		}
 		if err := runFFmpeg(ctx, args...); err != nil {
@@ -55,7 +94,7 @@ func (s *Service) GenerateFC2DefaultCover(ctx context.Context, mediaRow *moviex.
 		}
 	}
 
-	tempPath, finalPath, err := reserveFC2DefaultCoverOutput(captureDir)
+	tempPath, finalPath, err := reserveFC2ContactSheetOutput(captureDir, spec.imageType)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +108,7 @@ func (s *Service) GenerateFC2DefaultCover(ctx context.Context, mediaRow *moviex.
 		"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
 		"-framerate", "1", "-start_number", "0",
 		"-i", filepath.Join(buildDir, "frame-%06d.png"),
-		"-vf", fmt.Sprintf("tile=%dx%d:nb_frames=%d", fc2DefaultCoverColumns, fc2DefaultCoverRows, frameCount),
+		"-vf", fmt.Sprintf("tile=%dx%d:nb_frames=%d", spec.columns, spec.rows, frameCount),
 		"-frames:v", "1", "-an",
 		tempPath,
 	}
@@ -80,9 +119,12 @@ func (s *Service) GenerateFC2DefaultCover(ctx context.Context, mediaRow *moviex.
 		return nil, err
 	}
 	keepTemp = false
-	imageRow, err := s.persistFC2DefaultCover(ctx, mediaRow.ID, finalPath)
+	imageRow, err := s.persistFC2ContactSheet(ctx, mediaRow.ID, spec.imageType, finalPath)
 	if err != nil {
 		return nil, err
+	}
+	if !spec.setMovieCover {
+		return imageRow, nil
 	}
 	if err := s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, imageRow.ID); err != nil {
 		deleteErr := s.deps.FC2MediaImageModel.DeleteByMediaIDAndID(ctx, mediaRow.ID, imageRow.ID)
@@ -161,8 +203,8 @@ func fc2CaptureDirName(mediaRow *moviex.FC2Media) (string, error) {
 	return fc2Key, nil
 }
 
-func reserveFC2DefaultCoverOutput(captureDir string) (string, string, error) {
-	file, err := os.CreateTemp(captureDir, "."+FC2MediaImageTypeContactSheet+"-*.png")
+func reserveFC2ContactSheetOutput(captureDir, imageType string) (string, string, error) {
+	file, err := os.CreateTemp(captureDir, "."+imageType+"-*.png")
 	if err != nil {
 		return "", "", err
 	}
@@ -175,14 +217,14 @@ func reserveFC2DefaultCoverOutput(captureDir string) (string, string, error) {
 	return tempPath, finalPath, nil
 }
 
-func (s *Service) persistFC2DefaultCover(ctx context.Context, mediaID int64, filePath string) (*moviex.FC2MediaImage, error) {
+func (s *Service) persistFC2ContactSheet(ctx context.Context, mediaID int64, imageType, filePath string) (*moviex.FC2MediaImage, error) {
 	if s.deps.FC2MediaImageModel == nil {
 		_ = os.Remove(filePath)
 		return nil, fmt.Errorf("FC2媒体图片模型为空")
 	}
 	row, err := s.deps.FC2MediaImageModel.Insert(ctx, &moviex.FC2MediaImage{
 		FC2MediaID: mediaID,
-		ImageType:  FC2MediaImageTypeContactSheet,
+		ImageType:  imageType,
 		FilePath:   filepath.Clean(filePath),
 		CreatedOn:  time.Now().Unix(),
 	})

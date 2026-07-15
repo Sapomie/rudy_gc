@@ -3,6 +3,8 @@ package handler
 import (
 	"strings"
 	"testing"
+
+	"rudy_gc/internal/repository/moviex"
 )
 
 func TestNormalizeSHSehuatangThreadSortField(t *testing.T) {
@@ -22,5 +24,24 @@ func TestBuildSHSehuatangThreadOrderBy(t *testing.T) {
 		if !strings.HasPrefix(orderBy, "`"+field+"` ASC") {
 			t.Fatalf("order by %s = %q", field, orderBy)
 		}
+	}
+}
+
+func TestApplySHThreadFC2Keys(t *testing.T) {
+	rows := []*moviex.ShSehuatangThread{
+		{ThreadTID: "3619676", FC2MovieID: 96, FC2Key: ""},
+		{ThreadTID: "jav", MovieJavId: "ABP-123"},
+	}
+	movieRows := []*moviex.FC2Movie{
+		{ID: 96, FC2Key: " FC2PPV-4819241-1 "},
+	}
+
+	applySHThreadFC2Keys(rows, movieRows)
+
+	if got := rows[0].FC2Key; got != "FC2PPV-4819241-1" {
+		t.Fatalf("FC2Key = %q", got)
+	}
+	if got := rows[1].FC2Key; got != "" {
+		t.Fatalf("JAV row FC2Key = %q", got)
 	}
 }

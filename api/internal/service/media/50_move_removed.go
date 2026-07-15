@@ -23,6 +23,14 @@ type MoveWMediaResult struct {
 	Error      string `json:"error"`
 }
 
+type MoveFC2MediaResult struct {
+	FC2Key     string `json:"fc2_key"`
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+	Ok         bool   `json:"ok"`
+	Error      string `json:"error"`
+}
+
 func (s *Service) MoveWMediaToRemovedDeferRefresh(ctx context.Context, javId string) (*MoveWMediaResult, error) {
 	result, _, _, err := s.moveWMediaToRemoved(ctx, javId)
 	return result, err
@@ -94,6 +102,73 @@ func (s *Service) moveWMediaToRemoved(ctx context.Context, javId string) (*MoveW
 		TargetPath: targetPath,
 		Ok:         true,
 	}, row, updated, nil
+}
+
+func (s *Service) MoveFC2MediaToRemoved(ctx context.Context, fc2Key string) (*MoveFC2MediaResult, error) {
+	fc2Key = strings.TrimSpace(fc2Key)
+	if fc2Key == "" {
+		return nil, fmt.Errorf("fc2_key 为空")
+	}
+
+	row, err := s.deps.FC2MediaModel.FindOneByKey(ctx, fc2Key)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "fc2_media 不存在"}, nil
+		}
+		return nil, err
+	}
+	if row == nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "fc2_media 不存在"}, nil
+	}
+	if row.IsRemoved == int64(consts.FilmIsRemoved) {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "fc2_media 已删除"}, nil
+	}
+
+	rootDir := strings.TrimSpace(row.RootDir)
+	if rootDir == "" {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "root_dir 为空"}, nil
+	}
+	rootDir = filepath.Clean(rootDir)
+
+	srcPath := joinMediaPath(row.FullDir, row.FileName)
+	if strings.TrimSpace(srcPath) == "" {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "源路径为空"}, nil
+	}
+
+	removedDir := buildRemovedDir(rootDir)
+	if err := os.MkdirAll(removedDir, 0o755); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, Ok: false, Error: "创建 removed 目录失败: " + err.Error()}, nil
+	}
+
+	targetPath, err := nextAvailableTargetPath(removedDir, filepath.Base(srcPath))
+	if err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, Ok: false, Error: err.Error()}, nil
+	}
+	if err := moveFileWithFallback(ctx, srcPath, targetPath); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+
+	now := time.Now().Unix()
+	updated := *row
+	updated.IsRemoved = int64(consts.FilmIsRemoved)
+	updated.RemoveTime = now
+	updated.UpdatedOn = now
+	if err := s.deps.FC2MediaModel.Update(ctx, &updated); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+	if err := s.refreshSHMagnetDownloadStates(ctx, updated.SourceTorrentHash); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+	if err := s.syncFC2MediaSnapshots(ctx, updated.FC2MovieID); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+
+	return &MoveFC2MediaResult{
+		FC2Key:     fc2Key,
+		SourcePath: srcPath,
+		TargetPath: targetPath,
+		Ok:         true,
+	}, nil
 }
 
 func (s *Service) FinalizeMoveRemovedBatch(ctx context.Context, javIds ...string) error {

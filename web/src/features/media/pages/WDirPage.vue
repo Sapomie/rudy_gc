@@ -27,16 +27,16 @@
             <ChildrenGrid :children="children" />
           </section>
 
-          <div class="sticky-toolbar cards-toolbar wdir-movie-toolbar next02-pink-cards-toolbar" aria-label="WDir 影片控制栏">
-            <div class="cards-toolbar-sort">
+          <div v-if="hasMovieDirectory" class="sticky-toolbar cards-toolbar wdir-movie-toolbar next02-pink-cards-toolbar" aria-label="WDir 影片控制栏">
+            <div v-if="isJAVDirectory" class="cards-toolbar-sort">
               <LinkStrip :items="sortButtons" />
             </div>
             <div class="toolbar-line cards-toolbar-bottom">
               <div class="owned-line cards-toolbar-filters">
-                <LinkStrip :items="ownedButtons" />
+                <LinkStrip v-if="isJAVDirectory" :items="ownedButtons" />
                 <a class="button-secondary wdir-recursive-button" :class="{ active: recursive }" :href="recursiveHref(true)">递归</a>
                 <a class="button-secondary wdir-recursive-button" :class="{ active: !recursive }" :href="recursiveHref(false)">直属</a>
-                <button type="button" class="button-secondary cards-filter-button" :class="{ active: filterOpen }" :aria-expanded="filterOpen" @click.stop.prevent="toggleFilter">筛选</button>
+                <button v-if="isJAVDirectory" type="button" class="button-secondary cards-filter-button" :class="{ active: filterOpen }" :aria-expanded="filterOpen" @click.stop.prevent="toggleFilter">筛选</button>
               </div>
               <div class="next02-pink-cards-toolbar-status">
                 <div class="next02-pink-cards-metrics" aria-label="WDir 页面摘要">
@@ -50,7 +50,7 @@
             </div>
           </div>
 
-          <div id="movieCardFilterCollapse" class="collapse next02-pink-cards-filter next02-wdir-filter" :class="{ show: filterOpen }">
+          <div v-if="isJAVDirectory" id="movieCardFilterCollapse" class="collapse next02-pink-cards-filter next02-wdir-filter" :class="{ show: filterOpen }">
             <div class="card">
               <div class="card-body">
               <form class="row g-2 align-items-end" method="get" :action="filterAction">
@@ -70,7 +70,9 @@
           </div>
 
           <section class="next02-wdir-movies" aria-label="Movies">
-            <MovieGrid v-if="movies.length" :cards="movies" />
+            <MovieGrid v-if="isJAVDirectory && movies.length" :cards="movies" />
+            <FC2MovieGrid v-else-if="isFC2Directory" :cards="movies" empty-text="这个目录下暂时没有 FC2 媒体。" />
+            <div v-else-if="isMixedDirectory" class="movie-empty">请选择 JAV 或 FC2 子目录。</div>
             <div v-else class="movie-empty">这个目录下暂时没有媒体。</div>
           </section>
         </template>
@@ -101,6 +103,7 @@ import { apiPathForRoute, getJSON } from "@/shared/api/request";
 import ErrorPanel from "@/shared/components/ErrorPanel.vue";
 import LinkStrip from "@/shared/components/LinkStrip.vue";
 import LoadingState from "@/shared/components/LoadingState.vue";
+import FC2MovieGrid from "@/features/fc2/components/FC2MovieGrid.vue";
 import MovieGrid from "@/features/movies/components/MovieGrid.vue";
 import PageShell from "@/shared/components/PageShell.vue";
 import PaginationBar from "@/shared/components/PaginationBar.vue";
@@ -116,7 +119,7 @@ const sortLabels: Record<string, string> = {
   ByDaysInRank: "在榜天数",
   ByHighestRank: "最高排名",
   ByBirthTime: "下载时间",
-  ByLastScTime: "最后sc",
+  ByLastSelectedScTime: "最近入选 SC",
   ByScTimes: "sc次数",
   ByComeTimes: "co次数",
   ByCastAgeDesc: "年龄降序",
@@ -155,10 +158,15 @@ const detail = computed(() => asRecord(pick(payload.value, "Detail")));
 const directory = computed(() => asRecord(pick(detail.value, "directory", "Directory")));
 const directoryName = computed(() => text(directory.value, "name", "Name") || title.value);
 const pageHeadingTitle = computed(() => isDetail.value ? directoryName.value : title.value);
-const pageNote = computed(() => isDetail.value ? "目录路径、媒体统计、子目录与影片。" : "按完整目录树浏览 w_folder / w_media。");
+const pageNote = computed(() => isDetail.value ? "目录路径、JAV/FC2 媒体统计、子目录与影片。" : "按完整目录树浏览 w_folder / w_media / fc2_media。");
 const directoryId = computed(() => text(directory.value, "id", "Id"));
 const breadcrumbs = computed(() => asArray<AnyRecord>(pick(detail.value, "breadcrumbs", "Breadcrumbs")));
 const stats = computed(() => asRecord(pick(detail.value, "stats", "Stats")));
+const mediaType = computed(() => text(payload.value, "MediaType") || text(stats.value, "media_type", "MediaType") || "empty");
+const isJAVDirectory = computed(() => mediaType.value === "jav");
+const isFC2Directory = computed(() => mediaType.value === "fc2ppv");
+const isMixedDirectory = computed(() => mediaType.value === "mixed");
+const hasMovieDirectory = computed(() => isJAVDirectory.value || isFC2Directory.value);
 const recursive = computed(() => Boolean(payload.value.Recursive));
 const query = computed(() => text(payload.value, "Query"));
 const movies = computed(() => asArray<AnyRecord>(pick(payload.value, "movies", "Movies")));
@@ -251,9 +259,14 @@ const ChildrenGrid = defineComponent({
             const stat = asRecord(asArray<AnyRecord>(pick(item, "Stats"))[0]);
             const id = text(summary, "id", "Id");
             const name = text(summary, "name", "Name");
+            const mediaType = text(stat, "media_type", "MediaType") || "empty";
+            const typeLabel = directoryTypeLabel(mediaType);
             return h("a", { href: `/mediadir?id=${encodeURIComponent(id)}`, class: "next02-wdir-directory-item", key: id || name }, [
               h("span", { class: "next02-wdir-folder-mark", "aria-hidden": "true" }),
-              h("strong", { class: "next02-wdir-directory-name", title: name }, name),
+              h("strong", { class: "next02-wdir-directory-name", title: `${name} · ${typeLabel}` }, [
+                name,
+                h("small", { class: ["badge", "rounded-pill", "ms-2", directoryTypeBadgeClass(mediaType)] }, typeLabel)
+              ]),
               h("span", { class: "next02-wdir-directory-metric" }, [h("small", "媒体"), h("b", text(stat, "film_count", "FilmCount") || "0")]),
               h("span", { class: "next02-wdir-directory-metric" }, [h("small", "容量"), h("b", humanSize(pick(stat, "total_size", "TotalSize")))]),
               h("time", { class: "next02-wdir-directory-updated" }, ["更新 ", h(ScDateTime, { value: pick(summary, "updated_on", "UpdatedOn"), unix: true })])
@@ -264,5 +277,19 @@ const ChildrenGrid = defineComponent({
     };
   }
 });
+
+function directoryTypeLabel(mediaType: string): string {
+  if (mediaType === "jav") return "JAV";
+  if (mediaType === "fc2ppv") return "FC2";
+  if (mediaType === "mixed") return "混合";
+  return "空";
+}
+
+function directoryTypeBadgeClass(mediaType: string): string {
+  if (mediaType === "jav") return "text-bg-secondary";
+  if (mediaType === "fc2ppv") return "text-bg-warning";
+  if (mediaType === "mixed") return "text-bg-info";
+  return "text-bg-light";
+}
 
 </script>

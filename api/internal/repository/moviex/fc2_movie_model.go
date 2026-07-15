@@ -49,6 +49,8 @@ type defaultFC2MovieModel struct {
 
 const fc2MovieRows = "`id`,`fc2_key`,`code`,`code_seq`,`ppv_no`,`title`,`performer_text`,`mask_type`,`metadata_thread_id`,'' AS `metadata_thread_tid`,`post_time`,`media_present`,`media_birth_time`,`cover_image_id`,`data_status`,`created_on`,`updated_on`"
 
+const fc2MovieAliasedRows = "`fm`.`id`,`fm`.`fc2_key`,`fm`.`code`,`fm`.`code_seq`,`fm`.`ppv_no`,`fm`.`title`,`fm`.`performer_text`,`fm`.`mask_type`,`fm`.`metadata_thread_id`,'' AS `metadata_thread_tid`,`fm`.`post_time`,`fm`.`media_present`,`fm`.`media_birth_time`,`fm`.`cover_image_id`,`fm`.`data_status`,`fm`.`created_on`,`fm`.`updated_on`"
+
 func NewFC2MovieModel(conn sqlx.SqlConn) FC2MovieModel {
 	return &defaultFC2MovieModel{conn: conn}
 }
@@ -132,13 +134,7 @@ func (m *defaultFC2MovieModel) ListByCode(ctx context.Context, code string) ([]*
 }
 
 func (m *defaultFC2MovieModel) ListPage(ctx context.Context, offset, limit int64, keyword, status, sortField, sortOrder string) ([]*FC2Movie, error) {
-	builder := applyFC2MovieFilter(squirrel.Select(fc2MovieRows).From("`fc2_movie`"), keyword, status).OrderBy(fc2MovieOrderBy(sortField, sortOrder)...)
-	if offset > 0 {
-		builder = builder.Offset(uint64(offset))
-	}
-	if limit > 0 {
-		builder = builder.Limit(uint64(limit))
-	}
+	builder := buildFC2MovieListQuery(offset, limit, keyword, status, sortField, sortOrder)
 	query, args, err := builder.ToSql()
 	if err != nil {
 		return nil, err
@@ -151,6 +147,29 @@ func (m *defaultFC2MovieModel) ListPage(ctx context.Context, offset, limit int64
 		return nil, err
 	}
 	return rows, nil
+}
+
+func buildFC2MovieListQuery(offset, limit int64, keyword, status, sortField, sortOrder string) squirrel.SelectBuilder {
+	var builder squirrel.SelectBuilder
+	if isFC2ScStatSort(sortField) {
+		builder = applyAliasedFC2MovieFilter(
+			squirrel.Select(fc2MovieAliasedRows).
+				From("`fc2_movie` AS `fm`").
+				LeftJoin("`fc2_sc_stat` AS `fss` ON `fss`.`fc2_movie_id` = `fm`.`id`"),
+			keyword,
+			status,
+		)
+	} else {
+		builder = applyFC2MovieFilter(squirrel.Select(fc2MovieRows).From("`fc2_movie`"), keyword, status)
+	}
+	builder = builder.OrderBy(fc2MovieOrderBy(sortField, sortOrder)...)
+	if offset > 0 {
+		builder = builder.Offset(uint64(offset))
+	}
+	if limit > 0 {
+		builder = builder.Limit(uint64(limit))
+	}
+	return builder
 }
 
 func fc2MovieOrderBy(sortField, sortOrder string) []string {
@@ -170,10 +189,34 @@ func fc2MovieOrderBy(sortField, sortOrder string) []string {
 		primary = "`media_present` " + direction
 	case "birth_time":
 		primary = "`media_birth_time` " + direction
+	case "sc_times":
+		return fc2ScStatOrderBy("`fss`.`sc_times`", direction)
+	case "come_times":
+		return fc2ScStatOrderBy("`fss`.`come_times`", direction)
+	case "last_selected_sc_time":
+		return fc2ScStatOrderBy("`fss`.`last_selected_sc_time`", direction)
 	default:
 		return []string{"`ppv_no` " + direction, "`code_seq` " + direction, "`id` " + direction}
 	}
 	return []string{primary, "`ppv_no` DESC", "`code_seq` ASC", "`id` DESC"}
+}
+
+func isFC2ScStatSort(sortField string) bool {
+	switch strings.ToLower(strings.TrimSpace(sortField)) {
+	case "sc_times", "come_times", "last_selected_sc_time":
+		return true
+	default:
+		return false
+	}
+}
+
+func fc2ScStatOrderBy(column, direction string) []string {
+	return []string{
+		"COALESCE(" + column + ", 0) " + direction,
+		"`fm`.`ppv_no` DESC",
+		"`fm`.`code_seq` ASC",
+		"`fm`.`id` DESC",
+	}
 }
 
 func (m *defaultFC2MovieModel) UpdateMediaSnapshot(ctx context.Context, id int64, present int64, birthTime, updatedOn int64) error {
@@ -272,6 +315,22 @@ func applyFC2MovieFilter(builder squirrel.SelectBuilder, keyword, status string)
 	}
 	if status = strings.TrimSpace(status); status != "" {
 		builder = builder.Where("`data_status` = ?", status)
+	}
+	return builder
+}
+
+func applyAliasedFC2MovieFilter(builder squirrel.SelectBuilder, keyword, status string) squirrel.SelectBuilder {
+	if keyword = strings.TrimSpace(keyword); keyword != "" {
+		like := "%" + keyword + "%"
+		builder = builder.Where(squirrel.Or{
+			squirrel.Like{"fm.fc2_key": like},
+			squirrel.Like{"fm.code": like},
+			squirrel.Like{"fm.title": like},
+			squirrel.Like{"fm.performer_text": like},
+		})
+	}
+	if status = strings.TrimSpace(status); status != "" {
+		builder = builder.Where("`fm`.`data_status` = ?", status)
 	}
 	return builder
 }

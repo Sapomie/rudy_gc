@@ -177,7 +177,7 @@ func (s *Service) buildMovieTypeFromModels(ctx context.Context, javId string) (*
 	if scStatRow != nil {
 		out.ScTimes = scStatRow.ScTimes
 		out.ComeTimes = scStatRow.ComeTimes
-		out.LastScTime = scStatRow.LastScTime
+		out.LastSelectedScTime = scStatRow.LastSelectedScTime
 	}
 
 	mediaRow, err := s.deps.WMediaModel.FindOneByMovieJavId(ctx, mv.JavId)
@@ -227,10 +227,10 @@ func (s *Service) getCastInfos(ctx context.Context, movieJavId string, releasing
 			return nil, err
 		}
 		ci := &types.CastInfo{
-			PersonId:        castRow.PersonId,
-			LastScTime:      castRow.LastScTime,
-			LastScEventTime: castRow.LastScEventTime,
-			Name:            castRow.Name,
+			PersonId:               castRow.PersonId,
+			LastSelectedScTime:     castRow.LastSelectedScTime,
+			LastParticipatedScTime: castRow.LastParticipatedScTime,
+			Name:                   castRow.Name,
 		}
 
 		displayName := castRow.Name

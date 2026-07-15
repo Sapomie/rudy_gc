@@ -21,15 +21,15 @@ var (
 	cMovieAlbumItemRowsExpectAutoSet   = strings.Join(stringx.Remove(cMovieAlbumItemFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	cMovieAlbumItemRowsWithPlaceHolder = strings.Join(stringx.Remove(cMovieAlbumItemFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
-	cacheRudyGcCMovieAlbumItemIdPrefix                = "cache:rudyGc:cMovieAlbumItem:id:"
-	cacheRudyGcCMovieAlbumItemAlbumIdMovieJavIdPrefix = "cache:rudyGc:cMovieAlbumItem:albumId:movieJavId:"
+	cacheRudyGcCMovieAlbumItemIdPrefix       = "cache:rudyGc:cMovieAlbumItem:id:"
+	cacheRudyGcCMovieAlbumItemIdentityPrefix = "cache:rudyGc:cMovieAlbumItem:identity:"
 )
 
 type (
 	cMovieAlbumItemModel interface {
 		Insert(ctx context.Context, data *CMovieAlbumItem) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*CMovieAlbumItem, error)
-		FindOneByAlbumIdMovieJavId(ctx context.Context, albumId int64, movieJavId string) (*CMovieAlbumItem, error)
+		FindOneByIdentity(ctx context.Context, albumId int64, movieType string, movieJavId string, fc2Key string) (*CMovieAlbumItem, error)
 		Update(ctx context.Context, data *CMovieAlbumItem) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -42,7 +42,9 @@ type (
 	CMovieAlbumItem struct {
 		Id            int64  `db:"id"`
 		AlbumId       int64  `db:"album_id"`
+		MovieType     string `db:"movie_type"`
 		MovieJavId    string `db:"movie_jav_id"`
+		FC2Key        string `db:"fc2_key"`
 		MovieName     string `db:"movie_name"`
 		ReleasingDate int64  `db:"releasing_date"`
 		SortNo        int64  `db:"sort_no"`
@@ -65,7 +67,7 @@ func (m *defaultCMovieAlbumItemModel) Delete(ctx context.Context, id int64) erro
 	}
 
 	idKey := fmt.Sprintf("%s%v", cacheRudyGcCMovieAlbumItemIdPrefix, id)
-	ukKey := fmt.Sprintf("%s%v:%v", cacheRudyGcCMovieAlbumItemAlbumIdMovieJavIdPrefix, data.AlbumId, data.MovieJavId)
+	ukKey := formatCMovieAlbumItemIdentity(data.AlbumId, data.MovieType, data.MovieJavId, data.FC2Key)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
 		return conn.ExecCtx(ctx, query, id)
@@ -90,12 +92,12 @@ func (m *defaultCMovieAlbumItemModel) FindOne(ctx context.Context, id int64) (*C
 	}
 }
 
-func (m *defaultCMovieAlbumItemModel) FindOneByAlbumIdMovieJavId(ctx context.Context, albumId int64, movieJavId string) (*CMovieAlbumItem, error) {
-	ukKey := fmt.Sprintf("%s%v:%v", cacheRudyGcCMovieAlbumItemAlbumIdMovieJavIdPrefix, albumId, movieJavId)
+func (m *defaultCMovieAlbumItemModel) FindOneByIdentity(ctx context.Context, albumId int64, movieType string, movieJavId string, fc2Key string) (*CMovieAlbumItem, error) {
+	ukKey := formatCMovieAlbumItemIdentity(albumId, movieType, movieJavId, fc2Key)
 	var resp CMovieAlbumItem
 	err := m.QueryRowIndexCtx(ctx, &resp, ukKey, m.formatPrimary, func(ctx context.Context, conn sqlx.SqlConn, v any) (any, error) {
-		query := fmt.Sprintf("select %s from %s where `album_id` = ? and `movie_jav_id` = ? limit 1", cMovieAlbumItemRows, m.table)
-		if err := conn.QueryRowCtx(ctx, &resp, query, albumId, movieJavId); err != nil {
+		query := fmt.Sprintf("select %s from %s where `album_id` = ? and `movie_type` = ? and `movie_jav_id` = ? and `fc2_key` = ? limit 1", cMovieAlbumItemRows, m.table)
+		if err := conn.QueryRowCtx(ctx, &resp, query, albumId, movieType, movieJavId, fc2Key); err != nil {
 			return nil, err
 		}
 		return resp.Id, nil
@@ -112,10 +114,10 @@ func (m *defaultCMovieAlbumItemModel) FindOneByAlbumIdMovieJavId(ctx context.Con
 
 func (m *defaultCMovieAlbumItemModel) Insert(ctx context.Context, data *CMovieAlbumItem) (sql.Result, error) {
 	idKey := fmt.Sprintf("%s%v", cacheRudyGcCMovieAlbumItemIdPrefix, data.Id)
-	ukKey := fmt.Sprintf("%s%v:%v", cacheRudyGcCMovieAlbumItemAlbumIdMovieJavIdPrefix, data.AlbumId, data.MovieJavId)
+	ukKey := formatCMovieAlbumItemIdentity(data.AlbumId, data.MovieType, data.MovieJavId, data.FC2Key)
 	return m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, cMovieAlbumItemRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.AlbumId, data.MovieJavId, data.MovieName, data.ReleasingDate, data.SortNo, data.CreatedOn, data.UpdatedOn)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, cMovieAlbumItemRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.AlbumId, data.MovieType, data.MovieJavId, data.FC2Key, data.MovieName, data.ReleasingDate, data.SortNo, data.CreatedOn, data.UpdatedOn)
 	}, ukKey, idKey)
 }
 
@@ -126,12 +128,17 @@ func (m *defaultCMovieAlbumItemModel) Update(ctx context.Context, newData *CMovi
 	}
 
 	idKey := fmt.Sprintf("%s%v", cacheRudyGcCMovieAlbumItemIdPrefix, data.Id)
-	ukKey := fmt.Sprintf("%s%v:%v", cacheRudyGcCMovieAlbumItemAlbumIdMovieJavIdPrefix, data.AlbumId, data.MovieJavId)
+	oldUKKey := formatCMovieAlbumItemIdentity(data.AlbumId, data.MovieType, data.MovieJavId, data.FC2Key)
+	newUKKey := formatCMovieAlbumItemIdentity(newData.AlbumId, newData.MovieType, newData.MovieJavId, newData.FC2Key)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, cMovieAlbumItemRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.AlbumId, newData.MovieJavId, newData.MovieName, newData.ReleasingDate, newData.SortNo, newData.CreatedOn, newData.UpdatedOn, newData.Id)
-	}, ukKey, idKey)
+		return conn.ExecCtx(ctx, query, newData.AlbumId, newData.MovieType, newData.MovieJavId, newData.FC2Key, newData.MovieName, newData.ReleasingDate, newData.SortNo, newData.CreatedOn, newData.UpdatedOn, newData.Id)
+	}, oldUKKey, newUKKey, idKey)
 	return err
+}
+
+func formatCMovieAlbumItemIdentity(albumID int64, movieType string, movieJavID string, fc2Key string) string {
+	return fmt.Sprintf("%s%v:%s:%s:%s", cacheRudyGcCMovieAlbumItemIdentityPrefix, albumID, movieType, movieJavID, fc2Key)
 }
 
 func (m *defaultCMovieAlbumItemModel) formatPrimary(primary any) string {

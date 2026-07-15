@@ -47,9 +47,9 @@
                 <colgroup>
                   <col class="fc2-col-code"><col class="fc2-col-post-time"><col class="fc2-col-title">
                   <col class="fc2-col-performer"><col class="fc2-col-play"><col class="fc2-col-download-time">
-                  <col class="fc2-col-sc-times"><col class="fc2-col-come-times"><col class="fc2-col-last-sc-time">
+                  <col class="fc2-col-sc-times"><col class="fc2-col-come-times"><col class="fc2-col-last-selected-sc-time">
                 </colgroup>
-                <thead><tr><th><a class="fc2-sort-link" :href="sortHref('fc2_key')">影片标识{{ sortMark("fc2_key") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('post_time')">发布时间{{ sortMark("post_time") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('title')">影片名称{{ sortMark("title") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('performer_text')">出演信息{{ sortMark("performer_text") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('play')">播放{{ sortMark("play") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('birth_time')">下载时间{{ sortMark("birth_time") }}</a></th><th>SC 次数</th><th>Come 次数</th><th>最近 SC</th></tr></thead>
+                <thead><tr><th><a class="fc2-sort-link" :href="sortHref('fc2_key')">影片标识{{ sortMark("fc2_key") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('post_time')">发布时间{{ sortMark("post_time") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('title')">影片名称{{ sortMark("title") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('performer_text')">出演信息{{ sortMark("performer_text") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('play')">播放{{ sortMark("play") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('birth_time')">下载时间{{ sortMark("birth_time") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('sc_times')">SC 次数{{ sortMark("sc_times") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('come_times')">Come 次数{{ sortMark("come_times") }}</a></th><th><a class="fc2-sort-link" :href="sortHref('last_selected_sc_time')">最近入选 SC{{ sortMark("last_selected_sc_time") }}</a></th></tr></thead>
                 <tbody>
                   <tr v-for="row in rows" :key="rowText(row, 'FC2Key')">
                     <td><a class="fc2-code-link" :href="detailHref(row)" target="_blank" rel="noopener noreferrer">{{ rowText(row, "FC2Key") }}</a></td>
@@ -60,7 +60,7 @@
                     <td><ScDateTime v-if="rowValue(row, 'DownloadTime')" :value="rowValue(row, 'DownloadTime')" unix /><span v-else>-</span></td>
                     <td><strong>{{ rowText(row, "ScTimes") || "0" }}</strong></td>
                     <td><strong>{{ rowText(row, "ComeTimes") || "0" }}</strong></td>
-                    <td><ScDateTime v-if="rowValue(row, 'LastScTime')" :value="rowValue(row, 'LastScTime')" unix /><span v-else>-</span></td>
+                    <td><ScDateTime v-if="rowValue(row, 'LastSelectedScTime')" :value="rowValue(row, 'LastSelectedScTime')" unix /><span v-else>-</span></td>
                   </tr>
                   <tr v-if="!rows.length"><td colspan="9"><div class="sc-empty-state fc2-empty-state">当前筛选下没有 FC2 影片数据。</div></td></tr>
                 </tbody>

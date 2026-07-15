@@ -104,52 +104,44 @@
                 </div>
                 <div class="next02-sc-review-field is-movie-details">
                   <label class="form-label">影片明细</label>
-                  <div class="sc-preview-movie-grid" id="scPreviewMovieTableBody">
-                    <div v-if="!previewMovies.length" class="text-muted">暂无预览数据</div>
-                    <div v-for="(movie, index) in previewMovies" :key="movieRef(movie) || index">
-                      <div class="sc-preview-movie-card">
-                        <a v-if="movie.movieHref" :href="movie.movieHref">
-                          <img v-if="movie.jacketImg" class="sc-preview-movie-poster" :src="movie.jacketImg" :alt="`${movie.movieName} 海报`" loading="lazy" decoding="async">
-                          <div v-else class="sc-preview-movie-poster-empty"></div>
-                        </a>
-                        <div v-else>
-                          <img v-if="movie.jacketImg" class="sc-preview-movie-poster" :src="movie.jacketImg" :alt="`${movie.movieName} 海报`" loading="lazy" decoding="async">
-                          <div v-else class="sc-preview-movie-poster-empty"></div>
-                        </div>
-                        <a v-if="movie.movieHref" :href="movie.movieHref" class="sc-preview-movie-link fw-semibold">{{ movie.movieName }}</a>
-                        <div v-else class="sc-preview-movie-link fw-semibold">{{ movie.movieName }}</div>
-                        <span class="badge rounded-pill mt-1" :class="movie.movieType === MOVIE_TYPE_FC2 ? 'text-bg-warning' : 'text-bg-secondary'">{{ movie.movieType === MOVIE_TYPE_FC2 ? 'FC2' : 'JAV' }}</span>
-                        <div v-if="movie.title" class="small text-muted mt-1">{{ movie.title }}</div>
-                        <div class="sc-preview-is-sc-buttons">
-                          <div>
-                            <input
-                              :id="`sc-preview-is-sc-${index}-1`"
-                              v-model.number="movie.isSc"
-                              type="radio"
-                              class="btn-check sc-preview-is-sc-input-1"
-                              :name="`sc-preview-is-sc-${index}`"
-                              :value="GLIST_IS_NOT_SC"
-                              autocomplete="off"
-                              :data-preview-movie-idx="index"
-                              :data-preview-is-sc="GLIST_IS_NOT_SC"
-                            >
-                            <label class="btn btn-outline-secondary sc-preview-is-sc-btn sc-preview-is-sc-btn-1" :for="`sc-preview-is-sc-${index}-1`">不计入</label>
-                          </div>
-                          <div>
-                            <input
-                              :id="`sc-preview-is-sc-${index}-2`"
-                              v-model.number="movie.isSc"
-                              type="radio"
-                              class="btn-check sc-preview-is-sc-input-2"
-                              :name="`sc-preview-is-sc-${index}`"
-                              :value="GLIST_IS_SC"
-                              autocomplete="off"
-                              :data-preview-movie-idx="index"
-                              :data-preview-is-sc="GLIST_IS_SC"
-                            >
-                            <label class="btn btn-outline-secondary sc-preview-is-sc-btn sc-preview-is-sc-btn-2" :for="`sc-preview-is-sc-${index}-2`">计入SC</label>
-                          </div>
-                        </div>
+                  <div class="sc-preview-card-surface cards-page-shell next02-pink-cards-page">
+                    <div class="sc-preview-movie-grid movie-grid-v2 next02-pink-movie-grid" id="scPreviewMovieTableBody">
+                      <div v-if="!previewMovies.length" class="movie-empty">暂无预览数据</div>
+                      <div v-for="(movie, index) in previewMovies" :key="movieRef(movie) || index" class="col movie-grid-col-v2">
+                        <component :is="previewCardComponent(movie)" :movie="movie.card">
+                          <template #actions>
+                            <li class="list-group-item sc-preview-is-sc-buttons">
+                              <div>
+                                <input
+                                  :id="`sc-preview-is-sc-${index}-1`"
+                                  v-model.number="movie.isSc"
+                                  type="radio"
+                                  class="btn-check sc-preview-is-sc-input-1"
+                                  :name="`sc-preview-is-sc-${index}`"
+                                  :value="GLIST_IS_NOT_SC"
+                                  autocomplete="off"
+                                  :data-preview-movie-idx="index"
+                                  :data-preview-is-sc="GLIST_IS_NOT_SC"
+                                >
+                                <label class="btn btn-outline-secondary sc-preview-is-sc-btn sc-preview-is-sc-btn-1" :for="`sc-preview-is-sc-${index}-1`">不计入</label>
+                              </div>
+                              <div>
+                                <input
+                                  :id="`sc-preview-is-sc-${index}-2`"
+                                  v-model.number="movie.isSc"
+                                  type="radio"
+                                  class="btn-check sc-preview-is-sc-input-2"
+                                  :name="`sc-preview-is-sc-${index}`"
+                                  :value="GLIST_IS_SC"
+                                  autocomplete="off"
+                                  :data-preview-movie-idx="index"
+                                  :data-preview-is-sc="GLIST_IS_SC"
+                                >
+                                <label class="btn btn-outline-secondary sc-preview-is-sc-btn sc-preview-is-sc-btn-2" :for="`sc-preview-is-sc-${index}-2`">计入SC</label>
+                              </div>
+                            </li>
+                          </template>
+                        </component>
                       </div>
                     </div>
                   </div>
@@ -171,6 +163,8 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/shared/api/request";
+import FC2MovieCard from "@/features/fc2/components/FC2MovieCard.vue";
+import MovieCard from "@/features/movies/components/MovieCard.vue";
 import PageShell from "@/shared/components/PageShell.vue";
 import type { AnyRecord } from "@/shared/types/gc";
 import { asArray, asRecord, pick, text } from "@/shared/utils/format";
@@ -186,6 +180,7 @@ type PreviewMovie = {
   movieHref: string;
   jacketImg: string;
   casts: string[];
+  card: AnyRecord;
   isSc: number;
 };
 
@@ -273,18 +268,33 @@ function resetForm() {
 }
 
 function normalizeMovies(raw: unknown): PreviewMovie[] {
-  return asArray<AnyRecord>(raw).map((movie) => ({
-    movieType: text(movie, "movieType") || (text(movie, "movieJavId") ? MOVIE_TYPE_JAV : MOVIE_TYPE_FC2),
-    movieName: text(movie, "movieName"),
-    movieJavId: text(movie, "movieJavId"),
-    fc2MovieId: Number(pick(movie, "fc2MovieId") || 0),
-    movieKey: text(movie, "movieKey"),
-    title: text(movie, "title"),
-    movieHref: text(movie, "movieHref"),
-    jacketImg: text(movie, "jacketImg"),
-    casts: asArray<string>(pick(movie, "casts")),
-    isSc: GLIST_IS_SC
-  }));
+  return asArray<AnyRecord>(raw).map((movie) => {
+    const movieType = text(movie, "movieType") || (text(movie, "movieJavId") ? MOVIE_TYPE_JAV : MOVIE_TYPE_FC2);
+    const movieName = text(movie, "movieName");
+    const movieKey = text(movie, "movieKey");
+    const title = text(movie, "title");
+    const jacketImg = text(movie, "jacketImg");
+    const card = asRecord(pick(movie, "card"));
+    return {
+      movieType,
+      movieName,
+      movieJavId: text(movie, "movieJavId"),
+      fc2MovieId: Number(pick(movie, "fc2MovieId") || 0),
+      movieKey,
+      title,
+      movieHref: text(movie, "movieHref"),
+      jacketImg,
+      casts: asArray<string>(pick(movie, "casts")),
+      card: Object.keys(card).length ? card : (movieType === MOVIE_TYPE_FC2
+        ? { FC2Key: movieKey || movieName, Title: title, CoverImageURL: jacketImg }
+        : { name: movieName, title, jacket_img: jacketImg }),
+      isSc: GLIST_IS_SC
+    };
+  });
+}
+
+function previewCardComponent(movie: PreviewMovie) {
+  return movie.movieType === MOVIE_TYPE_FC2 ? FC2MovieCard : MovieCard;
 }
 
 function movieRef(movie: PreviewMovie): string {

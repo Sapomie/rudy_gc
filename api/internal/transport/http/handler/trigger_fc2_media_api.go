@@ -80,7 +80,7 @@ func (h *FC2MediaTriggerAPI) Commit(c *gin.Context) {
 }
 
 func (h *FC2MediaTriggerAPI) BackfillDefaultCovers(c *gin.Context) {
-	c.JSON(http.StatusAccepted, gin.H{"ok": true, "message": "FC2默认联系表封面补齐任务已启动"})
+	c.JSON(http.StatusAccepted, gin.H{"ok": true, "message": "FC2卡片与详情联系表封面补齐任务已启动"})
 	h.mediaSvc.EnqueueFC2DefaultCoverBackfill()
 }
 

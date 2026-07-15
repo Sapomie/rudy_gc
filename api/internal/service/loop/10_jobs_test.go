@@ -3,7 +3,29 @@ package loop
 import (
 	"reflect"
 	"testing"
+
+	"rudy_gc/internal/service/fetchsehuatang"
 )
+
+func TestNormalizeSHFetchAllExistingPolicy(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "default", raw: "", want: fetchsehuatang.SHExistingPolicySkip},
+		{name: "blank", raw: "  ", want: fetchsehuatang.SHExistingPolicySkip},
+		{name: "skip", raw: " SKIP ", want: fetchsehuatang.SHExistingPolicySkip},
+		{name: "upsert", raw: " UPSERT ", want: fetchsehuatang.SHExistingPolicyUpsert},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := normalizeSHFetchAllExistingPolicy(test.raw); got != test.want {
+				t.Fatalf("normalizeSHFetchAllExistingPolicy(%q) = %q, want %q", test.raw, got, test.want)
+			}
+		})
+	}
+}
 
 func TestNormalizeSHDetailTaskTargetForumIDs(t *testing.T) {
 	tests := []struct {

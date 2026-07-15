@@ -268,6 +268,65 @@ func TestGenerateFC2DefaultCoverUsesFixedLayoutAndSetsCover(t *testing.T) {
 	}
 }
 
+func TestGenerateFC2DetailCoverUsesFiveByFiveLayoutWithoutChangingCardCover(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg 未安装")
+	}
+	mediaRoot := t.TempDir()
+	localImageDir := t.TempDir()
+	sourceDir := filepath.Join(mediaRoot, "media")
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
+		t.Fatalf("创建媒体目录失败: %v", err)
+	}
+	const fileName = "test.mp4"
+	sourcePath := filepath.Join(sourceDir, fileName)
+	command := exec.Command("ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-f", "lavfi", "-i", "color=c=black:s=320x180:d=2", "-c:v", "mpeg4", sourcePath)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("创建测试视频失败: %v: %s", err, output)
+	}
+
+	imageModel := &fc2MediaImageModelStub{}
+	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: 28, CoverImageID: 99}}
+	service := &Service{deps: &dep.Dep{
+		Config: config.Config{FC2Media: config.FC2MediaConfig{
+			RootDirs:      []string{mediaRoot},
+			LocalImageDir: localImageDir,
+		}},
+		FC2MediaImageModel: imageModel,
+		FC2MovieModel:      movieModel,
+	}}
+	imageRow, err := service.GenerateFC2DetailCover(context.Background(), &moviex.FC2Media{
+		ID:         7,
+		FC2MovieID: 28,
+		FC2Key:     testFC2CaptureKey,
+		RootDir:    mediaRoot,
+		FullDir:    sourceDir,
+		FileName:   fileName,
+		Duration:   2,
+	})
+	if err != nil {
+		t.Fatalf("生成详情联系表封面失败: %v", err)
+	}
+	if imageModel.inserted == nil || imageModel.inserted.ImageType != FC2MediaImageTypeDetailContactSheet {
+		t.Fatalf("详情图片记录类型错误: %#v", imageModel.inserted)
+	}
+	file, err := os.Open(imageRow.FilePath)
+	if err != nil {
+		t.Fatalf("打开详情封面失败: %v", err)
+	}
+	defer file.Close()
+	config, _, err := image.DecodeConfig(file)
+	if err != nil {
+		t.Fatalf("读取详情封面尺寸失败: %v", err)
+	}
+	if config.Width != fc2DetailCoverColumns*fc2DetailCoverCellWidth {
+		t.Fatalf("详情封面宽度 = %d，期望 %d", config.Width, fc2DetailCoverColumns*fc2DetailCoverCellWidth)
+	}
+	if len(movieModel.coverUpdates) != 0 || movieModel.movie.CoverImageID != 99 {
+		t.Fatalf("详情联系表修改了卡片封面: updates=%#v movie=%#v", movieModel.coverUpdates, movieModel.movie)
+	}
+}
+
 func TestSetFC2CoverImageAcceptsContactSheet(t *testing.T) {
 	filePath := filepath.Join(t.TempDir(), "contact-sheet.png")
 	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
@@ -294,16 +353,21 @@ func TestSetFC2CoverImageAcceptsContactSheet(t *testing.T) {
 	}
 }
 
-func TestEnsureFC2DefaultCoverReusesExistingContactSheet(t *testing.T) {
+func TestEnsureFC2DefaultCoversReusesExistingCardAndDetailSheets(t *testing.T) {
 	filePath := filepath.Join(t.TempDir(), "contact-sheet.png")
 	if err := os.WriteFile(filePath, []byte("image"), 0o644); err != nil {
 		t.Fatalf("创建测试联系表失败: %v", err)
 	}
+	detailFilePath := filepath.Join(t.TempDir(), "detail-contact-sheet.png")
+	if err := os.WriteFile(detailFilePath, []byte("image"), 0o644); err != nil {
+		t.Fatalf("创建测试详情联系表失败: %v", err)
+	}
 	mediaRow := &moviex.FC2Media{ID: 7, FC2MovieID: 28}
 	mediaModel := &fakeFC2MediaModel{byID: mediaRow}
-	imageModel := &fc2MediaImageModelStub{rows: []*moviex.FC2MediaImage{{
-		ID: 9, FC2MediaID: mediaRow.ID, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath,
-	}}}
+	imageModel := &fc2MediaImageModelStub{rows: []*moviex.FC2MediaImage{
+		{ID: 9, FC2MediaID: mediaRow.ID, ImageType: FC2MediaImageTypeContactSheet, FilePath: filePath},
+		{ID: 10, FC2MediaID: mediaRow.ID, ImageType: FC2MediaImageTypeDetailContactSheet, FilePath: detailFilePath},
+	}}
 	movieModel := &fc2MovieModelStub{movie: &moviex.FC2Movie{ID: mediaRow.FC2MovieID}}
 	service := &Service{deps: &dep.Dep{
 		FC2MediaModel:      mediaModel,
@@ -311,8 +375,8 @@ func TestEnsureFC2DefaultCoverReusesExistingContactSheet(t *testing.T) {
 		FC2MovieModel:      movieModel,
 	}}
 
-	if err := service.ensureFC2DefaultCover(context.Background(), mediaRow.ID); err != nil {
-		t.Fatalf("复用已有联系表失败: %v", err)
+	if err := service.ensureFC2DefaultCovers(context.Background(), mediaRow.ID); err != nil {
+		t.Fatalf("复用已有卡片与详情联系表失败: %v", err)
 	}
 	if len(movieModel.coverUpdates) != 1 || movieModel.coverUpdates[0] != 9 {
 		t.Fatalf("已有联系表封面更新记录 = %#v，期望 [9]", movieModel.coverUpdates)

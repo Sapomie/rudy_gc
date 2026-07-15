@@ -27,7 +27,7 @@ func (s *Service) EnqueueFC2DefaultCoverBackfill() {
 		}
 		rows, err := s.deps.FC2MediaModel.ListAll(context.Background())
 		if err != nil {
-			s.deps.Log.Errorf("FC2默认联系表封面补齐查询失败: %v", err)
+			s.deps.Log.Errorf("FC2卡片与详情联系表封面补齐查询失败: %v", err)
 			return
 		}
 		mediaIDs := make([]int64, 0, len(rows))
@@ -47,15 +47,15 @@ func (s *Service) runFC2DefaultCoverIDs(ctx context.Context, mediaIDs []int64) {
 		}
 		err := func() error {
 			defer fc2DefaultCoverRunning.Delete(mediaID)
-			return s.ensureFC2DefaultCover(ctx, mediaID)
+			return s.ensureFC2DefaultCovers(ctx, mediaID)
 		}()
 		if err != nil {
-			s.deps.Log.Errorf("FC2默认联系表封面生成失败: media_id=%d err=%v", mediaID, err)
+			s.deps.Log.Errorf("FC2卡片与详情联系表封面生成失败: media_id=%d err=%v", mediaID, err)
 		}
 	}
 }
 
-func (s *Service) ensureFC2DefaultCover(ctx context.Context, mediaID int64) error {
+func (s *Service) ensureFC2DefaultCovers(ctx context.Context, mediaID int64) error {
 	if s == nil || s.deps == nil || s.deps.FC2MediaModel == nil || s.deps.FC2MovieModel == nil || s.deps.FC2MediaImageModel == nil {
 		return fmt.Errorf("FC2默认联系表封面服务依赖为空")
 	}
@@ -72,12 +72,18 @@ func (s *Service) ensureFC2DefaultCover(ctx context.Context, mediaID int64) erro
 		return err
 	}
 	if coverImage := ResolveFC2CoverImage(mediaRow.ID, movieRow.CoverImageID, imageRows); coverImage != nil {
-		if movieRow.CoverImageID == coverImage.ID {
-			return nil
+		if movieRow.CoverImageID != coverImage.ID {
+			if err := s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, coverImage.ID); err != nil {
+				return err
+			}
 		}
-		return s.saveFC2CoverImage(ctx, mediaRow.FC2MovieID, coverImage.ID)
+	} else if _, err := s.GenerateFC2DefaultCover(ctx, mediaRow); err != nil {
+		return err
 	}
-	_, err = s.GenerateFC2DefaultCover(ctx, mediaRow)
+	if detailCoverImage := ResolveFC2DetailCoverImage(mediaRow.ID, imageRows); detailCoverImage != nil {
+		return nil
+	}
+	_, err = s.GenerateFC2DetailCover(ctx, mediaRow)
 	return err
 }
 

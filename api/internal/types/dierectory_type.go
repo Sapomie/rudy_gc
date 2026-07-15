@@ -16,6 +16,7 @@ type DirSummaryWithStats struct {
 
 type DirStats struct {
 	Recursive     bool         `json:"recursive"`
+	MediaType     string       `json:"media_type"`
 	FilmCount     int64        `json:"film_count"`
 	TotalSize     int64        `json:"total_size"`
 	LastFilmBirth int64        `json:"last_film_birth"`

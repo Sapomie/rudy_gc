@@ -12,6 +12,7 @@ import (
 
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/dep"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/repository/moviex"
 	"rudy_gc/internal/service/media"
 	"rudy_gc/internal/service/movie"
@@ -33,31 +34,31 @@ func NewListPagesAPI(deps *dep.Dep) *ListPagesAPI {
 }
 
 type mediaListQuery struct {
-	Page            int64  `form:"p"`
-	PageSize        int64  `form:"ps"`
-	Sort            string `form:"sort"`
-	Order           string `form:"order"`
-	Keyword         string `form:"keyword"`
-	SizeMin         string `form:"size_min"`
-	SizeMax         string `form:"size_max"`
-	HeightMin       string `form:"height_min"`
-	HeightMax       string `form:"height_max"`
-	DurationMin     string `form:"duration_min"`
-	DurationMax     string `form:"duration_max"`
-	BitRateMin      string `form:"bit_rate_min"`
-	BitRateMax      string `form:"bit_rate_max"`
-	FrameAverageMin string `form:"frame_average_min"`
-	FrameAverageMax string `form:"frame_average_max"`
-	SelfMake        string `form:"self_make"`
-	HasMask         string `form:"has_mask"`
-	ScTimesMin      string `form:"sc_times_min"`
-	ScTimesMax      string `form:"sc_times_max"`
-	LastScFrom      string `form:"last_sc_from"`
-	LastScTo        string `form:"last_sc_to"`
-	BirthFrom       string `form:"birth_from"`
-	BirthTo         string `form:"birth_to"`
-	ReleasingFrom   string `form:"releasing_from"`
-	ReleasingTo     string `form:"releasing_to"`
+	Page               int64  `form:"p"`
+	PageSize           int64  `form:"ps"`
+	Sort               string `form:"sort"`
+	Order              string `form:"order"`
+	Keyword            string `form:"keyword"`
+	SizeMin            string `form:"size_min"`
+	SizeMax            string `form:"size_max"`
+	HeightMin          string `form:"height_min"`
+	HeightMax          string `form:"height_max"`
+	DurationMin        string `form:"duration_min"`
+	DurationMax        string `form:"duration_max"`
+	BitRateMin         string `form:"bit_rate_min"`
+	BitRateMax         string `form:"bit_rate_max"`
+	FrameAverageMin    string `form:"frame_average_min"`
+	FrameAverageMax    string `form:"frame_average_max"`
+	SelfMake           string `form:"self_make"`
+	HasMask            string `form:"has_mask"`
+	ScTimesMin         string `form:"sc_times_min"`
+	ScTimesMax         string `form:"sc_times_max"`
+	LastSelectedScFrom string `form:"last_selected_sc_from"`
+	LastSelectedScTo   string `form:"last_selected_sc_to"`
+	BirthFrom          string `form:"birth_from"`
+	BirthTo            string `form:"birth_to"`
+	ReleasingFrom      string `form:"releasing_from"`
+	ReleasingTo        string `form:"releasing_to"`
 }
 
 func (h *ListPagesAPI) MediaList(c *gin.Context) {
@@ -229,17 +230,17 @@ func buildMediaListFilter(q mediaListQuery) (types.MediaListFilter, error) {
 		filter.HasScTimesMax = true
 	}
 
-	if v, ok, err := parseOptionalDateUnixStart(q.LastScFrom); err != nil {
+	if v, ok, err := parseOptionalDateUnixStart(q.LastSelectedScFrom); err != nil {
 		return types.MediaListFilter{}, err
 	} else if ok {
-		filter.LastScFrom = v
-		filter.HasLastScFrom = true
+		filter.LastSelectedScFrom = v
+		filter.HasLastSelectedScFrom = true
 	}
-	if v, ok, err := parseOptionalDateUnixEnd(q.LastScTo); err != nil {
+	if v, ok, err := parseOptionalDateUnixEnd(q.LastSelectedScTo); err != nil {
 		return types.MediaListFilter{}, err
 	} else if ok {
-		filter.LastScTo = v
-		filter.HasLastScTo = true
+		filter.LastSelectedScTo = v
+		filter.HasLastSelectedScTo = true
 	}
 
 	if v, ok, err := parseOptionalDateUnixStart(q.BirthFrom); err != nil {
@@ -296,9 +297,9 @@ func buildMediaOrderByForPage(sortField, sortOrder string) string {
 	case "has_mask":
 		return "wm.has_mask " + order + ", wm.birth_time DESC, wm.movie_name DESC, wm.id DESC"
 	case "sc_times":
-		return "COALESCE(gss.sc_times, 0) " + order + ", COALESCE(gss.last_sc_time, 0) DESC, wm.birth_time DESC, wm.movie_name DESC, wm.id DESC"
-	case "last_sc_time":
-		return "COALESCE(gss.last_sc_time, 0) " + order + ", wm.birth_time DESC, wm.movie_name DESC, wm.id DESC"
+		return "COALESCE(gss.sc_times, 0) " + order + ", COALESCE(gss.last_selected_sc_time, 0) DESC, wm.birth_time DESC, wm.movie_name DESC, wm.id DESC"
+	case "last_selected_sc_time":
+		return "COALESCE(gss.last_selected_sc_time, 0) " + order + ", wm.birth_time DESC, wm.movie_name DESC, wm.id DESC"
 	case "releasing_date":
 		return "wm.releasing_date " + order + ", wm.birth_time DESC, wm.movie_name DESC, wm.id DESC"
 	default:
@@ -313,18 +314,18 @@ type filmSortLink struct {
 }
 
 type filmSortQuery struct {
-	ByMovieName     filmSortLink
-	BySize          filmSortLink
-	ByHeight        filmSortLink
-	ByDuration      filmSortLink
-	ByBitRate       filmSortLink
-	ByFrameAverage  filmSortLink
-	BySelfMake      filmSortLink
-	ByHasMask       filmSortLink
-	ByScTimes       filmSortLink
-	ByLastSc        filmSortLink
-	ByBirthTime     filmSortLink
-	ByReleasingDate filmSortLink
+	ByMovieName      filmSortLink
+	BySize           filmSortLink
+	ByHeight         filmSortLink
+	ByDuration       filmSortLink
+	ByBitRate        filmSortLink
+	ByFrameAverage   filmSortLink
+	BySelfMake       filmSortLink
+	ByHasMask        filmSortLink
+	ByScTimes        filmSortLink
+	ByLastSelectedSc filmSortLink
+	ByBirthTime      filmSortLink
+	ByReleasingDate  filmSortLink
 }
 
 func buildFilmSortQuery(c *gin.Context, currentField, currentOrder string) *filmSortQuery {
@@ -352,24 +353,24 @@ func buildFilmSortQuery(c *gin.Context, currentField, currentOrder string) *film
 	}
 
 	return &filmSortQuery{
-		ByMovieName:     makeHref("movie_name"),
-		BySize:          makeHref("size"),
-		ByHeight:        makeHref("height"),
-		ByDuration:      makeHref("duration"),
-		ByBitRate:       makeHref("bit_rate"),
-		ByFrameAverage:  makeHref("frame_average"),
-		BySelfMake:      makeHref("self_make"),
-		ByHasMask:       makeHref("has_mask"),
-		ByScTimes:       makeHref("sc_times"),
-		ByLastSc:        makeHref("last_sc_time"),
-		ByBirthTime:     makeHref("birth_time"),
-		ByReleasingDate: makeHref("releasing_date"),
+		ByMovieName:      makeHref("movie_name"),
+		BySize:           makeHref("size"),
+		ByHeight:         makeHref("height"),
+		ByDuration:       makeHref("duration"),
+		ByBitRate:        makeHref("bit_rate"),
+		ByFrameAverage:   makeHref("frame_average"),
+		BySelfMake:       makeHref("self_make"),
+		ByHasMask:        makeHref("has_mask"),
+		ByScTimes:        makeHref("sc_times"),
+		ByLastSelectedSc: makeHref("last_selected_sc_time"),
+		ByBirthTime:      makeHref("birth_time"),
+		ByReleasingDate:  makeHref("releasing_date"),
 	}
 }
 
 func normalizeFilmSortFieldForPage(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "movie_name", "size", "height", "duration", "bit_rate", "frame_average", "self_make", "has_mask", "sc_times", "last_sc_time", "birth_time", "releasing_date":
+	case "movie_name", "size", "height", "duration", "bit_rate", "frame_average", "self_make", "has_mask", "sc_times", "last_selected_sc_time", "birth_time", "releasing_date":
 		return strings.ToLower(strings.TrimSpace(v))
 	default:
 		return "birth_time"
@@ -1044,7 +1045,7 @@ func (h *ListPagesAPI) MovieAlbumItems(c *gin.Context) {
 		"Title":             "电影相册",
 		"ViewType":          "movie-albums",
 		"PageTitle":         "电影相册列表",
-		"PageNote":          "管理按 movie_jav_id 收纳的电影相册。",
+		"PageNote":          "统一管理 JAV 与 FC2 影片收藏。",
 		"QuickNavCurrent":   "movie_albums",
 		"Query":             q,
 		"Rows":              result.Items,
@@ -1254,6 +1255,8 @@ func (h *ListPagesAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
 	failedIDs := make([]int64, 0)
 	seen := make(map[int64]struct{}, len(req.ItemIDs))
 	removedCount := int64(0)
+	removedJAVCount := int64(0)
+	removedFC2Count := int64(0)
 	for _, itemID := range req.ItemIDs {
 		if itemID <= 0 {
 			continue
@@ -1268,9 +1271,38 @@ func (h *ListPagesAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
 			failedIDs = append(failedIDs, itemID)
 			continue
 		}
+		movieType := strings.TrimSpace(itemRow.MovieType)
+		if movieType == "" && strings.TrimSpace(itemRow.FC2Key) != "" {
+			movieType = moviedomain.SehuatangThreadMovieTypeFC2PPV
+		}
+		if movieType == "" {
+			movieType = moviedomain.SehuatangThreadMovieTypeJAV
+		}
 
-		result, moveErr := h.mediaSvc.MoveWMediaToRemovedDeferRefresh(c.Request.Context(), strings.TrimSpace(itemRow.MovieJavId))
-		if moveErr != nil || result == nil || !result.Ok {
+		moved := false
+		movedJavID := ""
+		switch movieType {
+		case moviedomain.SehuatangThreadMovieTypeJAV:
+			javID := strings.TrimSpace(itemRow.MovieJavId)
+			if javID == "" {
+				break
+			}
+			result, moveErr := h.mediaSvc.MoveWMediaToRemovedDeferRefresh(c.Request.Context(), javID)
+			if moveErr == nil && result != nil && result.Ok {
+				moved = true
+				movedJavID = javID
+			}
+		case moviedomain.SehuatangThreadMovieTypeFC2PPV:
+			fc2Key := strings.TrimSpace(itemRow.FC2Key)
+			if fc2Key == "" {
+				break
+			}
+			result, moveErr := h.mediaSvc.MoveFC2MediaToRemoved(c.Request.Context(), fc2Key)
+			if moveErr == nil && result != nil && result.Ok {
+				moved = true
+			}
+		}
+		if !moved {
 			failedIDs = append(failedIDs, itemID)
 			continue
 		}
@@ -1280,7 +1312,12 @@ func (h *ListPagesAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
 			continue
 		}
 
-		successJavIDs = append(successJavIDs, strings.TrimSpace(itemRow.MovieJavId))
+		if movedJavID != "" {
+			successJavIDs = append(successJavIDs, movedJavID)
+			removedJAVCount++
+		} else {
+			removedFC2Count++
+		}
 		removedCount++
 	}
 
@@ -1297,10 +1334,13 @@ func (h *ListPagesAPI) ExecuteMovieAlbumRemove(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"ok":            true,
-		"removed_count": removedCount,
-		"failed_ids":    failedIDs,
-		"message":       "统一删除完成",
+		"ok":                true,
+		"removed_count":     removedCount,
+		"removed_jav_count": removedJAVCount,
+		"removed_fc2_count": removedFC2Count,
+		"failed_count":      len(failedIDs),
+		"failed_ids":        failedIDs,
+		"message":           "统一删除完成",
 	})
 }
 
@@ -1402,21 +1442,21 @@ func buildMovieAlbumItemsSortQuery(c *gin.Context, currentField string, currentO
 }
 
 type castListQuery struct {
-	Page         int64  `form:"p"`
-	PageSize     int64  `form:"ps"`
-	Sort         string `form:"sort"`
-	Order        string `form:"order"`
-	Keyword      string `form:"keyword"`
-	OwnedMin     string `form:"wowned_min"`
-	OwnedMax     string `form:"wowned_max"`
-	LegacyMin    string `form:"owned_min"`
-	LegacyMax    string `form:"owned_max"`
-	ScTimesMin   string `form:"sc_times_min"`
-	ScTimesMax   string `form:"sc_times_max"`
-	ComeTimesMin string `form:"come_times_min"`
-	ComeTimesMax string `form:"come_times_max"`
-	LastScFrom   string `form:"last_sc_from"`
-	LastScTo     string `form:"last_sc_to"`
+	Page               int64  `form:"p"`
+	PageSize           int64  `form:"ps"`
+	Sort               string `form:"sort"`
+	Order              string `form:"order"`
+	Keyword            string `form:"keyword"`
+	OwnedMin           string `form:"wowned_min"`
+	OwnedMax           string `form:"wowned_max"`
+	LegacyMin          string `form:"owned_min"`
+	LegacyMax          string `form:"owned_max"`
+	ScTimesMin         string `form:"sc_times_min"`
+	ScTimesMax         string `form:"sc_times_max"`
+	ComeTimesMin       string `form:"come_times_min"`
+	ComeTimesMax       string `form:"come_times_max"`
+	LastSelectedScFrom string `form:"last_selected_sc_from"`
+	LastSelectedScTo   string `form:"last_selected_sc_to"`
 }
 
 func (h *ListPagesAPI) CastList(c *gin.Context) {
@@ -1522,22 +1562,22 @@ func buildCastListFilter(q castListQuery) (types.PersonListFilter, error) {
 		filter.HasComeTimesMax = true
 	}
 
-	if strings.TrimSpace(q.LastScFrom) != "" {
-		t, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(q.LastScFrom), time.Local)
+	if strings.TrimSpace(q.LastSelectedScFrom) != "" {
+		t, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(q.LastSelectedScFrom), time.Local)
 		if err != nil {
 			return types.PersonListFilter{}, err
 		}
-		filter.LastScFrom = t.Unix()
-		filter.HasLastScFrom = true
+		filter.LastSelectedScFrom = t.Unix()
+		filter.HasLastSelectedScFrom = true
 	}
 
-	if strings.TrimSpace(q.LastScTo) != "" {
-		t, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(q.LastScTo), time.Local)
+	if strings.TrimSpace(q.LastSelectedScTo) != "" {
+		t, err := time.ParseInLocation("2006-01-02", strings.TrimSpace(q.LastSelectedScTo), time.Local)
 		if err != nil {
 			return types.PersonListFilter{}, err
 		}
-		filter.LastScTo = t.Add(24*time.Hour - time.Second).Unix()
-		filter.HasLastScTo = true
+		filter.LastSelectedScTo = t.Add(24*time.Hour - time.Second).Unix()
+		filter.HasLastSelectedScTo = true
 	}
 
 	return filter, nil
@@ -1571,8 +1611,8 @@ func buildCastOrderByForPage(sortField, sortOrder string) string {
 		column = "p.sc_times"
 	case "come_times":
 		column = "p.come_times"
-	case "last_sc_time":
-		column = "p.last_sc_time"
+	case "last_selected_sc_time":
+		column = "p.last_selected_sc_time"
 	case "highest_rank":
 		column = "p.highest_rank"
 	}
@@ -1596,16 +1636,16 @@ type castSortLink struct {
 }
 
 type castSortQuery struct {
-	ByName        castSortLink
-	ByChinese     castSortLink
-	ByAge         castSortLink
-	ByHeight      castSortLink
-	ByMovieNumber castSortLink
-	ByWOwned      castSortLink
-	ByScTimes     castSortLink
-	ByComeTimes   castSortLink
-	ByLastSc      castSortLink
-	ByHighestRank castSortLink
+	ByName           castSortLink
+	ByChinese        castSortLink
+	ByAge            castSortLink
+	ByHeight         castSortLink
+	ByMovieNumber    castSortLink
+	ByWOwned         castSortLink
+	ByScTimes        castSortLink
+	ByComeTimes      castSortLink
+	ByLastSelectedSc castSortLink
+	ByHighestRank    castSortLink
 }
 
 func buildCastSortQuery(c *gin.Context, currentField, currentOrder string) *castSortQuery {
@@ -1633,16 +1673,16 @@ func buildCastSortQuery(c *gin.Context, currentField, currentOrder string) *cast
 	}
 
 	return &castSortQuery{
-		ByName:        makeHref("name"),
-		ByChinese:     makeHref("chinese"),
-		ByAge:         makeHref("age"),
-		ByHeight:      makeHref("height"),
-		ByMovieNumber: makeHref("movie_number"),
-		ByWOwned:      makeHref("owned_w_media_number"),
-		ByScTimes:     makeHref("sc_times"),
-		ByComeTimes:   makeHref("come_times"),
-		ByLastSc:      makeHref("last_sc_time"),
-		ByHighestRank: makeHref("highest_rank"),
+		ByName:           makeHref("name"),
+		ByChinese:        makeHref("chinese"),
+		ByAge:            makeHref("age"),
+		ByHeight:         makeHref("height"),
+		ByMovieNumber:    makeHref("movie_number"),
+		ByWOwned:         makeHref("owned_w_media_number"),
+		ByScTimes:        makeHref("sc_times"),
+		ByComeTimes:      makeHref("come_times"),
+		ByLastSelectedSc: makeHref("last_selected_sc_time"),
+		ByHighestRank:    makeHref("highest_rank"),
 	}
 }
 
@@ -1650,7 +1690,7 @@ func normalizeCastSortFieldForPage(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "owned_movie_number":
 		return "owned_w_media_number"
-	case "name", "chinese", "age", "height", "movie_number", "owned_w_media_number", "sc_times", "come_times", "last_sc_time", "highest_rank":
+	case "name", "chinese", "age", "height", "movie_number", "owned_w_media_number", "sc_times", "come_times", "last_selected_sc_time", "highest_rank":
 		return strings.ToLower(strings.TrimSpace(v))
 	default:
 		return "owned_w_media_number"

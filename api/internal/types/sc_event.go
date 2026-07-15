@@ -77,6 +77,7 @@ type ScEventMovie struct {
 	Entry      *GList
 	MovieType  *MovieType
 	FC2Movie   *FC2ScEventMovie
+	Card       any
 	MovieName  string
 	IsCome     bool
 	LoadError  string
@@ -85,18 +86,18 @@ type ScEventMovie struct {
 }
 
 type FC2ScEventMovie struct {
-	ID              int64
-	FC2Key          string
-	Title           string
-	PerformerText   string
-	PostTime        int64
-	VideoURL        string
-	PlayButtonClass string
-	PlayButtonText  string
-	ShowPlayButton  bool
-	DownloadTime    int64
-	ScTimes         int64
-	ComeTimes       int64
-	LastScTime      int64
-	LastScEventName string
+	ID                     int64
+	FC2Key                 string
+	Title                  string
+	PerformerText          string
+	PostTime               int64
+	VideoURL               string
+	PlayButtonClass        string
+	PlayButtonText         string
+	ShowPlayButton         bool
+	DownloadTime           int64
+	ScTimes                int64
+	ComeTimes              int64
+	LastSelectedScTime     int64
+	LastParticipatedScName string
 }

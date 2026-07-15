@@ -12,11 +12,11 @@ import (
 )
 
 type movieScInfo struct {
-	ScEventTimes    int64
-	ScTimes         int64
-	ComeTimes       int64
-	LastScTime      int64
-	LastScEventTime int64
+	ScEventTimes           int64
+	ScTimes                int64
+	ComeTimes              int64
+	LastSelectedScTime     int64
+	LastParticipatedScTime int64
 }
 
 func (l *ScService) AddMovieAndCastScInfo(ctx context.Context, movieJavIdMap map[string]struct{}) error {
@@ -166,15 +166,15 @@ func (l *ScService) rebuildCastScStatsByIDs(ctx context.Context, castIDs map[int
 		info := sumMovieScInfo(movieAgg)
 		if castRow.ScTimes == info.ScTimes &&
 			castRow.ComeTimes == info.ComeTimes &&
-			castRow.LastScTime == info.LastScTime &&
-			castRow.LastScEventTime == info.LastScEventTime {
+			castRow.LastSelectedScTime == info.LastSelectedScTime &&
+			castRow.LastParticipatedScTime == info.LastParticipatedScTime {
 			continue
 		}
 
 		castRow.ScTimes = info.ScTimes
 		castRow.ComeTimes = info.ComeTimes
-		castRow.LastScTime = info.LastScTime
-		castRow.LastScEventTime = info.LastScEventTime
+		castRow.LastSelectedScTime = info.LastSelectedScTime
+		castRow.LastParticipatedScTime = info.LastParticipatedScTime
 		if _, err := l.castUpsert(ctx, castRow); err != nil {
 			return fmt.Errorf("CastRepo.Upsert %s: %w", castRow.Name, err)
 		}
@@ -241,8 +241,8 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 		}
 		info := result[gl.MovieJavId]
 		info.ScEventTimes++
-		if scTime := scTimeMap[gl.ScName]; scTime > info.LastScEventTime {
-			info.LastScEventTime = scTime
+		if scTime := scTimeMap[gl.ScName]; scTime > info.LastParticipatedScTime {
+			info.LastParticipatedScTime = scTime
 		}
 		if gl.IsSc != consts.GListIsSc {
 			result[gl.MovieJavId] = info
@@ -252,8 +252,8 @@ func (l *ScService) buildMovieScInfo(ctx context.Context, movieJavIDs []string) 
 		if gl.IsCome == consts.GListIsCome {
 			info.ComeTimes++
 		}
-		if scTime := scTimeMap[gl.ScName]; scTime > info.LastScTime {
-			info.LastScTime = scTime
+		if scTime := scTimeMap[gl.ScName]; scTime > info.LastSelectedScTime {
+			info.LastSelectedScTime = scTime
 		}
 		result[gl.MovieJavId] = info
 	}
@@ -299,16 +299,16 @@ func aggregateFC2MovieScInfo(movieIDs []int64, gls []*types.GList, scTimeMap map
 		}
 		info := result[gl.FC2MovieId]
 		info.ScEventTimes++
-		if scTime := scTimeMap[gl.ScName]; scTime > info.LastScEventTime {
-			info.LastScEventTime = scTime
+		if scTime := scTimeMap[gl.ScName]; scTime > info.LastParticipatedScTime {
+			info.LastParticipatedScTime = scTime
 		}
 		if gl.IsSc == consts.GListIsSc {
 			info.ScTimes++
 			if gl.IsCome == consts.GListIsCome {
 				info.ComeTimes++
 			}
-			if scTime := scTimeMap[gl.ScName]; scTime > info.LastScTime {
-				info.LastScTime = scTime
+			if scTime := scTimeMap[gl.ScName]; scTime > info.LastSelectedScTime {
+				info.LastSelectedScTime = scTime
 			}
 		}
 		result[gl.FC2MovieId] = info
@@ -350,11 +350,11 @@ func sumMovieScInfo(movieAgg map[string]movieScInfo) movieScInfo {
 	for _, info := range movieAgg {
 		out.ScTimes += info.ScTimes
 		out.ComeTimes += info.ComeTimes
-		if info.LastScTime > out.LastScTime {
-			out.LastScTime = info.LastScTime
+		if info.LastSelectedScTime > out.LastSelectedScTime {
+			out.LastSelectedScTime = info.LastSelectedScTime
 		}
-		if info.LastScEventTime > out.LastScEventTime {
-			out.LastScEventTime = info.LastScEventTime
+		if info.LastParticipatedScTime > out.LastParticipatedScTime {
+			out.LastParticipatedScTime = info.LastParticipatedScTime
 		}
 	}
 	return out

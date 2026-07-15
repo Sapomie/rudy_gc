@@ -92,8 +92,8 @@
                       <th class="sc-sortable-head"><SortLink sort-key="ByTime" label="时间" /></th>
                       <th class="sc-number sc-sortable-head"><SortLink sort-key="ByTotalMovieCnt" label="总片数" /></th>
                       <th class="sc-number sc-sortable-head"><SortLink sort-key="ByMovieCnt" label="有 SC" /></th>
-                      <th class="sc-number">JAV</th>
-                      <th class="sc-number">FC2</th>
+                      <th class="sc-number sc-sortable-head"><SortLink sort-key="ByJavMovieCnt" label="JAV" /></th>
+                      <th class="sc-number sc-sortable-head"><SortLink sort-key="ByFC2MovieCnt" label="FC2" /></th>
                       <th class="sc-sortable-head"><SortLink sort-key="ByComeMovie" label="Come 片" /></th>
                       <th class="sc-number sc-sortable-head"><SortLink sort-key="ByCooldown" label="Cooldown" /></th>
                       <th class="sc-number sc-sortable-head"><SortLink sort-key="ByDuration" label="时长" /></th>
@@ -115,10 +115,15 @@
                       <td class="sc-number">{{ text(item, "JavMovieCount") || "0" }}</td>
                       <td class="sc-number">{{ text(item, "FC2MovieCount") || "0" }}</td>
                       <td class="sc-content-cell">
-                        <span class="sc-event-come-movie">
-                          <span v-if="text(item, 'ComeMovieType')" :class="['sc-event-source-badge', movieSourceClass(text(item, 'ComeMovieType'))]">{{ movieSourceLabel(text(item, "ComeMovieType")) }}</span>
-                          <LinkOrMuted :href="text(item, 'ComeMovieHref')" :value="text(eventOf(item), 'ComeMovieName')" new-window />
+                        <span v-if="text(eventOf(item), 'ComeMovieName')" class="sc-event-come-movie">
+                          <span
+                            :class="['sc-event-come-pill', movieSourceClass(text(item, 'ComeMovieType'))]"
+                            :aria-label="`${movieSourceLabel(text(item, 'ComeMovieType'))} 影片：${text(eventOf(item), 'ComeMovieName')}`"
+                          >
+                            <LinkOrMuted :href="text(item, 'ComeMovieHref')" :value="text(eventOf(item), 'ComeMovieName')" new-window />
+                          </span>
                         </span>
+                        <span v-else class="text-muted">-</span>
                       </td>
                       <td class="sc-number"><span v-if="num(eventOf(item), 'Cooldown') > 0">{{ humanDays(pick(eventOf(item), "Cooldown")) }}</span><span v-else class="text-muted">-</span></td>
                       <td class="sc-number sc-muted"><span v-if="num(eventOf(item), 'DurationMinutes') > 0">{{ text(eventOf(item), "DurationMinutes") }}</span><span v-else class="text-muted">-</span></td>
@@ -378,7 +383,41 @@
             <section v-if="items.length" aria-label="SC Movies">
               <div class="movie-grid-v2 next02-pink-movie-grid next02-sc-detail-movie-grid" id="movie-grid">
                 <div v-for="(item, index) in items" :key="movieKey(item, index)" class="col movie-grid-col-v2">
-                  <ScMovieCard :item="item" :event-name="eventName(event)" />
+                  <component :is="eventMovieCardComponent(item)" :movie="eventMovieCardData(item)">
+                    <template #actions>
+                      <li
+                        class="list-group-item movie-card-sc-status"
+                        :class="eventMovieHasSc(item) ? 'has-sc-status' : 'no-sc-status'"
+                        style="z-index: 2"
+                      >
+                        <div class="movie-card-sc-status-line">
+                          <div class="movie-card-sc-badges">
+                            <span class="movie-card-source" :class="eventMovieIsFC2(item) ? 'source-fc2' : 'source-jav'">{{ eventMovieIsFC2(item) ? "FC2" : "JAV" }}</span>
+                            <span class="movie-card-sc-state" :class="eventMovieHasSc(item) ? 'has-sc' : 'no-sc'">{{ eventMovieHasSc(item) ? "有 SC" : "无 SC" }}</span>
+                            <span v-if="eventMovieIsCome(item)" class="movie-card-sc-come">Come</span>
+                          </div>
+                          <div class="movie-card-sc-actions" role="group" aria-label="编辑影片 SC 状态">
+                            <button
+                              type="button"
+                              class="js-sc-event-movie-status has-sc-action"
+                              :class="{ active: eventMovieHasSc(item) }"
+                              :data-is-sc="GLIST_IS_SC"
+                              :disabled="eventMovieHasSc(item) || eventMovieStatusSaving(item)"
+                              @click="updateMovieStatus(eventName(event), eventMovieGListID(item), GLIST_IS_SC)"
+                            >{{ eventMovieStatusSaving(item) ? "保存中" : "有 SC" }}</button>
+                            <button
+                              type="button"
+                              class="js-sc-event-movie-status no-sc-action"
+                              :class="{ active: !eventMovieHasSc(item) }"
+                              :data-is-sc="GLIST_IS_NOT_SC"
+                              :disabled="!eventMovieHasSc(item) || eventMovieStatusSaving(item)"
+                              @click="updateMovieStatus(eventName(event), eventMovieGListID(item), GLIST_IS_NOT_SC)"
+                            >{{ eventMovieStatusSaving(item) ? "保存中" : "无 SC" }}</button>
+                          </div>
+                        </div>
+                      </li>
+                    </template>
+                  </component>
                 </div>
               </div>
             </section>
@@ -416,6 +455,8 @@
 import { computed, defineComponent, h, reactive, ref, watch, type PropType } from "vue";
 import { useRoute } from "vue-router";
 import { apiPathForRoute, getJSON, sendJSON } from "@/shared/api/request";
+import FC2MovieCard from "@/features/fc2/components/FC2MovieCard.vue";
+import MovieCard from "@/features/movies/components/MovieCard.vue";
 import PageShell from "@/shared/components/PageShell.vue";
 import ScDateTime from "@/shared/components/ScDateTime.vue";
 import type { AnyRecord } from "@/shared/types/gc";
@@ -519,7 +560,9 @@ function movieSourceLabel(movieType: string): string {
 }
 
 function movieSourceClass(movieType: string): string {
-  return movieType === "fc2ppv" || movieType === "fc2" ? "source-fc2" : "source-jav";
+  if (movieType === "fc2ppv" || movieType === "fc2") return "source-fc2";
+  if (movieType === "jav") return "source-jav";
+  return "source-unknown";
 }
 
 function cardListSummaryApiPath(): string {
@@ -736,6 +779,40 @@ function movieKey(item: AnyRecord, index: number): string {
   return text(movie, "name", "Name", "jav_id", "JavID") || String(index);
 }
 
+function eventMovieEntry(item: AnyRecord): AnyRecord {
+  return asRecord(pick(item, "Entry"));
+}
+
+function eventMovieIsFC2(item: AnyRecord): boolean {
+  return text(eventMovieEntry(item), "MovieType") === "fc2ppv" || num(eventMovieEntry(item), "FC2MovieId") > 0;
+}
+
+function eventMovieCardComponent(item: AnyRecord) {
+  return eventMovieIsFC2(item) ? FC2MovieCard : MovieCard;
+}
+
+function eventMovieCardData(item: AnyRecord): AnyRecord {
+  const card = asRecord(pick(item, "Card"));
+  if (Object.keys(card).length) return card;
+  return eventMovieIsFC2(item) ? asRecord(pick(item, "FC2Movie")) : asRecord(pick(item, "MovieType"));
+}
+
+function eventMovieGListID(item: AnyRecord): number {
+  return num(eventMovieEntry(item), "Id");
+}
+
+function eventMovieHasSc(item: AnyRecord): boolean {
+  return num(eventMovieEntry(item), "IsSc") === GLIST_IS_SC;
+}
+
+function eventMovieIsCome(item: AnyRecord): boolean {
+  return num(eventMovieEntry(item), "IsCome") === 2;
+}
+
+function eventMovieStatusSaving(item: AnyRecord): boolean {
+  return movieStatusSavingKey.value === `${eventName(event.value)}:${eventMovieGListID(item)}`;
+}
+
 function humanMovieSize(input: unknown): string {
   const value = Number(input || 0);
   if (value >= 1024 ** 4) return `${(value / 1024 ** 4).toFixed(1)} TB`;
@@ -845,120 +922,4 @@ const MetricCard = defineComponent({
   }
 });
 
-const ScMovieCard = defineComponent({
-  name: "ScMovieCard",
-  props: {
-    item: { type: Object as PropType<AnyRecord>, required: true },
-    eventName: { type: String, required: true }
-  },
-  setup(props) {
-    const movie = () => asRecord(pick(props.item, "MovieType"));
-    const fc2Movie = () => asRecord(pick(props.item, "FC2Movie"));
-    const entry = () => asRecord(pick(props.item, "Entry"));
-    const isFC2Movie = () => text(entry(), "MovieType") === "fc2ppv" || num(fc2Movie(), "ID") > 0;
-    const movieName = () => isFC2Movie() ? text(fc2Movie(), "FC2Key") : text(movie(), "name", "Name", "jav_id", "JavID");
-    const movieTitle = () => isFC2Movie() ? text(fc2Movie(), "Title") : text(movie(), "title", "Title");
-    const movieDetailHref = () => isFC2Movie() ? `/fcdetail/${encodeURIComponent(movieName())}` : movieHref(movieName());
-    const lastScTime = () => isFC2Movie() ? num(fc2Movie(), "LastScTime") : num(movie(), "last_sc_time", "LastScTime");
-    const statusControls = () => {
-      const gListID = num(entry(), "Id");
-      const isSc = num(entry(), "IsSc") === GLIST_IS_SC;
-      const isCome = num(entry(), "IsCome") === 2;
-      if (gListID <= 0 || !props.eventName) return null;
-      const savingKey = `${props.eventName}:${gListID}`;
-      const saving = movieStatusSavingKey.value === savingKey;
-      return h("li", { class: ["list-group-item", "movie-card-sc-status", isSc ? "has-sc-status" : "no-sc-status"], style: "z-index:2;" }, [
-        h("div", { class: "movie-card-sc-status-line" }, [
-          h("div", { class: "movie-card-sc-badges" }, [
-            h("span", { class: ["movie-card-source", isFC2Movie() ? "source-fc2" : "source-jav"] }, isFC2Movie() ? "FC2" : "JAV"),
-            h("span", { class: ["movie-card-sc-state", isSc ? "has-sc" : "no-sc"] }, isSc ? "有 SC" : "无 SC"),
-            isCome ? h("span", { class: "movie-card-sc-come" }, "Come") : null
-          ]),
-          h("div", { class: "movie-card-sc-actions", role: "group", "aria-label": "编辑影片 SC 状态" }, [
-            h("button", { type: "button", class: ["js-sc-event-movie-status", "has-sc-action", { active: isSc }], "data-is-sc": GLIST_IS_SC, disabled: isSc || saving || undefined, onClick: () => void updateMovieStatus(props.eventName, gListID, GLIST_IS_SC) }, saving ? "保存中" : "有 SC"),
-            h("button", { type: "button", class: ["js-sc-event-movie-status", "no-sc-action", { active: !isSc }], "data-is-sc": GLIST_IS_NOT_SC, disabled: !isSc || saving || undefined, onClick: () => void updateMovieStatus(props.eventName, gListID, GLIST_IS_NOT_SC) }, saving ? "保存中" : "无 SC")
-          ])
-        ])
-      ]);
-    };
-    const moviePlayRow = () => {
-      if (isFC2Movie()) {
-        if (!pick(fc2Movie(), "ShowPlayButton")) return null;
-        const play = h("a", {
-          href: text(fc2Movie(), "VideoURL"),
-          class: ["btn", "btn-sm", text(fc2Movie(), "PlayButtonClass") || "btn-success"],
-          target: "_blank",
-          rel: "noopener noreferrer"
-        }, text(fc2Movie(), "PlayButtonText") || "Play");
-        const downloadTime = pick(fc2Movie(), "DownloadTime");
-        return h("li", { class: "list-group-item py-2 movie-card-media-block" }, [
-          h("div", { class: "card-play-stack" }, [h("div", { class: "card-play-row" }, [
-            play,
-            downloadTime ? h("span", { class: "text-muted small card-play-date movie-card-download-date" }, `下载 ${formatUnixFull(downloadTime)}`) : null
-          ])])
-        ]);
-      }
-      const ownedMedia = num(movie(), "owned_w_media", "OwnedWMedia");
-      if (ownedMedia < 4) return null;
-      const videoUrl = text(movie(), "video_url_w_media", "VideoUrlWMedia");
-      const mediaBirth = text(movie(), "film_birth_date_w_media", "FilmBirthDateWMedia");
-      const play = ownedMedia === 6
-        ? h("span", { class: "btn btn-sm btn-secondary disabled", "aria-disabled": "true" }, "Removed")
-        : h("a", { href: videoUrl, class: ["btn", "btn-sm", ownedMedia === 5 ? "btn-info" : "btn-success"], target: "_blank", rel: "noopener noreferrer" }, "Play");
-      return h("li", { class: "list-group-item py-2 movie-card-media-block" }, [
-        h("div", { class: "card-play-stack" }, [h("div", { class: "card-play-row" }, [
-          play,
-          mediaBirth ? h("span", { class: "text-muted small card-play-date movie-card-download-date" }, `下载 ${mediaBirth}`) : null
-        ])])
-      ]);
-    };
-    const genreLinks = () => isFC2Movie() ? [] : asArray<string>(pick(movie(), "genre", "Genre")).map((genre) => h("a", { href: `/listcard?gn=${encodeURIComponent(genre)}`, class: "badge badge-genre movie-card-tag-genre me-1 mb-1", target: "_blank", rel: "noopener noreferrer" }, String(genre)));
-    const castLinks = () => asArray<AnyRecord>(pick(movie(), "cast", "Cast")).map((cast) => {
-      const label = text(cast, "NameShow", "DisplayName", "Name", "name");
-      const personID = text(cast, "PersonId", "person_id", "Id", "id");
-      return h("a", { href: personID && personID !== "0" ? `/castdetail/${encodeURIComponent(personID)}` : `/listcard?cn=${encodeURIComponent(label)}`, class: "person-tag movie-card-tag-person movie-card-tag-cast mr-2", title: label, target: "_blank", rel: "noopener noreferrer" }, label);
-    });
-    return () => h("article", { class: ["card shadow-sm h-100 card-lift movie-card-v2 next02-pink-movie-card", { "is-fc2-movie-card": isFC2Movie() }] }, [
-      h("a", { href: movieDetailHref(), class: "d-block poster-link", "aria-label": `查看 ${movieName()} 详情`, target: "_blank", rel: "noopener noreferrer" }, [
-        h("div", { class: "thumb-2x3" }, [
-          text(movie(), "jacket_img", "JacketImg") ? h("img", { src: text(movie(), "jacket_img", "JacketImg"), alt: `${movieName()} 海报`, loading: "lazy", decoding: "async" }) : h("div", { class: "thumb-empty" }, "No Image"),
-          h("div", { class: "badge-top-left" }, [
-            (isFC2Movie() ? num(fc2Movie(), "ComeTimes") : num(movie(), "come_times", "ComeTimes")) ? h("span", { class: "badge-come" }, `❤ ${isFC2Movie() ? num(fc2Movie(), "ComeTimes") : num(movie(), "come_times", "ComeTimes")}`) : null,
-            (isFC2Movie() ? num(fc2Movie(), "ScTimes") : num(movie(), "sc_times", "ScTimes")) ? h("span", { class: "badge-times" }, `× ${isFC2Movie() ? num(fc2Movie(), "ScTimes") : num(movie(), "sc_times", "ScTimes")}`) : null
-          ]),
-          h("div", { class: "badge-bottom-right" }, [
-            num(movie(), "highest_rank", "HighestRank") ? h("span", { class: "badge-rank" }, `#${num(movie(), "highest_rank", "HighestRank")}`) : null,
-            text(movie(), "score", "Score") ? h("span", { class: "badge-score" }, `★ ${text(movie(), "score", "Score")}`) : null
-          ])
-        ])
-      ]),
-      h("ul", { class: "list-group list-group-flush" }, [
-        statusControls(),
-        h("li", { class: "list-group-item movie-card-title-block" }, [
-          h("h6", { class: "mb-1 text-truncate", title: movieTitle() }, [
-            h("a", { href: isFC2Movie() ? movieDetailHref() : `/listcard?pn=${encodeURIComponent(text(movie(), "prefix", "Prefix"))}`, class: "stretched-link text-reset text-decoration-none movie-name", target: "_blank", rel: "noopener noreferrer" }, movieName() || "-"),
-            text(movie(), "viewers_number_watched", "ViewersNumberWatched") ? h("small", { class: "text-muted ml-2" }, `(${text(movie(), "viewers_number_watched", "ViewersNumberWatched")})`) : null
-          ]),
-          movieTitle() ? h("p", { class: "mb-0 text-muted line-clamp-2 movie-subtitle", title: movieTitle() }, movieTitle()) : null
-        ]),
-        moviePlayRow(),
-        h("li", { class: "list-group-item text-muted genre-list movie-card-tag-block" }, genreLinks()),
-        h("li", { class: "list-group-item cast-list movie-card-tag-block" }, [
-          ...(isFC2Movie() ? [h("span", { class: "person-tag movie-card-tag-person movie-card-tag-cast mr-2" }, text(fc2Movie(), "PerformerText") || "-")] : castLinks()),
-          text(movie(), "director", "Director") ? h("a", { href: `/listcard?dn=${encodeURIComponent(text(movie(), "director", "Director"))}`, class: "person-tag movie-card-tag-person movie-card-tag-director ml-2", title: text(movie(), "director", "Director"), target: "_blank", rel: "noopener noreferrer" }, text(movie(), "director", "Director")) : null
-        ]),
-        h("li", { class: "list-group-item movie-card-sc-history" }, [
-          h("span", { class: "movie-card-sc-history-label" }, "最近 SC"),
-          h("span", { class: "movie-card-sc-history-value" }, lastScTime() > 0 ? formatUnixFull(lastScTime()) : "-")
-        ]),
-        h("li", { class: "list-group-item d-flex align-items-center small card-link-row movie-card-footer" }, [
-          text(movie(), "bus_url", "BusUrl") ? h("a", { href: text(movie(), "bus_url", "BusUrl"), class: "movie-card-tag-link me-2", target: "_blank", rel: "noopener noreferrer" }, "Bus") : null,
-          text(movie(), "search_url", "SearchUrl") ? h("a", { href: text(movie(), "search_url", "SearchUrl"), class: "movie-card-tag-link me-2", target: "_blank", rel: "noopener noreferrer" }, "Suk") : null,
-          text(movie(), "jav_url", "JavUrl") ? h("a", { href: text(movie(), "jav_url", "JavUrl"), class: "movie-card-tag-link me-2", target: "_blank", rel: "noopener noreferrer" }, "Lib") : null,
-          h("span", { class: "movie-card-tag-date ms-auto text-muted" }, isFC2Movie() ? `发布 ${formatUnixFull(pick(fc2Movie(), "PostTime"))}` : `上映 ${text(movie(), "releasing_date", "ReleasingDate")}`)
-        ])
-      ].filter(Boolean))
-    ]);
-  }
-});
 </script>

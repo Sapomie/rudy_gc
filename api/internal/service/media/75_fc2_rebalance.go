@@ -12,6 +12,7 @@ import (
 
 	"rudy_gc/internal/consts"
 	"rudy_gc/internal/repository/moviex"
+	"rudy_gc/internal/service/wfoldertree"
 )
 
 type fc2MediaLeafBucketState struct {
@@ -77,9 +78,9 @@ func (s *Service) rebalanceFC2MediaLeafDirsForLayout(ctx context.Context, layout
 			}
 			return state.rows[i].ID < state.rows[j].ID
 		})
-		folder, findErr := s.deps.FC2FolderModel.FindOneByPathSourceType(ctx, path, consts.WFolderSourceNative)
+		folder, findErr := s.deps.WFolderModel.FindOneByPathSourceType(ctx, path, consts.WFolderSourceNative)
 		if findErr == nil && folder != nil {
-			state.folderID = folder.ID
+			state.folderID = folder.Id
 		} else if findErr != nil && !errors.Is(findErr, moviex.ErrNotFound) {
 			return nil, findErr
 		}
@@ -96,11 +97,11 @@ func (s *Service) rebalanceFC2MediaLeafDirsForLayout(ctx context.Context, layout
 				break
 			}
 			if target.folderID <= 0 {
-				folder, err := ensureFC2FolderChain(ctx, s.deps.FC2FolderModel, target.path, nowUnix)
+				folder, err := wfoldertree.EnsurePathChain(ctx, s.deps.WFolderModel, consts.WFolderSourceNative, target.path, nowUnix)
 				if err != nil {
 					return result, err
 				}
-				target.folderID = folder.ID
+				target.folderID = folder.Id
 			}
 			donor := buckets[donorIndex]
 			row := donor.rows[0]
@@ -192,7 +193,7 @@ func (s *Service) cleanupEmptyFC2MediaDirs(ctx context.Context, baseDir string) 
 		if err := os.Remove(bucket.path); err != nil && !os.IsNotExist(err) {
 			return removedLeafDirs, removedYearDirs, err
 		}
-		if err := s.deleteFC2FolderRowByPathIfExists(ctx, bucket.path); err != nil {
+		if err := s.deleteFolderRowByPathIfExists(ctx, bucket.path); err != nil {
 			return removedLeafDirs, removedYearDirs, err
 		}
 		removedLeafDirs++
@@ -219,24 +220,10 @@ func (s *Service) cleanupEmptyFC2MediaDirs(ctx context.Context, baseDir string) 
 		if err := os.Remove(bucket.path); err != nil && !os.IsNotExist(err) {
 			return removedLeafDirs, removedYearDirs, err
 		}
-		if err := s.deleteFC2FolderRowByPathIfExists(ctx, bucket.path); err != nil {
+		if err := s.deleteFolderRowByPathIfExists(ctx, bucket.path); err != nil {
 			return removedLeafDirs, removedYearDirs, err
 		}
 		removedYearDirs++
 	}
 	return removedLeafDirs, removedYearDirs, nil
-}
-
-func (s *Service) deleteFC2FolderRowByPathIfExists(ctx context.Context, path string) error {
-	row, err := s.deps.FC2FolderModel.FindOneByPathSourceType(ctx, path, consts.WFolderSourceNative)
-	if err != nil {
-		if errors.Is(err, moviex.ErrNotFound) {
-			return nil
-		}
-		return err
-	}
-	if row == nil || row.ID <= 0 {
-		return nil
-	}
-	return s.deps.FC2FolderModel.Delete(ctx, row.ID)
 }

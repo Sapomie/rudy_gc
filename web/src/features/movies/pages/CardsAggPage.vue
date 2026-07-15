@@ -75,7 +75,7 @@
           <div class="col"><AggItemTable title="上映年月" :items="listOf(timeline, 'ReleaseMonths')" /></div>
           <div class="col"><AggItemTable title="Media 下载年份" :items="listOf(timeline, 'MediaBirthYears')" /></div>
           <div class="col"><AggItemTable title="Media 下载年月" :items="listOf(timeline, 'MediaBirthMonths')" /></div>
-          <div class="col"><AggItemTable title="最后 SC 年月" :items="listOf(timeline, 'LastScMonths')" /></div>
+          <div class="col"><AggItemTable title="入选 SC 年月" :items="listOf(timeline, 'LastSelectedScMonths')" /></div>
         </div>
 
         <div class="cards-agg-two-col mt-1">
@@ -95,7 +95,7 @@
           <div class="col"><AggTopMovieTable title="最高排名" :items="listOf(topMovies, 'HighestRanks')" /></div>
           <div class="col"><AggTopMovieTable title="最近上映" :items="listOf(topMovies, 'RecentRelease')" /></div>
           <div class="col"><AggTopMovieTable title="最近 Media 下载" :items="listOf(topMovies, 'RecentMedia')" /></div>
-          <div class="col"><AggTopMovieTable title="最近 SC" :items="listOf(topMovies, 'RecentSc')" /></div>
+          <div class="col"><AggTopMovieTable title="最近入选 SC" :items="listOf(topMovies, 'RecentSelectedSc')" /></div>
         </div>
       </template>
     </template>

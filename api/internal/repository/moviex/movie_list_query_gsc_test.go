@@ -17,7 +17,7 @@ func TestMissingGScStatMatches(t *testing.T) {
 		{name: "empty request", req: &types.ListMovieFullRequest{}, want: true},
 		{name: "zero maximum includes missing stat", req: &types.ListMovieFullRequest{ScTimesMax: &zero}, want: true},
 		{name: "positive minimum excludes missing stat", req: &types.ListMovieFullRequest{ScTimesMin: 1}, want: false},
-		{name: "date minimum excludes missing stat", req: &types.ListMovieFullRequest{LastScTimeMin: "2026-01-01"}, want: false},
+		{name: "date minimum excludes missing stat", req: &types.ListMovieFullRequest{LastSelectedScTimeMin: "2026-01-01"}, want: false},
 		{name: "negative maximum excludes missing stat", req: &types.ListMovieFullRequest{ComeTimesMax: &negative}, want: false},
 	}
 

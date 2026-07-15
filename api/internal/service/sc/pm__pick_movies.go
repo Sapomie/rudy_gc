@@ -127,7 +127,7 @@ func (l *ScService) LogPicksBySource(mts []*types.MovieType, source string) {
 
 	// ---------- 打印表头 ----------
 	l.deps.Log.Infof("%-25s | %-15s | %-12s | %-8s | %-12s | %-19s",
-		"Name", "Cast[0]", "FilmDate", "ScTimes", "RDate", "CastLastSc")
+		"Name", "Cast[0]", "FilmDate", "ScTimes", "RDate", "CastSelectedSc")
 	l.deps.Log.Info(strings.Repeat("-", 100))
 
 	// ---------- 打印每行 ----------
@@ -143,13 +143,13 @@ func (l *ScService) LogPicksBySource(mts []*types.MovieType, source string) {
 		}
 
 		cast0 := "-"
-		castLastSc := "-"
+		castLastSelectedSc := "-"
 		if len(mt.Cast) > 0 && mt.Cast[0] != nil {
 			if mt.Cast[0].Name != "" {
 				cast0 = mt.Cast[0].Name
 			}
-			if mt.Cast[0].LastScTime > 0 {
-				castLastSc = time.Unix(mt.Cast[0].LastScTime, 0).Format("2006-01-02 15:04:05")
+			if mt.Cast[0].LastSelectedScTime > 0 {
+				castLastSelectedSc = time.Unix(mt.Cast[0].LastSelectedScTime, 0).Format("2006-01-02 15:04:05")
 			}
 		}
 
@@ -161,7 +161,7 @@ func (l *ScService) LogPicksBySource(mts []*types.MovieType, source string) {
 		totalSize += SmartPickMovieSize(mt, source)
 
 		l.deps.Log.Infof("%-25s | %-15s | %-12s | %-8d | %-12s | %-19s",
-			name, cast0, filmDate, scTimes, releasingDate, castLastSc)
+			name, cast0, filmDate, scTimes, releasingDate, castLastSelectedSc)
 	}
 
 	// ---------- 打印总大小 ----------
