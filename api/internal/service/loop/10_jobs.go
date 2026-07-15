@@ -758,7 +758,7 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 		detailTargets := append([]string(nil), listResult.DetailThreadTIDs...)
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:             "fetch_sehuatang_sh_detail_prepare",
-			Message:           fmt.Sprintf("列表建池完成，准备补全详情，待处理=%d", len(detailTargets)),
+			Message:           fmt.Sprintf("列表建池完成，准备抓取详情，策略=%s，待处理=%d", existingPolicy, len(detailTargets)),
 			HandledCount:      int(listResult.MatchedCount),
 			SuccessCount:      int(listResult.FetchedCount),
 			FailedCount:       int(listResult.FailedCount),
@@ -772,11 +772,15 @@ func (l *FetchLoopService) StartFetchSehuatangSHThreads(req StartTaskRequest) (s
 
 		var detailResult *fetchsehuatang.SHFetchResult
 		if len(detailTargets) > 0 {
+			detailScope := "new_threads"
+			if existingPolicy == fetchsehuatang.SHExistingPolicyUpsert {
+				detailScope = "all_page_threads"
+			}
 			selectionCriteria, marshalErr := json.Marshal(map[string]any{
 				"trigger_source":   "shfetchall",
 				"existing_policy":  existingPolicy,
+				"detail_scope":     detailScope,
 				"target_forum_ids": req.TargetForumIDs,
-				"detail_statuses":  []string{fetchsehuatang.SHDetailStatusPending, fetchsehuatang.SHDetailStatusFailed},
 				"list_start_page":  startPage,
 				"list_end_page":    endPage,
 			})

@@ -101,19 +101,19 @@ func TestValidateSHFetchRequestRejectsInvalidExistingPolicy(t *testing.T) {
 func TestSHListTopicNeedsDetail(t *testing.T) {
 	tests := []struct {
 		name     string
+		policy   string
 		existed  bool
-		status   string
 		expected bool
 	}{
-		{name: "new", existed: false, status: "", expected: true},
-		{name: "pending", existed: true, status: SHDetailStatusPending, expected: true},
-		{name: "failed", existed: true, status: SHDetailStatusFailed, expected: true},
-		{name: "fetched", existed: true, status: SHDetailStatusFetched, expected: false},
+		{name: "upsert new", policy: SHExistingPolicyUpsert, existed: false, expected: true},
+		{name: "upsert existing", policy: SHExistingPolicyUpsert, existed: true, expected: true},
+		{name: "skip new", policy: SHExistingPolicySkip, existed: false, expected: true},
+		{name: "skip existing", policy: SHExistingPolicySkip, existed: true, expected: false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := shListTopicNeedsDetail(test.existed, test.status); got != test.expected {
-				t.Fatalf("shListTopicNeedsDetail(%v, %q) = %v, want %v", test.existed, test.status, got, test.expected)
+			if got := shListTopicNeedsDetail(test.policy, test.existed); got != test.expected {
+				t.Fatalf("shListTopicNeedsDetail(%q, %v) = %v, want %v", test.policy, test.existed, got, test.expected)
 			}
 		})
 	}

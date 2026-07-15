@@ -563,7 +563,7 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 				}
 				continue
 			}
-			needsDetail := shListTopicNeedsDetail(existed, oldTarget.DetailStatus)
+			needsDetail := shListTopicNeedsDetail(req.ExistingPolicy, existed)
 			if existed {
 				markSHThreadAggTarget(result, oldTarget)
 			}
@@ -618,8 +618,8 @@ func (s *Service) fetchSHListPages(ctx context.Context, cfg fetchsite.SiteConfig
 	return nil
 }
 
-func shListTopicNeedsDetail(existed bool, detailStatus string) bool {
-	return !existed || strings.TrimSpace(detailStatus) != SHDetailStatusFetched
+func shListTopicNeedsDetail(existingPolicy string, existed bool) bool {
+	return !existed || NormalizeSHExistingPolicy(existingPolicy) == SHExistingPolicyUpsert
 }
 
 func shListTopicShouldSkip(existingPolicy string, existed bool) bool {

@@ -190,7 +190,7 @@
                             @click="form.existingPolicy = 'skip'"
                           >跳过已有</button>
                         </div>
-                        <div class="text-muted small mt-1">{{ form.existingPolicy === "skip" ? "已有帖子不更新、不补全详情，只处理本次发现的新帖子。" : "已有帖子更新基础信息，并补全待抓或失败的详情。" }}</div>
+                        <div class="text-muted small mt-1">{{ form.existingPolicy === "skip" ? "已有帖子不更新、不抓取详情，只处理本次发现的新帖子。" : "更新已有帖子基础信息，并重新抓取当前页面全部帖子详情。" }}</div>
                       </div>
 
                       <div class="form-group compact-field grid-span-2" id="fetchSehuatangSHDetailStatusFieldWrap" :class="{ 'is-hidden': !showSHDetailFields }">
@@ -861,8 +861,8 @@ const stopDisabled = computed(() => {
 const currentProgressPercent = computed(() => {
   const job = currentJob.value || {};
   if (isSHRuntimeOverview.value) {
-    const page = sehuatangPageCounts(job);
-    return page.total > 0 ? Math.max(0, Math.min(100, Math.round(page.completed * 100 / page.total))) : 0;
+    const progress = sehuatangCurrentProgressCounts(job);
+    return progress.total > 0 ? Math.max(0, Math.min(100, Math.round(progress.completed * 100 / progress.total))) : 0;
   }
   if (["javbus_filtered_queue", "sukebei_filtered_queue"].includes(overviewMode.value)) {
     const pending = asArray<AnyRecord>(pick(job, "pending_items", "PendingItems")).length;
@@ -982,7 +982,7 @@ const shHeroMetrics = computed(() => [
 ]);
 const shListRuntimeContext = computed(() => {
   const job = currentJob.value || {};
-  const page = sehuatangPageCounts(job);
+  const progress = sehuatangCurrentProgressCounts(job);
   const targetForumText = jobStatText(job, "target_forum_ids") || targetForumIDs.value.join(",");
   const currentForumID = jobStatText(job, "current_forum_id") || targetForumText.split(",")[0] || "";
   const currentPage = jobStatNumber(job, "current_page");
@@ -995,13 +995,14 @@ const shListRuntimeContext = computed(() => {
     { label: "页码范围", value: startPage > 0 && endPage > 0 ? `${startPage}-${endPage}` : "-" },
     { label: "当前抓取", value: currentPage > 0 ? `${shForumName(shForums.value, currentForumID)} · 第 ${currentPage} 页` : "准备中" },
     { label: "运行时长", value: formatJobElapsed(job) },
-    { label: "预计剩余时间", value: formatJobEstimatedRemaining(job, page.completed, page.total) }
+    { label: "预计剩余时间", value: formatJobEstimatedRemaining(job, progress.completed, progress.total) }
   ];
 });
 const shDetailRuntimeContext = computed(() => {
   const job = currentJob.value || {};
   const targetForumText = jobStatText(job, "target_forum_ids") || targetForumIDs.value.join(",");
   const page = sehuatangPageCounts(job);
+  const progress = sehuatangCurrentProgressCounts(job);
   const currentPageText = jobStatText(job, "current_page_text");
   const currentMatch = currentPageText.match(/^detail=(\d+)\/(\d+)(?:\s+tid=(\S+))?/);
   const currentDetail = currentMatch
@@ -1013,7 +1014,7 @@ const shDetailRuntimeContext = computed(() => {
     { label: "选中帖子", value: String(page.total) },
     { label: "当前抓取", value: currentDetail },
     { label: "运行时长", value: formatJobElapsed(job) },
-    { label: "预计剩余时间", value: formatJobEstimatedRemaining(job, page.completed, page.total) }
+    { label: "预计剩余时间", value: formatJobEstimatedRemaining(job, progress.completed, progress.total) }
   ];
 });
 const shRuntimeContext = computed(() => isSHDetailOverview.value ? shDetailRuntimeContext.value : shListRuntimeContext.value);
@@ -1330,10 +1331,36 @@ function sehuatangPageCounts(job: AnyRecord): { completed: number; total: number
   return { completed: listPhase.handled, total: listPhase.total };
 }
 
-function currentPhaseLabel(job: AnyRecord): string {
+function sehuatangCurrentProgressCounts(job: AnyRecord): { completed: number; total: number } {
+  const phaseKey = jobCurrentPhaseKey(job);
+  if (phaseKey) {
+    const phase = phaseStat(job, phaseKey);
+    if (phase.total > 0) {
+      return { completed: phase.handled, total: phase.total };
+    }
+  }
+
+  if (phaseKey === "detail" || isSHDetailOverview.value) {
+    const taskType = text(job, "task_type", "TaskType");
+    const detailPrefix = taskType === "spider_fetch_sehuatang_sh_threads" ? "detail_" : "";
+    const completed = jobStatNumber(job, `${detailPrefix}completed_page_count`);
+    const total = jobStatNumber(job, `${detailPrefix}total_page_count`);
+    if (total > 0) {
+      return { completed, total };
+    }
+  }
+
+  return sehuatangPageCounts(job);
+}
+
+function jobCurrentPhaseKey(job: AnyRecord): string {
   const stage = text(job, "stage", "Stage");
   const dailyBestInitialPhase = overviewMode.value === "dailybest_stages" && ["pipeline_pre", "job_started"].includes(stage) ? "bestinv" : "";
-  const phase = text(job, "current_phase_key", "CurrentPhaseKey") || dailyBestInitialPhase || phaseByEventStage[stage] || "";
+  return text(job, "current_phase_key", "CurrentPhaseKey") || dailyBestInitialPhase || phaseByEventStage[stage] || "";
+}
+
+function currentPhaseLabel(job: AnyRecord): string {
+  const phase = jobCurrentPhaseKey(job);
   return phase ? stagePhaseLabels[phase] || phase : "-";
 }
 

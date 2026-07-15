@@ -300,7 +300,7 @@ func (h *CrawlerPagesAPI) FetchSehuatangSHPage(c *gin.Context) {
 		"PageTitle":         "色花堂一体抓取",
 		"QuickNavCurrent":   "fetch_sehuatang_sh",
 		"TaskPanelTitle":    "色花堂一体抓取",
-		"PageNote":          "先按列表建池流程保存帖子基础信息，再补全本次待抓或失败的帖子详情。",
+		"PageNote":          "先按页面保存帖子基础信息，再根据已有帖子策略抓取详情。Upsert 会重新抓取页面内全部帖子详情。",
 		"TaskTableTitle":    "色花堂一体抓取任务",
 		"EventTitle":        "色花堂一体抓取事件流",
 		"StorageKey":        "crawler_jobs_fetch_sehuatang_sh_selected_job",
