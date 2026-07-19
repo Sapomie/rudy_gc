@@ -3,6 +3,7 @@ MAKE_DIR := $(ROOT_DIR)/make
 
 include $(MAKE_DIR)/common.mk
 include $(MAKE_DIR)/apps.mk
+include $(MAKE_DIR)/dailybest.mk
 include $(MAKE_DIR)/verify.mk
 include $(MAKE_DIR)/backup.mk
 
@@ -21,6 +22,9 @@ help:
 	@echo "  make test-api    Run Go tests"
 	@echo "  make build-api   Build Go packages"
 	@echo "  make migrate-api Run database migrations"
+	@echo "  make run-dailybest-remote     Run DailyBest remote service"
+	@echo "  make build-dailybest-remote   Build DailyBest remote service"
+	@echo "  make migrate-dailybest-remote Migrate DailyBest remote database"
 	@echo "  make check-web   Type-check web"
 	@echo "  make test-web    Run web unit tests"
 	@echo "  make build-web   Build web"
