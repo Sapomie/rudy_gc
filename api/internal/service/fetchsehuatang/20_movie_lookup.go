@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+var sehuatangThreadMovieNameOverrides = map[string]string{
+	"3270076": "FC2PPV-4821506",
+}
+
 func (s *Service) resolveMovieJavIDByMovieName(ctx context.Context, movieName string) (string, error) {
 	movieName = strings.TrimSpace(movieName)
 	if movieName == "" {
@@ -41,7 +45,7 @@ func (s *Service) resolveMovieJavIDByMovieName(ctx context.Context, movieName st
 	return "", nil
 }
 
-func (s *Service) resolveSehuatangThreadMovieFields(ctx context.Context, titles ...string) (string, string, error) {
+func resolveSehuatangThreadMovieName(threadTID string, titles ...string) string {
 	movieName := ""
 	for _, title := range titles {
 		movieName = parseMovieName(title)
@@ -49,6 +53,14 @@ func (s *Service) resolveSehuatangThreadMovieFields(ctx context.Context, titles 
 			break
 		}
 	}
+	if override := strings.TrimSpace(sehuatangThreadMovieNameOverrides[strings.TrimSpace(threadTID)]); override != "" {
+		return override
+	}
+	return movieName
+}
+
+func (s *Service) resolveSehuatangThreadMovieFields(ctx context.Context, threadTID string, titles ...string) (string, string, error) {
+	movieName := resolveSehuatangThreadMovieName(threadTID, titles...)
 	movieJavID, err := s.resolveMovieJavIDByMovieName(ctx, movieName)
 	if err != nil {
 		return movieName, "", err

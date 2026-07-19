@@ -368,7 +368,7 @@ func (s *Service) saveSHListTopic(ctx context.Context, req SHFetchRequest, run s
 	if _, err := s.deps.ShSehuatangFetchItemModel.Upsert(ctx, item); err != nil {
 		return err
 	}
-	movieName, movieJavID, err := s.resolveSehuatangThreadMovieFields(ctx, topic.Title)
+	movieName, movieJavID, err := s.resolveSehuatangThreadMovieFields(ctx, topic.ThreadTID, topic.Title)
 	if err != nil {
 		return err
 	}
@@ -535,7 +535,12 @@ func (s *Service) fetchSHTopicDetailWithOptions(ctx context.Context, cfg fetchsi
 	if detail.PostTime <= 0 {
 		detail.PostTime = parseForumTimeText(topic.ListPostAt, time.Now())
 	}
-	movieName, movieJavID, resolveErr := s.resolveSehuatangThreadMovieFields(ctx, detail.ThreadTitle, topic.Title)
+	movieName, movieJavID, resolveErr := s.resolveSehuatangThreadMovieFields(
+		ctx,
+		detail.ThreadTID,
+		detail.ThreadTitle,
+		topic.Title,
+	)
 	if resolveErr != nil {
 		result.FailedCount++
 		result.LastError = resolveErr.Error()

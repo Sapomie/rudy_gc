@@ -9,14 +9,16 @@ import (
 )
 
 type LibraryRescanSelection struct {
-	Scope    string   `json:"scope"`
-	Root     string   `json:"root"`
-	Branches []string `json:"branches"`
+	MediaType string   `json:"media_type"`
+	Scope     string   `json:"scope"`
+	Root      string   `json:"root"`
+	Branches  []string `json:"branches"`
 }
 
 type LibraryRescanRootOption struct {
-	Root   string                      `json:"root"`
-	Scopes []*LibraryRescanScopeOption `json:"scopes"`
+	MediaType string                      `json:"media_type"`
+	Root      string                      `json:"root"`
+	Scopes    []*LibraryRescanScopeOption `json:"scopes"`
 }
 
 type LibraryRescanScopeOption struct {
@@ -35,12 +37,13 @@ type LibraryRescanDirOption struct {
 func (s *Service) ListLibraryRescanRootOptions(ctx context.Context) ([]*LibraryRescanRootOption, error) {
 	_ = ctx
 
-	roots := s.mediaRoots()
-	out := make([]*LibraryRescanRootOption, 0, len(roots))
-	for _, root := range roots {
-		layout := buildRootLayout(root)
+	configuredRoots := s.libraryRescanConfiguredRoots()
+	out := make([]*LibraryRescanRootOption, 0, len(configuredRoots))
+	for _, configured := range configuredRoots {
+		layout := buildRootLayout(configured.Root)
 		option := &LibraryRescanRootOption{
-			Root: root,
+			MediaType: configured.MediaType,
+			Root:      configured.Root,
 			Scopes: []*LibraryRescanScopeOption{
 				buildLibraryRescanScopeOption(scopeMedia, "media", layout.media),
 				buildLibraryRescanScopeOption(scopeWatched, "watched", layout.watched),

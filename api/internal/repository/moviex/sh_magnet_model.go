@@ -17,6 +17,7 @@ type (
 		FindOne(ctx context.Context, id int64) (*ShMagnet, error)
 		ListByIDs(ctx context.Context, ids []int64) ([]*ShMagnet, error)
 		ListByMovieKey(ctx context.Context, movieJavID string, movieName string) ([]*ShMagnet, error)
+		ListByFC2Key(ctx context.Context, fc2Key string) ([]*ShMagnet, error)
 		ListMissingMovieJavIDByMovieName(ctx context.Context, movieName string) ([]*ShMagnet, error)
 		UpdateMovieFields(ctx context.Context, id int64, movieJavID string, movieName string, updatedOn int64) error
 		RefreshDownloadStatesByInfoHashes(ctx context.Context, infoHashes ...string) error
@@ -174,6 +175,23 @@ func (m *defaultShMagnetModel) ListByMovieKey(ctx context.Context, movieJavID st
 
 	rows := make([]*ShMagnet, 0)
 	if err := m.conn.QueryRowsCtx(ctx, &rows, query, args...); err != nil {
+		if err == sqlx.ErrNotFound {
+			return []*ShMagnet{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *defaultShMagnetModel) ListByFC2Key(ctx context.Context, fc2Key string) ([]*ShMagnet, error) {
+	fc2Key = strings.TrimSpace(fc2Key)
+	if fc2Key == "" {
+		return []*ShMagnet{}, nil
+	}
+
+	query := "select " + shMagnetSelectRows + " from " + m.table + " m left join `sh_thread` t on t.thread_tid = m.thread_tid left join `fc2_movie` fm on fm.id = t.fc2_movie_id where fm.fc2_key = ? order by m.post_time desc, m.updated_on desc, m.id desc"
+	rows := make([]*ShMagnet, 0)
+	if err := m.conn.QueryRowsCtx(ctx, &rows, query, fc2Key); err != nil {
 		if err == sqlx.ErrNotFound {
 			return []*ShMagnet{}, nil
 		}

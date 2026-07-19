@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const scMediaMovePlanVersion = 1
+const (
+	scMediaMovePlanLegacyVersion = 1
+	scMediaMovePlanVersion       = 2
+)
 
 var ErrScMediaMovePlanNotFound = errors.New("sc media move plan not found")
 
@@ -42,7 +45,9 @@ type scMediaMovePlan struct {
 }
 
 type scMediaMovePlanEntry struct {
+	MovieType  string   `json:"movie_type"`
 	MovieJavId string   `json:"movie_jav_id"`
+	FC2Key     string   `json:"fc2_key"`
 	MovieName  string   `json:"movie_name"`
 	ScNames    []string `json:"sc_names"`
 	RootDir    string   `json:"root_dir"`
@@ -51,7 +56,9 @@ type scMediaMovePlanEntry struct {
 
 type scMediaMovePlanCheck struct {
 	Status     string   `json:"status"`
+	MovieType  string   `json:"movie_type"`
 	MovieJavId string   `json:"movie_jav_id"`
+	FC2Key     string   `json:"fc2_key"`
 	MovieName  string   `json:"movie_name"`
 	ScNames    []string `json:"sc_names"`
 	RootDir    string   `json:"root_dir"`
@@ -96,7 +103,9 @@ func (s *Service) ReadScMediaMovePlanSnapshot(ctx context.Context, mode, scName 
 		}
 		out.Items = append(out.Items, &ScMediaMoveItem{
 			Status:     strings.TrimSpace(check.Status),
+			MovieType:  normalizeScMediaMoveMovieType(check.MovieType, check.MovieJavId, check.FC2Key),
 			MovieJavId: strings.TrimSpace(check.MovieJavId),
+			FC2Key:     strings.TrimSpace(check.FC2Key),
 			MovieName:  strings.TrimSpace(check.MovieName),
 			ScNames:    normalizeScMediaMoveItemScNames(out.Mode, out.ScName, check.ScNames),
 			RootDir:    strings.TrimSpace(check.RootDir),
@@ -155,7 +164,9 @@ func buildScMediaMovePlan(mode, scName string, generatedAt int64, items []*ScMed
 		case scMediaMoveStatusPass:
 			plan.Movable++
 			plan.Entries = append(plan.Entries, &scMediaMovePlanEntry{
+				MovieType:  normalizeScMediaMoveMovieType(item.MovieType, item.MovieJavId, item.FC2Key),
 				MovieJavId: strings.TrimSpace(item.MovieJavId),
+				FC2Key:     strings.TrimSpace(item.FC2Key),
 				MovieName:  strings.TrimSpace(item.MovieName),
 				ScNames:    append([]string{}, item.ScNames...),
 				RootDir:    strings.TrimSpace(item.RootDir),
@@ -169,7 +180,9 @@ func buildScMediaMovePlan(mode, scName string, generatedAt int64, items []*ScMed
 		plan.Total++
 		plan.Checks = append(plan.Checks, &scMediaMovePlanCheck{
 			Status:     status,
+			MovieType:  normalizeScMediaMoveMovieType(item.MovieType, item.MovieJavId, item.FC2Key),
 			MovieJavId: strings.TrimSpace(item.MovieJavId),
+			FC2Key:     strings.TrimSpace(item.FC2Key),
 			MovieName:  strings.TrimSpace(item.MovieName),
 			ScNames:    append([]string{}, item.ScNames...),
 			RootDir:    strings.TrimSpace(item.RootDir),
@@ -250,7 +263,7 @@ func (s *Service) loadScMediaMovePlan(mode, scName string) (*scMediaMovePlan, er
 	if err = json.Unmarshal(payload, plan); err != nil {
 		return nil, fmt.Errorf("sc media 计划解析失败: %w", err)
 	}
-	if plan.Version != scMediaMovePlanVersion {
+	if plan.Version != scMediaMovePlanLegacyVersion && plan.Version != scMediaMovePlanVersion {
 		return nil, fmt.Errorf("sc media 计划版本不支持: %d", plan.Version)
 	}
 	plan.Mode = normalizeScMediaMoveMode(plan.Mode)
@@ -262,6 +275,22 @@ func (s *Service) loadScMediaMovePlan(mode, scName string) (*scMediaMovePlan, er
 	}
 	if plan.Checks == nil {
 		plan.Checks = []*scMediaMovePlanCheck{}
+	}
+	for _, entry := range plan.Entries {
+		if entry == nil {
+			continue
+		}
+		entry.MovieType = normalizeScMediaMoveMovieType(entry.MovieType, entry.MovieJavId, entry.FC2Key)
+		entry.MovieJavId = strings.TrimSpace(entry.MovieJavId)
+		entry.FC2Key = strings.TrimSpace(entry.FC2Key)
+	}
+	for _, check := range plan.Checks {
+		if check == nil {
+			continue
+		}
+		check.MovieType = normalizeScMediaMoveMovieType(check.MovieType, check.MovieJavId, check.FC2Key)
+		check.MovieJavId = strings.TrimSpace(check.MovieJavId)
+		check.FC2Key = strings.TrimSpace(check.FC2Key)
 	}
 	return plan, nil
 }
@@ -281,7 +310,10 @@ func (s *Service) clearScMediaMovePlan(mode, scName string) error {
 func (s *Service) scMediaPlanLayout() (rootLayout, error) {
 	roots := s.mediaRoots()
 	if len(roots) == 0 {
-		return rootLayout{}, fmt.Errorf("media.rootDirs 未配置")
+		roots = s.fc2ScMediaRoots()
+	}
+	if len(roots) == 0 {
+		return rootLayout{}, fmt.Errorf("media.rootDirs 与 fc2Media.rootDirs 均未配置")
 	}
 	return buildRootLayout(roots[0]), nil
 }

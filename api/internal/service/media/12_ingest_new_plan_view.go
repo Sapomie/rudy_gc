@@ -61,9 +61,13 @@ func (s *Service) ReadIngestPlanSnapshot(ctx context.Context) (*IngestPlanSnapsh
 			}
 			out.Items = append(out.Items, &IngestFileItem{
 				Status:            status,
+				Action:            check.Action,
+				Notice:            check.Notice,
 				RootDir:           check.RootDir,
 				SourcePath:        check.SourcePath,
 				MovieName:         check.MovieName,
+				ExistingPath:      check.ExistingPath,
+				RemovedPath:       check.RemovedPath,
 				TargetFileName:    check.TargetFileName,
 				TargetDir:         check.TargetDir,
 				Alias:             check.Alias,

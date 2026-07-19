@@ -96,4 +96,12 @@ func TestFC2ImageGenerationRoutesAreReducedToDefaultCoverTask(t *testing.T) {
 	if _, ok := routes[movieAlbumRoute]; !ok {
 		t.Fatalf("FC2电影相册路由缺失: %s", movieAlbumRoute)
 	}
+	for _, resourceAlbumRoute := range []string{
+		http.MethodPost + " /api/fc2/movies/:fc2_key/resource-album-item",
+		http.MethodDelete + " /api/fc2/movies/:fc2_key/resource-album-item",
+	} {
+		if _, ok := routes[resourceAlbumRoute]; !ok {
+			t.Fatalf("FC2磁力相册路由缺失: %s", resourceAlbumRoute)
+		}
+	}
 }

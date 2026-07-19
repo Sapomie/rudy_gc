@@ -26,6 +26,8 @@ apps-help:
 	@echo "  make run-dev          Run API and web together"
 	@echo "  make stop-dev         Stop API and web"
 	@echo "  make check-dev        Test API and check web"
+	@echo "  make run-all          Run API and web together"
+	@echo "  make stop-all         Stop API and web"
 	@echo "App variables:"
 	@echo "  API_DIR=$(API_DIR)"
 	@echo "  API_CONFIG_FILE=$(API_CONFIG_FILE)"
@@ -75,7 +77,6 @@ stop-web:
 		echo "web port $(WEB_PORT) is not in use"; \
 	fi
 
-
 check-web:
 	@cd "$(WEB_DIR)" && npm run check
 
@@ -97,8 +98,14 @@ stop-dev: stop-api stop-web
 
 check-dev: test-api check-web
 
-run-all: run-dev
+run-all: stop-all
+	@echo "Starting API and web"
+	@set -e; \
+	(cd "$(API_DIR)" && go run ./cmd/api -f "$(API_CONFIG_FILE)") & api_pid=$$!; \
+	(cd "$(WEB_DIR)" && PORT="$(WEB_PORT)" API_ORIGIN="$(API_ORIGIN)" npm run dev) & web_pid=$$!; \
+	trap 'kill -9 $$api_pid $$web_pid 2>/dev/null || true' INT TERM EXIT; \
+	wait $$api_pid $$web_pid
 
-stop-all: stop-dev
+stop-all: stop-api stop-web
 
 endif

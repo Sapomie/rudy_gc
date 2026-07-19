@@ -2,31 +2,42 @@ package loop
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"rudy_gc/internal/service/fetchsite"
 )
 
-const fetchSitePreviewDefaultPageSize int64 = 100
+const (
+	fetchSiteSourceJavbus  = "javbus"
+	fetchSiteSourceSukebei = "sukebei"
+)
 
-type FetchSitePreviewItem struct {
-	MovieJavID string `json:"movie_jav_id"`
-	MovieName  string `json:"movie_name"`
-	Source     string `json:"source"`
+type FetchSitePreviewAggregate struct {
+	MatchedMovies        int64 `json:"matched_movies"`
+	SelectedItems        int64 `json:"selected_items"`
+	JavbusCount          int64 `json:"javbus_count"`
+	SukebeiCount         int64 `json:"sukebei_count"`
+	BothCount            int64 `json:"both_count"`
+	SkippedRecentFetch   int64 `json:"skipped_recent_fetch"`
+	SkippedRecentSuccess int64 `json:"skipped_recent_success"`
 }
 
 type FetchSitePreviewResult struct {
-	TaskType   string                  `json:"task_type"`
-	Total      int64                   `json:"total"`
-	Page       int64                   `json:"page"`
-	PageSize   int64                   `json:"page_size"`
-	TotalPages int64                   `json:"total_pages"`
-	Items      []*FetchSitePreviewItem `json:"items"`
+	TaskType  string                    `json:"task_type"`
+	Signature string                    `json:"signature"`
+	Aggregate FetchSitePreviewAggregate `json:"aggregate"`
+	Targets   []FetchSiteTarget         `json:"targets"`
 }
 
-func (l *FetchLoopService) PreviewFetchSiteTargets(ctx context.Context, req StartTaskRequest, page int64, pageSize int64) (*FetchSitePreviewResult, error) {
+func (l *FetchLoopService) PreviewFetchSiteTargets(ctx context.Context, req StartTaskRequest) (*FetchSitePreviewResult, error) {
 	taskType := strings.TrimSpace(req.TaskType)
+	if !isFetchSitePreviewTaskType(taskType) {
+		return nil, fmt.Errorf("unsupported task_type: %s", taskType)
+	}
 	movieReq, err := buildFetchSiteMovieRequest(req)
 	if err != nil {
 		return nil, err
@@ -35,162 +46,114 @@ func (l *FetchLoopService) PreviewFetchSiteTargets(ctx context.Context, req Star
 	if err != nil {
 		return nil, err
 	}
-	targetCount := normalizeFetchSiteNumber(req.Number)
-	page = normalizeFetchSitePreviewPage(page)
-	pageSize = normalizeFetchSitePreviewPageSize(pageSize)
-
-	var items []*FetchSitePreviewItem
-	switch taskType {
-	case TaskSpiderFetchJavbus:
-		tasks, err := l.buildFilteredJavbusFetchTasksWithFilterTarget(ctx, movieReq, targetCount, durationFilter.LastFetchDurationDays, durationFilter.LastSuccessDurationDays)
-		if err != nil {
-			return nil, err
-		}
-		items = buildFetchSitePreviewItemsFromJavbus(tasks)
-	case TaskSpiderFetchSukebei:
-		tasks, err := l.buildFilteredSukebeiFetchTasksWithFilterTarget(ctx, movieReq, targetCount, durationFilter.LastFetchDurationDays, durationFilter.LastSuccessDurationDays)
-		if err != nil {
-			return nil, err
-		}
-		items = buildFetchSitePreviewItemsFromSukebei(tasks)
-	case TaskSpiderFetchSiteBoth:
-		javbusTasks, err := l.buildFilteredJavbusFetchTasksWithFilterTarget(ctx, movieReq, targetCount, durationFilter.LastFetchDurationDays, durationFilter.LastSuccessDurationDays)
-		if err != nil {
-			return nil, err
-		}
-		sukebeiTasks, err := l.buildFilteredSukebeiFetchTasksWithFilterTarget(ctx, movieReq, targetCount, durationFilter.LastFetchDurationDays, durationFilter.LastSuccessDurationDays)
-		if err != nil {
-			return nil, err
-		}
-		items = mergeFetchSitePreviewItems(
-			buildFetchSitePreviewItemsFromJavbus(javbusTasks),
-			buildFetchSitePreviewItemsFromSukebei(sukebeiTasks),
-		)
-	default:
-		return nil, fmt.Errorf("unsupported task_type: %s", taskType)
+	movies, err := l.movieSvc.ListMovieFullAllOrdered(ctx, movieReq)
+	if err != nil {
+		return nil, err
 	}
 
-	total := int64(len(items))
-	totalPages := int64(0)
-	if total > 0 {
-		totalPages = (total + pageSize - 1) / pageSize
+	targets := make([]FetchSiteTarget, 0)
+	javbusMovies := make(map[string]struct{})
+	sukebeiMovies := make(map[string]struct{})
+	sequence := int64(0)
+	skippedRecentFetch := 0
+	skippedRecentSuccess := 0
+
+	if taskType == TaskSpiderFetchJavbus || taskType == TaskSpiderFetchSiteBoth {
+		tasks, skippedFetch, skippedSuccess, err := l.fetchQueue.BuildFilteredJavbusFetchTasksByMovies(ctx, movies.List, durationFilter.LastFetchDurationDays, durationFilter.LastSuccessDurationDays)
+		if err != nil {
+			return nil, err
+		}
+		skippedRecentFetch += skippedFetch
+		skippedRecentSuccess += skippedSuccess
+		for _, task := range tasks {
+			if task == nil || strings.TrimSpace(task.MovieJavID) == "" {
+				continue
+			}
+			sequence++
+			movieJavID := strings.TrimSpace(task.MovieJavID)
+			javbusMovies[movieJavID] = struct{}{}
+			targets = append(targets, fetchSiteTargetFromJavbusTask(task, sequence))
+		}
 	}
-	if totalPages > 0 && page > totalPages {
-		page = totalPages
-	}
-	start := (page - 1) * pageSize
-	if start < 0 {
-		start = 0
-	}
-	end := start + pageSize
-	if end > total {
-		end = total
-	}
-	pageItems := []*FetchSitePreviewItem{}
-	if total > 0 && start < end {
-		pageItems = items[start:end]
+	if taskType == TaskSpiderFetchSukebei || taskType == TaskSpiderFetchSiteBoth {
+		tasks, skippedFetch, skippedSuccess, err := l.fetchQueue.BuildFilteredSukebeiFetchTasksByMovies(ctx, movies.List, durationFilter.LastFetchDurationDays, durationFilter.LastSuccessDurationDays)
+		if err != nil {
+			return nil, err
+		}
+		skippedRecentFetch += skippedFetch
+		skippedRecentSuccess += skippedSuccess
+		for _, task := range tasks {
+			if task == nil || strings.TrimSpace(task.MovieJavID) == "" {
+				continue
+			}
+			sequence++
+			movieJavID := strings.TrimSpace(task.MovieJavID)
+			sukebeiMovies[movieJavID] = struct{}{}
+			targets = append(targets, fetchSiteTargetFromSukebeiTask(task, sequence))
+		}
 	}
 
+	bothCount := int64(0)
+	for movieJavID := range javbusMovies {
+		if _, ok := sukebeiMovies[movieJavID]; ok {
+			bothCount++
+		}
+	}
+	signature, err := fetchSitePreviewSignature(req)
+	if err != nil {
+		return nil, err
+	}
+	aggregate := FetchSitePreviewAggregate{
+		MatchedMovies:        movies.Total,
+		SelectedItems:        int64(len(targets)),
+		JavbusCount:          int64(len(javbusMovies)),
+		SukebeiCount:         int64(len(sukebeiMovies)),
+		BothCount:            bothCount,
+		SkippedRecentFetch:   int64(skippedRecentFetch),
+		SkippedRecentSuccess: int64(skippedRecentSuccess),
+	}
 	return &FetchSitePreviewResult{
-		TaskType:   taskType,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: totalPages,
-		Items:      pageItems,
+		TaskType:  taskType,
+		Signature: signature,
+		Aggregate: aggregate,
+		Targets:   targets,
 	}, nil
 }
 
-func buildFetchSitePreviewItemsFromJavbus(tasks []*fetchsite.JavbusFetchTask) []*FetchSitePreviewItem {
-	out := make([]*FetchSitePreviewItem, 0, len(tasks))
-	for _, task := range tasks {
-		if task == nil {
-			continue
-		}
-		out = append(out, &FetchSitePreviewItem{
-			MovieJavID: strings.TrimSpace(task.MovieJavID),
-			MovieName:  strings.TrimSpace(task.MovieName),
-			Source:     "JavBus",
-		})
+func fetchSiteTargetFromJavbusTask(task *fetchsite.JavbusFetchTask, sequence int64) FetchSiteTarget {
+	return FetchSiteTarget{
+		Sequence:   sequence,
+		Source:     fetchSiteSourceJavbus,
+		MovieJavID: strings.TrimSpace(task.MovieJavID),
+		MovieName:  strings.TrimSpace(task.MovieName),
 	}
-	return out
 }
 
-func buildFetchSitePreviewItemsFromSukebei(tasks []*fetchsite.SukebeiFetchTask) []*FetchSitePreviewItem {
-	out := make([]*FetchSitePreviewItem, 0, len(tasks))
-	for _, task := range tasks {
-		if task == nil {
-			continue
-		}
-		out = append(out, &FetchSitePreviewItem{
-			MovieJavID: strings.TrimSpace(task.MovieJavID),
-			MovieName:  strings.TrimSpace(task.MovieName),
-			Source:     "Sukebei",
-		})
+func fetchSiteTargetFromSukebeiTask(task *fetchsite.SukebeiFetchTask, sequence int64) FetchSiteTarget {
+	return FetchSiteTarget{
+		Sequence:   sequence,
+		Source:     fetchSiteSourceSukebei,
+		MovieJavID: strings.TrimSpace(task.MovieJavID),
+		MovieName:  strings.TrimSpace(task.MovieName),
 	}
-	return out
 }
 
-func mergeFetchSitePreviewItems(left []*FetchSitePreviewItem, right []*FetchSitePreviewItem) []*FetchSitePreviewItem {
-	out := make([]*FetchSitePreviewItem, 0, len(left)+len(right))
-	indexByMovie := make(map[string]int, len(left)+len(right))
-	appendItem := func(item *FetchSitePreviewItem) {
-		if item == nil {
-			return
-		}
-		movieJavID := strings.TrimSpace(item.MovieJavID)
-		movieName := strings.TrimSpace(item.MovieName)
-		source := strings.TrimSpace(item.Source)
-		if movieJavID == "" && movieName == "" {
-			return
-		}
-		key := movieJavID
-		if key == "" {
-			key = movieName
-		}
-		if key == "" {
-			return
-		}
-		if idx, ok := indexByMovie[key]; ok {
-			current := out[idx]
-			if current.MovieName == "" {
-				current.MovieName = movieName
-			}
-			if current.Source == "" {
-				current.Source = source
-				return
-			}
-			if source != "" && !strings.Contains(current.Source, source) {
-				current.Source = current.Source + " / " + source
-			}
-			return
-		}
-		indexByMovie[key] = len(out)
-		out = append(out, &FetchSitePreviewItem{
-			MovieJavID: movieJavID,
-			MovieName:  movieName,
-			Source:     source,
-		})
+func fetchSitePreviewSignature(req StartTaskRequest) (string, error) {
+	req.FetchSiteTargets = nil
+	req.Number = 0
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return "", err
 	}
-	for _, item := range left {
-		appendItem(item)
-	}
-	for _, item := range right {
-		appendItem(item)
-	}
-	return out
+	sum := sha256.Sum256(payload)
+	return hex.EncodeToString(sum[:]), nil
 }
 
-func normalizeFetchSitePreviewPage(page int64) int64 {
-	if page > 0 {
-		return page
+func isFetchSitePreviewTaskType(taskType string) bool {
+	switch strings.TrimSpace(taskType) {
+	case TaskSpiderFetchJavbus, TaskSpiderFetchSukebei, TaskSpiderFetchSiteBoth:
+		return true
+	default:
+		return false
 	}
-	return 1
-}
-
-func normalizeFetchSitePreviewPageSize(pageSize int64) int64 {
-	if pageSize > 0 {
-		return pageSize
-	}
-	return fetchSitePreviewDefaultPageSize
 }

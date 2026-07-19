@@ -25,7 +25,9 @@ type scMediaMoveReq struct {
 
 type scMediaMoveRow struct {
 	Status     string   `json:"status"`
+	MovieType  string   `json:"movie_type"`
 	MovieJavId string   `json:"movie_jav_id"`
+	FC2Key     string   `json:"fc2_key"`
 	MovieName  string   `json:"movie_name"`
 	ScNames    []string `json:"sc_names"`
 	RootDir    string   `json:"root_dir"`
@@ -313,7 +315,9 @@ func buildScMediaMoveRow(item *media.ScMediaMoveItem) scMediaMoveRow {
 	}
 	return scMediaMoveRow{
 		Status:     strings.TrimSpace(item.Status),
+		MovieType:  strings.TrimSpace(item.MovieType),
 		MovieJavId: strings.TrimSpace(item.MovieJavId),
+		FC2Key:     strings.TrimSpace(item.FC2Key),
 		MovieName:  strings.TrimSpace(item.MovieName),
 		ScNames:    append([]string{}, item.ScNames...),
 		RootDir:    strings.TrimSpace(item.RootDir),

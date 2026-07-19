@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	fc2domain "rudy_gc/internal/domain/fc2"
 	"rudy_gc/internal/repository/moviex"
 )
 
@@ -28,7 +29,16 @@ var (
 	ErrAlbumMismatch     = errors.New("相册条目不属于当前相册")
 	ErrTargetAlbumID     = errors.New("无效目标相册")
 	ErrTargetAlbumSame   = errors.New("目标相册不能与当前相册相同")
+	ErrInvalidFC2Key     = errors.New("FC2影片标识格式无效")
+	ErrInvalidFC2Album   = errors.New("FC2磁力仅支持下载中和待下载相册")
 )
+
+type FC2SHMagnetResource struct {
+	*moviex.ShMagnet
+	RowID        int64
+	IsInDownload bool
+	IsInPending  bool
+}
 
 type albumSourcePayload struct {
 	MovieName   string
@@ -56,6 +66,116 @@ func normalizeAlbumName(raw string) string {
 		return defaultAlbumName
 	}
 	return name
+}
+
+func normalizeFC2ResourceAlbumName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name != defaultAlbumName && name != pendingAlbumName {
+		return name, ErrInvalidFC2Album
+	}
+	return name, nil
+}
+
+func normalizeFC2ResourceKey(raw string) (string, error) {
+	fc2Key, _, _, _, ok := fc2domain.NormalizeKey(raw)
+	if !ok {
+		return "", ErrInvalidFC2Key
+	}
+	return fc2Key, nil
+}
+
+func (s *Service) ListFC2SHMagnetResources(ctx context.Context, rawFC2Key string) ([]*FC2SHMagnetResource, error) {
+	fc2Key, err := normalizeFC2ResourceKey(rawFC2Key)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.deps.ShMagnetModel.ListByFC2Key(ctx, fc2Key)
+	if err != nil {
+		return nil, err
+	}
+	rowIDs := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if row != nil && row.Id > 0 {
+			rowIDs = append(rowIDs, row.Id)
+		}
+	}
+
+	statusByAlbum := make(map[string]map[int64]struct{}, 2)
+	for _, albumName := range []string{defaultAlbumName, pendingAlbumName} {
+		albumID, albumErr := s.getAlbumIDByName(ctx, albumName, false)
+		if albumErr != nil {
+			return nil, albumErr
+		}
+		items, itemErr := s.deps.AlbumItemModel.ListByAlbumIdSourceTypeSourceRowIDs(ctx, albumID, sourceTypeSHMagnet, rowIDs)
+		if itemErr != nil {
+			return nil, itemErr
+		}
+		ids := make(map[int64]struct{}, len(items))
+		for _, item := range items {
+			if item != nil {
+				ids[item.SourceRowId] = struct{}{}
+			}
+		}
+		statusByAlbum[albumName] = ids
+	}
+
+	out := make([]*FC2SHMagnetResource, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		_, inDownload := statusByAlbum[defaultAlbumName][row.Id]
+		_, inPending := statusByAlbum[pendingAlbumName][row.Id]
+		out = append(out, &FC2SHMagnetResource{
+			ShMagnet:     row,
+			RowID:        row.Id,
+			IsInDownload: inDownload,
+			IsInPending:  inPending,
+		})
+	}
+	return out, nil
+}
+
+func (s *Service) AddFC2SHMagnetToAlbum(ctx context.Context, rawFC2Key, rawAlbumName string, sourceRowID int64) (bool, string, error) {
+	_, albumName, err := s.validateFC2SHMagnetAlbumRequest(ctx, rawFC2Key, rawAlbumName, sourceRowID)
+	if err != nil {
+		return false, albumName, err
+	}
+	return s.AddFetchResourceToAlbum(ctx, albumName, "", sourceTypeSHMagnet, sourceRowID)
+}
+
+func (s *Service) RemoveFC2SHMagnetFromAlbum(ctx context.Context, rawFC2Key, rawAlbumName string, sourceRowID int64) (bool, string, error) {
+	_, albumName, err := s.validateFC2SHMagnetAlbumRequest(ctx, rawFC2Key, rawAlbumName, sourceRowID)
+	if err != nil {
+		return false, albumName, err
+	}
+	return s.RemoveFetchResourceFromAlbum(ctx, albumName, "", sourceTypeSHMagnet, sourceRowID)
+}
+
+func (s *Service) validateFC2SHMagnetAlbumRequest(ctx context.Context, rawFC2Key, rawAlbumName string, sourceRowID int64) (string, string, error) {
+	fc2Key, err := normalizeFC2ResourceKey(rawFC2Key)
+	if err != nil {
+		return "", strings.TrimSpace(rawAlbumName), err
+	}
+	albumName, err := normalizeFC2ResourceAlbumName(rawAlbumName)
+	if err != nil {
+		return fc2Key, albumName, err
+	}
+	if sourceRowID <= 0 {
+		return fc2Key, albumName, ErrInvalidSourceRow
+	}
+	row, err := s.deps.ShMagnetModel.FindOne(ctx, sourceRowID)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return fc2Key, albumName, ErrSourceNotFound
+		}
+		return fc2Key, albumName, err
+	}
+	rowFC2Key, err := normalizeFC2ResourceKey(row.FC2Key)
+	if err != nil || rowFC2Key != fc2Key {
+		return fc2Key, albumName, ErrSourceMovieMiss
+	}
+	return fc2Key, albumName, nil
 }
 
 func (s *Service) AddFetchResourceToAlbum(ctx context.Context, albumName, movieJavID string, sourceType string, sourceRowID int64) (bool, string, error) {

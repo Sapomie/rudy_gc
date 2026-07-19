@@ -285,71 +285,81 @@ func (s *Service) buildMediaRow(in mediaRowInput) *moviex.WMedia {
 	}
 }
 
-func (s *Service) upsertMedia(ctx context.Context, row *moviex.WMedia) error {
-	existing, err := s.findMediaForUpsert(ctx, row)
-	if err != nil {
+func (s *Service) insertMedia(ctx context.Context, row *moviex.WMedia) error {
+	if _, err := s.deps.WMediaModel.Insert(ctx, row); err != nil {
+		if isDuplicateEntryErr(err) {
+			return fmt.Errorf("影片媒体已存在，拒绝覆盖: movie_jav_id=%s: %w", row.MovieJavId, err)
+		}
 		return err
 	}
-	if existing != nil {
-		previousSourceHash := existing.SourceTorrentHash
-		row.Id = existing.Id
-		row.CreatedOn = existing.CreatedOn
-		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
-			return err
+	return nil
+}
+
+func (s *Service) persistMediaIngest(ctx context.Context, row *moviex.WMedia, expected *ingestExistingMediaSnapshot) (*moviex.WMedia, error) {
+	if row == nil {
+		return nil, fmt.Errorf("媒体入库记录为空")
+	}
+	existing, err := s.findExistingMediaForIngest(ctx, row.MovieJavId)
+	if err != nil {
+		return nil, err
+	}
+	if expected == nil {
+		if existing != nil {
+			return nil, fmt.Errorf("预处理后媒体状态已变化，请重新预处理: %s", row.MovieJavId)
 		}
-		if err := s.refreshSHMagnetDownloadStates(ctx, previousSourceHash, row.SourceTorrentHash); err != nil {
-			return err
-		}
-		if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, existing.MovieJavId, row.MovieJavId); err != nil {
-			return err
-		}
-		if err := s.syncJAVScMediaSnapshots(ctx, existing.MovieJavId, row.MovieJavId); err != nil {
-			return err
-		}
-		s.invalidateMovieTypeCaches(ctx, existing.MovieJavId, row.MovieJavId)
-		return nil
+		return nil, s.insertMedia(ctx, row)
+	}
+	if existing == nil || !mediaSnapshotMatches(expected, existing) {
+		return nil, fmt.Errorf("预处理后媒体记录已变化，请重新预处理: %s", row.MovieJavId)
 	}
 
-	if _, err := s.deps.WMediaModel.Insert(ctx, row); err != nil {
-		// 唯一键冲突时，再尝试一次回查并更新。
-		if !isDuplicateEntryErr(err) {
-			return err
-		}
-		dup, findErr := s.findMediaForUpsert(ctx, row)
-		if findErr != nil {
-			return err
-		}
-		if dup == nil {
-			return err
-		}
-		row.Id = dup.Id
-		row.CreatedOn = dup.CreatedOn
-		if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
-			return err
-		}
-		if err := s.refreshSHMagnetDownloadStates(ctx, dup.SourceTorrentHash, row.SourceTorrentHash); err != nil {
-			return err
-		}
-		if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, dup.MovieJavId, row.MovieJavId); err != nil {
-			return err
-		}
-		if err := s.syncJAVScMediaSnapshots(ctx, dup.MovieJavId, row.MovieJavId); err != nil {
-			return err
-		}
-		s.invalidateMovieTypeCaches(ctx, dup.MovieJavId, row.MovieJavId)
-		return nil
+	row.Id = existing.Id
+	row.CreatedOn = existing.CreatedOn
+	if err := s.deps.WMediaModel.Update(ctx, row); err != nil {
+		return nil, err
 	}
-	if err := s.refreshSHMagnetDownloadStates(ctx, row.SourceTorrentHash); err != nil {
-		return err
+	return existing, nil
+}
+
+func (s *Service) finalizeMediaIngest(ctx context.Context, previous, row *moviex.WMedia) error {
+	if row == nil {
+		return fmt.Errorf("媒体入库记录为空")
 	}
-	if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, row.MovieJavId); err != nil {
-		return err
+
+	var errs []error
+	hashes := []string{row.SourceTorrentHash}
+	javIDs := []string{row.MovieJavId}
+	if previous != nil {
+		hashes = append([]string{previous.SourceTorrentHash}, hashes...)
+		javIDs = append([]string{previous.MovieJavId}, javIDs...)
 	}
-	if err := s.syncJAVScMediaSnapshot(ctx, row.MovieJavId); err != nil {
-		return err
+	if err := s.refreshSHMagnetDownloadStates(ctx, hashes...); err != nil {
+		errs = append(errs, fmt.Errorf("刷新磁力下载状态: %w", err))
 	}
-	s.invalidateMovieTypeCaches(ctx, row.MovieJavId)
-	return nil
+	if err := s.syncPersonStatsByMovieJavIDs(ctx, row.UpdatedOn, javIDs...); err != nil {
+		errs = append(errs, fmt.Errorf("同步演员统计: %w", err))
+	}
+	if err := s.syncJAVScMediaSnapshots(ctx, javIDs...); err != nil {
+		errs = append(errs, fmt.Errorf("同步 SC 媒体快照: %w", err))
+	}
+	s.invalidateMovieTypeCaches(ctx, javIDs...)
+	return errors.Join(errs...)
+}
+
+func (s *Service) findExistingMediaForIngest(ctx context.Context, movieJavID string) (*moviex.WMedia, error) {
+	movieJavID = strings.TrimSpace(movieJavID)
+	if movieJavID == "" {
+		return nil, fmt.Errorf("empty movie_jav_id")
+	}
+
+	existing, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, movieJavID, consts.WMediaSourceNative)
+	if err == nil {
+		return existing, nil
+	}
+	if errors.Is(err, moviex.ErrNotFound) {
+		return nil, nil
+	}
+	return nil, err
 }
 
 func (s *Service) refreshSHMagnetDownloadStates(ctx context.Context, infoHashes ...string) error {
@@ -382,40 +392,6 @@ func (s *Service) invalidateMovieTypeCaches(ctx context.Context, javIDs ...strin
 		}
 		log.Infof("del MovieType cache ok, javId=%s", javID)
 	}
-}
-
-func (s *Service) findMediaForUpsert(ctx context.Context, row *moviex.WMedia) (*moviex.WMedia, error) {
-	if strings.TrimSpace(row.MovieJavId) != "" {
-		existing, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, row.MovieJavId, row.SourceType)
-		if err == nil {
-			return existing, nil
-		}
-		if !errors.Is(err, moviex.ErrNotFound) {
-			return nil, err
-		}
-	}
-
-	if strings.TrimSpace(row.MovieName) != "" {
-		existing, err := s.deps.WMediaModel.FindOneByMovieNameSourceType(ctx, row.MovieName, row.SourceType)
-		if err == nil {
-			return existing, nil
-		}
-		if !errors.Is(err, moviex.ErrNotFound) {
-			return nil, err
-		}
-	}
-
-	if strings.TrimSpace(row.FileName) != "" {
-		existing, err := s.deps.WMediaModel.FindOneByFileNameSourceType(ctx, row.FileName, row.SourceType)
-		if err == nil {
-			return existing, nil
-		}
-		if !errors.Is(err, moviex.ErrNotFound) {
-			return nil, err
-		}
-	}
-
-	return nil, nil
 }
 
 func isDuplicateEntryErr(err error) bool {

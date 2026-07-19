@@ -18,7 +18,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-var configFile = flag.String("f", "../configs/local/api.yaml", "the config file")
+var configFile = flag.String("f", "cmd/api/config.yaml", "the config file")
 
 func main() {
 	flag.Parse()

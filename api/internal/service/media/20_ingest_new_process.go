@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"rudy_gc/internal/consts"
+	"rudy_gc/internal/repository/moviex"
 	"rudy_gc/internal/taskctx"
 )
 
@@ -188,7 +189,7 @@ func (s *Service) ingestCommitOneRoot(ctx context.Context, root string, now time
 		}
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:   stage,
-			Message: fmt.Sprintf("执行插入：%s", filepath.Base(prepared.sourcePath)),
+			Message: fmt.Sprintf("执行入库：%s", filepath.Base(prepared.sourcePath)),
 		})
 	}
 
@@ -219,16 +220,20 @@ func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, p
 
 	sourcePath := prepared.sourcePath
 	item = &IngestFileItem{
-		Status:     ingestItemStatusPass,
-		RootDir:    layout.rootDir,
-		SourcePath: sourcePath,
-		MovieName:  prepared.meta.movieName,
+		Status:       ingestItemStatusPass,
+		Action:       prepared.action,
+		Notice:       prepared.notice,
+		RootDir:      layout.rootDir,
+		SourcePath:   sourcePath,
+		MovieName:    prepared.meta.movieName,
+		ExistingPath: mediaSnapshotPath(prepared.existing),
 	}
 
 	var (
 		err        error
 		holding    string
 		movedToTmp string
+		existing   *moviex.WMedia
 	)
 
 	defer func() {
@@ -247,6 +252,11 @@ func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, p
 		}
 		item.FailedPath = failedPath
 	}()
+
+	existing, err = s.validatePreparedMediaIngestState(ctx, prepared)
+	if err != nil {
+		return item, nil
+	}
 
 	movedToTmp, err = moveIntoDirUnique(sourcePath, layout.tmp)
 	if err != nil {
@@ -309,17 +319,20 @@ func (s *Service) processOneIngestFile(ctx context.Context, layout rootLayout, p
 	item.Alias = row.Alias
 	item.SourceTorrentHash = row.SourceTorrentHash
 
-	if err = s.upsertMedia(ctx, row); err != nil {
+	var previous *moviex.WMedia
+	previous, item.RemovedPath, err = s.persistPreparedMediaIngest(ctx, prepared, existing, row)
+	if err != nil {
 		return item, nil
 	}
 	changedMovieJavIDs = append(changedMovieJavIDs, row.MovieJavId)
-
 	holding = ""
-	if err = s.moveFavoriteItemToMediaAlbum(ctx, prepared.favoriteSource); err != nil {
-		return item, changedMovieJavIDs
+
+	if finalizeErr := s.finalizeMediaIngest(ctx, previous, row); finalizeErr != nil {
+		item.Notice = appendIngestNotice(item.Notice, "媒体已入库，后置状态刷新失败: "+finalizeErr.Error())
 	}
-
-	holding = ""
+	if albumErr := s.moveFavoriteItemToMediaAlbum(ctx, prepared.favoriteSource); albumErr != nil {
+		item.Notice = appendIngestNotice(item.Notice, "媒体已入库，来源相册迁移失败: "+albumErr.Error())
+	}
 	return item, changedMovieJavIDs
 }
 
@@ -342,9 +355,12 @@ func buildPrecheckPreviewItem(layout rootLayout, prepared *ingestPreparedItem, n
 	}
 	return &IngestFileItem{
 		Status:            ingestItemStatusPass,
+		Action:            prepared.action,
+		Notice:            prepared.notice,
 		RootDir:           layout.rootDir,
 		SourcePath:        prepared.sourcePath,
 		MovieName:         prepared.meta.movieName,
+		ExistingPath:      mediaSnapshotPath(prepared.existing),
 		TargetFileName:    buildTargetFileName(prepared.meta),
 		TargetDir:         targetDir,
 		Alias:             buildMediaAlias(prepared.meta, birthTime, info.Size()),
@@ -352,6 +368,132 @@ func buildPrecheckPreviewItem(layout rootLayout, prepared *ingestPreparedItem, n
 		Size:              info.Size(),
 		BirthTime:         birthTime,
 	}, nil
+}
+
+func (s *Service) validatePreparedMediaIngestState(ctx context.Context, prepared *ingestPreparedItem) (*moviex.WMedia, error) {
+	if prepared == nil {
+		return nil, fmt.Errorf("nil ingest prepared item")
+	}
+	current, err := s.findExistingMediaForIngest(ctx, prepared.movieInfo.javID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch prepared.action {
+	case ingestActionInsert:
+		if current != nil {
+			return nil, fmt.Errorf("预处理后媒体状态已变化，请重新预处理: %s", prepared.movieInfo.javID)
+		}
+		return nil, nil
+	case ingestActionRestore:
+		if current == nil || current.IsRemoved != consts.FilmIsRemoved || !mediaSnapshotMatches(prepared.existing, current) {
+			return nil, fmt.Errorf("预处理后已移除媒体记录已变化，请重新预处理: %s", prepared.movieInfo.javID)
+		}
+		return current, nil
+	case ingestActionReplace:
+		if current == nil || current.IsRemoved == consts.FilmIsRemoved || !mediaSnapshotMatches(prepared.existing, current) {
+			return nil, fmt.Errorf("预处理后活动媒体记录已变化，请重新预处理: %s", prepared.movieInfo.javID)
+		}
+		path := joinMediaPath(current.FullDir, current.FileName)
+		info, statErr := os.Stat(path)
+		if statErr != nil {
+			return nil, fmt.Errorf("活动影片旧文件不可用: %s: %w", path, statErr)
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("活动影片旧路径不是文件: %s", path)
+		}
+		return current, nil
+	default:
+		return nil, fmt.Errorf("invalid ingest action: %q", prepared.action)
+	}
+}
+
+func moveActiveMediaFileToRemoved(ctx context.Context, existing *moviex.WMedia) (string, string, error) {
+	if existing == nil {
+		return "", "", fmt.Errorf("活动媒体记录为空")
+	}
+	originalPath := joinMediaPath(existing.FullDir, existing.FileName)
+	if originalPath == "" {
+		return "", "", fmt.Errorf("活动媒体旧文件路径为空: %s", existing.MovieJavId)
+	}
+	info, err := os.Stat(originalPath)
+	if err != nil {
+		return "", "", fmt.Errorf("活动媒体旧文件不可用: %s: %w", originalPath, err)
+	}
+	if !info.Mode().IsRegular() {
+		return "", "", fmt.Errorf("活动媒体旧路径不是文件: %s", originalPath)
+	}
+
+	removedDir := buildRemovedDir(existing.RootDir)
+	if removedDir == "" {
+		return "", "", fmt.Errorf("活动媒体 root_dir 为空: %s", existing.MovieJavId)
+	}
+	if err = os.MkdirAll(removedDir, defaultFilePerm); err != nil {
+		return "", "", fmt.Errorf("创建 removed 目录失败: %w", err)
+	}
+	removedPath, err := nextAvailableTargetPath(removedDir, filepath.Base(originalPath))
+	if err != nil {
+		return "", "", err
+	}
+	if err = moveFileWithFallback(ctx, originalPath, removedPath); err != nil {
+		return "", "", fmt.Errorf("移动活动旧文件失败: %w", err)
+	}
+	return originalPath, removedPath, nil
+}
+
+func (s *Service) persistPreparedMediaIngest(
+	ctx context.Context,
+	prepared *ingestPreparedItem,
+	existing *moviex.WMedia,
+	row *moviex.WMedia,
+) (*moviex.WMedia, string, error) {
+	if prepared == nil {
+		return nil, "", fmt.Errorf("nil ingest prepared item")
+	}
+	if prepared.action != ingestActionReplace {
+		previous, err := s.persistMediaIngest(ctx, row, prepared.existing)
+		return previous, "", err
+	}
+
+	originalPath, removedPath, err := moveActiveMediaFileToRemoved(ctx, existing)
+	if err != nil {
+		return nil, "", err
+	}
+	previous, err := s.persistMediaIngest(ctx, row, prepared.existing)
+	if err == nil {
+		return previous, removedPath, nil
+	}
+	if rollbackErr := rollbackReplacedMediaFile(ctx, removedPath, originalPath); rollbackErr != nil {
+		return nil, removedPath, fmt.Errorf("%w; rollback_old_media_err=%v", err, rollbackErr)
+	}
+	return nil, "", err
+}
+
+func rollbackReplacedMediaFile(ctx context.Context, removedPath, originalPath string) error {
+	if strings.TrimSpace(removedPath) == "" || strings.TrimSpace(originalPath) == "" {
+		return fmt.Errorf("旧文件回滚路径为空")
+	}
+	if _, err := os.Stat(originalPath); err == nil {
+		return fmt.Errorf("旧文件原路径已被占用: %s", originalPath)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("检查旧文件原路径失败: %w", err)
+	}
+	if err := moveFileWithFallback(ctx, removedPath, originalPath); err != nil {
+		return fmt.Errorf("恢复旧文件失败: %w", err)
+	}
+	return nil
+}
+
+func appendIngestNotice(current, next string) string {
+	current = strings.TrimSpace(current)
+	next = strings.TrimSpace(next)
+	if current == "" {
+		return next
+	}
+	if next == "" {
+		return current
+	}
+	return current + "；" + next
 }
 
 func moveIntoDirUnique(sourcePath, targetDir string) (string, error) {

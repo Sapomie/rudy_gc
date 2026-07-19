@@ -14,7 +14,10 @@ import (
 	"rudy_gc/internal/types"
 )
 
-const defaultAggPageSize = 100
+const (
+	defaultAggPageSize          = 100
+	defaultMovieAggCardPageSize = 18
+)
 
 type MovieAggAPI struct {
 	movieSvc      *movie.Service
@@ -49,6 +52,16 @@ func clampPageSize(size int) int {
 	return size
 }
 
+func clampMovieAggCardPageSize(size int) int {
+	if size <= 0 {
+		return defaultMovieAggCardPageSize
+	}
+	if size > maxPageSize {
+		return maxPageSize
+	}
+	return size
+}
+
 func (h *MovieAggAPI) MovieAggAllRelease(c *gin.Context) {
 	originalPath := c.Request.URL.Path
 	c.Request.URL.Path = "/aggrelease"
@@ -59,7 +72,7 @@ func (h *MovieAggAPI) MovieAggAllRelease(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultAggPageSize)), defaultAggPageSize))
+	size := clampMovieAggCardPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultMovieAggCardPageSize)), defaultMovieAggCardPageSize))
 	curOD := normalizeOrderBy(c.Query("od"), consts.OrderByReleasingDate)
 	sq := buildSortQuery(c, curOD)
 

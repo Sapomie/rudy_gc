@@ -17,7 +17,6 @@
 # Dependencies
 vendor/
 
-
 z_text/*
 cmd/own_tst/*
 z_reference/
@@ -33,7 +32,3 @@ v2/make/local.secrets.mk
 v2/deploy/data
 v2/deploy/conf
 v2/deploy/*.config.yaml
-
-web/node_modules
-web/dist
-web/.vite

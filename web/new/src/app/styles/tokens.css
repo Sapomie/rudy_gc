@@ -1,0 +1,591 @@
+/* 由现有页面实际引用拆分，保持原规则顺序。 */
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  background: #fff8fb;
+  color: #4b2939;
+  --side-bg: #4b2939;
+  --side-bg-2: #573144;
+  --side-text: #fff4f8;
+  --side-muted: #e7bfd1;
+  --paper: #ffffff;
+  --paper-soft: #fffafd;
+  --paper-blue: #fff5fa;
+  --line: #eed5e1;
+  --line-soft: #f1dce6;
+  --text: #4b2939;
+  --muted: #8b6577;
+  --primary: #d94f8a;
+  --primary-soft: #fff0f6;
+  --good: #22a06b;
+  --warn: #f5b225;
+  --danger: #ec536c;
+  --shadow: 0 10px 24px rgba(132, 52, 88, 0.055);
+}
+:root .app-shell {
+  --nav-side-width: 220px;
+  --nav-top-height: 64px;
+  --nav-primary: #d94f8a;
+  --nav-primary-dark: #9f2f63;
+  --nav-primary-soft: #fff0f6;
+  --nav-secondary: #ef8fba;
+  --nav-side-start: #4b2939;
+  --nav-side-end: #351f2a;
+  --nav-top-bg: #fffafd;
+  --nav-line: #eed5e1;
+  --nav-line-soft: #f1dce6;
+  --nav-text: #fff4f8;
+  --nav-muted: #8b6577;
+}
+:root .app-shell .brand-block {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  width: var(--nav-side-width);
+  height: var(--nav-top-height);
+  min-height: var(--nav-top-height);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 244, 248, .12);
+  border-radius: 0;
+  padding: 0 16px;
+  background: linear-gradient(135deg, var(--nav-side-start) 0%, var(--nav-side-end) 100%);
+  color: var(--nav-text);
+  box-shadow: inset 0 -1px rgba(239, 143, 186, .08);
+  text-decoration: none;
+  transition: transform 220ms ease, filter 160ms ease;
+}
+:root .app-shell .brand-block:hover,
+:root .app-shell .brand-block:focus-visible {
+  color: var(--nav-text);
+  filter: brightness(1.07);
+  text-decoration: none;
+}
+:root .app-shell .brand-block:focus-visible {
+  outline: 2px solid var(--nav-secondary);
+  outline-offset: -3px;
+}
+:root .app-shell .brand-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-secondary) 100%);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(217, 79, 138, .24);
+  font-weight: 900;
+}
+:root .app-shell .brand-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--nav-text);
+  font-size: 17px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .app-shell .side-panel {
+  position: fixed;
+  inset: 0 auto 0 0;
+  left: 0;
+  z-index: 25;
+  width: var(--nav-side-width);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: var(--nav-top-height);
+  background: linear-gradient(180deg, var(--nav-side-start) 0%, var(--nav-side-end) 100%);
+  color: var(--nav-text);
+  box-shadow: 12px 0 30px rgba(75, 41, 57, .16);
+  scrollbar-color: rgba(255, 244, 248, .24) transparent;
+  scrollbar-width: thin;
+  transition: left 220ms ease, box-shadow 220ms ease;
+}
+:root .app-shell .side-panel::-webkit-scrollbar {
+  width: 8px;
+}
+:root .app-shell .side-panel::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 244, 248, .2);
+  background-clip: content-box;
+}
+:root .app-shell .side-nav {
+  padding: 14px 10px 28px;
+}
+:root .app-shell .side-nav::before {
+  padding: 10px 12px 14px;
+  color: rgba(255, 244, 248, .54);
+  font-size: 11px;
+}
+:root .app-shell .side-group {
+  margin-bottom: 3px;
+  border-radius: 8px;
+}
+:root .app-shell .side-group-title {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 9px 0 18px;
+  background: transparent;
+  color: rgba(255, 244, 248, .82);
+  box-shadow: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+:root .app-shell .side-group-title::before {
+  content: "";
+  position: absolute;
+  inset: 10px auto 10px 7px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--nav-secondary);
+  opacity: 0;
+  transform: scaleY(.45);
+  transition: opacity 160ms ease, transform 180ms ease;
+}
+:root .app-shell .side-group-title::after {
+  content: "›";
+  width: 12px;
+  flex: 0 0 12px;
+  margin-left: 2px;
+  color: rgba(255, 244, 248, .54);
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+  transition: color 160ms ease, transform 220ms ease;
+}
+:root .app-shell .side-group-title:hover,
+:root .app-shell .side-group-title:focus-visible,
+:root .app-shell .side-group.is-open > .side-group-title {
+  background: rgba(239, 143, 186, .1);
+  color: var(--nav-text);
+  transform: none;
+}
+:root .app-shell .side-group-title:focus-visible {
+  outline: 2px solid rgba(239, 143, 186, .7);
+  outline-offset: -2px;
+}
+:root .app-shell .side-group.is-active-group > .side-group-title {
+  background: rgba(217, 79, 138, .16);
+  color: var(--nav-text);
+  box-shadow: none;
+}
+:root .app-shell .side-group.is-open > .side-group-title::before,
+:root .app-shell .side-group.is-active-group > .side-group-title::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+:root .app-shell .side-group.is-open > .side-group-title::after {
+  color: var(--nav-text);
+  transform: rotate(90deg);
+}
+:root .app-shell .side-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .app-shell .side-count {
+  display: inline-flex;
+  min-width: 22px;
+  height: 20px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 244, 248, .18);
+  border-radius: 999px;
+  padding: 0 6px;
+  background: rgba(255, 244, 248, .06);
+  color: rgba(255, 244, 248, .66);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+:root .app-shell .side-group.is-active-group > .side-group-title .side-count {
+  border-color: rgba(239, 143, 186, .36);
+  background: rgba(217, 79, 138, .14);
+  color: var(--nav-text);
+}
+:root .app-shell .side-link {
+  position: relative;
+  display: flex;
+  max-height: 0;
+  align-items: center;
+  overflow: hidden;
+  margin: 0;
+  border-radius: 6px;
+  padding: 0 8px 0 32px;
+  color: rgba(255, 244, 248, .76);
+  font-size: 12px;
+  line-height: 18px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  visibility: hidden;
+  transition:
+    max-height 220ms ease,
+    margin 220ms ease,
+    padding 220ms ease,
+    opacity 160ms ease,
+    transform 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+:root .app-shell .side-link::before {
+  content: "";
+  position: absolute;
+  inset: 7px auto 7px 16px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--nav-secondary);
+  opacity: 0;
+  transform: scaleY(.4);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+:root .app-shell .side-group.is-open .side-link {
+  max-height: 30px;
+  margin: 1px 0 1px 6px;
+  padding: 5px 8px 5px 32px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+:root .app-shell .side-group.is-open .side-link:hover,
+:root .app-shell .side-group.is-open .side-link:focus-visible {
+  background: rgba(239, 143, 186, .11);
+  color: var(--nav-text);
+  text-decoration: none;
+  transform: none;
+}
+:root .app-shell .side-group.is-open .side-link:focus-visible {
+  outline: 2px solid rgba(239, 143, 186, .66);
+  outline-offset: -2px;
+}
+:root .app-shell .side-group.is-open .side-link.active,
+:root .app-shell .side-link.active {
+  background: rgba(217, 79, 138, .24);
+  color: #fff;
+  box-shadow: inset 2px 0 var(--nav-secondary);
+}
+:root .app-shell .side-group.is-open .side-link.active::before,
+:root .app-shell .side-link.active::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+:root .app-shell .top-bar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 24;
+  display: grid;
+  height: var(--nav-top-height);
+  min-height: var(--nav-top-height);
+  grid-template-columns: minmax(150px, 240px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--nav-line);
+  padding: 0 12px 0 calc(var(--nav-side-width) + 14px);
+  background: linear-gradient(180deg, #fff 0%, var(--nav-top-bg) 100%);
+  box-shadow: 0 8px 22px rgba(159, 47, 99, .08);
+  backdrop-filter: blur(12px);
+  transition: padding-left 220ms ease;
+}
+:root .app-shell .top-left {
+  display: flex;
+  width: auto;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+:root .app-shell .icon-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid var(--nav-line);
+  border-radius: 9px;
+  padding: 0;
+  background: var(--nav-primary-soft);
+  color: var(--nav-primary-dark);
+  box-shadow: 0 5px 14px rgba(217, 79, 138, .09);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+:root .app-shell .icon-button:hover,
+:root .app-shell .icon-button:focus-visible {
+  border-color: rgba(217, 79, 138, .46);
+  background: #fff;
+  color: var(--nav-primary);
+  box-shadow: 0 7px 16px rgba(217, 79, 138, .14);
+  transform: none;
+}
+:root .app-shell .icon-button:active {
+  background: #fcecf4;
+}
+:root .app-shell .icon-button:focus-visible {
+  outline: 2px solid rgba(217, 79, 138, .4);
+  outline-offset: 2px;
+}
+:root .app-shell .top-title {
+  display: block;
+  min-width: 0;
+  max-width: 190px;
+  overflow: hidden;
+  color: var(--nav-side-start);
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .app-shell .top-links {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-left: 0;
+  padding: 8px 4px;
+  scroll-padding-inline: 4px;
+  scrollbar-width: none;
+}
+:root .app-shell .top-links::-webkit-scrollbar {
+  display: none;
+}
+:root .app-shell .top-link-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--nav-line-soft);
+  border-radius: 10px;
+  padding: 3px;
+  background: var(--nav-primary-soft);
+  box-shadow: 0 4px 12px rgba(159, 47, 99, .05);
+}
+:root .app-shell .top-link-label,
+:root .app-shell .top-link {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 9px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 16px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+:root .app-shell .top-link-label {
+  background: transparent;
+  color: var(--nav-muted);
+  cursor: default;
+}
+:root .app-shell .top-link {
+  background: rgba(255, 255, 255, .9);
+  color: var(--nav-primary-dark);
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+:root .app-shell .top-link:hover,
+:root .app-shell .top-link:focus-visible {
+  background: var(--nav-primary-soft);
+  color: var(--nav-primary);
+  box-shadow: 0 5px 12px rgba(217, 79, 138, .1);
+  text-decoration: none;
+  transform: none;
+}
+:root .app-shell .top-link:focus-visible {
+  outline: 2px solid rgba(217, 79, 138, .38);
+  outline-offset: 1px;
+}
+:root .app-shell .top-link.active,
+:root .app-shell .top-link.router-link-active {
+  background: var(--nav-primary);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(217, 79, 138, .24);
+}
+:root .app-shell .top-link-group > .top-link:not(:first-child),
+:root .app-shell .top-link-group > .top-link-label + .top-link,
+:root .app-shell .top-link-group > .top-link:not(:last-child),
+:root .app-shell .top-link-group > .top-link-label,
+:root .app-shell .top-link-group > .top-link:last-child {
+  margin-right: 0;
+  margin-left: 0;
+  border-radius: 8px;
+}
+:root .app-shell .top-legacy-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+:root .app-shell .top-legacy-button {
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--nav-line);
+  border-radius: 9px;
+  background: var(--nav-primary-soft);
+  color: var(--nav-primary-dark);
+  box-shadow: 0 5px 12px rgba(217, 79, 138, .08);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+:root .app-shell .top-legacy-button:hover,
+:root .app-shell .top-legacy-button:focus-visible {
+  border-color: rgba(217, 79, 138, .42);
+  background: #fff;
+  color: var(--nav-primary);
+  box-shadow: 0 7px 16px rgba(217, 79, 138, .13);
+  transform: none;
+}
+:root .app-shell .top-legacy-button:focus-visible {
+  outline: 2px solid rgba(217, 79, 138, .38);
+  outline-offset: 2px;
+}
+:root .app-shell .top-legacy-button.fullscreen {
+  width: 34px;
+  font-size: 17px;
+}
+:root .app-shell .top-legacy-button.user {
+  width: 28px;
+}
+:root .app-shell .main-content {
+  margin-left: var(--nav-side-width);
+  padding-top: 82px;
+  transition: margin-left 220ms ease;
+}
+:root .app-shell .page-shell:is(
+  .records-page-shell,
+  .w-agg-events-page-shell,
+  .torrent-albums-page-shell,
+  .movie-agg-page-shell,
+  .wdir-page-shell,
+  .sc-events-page-shell,
+  .crawler-jobs-page-shell,
+  .crawler-tasks-page-shell,
+  .crawler-detail-loop-page-shell,
+  .fetch-sites-page-shell,
+  .fetch-site-list-page-shell
+) {
+  padding-top: 0;
+}
+:root .app-shell.is-sidebar-collapsed .brand-block {
+  transform: translateX(calc(-1 * var(--nav-side-width) - 12px));
+}
+:root .app-shell.is-sidebar-collapsed .side-panel {
+  left: calc(-1 * var(--nav-side-width) - 12px);
+  box-shadow: none;
+}
+:root .app-shell.is-sidebar-collapsed .top-bar {
+  padding-left: 16px;
+}
+:root .app-shell.is-sidebar-collapsed .main-content {
+  margin-left: 0;
+}
+@media (max-width: 1200px) {
+  :root .app-shell .top-bar {
+    grid-template-columns: minmax(128px, 190px) minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  :root .app-shell .top-title {
+    max-width: 150px;
+  }
+}
+@media (max-width: 768px) {
+  :root .app-shell {
+    --nav-side-width: 100%;
+  }
+
+  :root .app-shell .brand-block {
+    position: static;
+    width: 100%;
+    transform: none;
+  }
+
+  :root .app-shell .side-panel {
+    position: static;
+    inset: auto;
+    left: 0;
+    width: 100%;
+    max-height: 320px;
+    padding-top: 0;
+    transform: none;
+  }
+
+  :root .app-shell .top-bar {
+    position: sticky;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  :root .app-shell .top-title {
+    max-width: none;
+  }
+
+  :root .app-shell .top-links {
+    width: 100%;
+  }
+
+  :root .app-shell .main-content,
+  :root .app-shell.is-sidebar-collapsed .main-content {
+    margin-left: 0;
+    padding-top: 18px;
+  }
+
+  :root .app-shell.is-sidebar-collapsed .brand-block {
+    transform: none;
+  }
+
+  :root .app-shell.is-sidebar-collapsed .side-panel {
+    display: none;
+    left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .app-shell .brand-block,
+  :root .app-shell .side-panel,
+  :root .app-shell .side-group-title,
+  :root .app-shell .side-group-title::before,
+  :root .app-shell .side-group-title::after,
+  :root .app-shell .side-link,
+  :root .app-shell .side-link::before,
+  :root .app-shell .top-bar,
+  :root .app-shell .icon-button,
+  :root .app-shell .top-link,
+  :root .app-shell .top-legacy-button,
+  :root .app-shell .main-content {
+    transition: none !important;
+  }
+}

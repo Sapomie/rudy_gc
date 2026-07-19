@@ -24,10 +24,7 @@ var allowedFetchSiteOrderBy = map[string]struct{}{
 	consts.OrderByLastSelectedScTime: {},
 }
 
-const (
-	fetchSiteDefaultNumber       int64 = 1000000
-	fetchSiteDefaultDurationDays int64 = 5
-)
+const fetchSiteDefaultDurationDays int64 = 5
 
 func buildFetchSiteMovieRequest(req StartTaskRequest) (*types.ListMovieFullRequest, error) {
 	out := &types.ListMovieFullRequest{
@@ -54,7 +51,6 @@ func buildFetchSiteMovieRequest(req StartTaskRequest) (*types.ListMovieFullReque
 		OrderBy:               normalizeFetchSiteOrderBy(req.OrderBy),
 		Order:                 normalizeFetchSiteOrder(req.Order),
 		Page:                  1,
-		PageSize:              normalizeFetchSiteNumber(req.Number),
 	}
 
 	var err error
@@ -123,13 +119,6 @@ func buildFetchSiteDurationFilter(req StartTaskRequest) (fetchSiteDurationFilter
 		out.LastSuccessDurationDays = fetchSiteDefaultDurationDays
 	}
 	return out, nil
-}
-
-func normalizeFetchSiteNumber(number int64) int64 {
-	if number > 0 {
-		return number
-	}
-	return fetchSiteDefaultNumber
 }
 
 func normalizeFetchSiteOrderBy(input string) string {

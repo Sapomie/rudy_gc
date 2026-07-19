@@ -83,6 +83,8 @@ func New(d *dep.Dep) *gin.Engine {
 		api.POST("/sh-magnets/batch-add-album", shMagnetAPI.BatchAddToAlbum)
 		api.GET("/fc2/movies", fc2API.List)
 		api.GET("/fc2/movies/:fc2_key", fc2API.Detail)
+		api.POST("/fc2/movies/:fc2_key/resource-album-item", fc2API.AddResourceToAlbum)
+		api.DELETE("/fc2/movies/:fc2_key/resource-album-item", fc2API.RemoveResourceFromAlbum)
 		api.POST("/fc2/movies/:fc2_key/movie-album-item", fc2API.AddMovieToAlbum)
 		api.GET("/fc2/cards", fc2CardsAPI.List)
 		api.GET("/fc2/cards/owned", fc2CardsAPI.ListOwned)

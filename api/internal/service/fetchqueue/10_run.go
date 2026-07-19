@@ -11,6 +11,27 @@ import (
 	"rudy_gc/internal/types"
 )
 
+type FetchTaskHookEvent struct {
+	Source     string
+	MovieJavID string
+	MovieName  string
+	Index      int
+	Total      int
+}
+
+type FetchTaskHooks struct {
+	Before   func(event FetchTaskHookEvent) error
+	After    func(event FetchTaskHookEvent, taskErr error) error
+	Snapshot func() (map[string]int64, map[string]string)
+}
+
+func reportFetchTaskProgress(ctx context.Context, progress taskctx.Progress, hooks *FetchTaskHooks) {
+	if hooks != nil && hooks.Snapshot != nil {
+		progress.Stats, progress.StatsText = hooks.Snapshot()
+	}
+	taskctx.ReportProgress(ctx, progress)
+}
+
 func (s *Service) BackfillFetchTasks(ctx context.Context, pageSize int64) (*fetchsite.BackfillResult, error) {
 	return s.siteSvc.BackfillFetchTasks(ctx, pageSize)
 }
@@ -20,7 +41,7 @@ func (s *Service) RunPendingJavbusFetchTasks(ctx context.Context, limit int64) (
 	if err != nil {
 		return nil, err
 	}
-	return s.runJavbusTasks(ctx, tasks, "JavBus 待抓取任务已加载")
+	return s.runJavbusTasks(ctx, tasks, "JavBus 待抓取任务已加载", nil)
 }
 
 func (s *Service) RunPendingSukebeiFetchTasks(ctx context.Context, limit int64) (*fetchsite.RunFetchTasksResult, error) {
@@ -28,7 +49,7 @@ func (s *Service) RunPendingSukebeiFetchTasks(ctx context.Context, limit int64) 
 	if err != nil {
 		return nil, err
 	}
-	return s.runSukebeiTasks(ctx, tasks, "Sukebei 待抓取任务已加载")
+	return s.runSukebeiTasks(ctx, tasks, "Sukebei 待抓取任务已加载", nil)
 }
 
 func (s *Service) RunJavbusFetchTasksByMovies(
@@ -92,7 +113,7 @@ func (s *Service) RunPreparedJavbusFetchTasks(
 	tasks []*fetchsite.JavbusFetchTask,
 	loadLabel string,
 ) (*fetchsite.RunFetchTasksResult, error) {
-	return s.runJavbusTasks(ctx, tasks, loadLabel)
+	return s.runJavbusTasks(ctx, tasks, loadLabel, nil)
 }
 
 func (s *Service) RunPreparedSukebeiFetchTasks(
@@ -100,7 +121,25 @@ func (s *Service) RunPreparedSukebeiFetchTasks(
 	tasks []*fetchsite.SukebeiFetchTask,
 	loadLabel string,
 ) (*fetchsite.RunFetchTasksResult, error) {
-	return s.runSukebeiTasks(ctx, tasks, loadLabel)
+	return s.runSukebeiTasks(ctx, tasks, loadLabel, nil)
+}
+
+func (s *Service) RunPreparedJavbusFetchTasksWithHooks(
+	ctx context.Context,
+	tasks []*fetchsite.JavbusFetchTask,
+	loadLabel string,
+	hooks *FetchTaskHooks,
+) (*fetchsite.RunFetchTasksResult, error) {
+	return s.runJavbusTasks(ctx, tasks, loadLabel, hooks)
+}
+
+func (s *Service) RunPreparedSukebeiFetchTasksWithHooks(
+	ctx context.Context,
+	tasks []*fetchsite.SukebeiFetchTask,
+	loadLabel string,
+	hooks *FetchTaskHooks,
+) (*fetchsite.RunFetchTasksResult, error) {
+	return s.runSukebeiTasks(ctx, tasks, loadLabel, hooks)
 }
 
 func (s *Service) RunSingleJavbusFetchTask(ctx context.Context, movieJavID, movieName string) (*fetchsite.RunFetchTasksResult, error) {
@@ -158,7 +197,7 @@ func (s *Service) RunAfterDetailFetchTasks(
 		}
 		javbusPendingTasks = append(javbusPendingTasks, task)
 	}
-	javbusResult, err := s.runJavbusTasks(ctx, javbusPendingTasks, "详情后 JavBus 待抓取任务已加载")
+	javbusResult, err := s.runJavbusTasks(ctx, javbusPendingTasks, "详情后 JavBus 待抓取任务已加载", nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -174,16 +213,16 @@ func (s *Service) RunAfterDetailFetchTasks(
 		}
 		sukebeiPendingTasks = append(sukebeiPendingTasks, task)
 	}
-	sukebeiResult, err := s.runSukebeiTasks(ctx, sukebeiPendingTasks, "详情后 Sukebei 待抓取任务已加载")
+	sukebeiResult, err := s.runSukebeiTasks(ctx, sukebeiPendingTasks, "详情后 Sukebei 待抓取任务已加载", nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	return javbusResult, sukebeiResult, nil
 }
 
-func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusFetchTask, loadLabel string) (*fetchsite.RunFetchTasksResult, error) {
+func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusFetchTask, loadLabel string, hooks *FetchTaskHooks) (*fetchsite.RunFetchTasksResult, error) {
 	result := &fetchsite.RunFetchTasksResult{Queued: len(tasks)}
-	taskctx.ReportProgress(ctx, taskctx.Progress{
+	reportFetchTaskProgress(ctx, taskctx.Progress{
 		Stage:             "fetch_javbus_queue_ready",
 		Message:           fmt.Sprintf("%s：%d 条", loadLabel, len(tasks)),
 		QueuedCount:       len(tasks),
@@ -193,7 +232,7 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 		PhaseTotalCount:   len(tasks),
 		PhaseSuccessCount: 0,
 		PhaseFailedCount:  0,
-	})
+	}, hooks)
 
 	hasPreviousRemoteRequest := false
 	for _, task := range tasks {
@@ -210,12 +249,24 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 			}
 		}
 
+		event := FetchTaskHookEvent{Source: fetchsite.FetchSiteCodeJavbus, MovieJavID: task.MovieJavID, MovieName: task.MovieName, Index: result.Handled + 1, Total: len(tasks)}
+		if hooks != nil && hooks.Before != nil {
+			if err := hooks.Before(event); err != nil {
+				return result, err
+			}
+		}
+
 		result.Handled++
 		runErr := s.runJavbusTask(ctx, task)
+		if hooks != nil && hooks.After != nil {
+			if err := hooks.After(event, runErr); err != nil {
+				return result, err
+			}
+		}
 		if runErr != nil {
 			reportErrorLog(ctx, fmt.Sprintf("JavBus 抓取失败: %s | err=%v", task.MovieName, runErr))
 			result.Failed++
-			taskctx.ReportProgress(ctx, taskctx.Progress{
+			reportFetchTaskProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_javbus_failed",
 				Message:           fmt.Sprintf("JavBus 已完成 %d/%d", result.Handled, len(tasks)),
 				HandledCount:      result.Handled,
@@ -228,11 +279,11 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 				PhaseTotalCount:   len(tasks),
 				PhaseSuccessCount: result.Success,
 				PhaseFailedCount:  result.Failed,
-			})
+			}, hooks)
 		} else {
 			reportInfoLog(ctx, fmt.Sprintf("JavBus 抓取成功: %s", task.MovieName))
 			result.Success++
-			taskctx.ReportProgress(ctx, taskctx.Progress{
+			reportFetchTaskProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_javbus_done",
 				Message:           fmt.Sprintf("JavBus 已完成 %d/%d", result.Handled, len(tasks)),
 				HandledCount:      result.Handled,
@@ -245,11 +296,11 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 				PhaseTotalCount:   len(tasks),
 				PhaseSuccessCount: result.Success,
 				PhaseFailedCount:  result.Failed,
-			})
+			}, hooks)
 		}
 		hasPreviousRemoteRequest = true
 	}
-	taskctx.ReportProgress(ctx, taskctx.Progress{
+	reportFetchTaskProgress(ctx, taskctx.Progress{
 		Stage:             "fetch_javbus_all_done",
 		Message:           "JavBus 抓取完成",
 		HandledCount:      result.Handled,
@@ -262,13 +313,13 @@ func (s *Service) runJavbusTasks(ctx context.Context, tasks []*fetchsite.JavbusF
 		PhaseTotalCount:   len(tasks),
 		PhaseSuccessCount: result.Success,
 		PhaseFailedCount:  result.Failed,
-	})
+	}, hooks)
 	return result, nil
 }
 
-func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.SukebeiFetchTask, loadLabel string) (*fetchsite.RunFetchTasksResult, error) {
+func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.SukebeiFetchTask, loadLabel string, hooks *FetchTaskHooks) (*fetchsite.RunFetchTasksResult, error) {
 	result := &fetchsite.RunFetchTasksResult{Queued: len(tasks)}
-	taskctx.ReportProgress(ctx, taskctx.Progress{
+	reportFetchTaskProgress(ctx, taskctx.Progress{
 		Stage:             "fetch_sukebei_queue_ready",
 		Message:           fmt.Sprintf("%s：%d 条", loadLabel, len(tasks)),
 		QueuedCount:       len(tasks),
@@ -278,7 +329,7 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 		PhaseTotalCount:   len(tasks),
 		PhaseSuccessCount: 0,
 		PhaseFailedCount:  0,
-	})
+	}, hooks)
 
 	hasPreviousRemoteRequest := false
 	for _, task := range tasks {
@@ -295,12 +346,24 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 			}
 		}
 
+		event := FetchTaskHookEvent{Source: fetchsite.FetchSiteCodeSukebei, MovieJavID: task.MovieJavID, MovieName: task.MovieName, Index: result.Handled + 1, Total: len(tasks)}
+		if hooks != nil && hooks.Before != nil {
+			if err := hooks.Before(event); err != nil {
+				return result, err
+			}
+		}
+
 		result.Handled++
 		runErr := s.runSukebeiTask(ctx, task)
+		if hooks != nil && hooks.After != nil {
+			if err := hooks.After(event, runErr); err != nil {
+				return result, err
+			}
+		}
 		if runErr != nil {
 			reportErrorLog(ctx, fmt.Sprintf("Sukebei 抓取失败: %s | err=%v", task.MovieName, runErr))
 			result.Failed++
-			taskctx.ReportProgress(ctx, taskctx.Progress{
+			reportFetchTaskProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_sukebei_failed",
 				Message:           fmt.Sprintf("Sukebei 已完成 %d/%d", result.Handled, len(tasks)),
 				HandledCount:      result.Handled,
@@ -313,11 +376,11 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 				PhaseTotalCount:   len(tasks),
 				PhaseSuccessCount: result.Success,
 				PhaseFailedCount:  result.Failed,
-			})
+			}, hooks)
 		} else {
 			reportInfoLog(ctx, fmt.Sprintf("Sukebei 抓取成功: %s", task.MovieName))
 			result.Success++
-			taskctx.ReportProgress(ctx, taskctx.Progress{
+			reportFetchTaskProgress(ctx, taskctx.Progress{
 				Stage:             "fetch_sukebei_done",
 				Message:           fmt.Sprintf("Sukebei 已完成 %d/%d", result.Handled, len(tasks)),
 				HandledCount:      result.Handled,
@@ -330,11 +393,11 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 				PhaseTotalCount:   len(tasks),
 				PhaseSuccessCount: result.Success,
 				PhaseFailedCount:  result.Failed,
-			})
+			}, hooks)
 		}
 		hasPreviousRemoteRequest = true
 	}
-	taskctx.ReportProgress(ctx, taskctx.Progress{
+	reportFetchTaskProgress(ctx, taskctx.Progress{
 		Stage:             "fetch_sukebei_all_done",
 		Message:           "Sukebei 抓取完成",
 		HandledCount:      result.Handled,
@@ -347,7 +410,7 @@ func (s *Service) runSukebeiTasks(ctx context.Context, tasks []*fetchsite.Sukebe
 		PhaseTotalCount:   len(tasks),
 		PhaseSuccessCount: result.Success,
 		PhaseFailedCount:  result.Failed,
-	})
+	}, hooks)
 	return result, nil
 }
 

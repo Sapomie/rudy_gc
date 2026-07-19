@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"rudy_gc/internal/consts"
+	moviedomain "rudy_gc/internal/domain/movie"
 	"rudy_gc/internal/repository/moviex"
 )
 
@@ -38,7 +39,9 @@ type ScMediaMoveResult struct {
 
 type ScMediaMoveItem struct {
 	Status     string   `json:"status"`
+	MovieType  string   `json:"movie_type"`
 	MovieJavId string   `json:"movie_jav_id"`
+	FC2Key     string   `json:"fc2_key"`
 	MovieName  string   `json:"movie_name"`
 	ScNames    []string `json:"sc_names"`
 	RootDir    string   `json:"root_dir"`
@@ -54,8 +57,8 @@ func (s *Service) ScMediaMovePrecheck(ctx context.Context, mode, scName string) 
 	if mode == scMediaMoveModeSingle && scName == "" {
 		return nil, fmt.Errorf("sc_name 为空")
 	}
-	if len(s.mediaRoots()) == 0 {
-		return nil, fmt.Errorf("media.rootDirs 未配置")
+	if len(s.mediaRoots()) == 0 && len(s.fc2ScMediaRoots()) == 0 {
+		return nil, fmt.Errorf("media.rootDirs 与 fc2Media.rootDirs 均未配置")
 	}
 
 	now := time.Now()
@@ -157,19 +160,69 @@ func buildScMediaMovePrecheckResult(mode, scName string, generatedAt int64, item
 }
 
 func (s *Service) listScMediaMoveRowsForScope(ctx context.Context, mode, scName string) ([]*moviex.GList, error) {
-	switch normalizeScMediaMoveMode(mode) {
-	case scMediaMoveModeAll:
-		return s.deps.GListModel.ListAllScOnlyByMovieType(ctx, "jav")
-	default:
-		return s.deps.GListModel.ListScOnlyByScNameAndMovieType(ctx, strings.TrimSpace(scName), "jav")
+	listByType := func(movieType string) ([]*moviex.GList, error) {
+		if normalizeScMediaMoveMode(mode) == scMediaMoveModeAll {
+			return s.deps.GListModel.ListAllScOnlyByMovieType(ctx, movieType)
+		}
+		return s.deps.GListModel.ListScOnlyByScNameAndMovieType(ctx, strings.TrimSpace(scName), movieType)
 	}
+
+	javRows, err := listByType(moviedomain.SehuatangThreadMovieTypeJAV)
+	if err != nil {
+		return nil, err
+	}
+	fc2Rows, err := listByType(moviedomain.SehuatangThreadMovieTypeFC2PPV)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]*moviex.GList, 0, len(javRows)+len(fc2Rows))
+	rows = append(rows, javRows...)
+	rows = append(rows, fc2Rows...)
+	return rows, nil
 }
 
 func (s *Service) buildScMediaMovePrecheckItems(ctx context.Context, mode, scName string, rows []*moviex.GList, now time.Time) ([]*ScMediaMoveItem, error) {
 	if len(rows) == 0 {
 		return []*ScMediaMoveItem{}, nil
 	}
+	javRows := make([]*moviex.GList, 0, len(rows))
+	fc2Rows := make([]*moviex.GList, 0, len(rows))
+	items := make([]*ScMediaMoveItem, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		switch normalizeScMediaMoveMovieType(row.MovieType, row.MovieJavId, "") {
+		case moviedomain.SehuatangThreadMovieTypeJAV:
+			javRows = append(javRows, row)
+		case moviedomain.SehuatangThreadMovieTypeFC2PPV:
+			fc2Rows = append(fc2Rows, row)
+		default:
+			items = append(items, &ScMediaMoveItem{
+				Status:    scMediaMoveStatusFail,
+				MovieType: strings.TrimSpace(row.MovieType),
+				MovieName: pickScMediaMovieName(row),
+				ScNames:   normalizeScMediaMoveItemScNames(mode, scName, []string{row.ScName}),
+				Error:     "g_list.movie_type 不支持: " + strings.TrimSpace(row.MovieType),
+			})
+		}
+	}
 
+	javItems, err := s.buildJAVScMediaMovePrecheckItems(ctx, mode, scName, javRows, now)
+	if err != nil {
+		return nil, err
+	}
+	items = append(items, javItems...)
+	fc2Items, err := s.buildFC2ScMediaMovePrecheckItems(ctx, mode, scName, fc2Rows, now)
+	if err != nil {
+		return nil, err
+	}
+	items = append(items, fc2Items...)
+	sortScMediaMoveItems(items)
+	return items, nil
+}
+
+func (s *Service) buildJAVScMediaMovePrecheckItems(ctx context.Context, mode, scName string, rows []*moviex.GList, now time.Time) ([]*ScMediaMoveItem, error) {
 	movieNames := make(map[string]string, len(rows))
 	movieScNames := make(map[string][]string, len(rows))
 	javIDs := make([]string, 0, len(rows))
@@ -185,6 +238,7 @@ func (s *Service) buildScMediaMovePrecheckItems(ctx context.Context, mode, scNam
 		if javID == "" {
 			items = append(items, &ScMediaMoveItem{
 				Status:    scMediaMoveStatusFail,
+				MovieType: moviedomain.SehuatangThreadMovieTypeJAV,
 				MovieName: movieName,
 				ScNames:   normalizeScMediaMoveItemScNames(mode, scName, []string{currentScName}),
 				Error:     "g_list.movie_jav_id 为空",
@@ -224,6 +278,124 @@ func (s *Service) buildScMediaMovePrecheckItems(ctx context.Context, mode, scNam
 		items = append(items, item)
 	}
 
+	return items, nil
+}
+
+func (s *Service) buildFC2ScMediaMovePrecheckItems(ctx context.Context, mode, scName string, rows []*moviex.GList, now time.Time) ([]*ScMediaMoveItem, error) {
+	movieNames := make(map[int64]string, len(rows))
+	movieScNames := make(map[int64][]string, len(rows))
+	movieIDs := make([]int64, 0, len(rows))
+	seenMovieIDs := make(map[int64]struct{}, len(rows))
+	items := make([]*ScMediaMoveItem, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		movieID := row.FC2MovieId
+		movieName := pickScMediaMovieName(row)
+		currentScName := strings.TrimSpace(row.ScName)
+		if movieID <= 0 {
+			items = append(items, &ScMediaMoveItem{
+				Status:    scMediaMoveStatusFail,
+				MovieType: moviedomain.SehuatangThreadMovieTypeFC2PPV,
+				MovieName: movieName,
+				ScNames:   normalizeScMediaMoveItemScNames(mode, scName, []string{currentScName}),
+				Error:     "g_list 无法解析 fc2_key",
+			})
+			continue
+		}
+		if _, ok := seenMovieIDs[movieID]; ok {
+			if strings.TrimSpace(movieNames[movieID]) == "" && movieName != "" {
+				movieNames[movieID] = movieName
+			}
+			movieScNames[movieID] = appendScMediaMoveName(movieScNames[movieID], currentScName)
+			continue
+		}
+		seenMovieIDs[movieID] = struct{}{}
+		movieNames[movieID] = movieName
+		movieScNames[movieID] = appendScMediaMoveName(movieScNames[movieID], currentScName)
+		movieIDs = append(movieIDs, movieID)
+	}
+
+	movieRows, err := s.deps.FC2MovieModel.ListByIDs(ctx, movieIDs)
+	if err != nil {
+		return nil, err
+	}
+	movieMap := make(map[int64]*moviex.FC2Movie, len(movieRows))
+	for _, row := range movieRows {
+		if row != nil {
+			movieMap[row.ID] = row
+		}
+	}
+
+	fc2Keys := make([]string, 0, len(movieIDs))
+	keyNames := make(map[string]string, len(movieIDs))
+	keyScNames := make(map[string][]string, len(movieIDs))
+	seenKeys := make(map[string]struct{}, len(movieIDs))
+	for _, movieID := range movieIDs {
+		movieRow := movieMap[movieID]
+		if movieRow == nil {
+			items = append(items, &ScMediaMoveItem{
+				Status:    scMediaMoveStatusFail,
+				MovieType: moviedomain.SehuatangThreadMovieTypeFC2PPV,
+				MovieName: strings.TrimSpace(movieNames[movieID]),
+				ScNames:   normalizeScMediaMoveItemScNames(mode, scName, movieScNames[movieID]),
+				Error:     "fc2_movie 不存在",
+			})
+			continue
+		}
+		fc2Key := strings.TrimSpace(movieRow.FC2Key)
+		movieName := strings.TrimSpace(movieNames[movieID])
+		if movieName == "" {
+			movieName = strings.TrimSpace(movieRow.Title)
+		}
+		if movieName == "" {
+			movieName = fc2Key
+		}
+		if fc2Key == "" {
+			items = append(items, &ScMediaMoveItem{
+				Status:    scMediaMoveStatusFail,
+				MovieType: moviedomain.SehuatangThreadMovieTypeFC2PPV,
+				MovieName: movieName,
+				ScNames:   normalizeScMediaMoveItemScNames(mode, scName, movieScNames[movieID]),
+				Error:     "fc2_movie.fc2_key 为空",
+			})
+			continue
+		}
+		if _, ok := seenKeys[fc2Key]; ok {
+			if strings.TrimSpace(keyNames[fc2Key]) == "" && movieName != "" {
+				keyNames[fc2Key] = movieName
+			}
+			for _, currentScName := range movieScNames[movieID] {
+				keyScNames[fc2Key] = appendScMediaMoveName(keyScNames[fc2Key], currentScName)
+			}
+			continue
+		}
+		seenKeys[fc2Key] = struct{}{}
+		fc2Keys = append(fc2Keys, fc2Key)
+		keyNames[fc2Key] = movieName
+		keyScNames[fc2Key] = append([]string{}, movieScNames[movieID]...)
+	}
+
+	mediaRows, err := s.deps.FC2MediaModel.ListByKeys(ctx, fc2Keys)
+	if err != nil {
+		return nil, err
+	}
+	mediaMap := make(map[string]*moviex.FC2Media, len(mediaRows))
+	for _, row := range mediaRows {
+		if row != nil {
+			mediaMap[strings.TrimSpace(row.FC2Key)] = row
+		}
+	}
+	for _, fc2Key := range fc2Keys {
+		item := s.buildOneFC2ScMediaMovePrecheckItem(mediaMap[fc2Key], fc2Key, keyNames[fc2Key], now)
+		item.ScNames = normalizeScMediaMoveItemScNames(mode, scName, keyScNames[fc2Key])
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func sortScMediaMoveItems(items []*ScMediaMoveItem) {
 	sort.SliceStable(items, func(i, j int) bool {
 		if rankScMediaMoveStatus(items[i].Status) != rankScMediaMoveStatus(items[j].Status) {
 			return rankScMediaMoveStatus(items[i].Status) < rankScMediaMoveStatus(items[j].Status)
@@ -233,12 +405,12 @@ func (s *Service) buildScMediaMovePrecheckItems(ctx context.Context, mode, scNam
 		}
 		return items[i].SourcePath < items[j].SourcePath
 	})
-	return items, nil
 }
 
 func (s *Service) buildOneScMediaMovePrecheckItem(row *moviex.WMedia, javID, fallbackMovieName string, now time.Time) *ScMediaMoveItem {
 	item := &ScMediaMoveItem{
 		Status:     scMediaMoveStatusFail,
+		MovieType:  moviedomain.SehuatangThreadMovieTypeJAV,
 		MovieJavId: strings.TrimSpace(javID),
 		MovieName:  strings.TrimSpace(fallbackMovieName),
 	}
@@ -305,9 +477,87 @@ func (s *Service) buildOneScMediaMovePrecheckItem(row *moviex.WMedia, javID, fal
 	return item
 }
 
+func (s *Service) buildOneFC2ScMediaMovePrecheckItem(row *moviex.FC2Media, fc2Key, fallbackMovieName string, now time.Time) *ScMediaMoveItem {
+	item := &ScMediaMoveItem{
+		Status:    scMediaMoveStatusFail,
+		MovieType: moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		FC2Key:    strings.TrimSpace(fc2Key),
+		MovieName: strings.TrimSpace(fallbackMovieName),
+	}
+	if row == nil {
+		item.Status = scMediaMoveStatusSkip
+		item.Error = "没有 fc2_media"
+		return item
+	}
+
+	if item.MovieName == "" {
+		item.MovieName = strings.TrimSpace(row.FC2Key)
+	}
+	item.RootDir = strings.TrimSpace(row.RootDir)
+	item.SourcePath = joinMediaPath(row.FullDir, row.FileName)
+	if strings.TrimSpace(item.SourcePath) == "" {
+		item.Error = "fc2_media 源路径为空"
+		return item
+	}
+	if row.IsRemoved == int64(consts.FilmIsRemoved) {
+		item.Status = scMediaMoveStatusSkip
+		item.Error = "fc2_media 已删除"
+		return item
+	}
+
+	root, layout, err := s.resolveScMediaLayoutForFC2Row(row)
+	if err != nil {
+		item.Error = err.Error()
+		return item
+	}
+	item.RootDir = root
+
+	sourceDir := filepath.Clean(strings.TrimSpace(row.FullDir))
+	if isPathWithin(sourceDir, layout.watched) {
+		item.Status = scMediaMoveStatusSkip
+		item.Error = "已在 watched 目录"
+		return item
+	}
+	if !isPathWithin(sourceDir, layout.media) {
+		item.Error = "fc2_media 不在 media 目录"
+		return item
+	}
+	if _, statErr := os.Stat(item.SourcePath); statErr != nil {
+		item.Error = "源文件不存在: " + statErr.Error()
+		return item
+	}
+
+	targetDir, err := previewWatchedTargetDirectory(layout, now)
+	if err != nil {
+		item.Error = err.Error()
+		return item
+	}
+	targetPath := filepath.Join(targetDir, strings.TrimSpace(row.FileName))
+	if _, statErr := os.Stat(targetPath); statErr == nil {
+		item.Error = "目标目录已存在同名文件"
+		return item
+	} else if !os.IsNotExist(statErr) {
+		item.Error = "检查目标路径失败: " + statErr.Error()
+		return item
+	}
+
+	item.Status = scMediaMoveStatusPass
+	item.TargetDir = targetDir
+	item.TargetPath = targetPath
+	return item
+}
+
 func (s *Service) commitOneScMediaMove(ctx context.Context, entry *scMediaMovePlanEntry, now time.Time) *ScMediaMoveItem {
+	if entryMovieType(entry) == moviedomain.SehuatangThreadMovieTypeFC2PPV {
+		return s.commitOneFC2ScMediaMove(ctx, entry, now)
+	}
+	return s.commitOneJAVScMediaMove(ctx, entry, now)
+}
+
+func (s *Service) commitOneJAVScMediaMove(ctx context.Context, entry *scMediaMovePlanEntry, now time.Time) *ScMediaMoveItem {
 	item := &ScMediaMoveItem{
 		Status:     scMediaMoveStatusPass,
+		MovieType:  moviedomain.SehuatangThreadMovieTypeJAV,
 		MovieJavId: strings.TrimSpace(entryMovieJavID(entry)),
 		MovieName:  strings.TrimSpace(entryMovieName(entry)),
 		ScNames:    append([]string{}, entryScNames(entry)...),
@@ -425,6 +675,121 @@ func (s *Service) commitOneScMediaMove(ctx context.Context, entry *scMediaMovePl
 	return item
 }
 
+func (s *Service) commitOneFC2ScMediaMove(ctx context.Context, entry *scMediaMovePlanEntry, now time.Time) *ScMediaMoveItem {
+	item := &ScMediaMoveItem{
+		Status:     scMediaMoveStatusPass,
+		MovieType:  moviedomain.SehuatangThreadMovieTypeFC2PPV,
+		FC2Key:     strings.TrimSpace(entryFC2Key(entry)),
+		MovieName:  strings.TrimSpace(entryMovieName(entry)),
+		ScNames:    append([]string{}, entryScNames(entry)...),
+		RootDir:    strings.TrimSpace(entryRootDir(entry)),
+		SourcePath: strings.TrimSpace(entrySourcePath(entry)),
+	}
+	if item.FC2Key == "" {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "计划中的 fc2_key 为空"
+		return item
+	}
+
+	row, err := s.deps.FC2MediaModel.FindOneByKey(ctx, item.FC2Key)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			item.Status = scMediaMoveStatusFail
+			item.Error = "fc2_media 不存在"
+			return item
+		}
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+	if row == nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "fc2_media 不存在"
+		return item
+	}
+
+	currentPath := joinMediaPath(row.FullDir, row.FileName)
+	item.SourcePath = currentPath
+	if row.IsRemoved == int64(consts.FilmIsRemoved) {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "fc2_media 已删除"
+		return item
+	}
+	if expected := strings.TrimSpace(entrySourcePath(entry)); expected != "" && filepath.Clean(expected) != filepath.Clean(currentPath) {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "fc2_media 路径已变化，请重跑预处理"
+		return item
+	}
+
+	root, layout, err := s.resolveScMediaLayoutForFC2Row(row)
+	if err != nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+	item.RootDir = root
+
+	currentDir := filepath.Clean(strings.TrimSpace(row.FullDir))
+	if isPathWithin(currentDir, layout.watched) {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "fc2_media 已在 watched 目录"
+		return item
+	}
+	if !isPathWithin(currentDir, layout.media) {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "fc2_media 不在 media 目录"
+		return item
+	}
+
+	targetDir, folderID, err := s.allocateWatchedTargetDirectory(ctx, layout, now)
+	if err != nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+	targetPath := filepath.Join(targetDir, strings.TrimSpace(row.FileName))
+	if _, statErr := os.Stat(targetPath); statErr == nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "目标目录已存在同名文件"
+		return item
+	} else if !os.IsNotExist(statErr) {
+		item.Status = scMediaMoveStatusFail
+		item.Error = "检查目标路径失败: " + statErr.Error()
+		return item
+	}
+
+	if err = moveFileWithFallback(ctx, currentPath, targetPath); err != nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+
+	updated := *row
+	updated.RootDir = filepath.Clean(root)
+	updated.FullDir = filepath.Clean(targetDir)
+	updated.DirectoryID = folderID
+	updated.UpdatedOn = now.Unix()
+	if err = s.deps.FC2MediaModel.Update(ctx, &updated); err != nil {
+		if rollbackErr := moveFileWithFallback(ctx, targetPath, currentPath); rollbackErr != nil {
+			item.Status = scMediaMoveStatusFail
+			item.Error = err.Error() + "; 回滚文件失败: " + rollbackErr.Error()
+			return item
+		}
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+	if err = s.syncFC2MediaSnapshots(ctx, updated.FC2MovieID); err != nil {
+		item.Status = scMediaMoveStatusFail
+		item.Error = err.Error()
+		return item
+	}
+
+	item.TargetDir = updated.FullDir
+	item.TargetPath = targetPath
+	return item
+}
+
 func pickScMediaMovieName(row *moviex.GList) string {
 	if row == nil {
 		return ""
@@ -441,12 +806,29 @@ func pickScMediaMovieName(row *moviex.GList) string {
 }
 
 func (s *Service) resolveScMediaLayoutForRow(row *moviex.WMedia) (string, rootLayout, error) {
-	roots := s.mediaRoots()
 	if row == nil {
 		return "", rootLayout{}, fmt.Errorf("w_media 为空")
 	}
+	return s.resolveScMediaLayout(row.RootDir, row.FullDir, "w_media", s.mediaRoots())
+}
 
-	cleanRoot := filepath.Clean(strings.TrimSpace(row.RootDir))
+func (s *Service) resolveScMediaLayoutForFC2Row(row *moviex.FC2Media) (string, rootLayout, error) {
+	if row == nil {
+		return "", rootLayout{}, fmt.Errorf("fc2_media 为空")
+	}
+	return s.resolveScMediaLayout(row.RootDir, row.FullDir, "fc2_media", s.fc2ScMediaRoots())
+}
+
+func (s *Service) resolveScMediaLayout(rootDir, fullDir, mediaLabel string, roots []string) (string, rootLayout, error) {
+	mediaLabel = strings.TrimSpace(mediaLabel)
+	if mediaLabel == "" {
+		mediaLabel = "media"
+	}
+
+	cleanRoot := ""
+	if rootDir = strings.TrimSpace(rootDir); rootDir != "" {
+		cleanRoot = filepath.Clean(rootDir)
+	}
 	for _, root := range roots {
 		if cleanRoot != "" && cleanRoot == filepath.Clean(root) {
 			layout := buildRootLayout(root)
@@ -454,26 +836,42 @@ func (s *Service) resolveScMediaLayoutForRow(row *moviex.WMedia) (string, rootLa
 		}
 	}
 
-	fullDir := filepath.Clean(strings.TrimSpace(row.FullDir))
+	cleanFullDir := ""
+	if fullDir = strings.TrimSpace(fullDir); fullDir != "" {
+		cleanFullDir = filepath.Clean(fullDir)
+	}
 	for _, root := range roots {
 		layout := buildRootLayout(root)
-		if isPathWithin(fullDir, layout.media) || isPathWithin(fullDir, layout.watched) {
+		if isPathWithin(cleanFullDir, layout.media) || isPathWithin(cleanFullDir, layout.watched) {
 			return root, layout, nil
 		}
 	}
 
 	if cleanRoot != "" {
-		return "", rootLayout{}, fmt.Errorf("w_media root_dir 未配置: %s", cleanRoot)
+		return "", rootLayout{}, fmt.Errorf("%s root_dir 未配置: %s", mediaLabel, cleanRoot)
 	}
-	return "", rootLayout{}, fmt.Errorf("w_media 路径不在已配置 root 中: %s", fullDir)
+	return "", rootLayout{}, fmt.Errorf("%s 路径不在已配置 root 中: %s", mediaLabel, cleanFullDir)
+}
+
+func (s *Service) fc2ScMediaRoots() []string {
+	configured := s.fc2MediaRoots()
+	roots := make([]string, 0, len(configured))
+	for _, root := range configured {
+		if strings.TrimSpace(root.rootDir) != "" {
+			roots = append(roots, root.rootDir)
+		}
+	}
+	return roots
 }
 
 func isPathWithin(pathValue, baseDir string) bool {
-	pathValue = filepath.Clean(strings.TrimSpace(pathValue))
-	baseDir = filepath.Clean(strings.TrimSpace(baseDir))
+	pathValue = strings.TrimSpace(pathValue)
+	baseDir = strings.TrimSpace(baseDir)
 	if pathValue == "" || baseDir == "" {
 		return false
 	}
+	pathValue = filepath.Clean(pathValue)
+	baseDir = filepath.Clean(baseDir)
 	rel, err := filepath.Rel(baseDir, pathValue)
 	if err != nil {
 		return false
@@ -510,6 +908,20 @@ func entryMovieJavID(entry *scMediaMovePlanEntry) string {
 	return entry.MovieJavId
 }
 
+func entryMovieType(entry *scMediaMovePlanEntry) string {
+	if entry == nil {
+		return ""
+	}
+	return normalizeScMediaMoveMovieType(entry.MovieType, entry.MovieJavId, entry.FC2Key)
+}
+
+func entryFC2Key(entry *scMediaMovePlanEntry) string {
+	if entry == nil {
+		return ""
+	}
+	return entry.FC2Key
+}
+
 func entryMovieName(entry *scMediaMovePlanEntry) string {
 	if entry == nil {
 		return ""
@@ -543,6 +955,26 @@ func normalizeScMediaMoveMode(mode string) string {
 		return scMediaMoveModeAll
 	}
 	return scMediaMoveModeSingle
+}
+
+func normalizeScMediaMoveMovieType(movieType, movieJavID, fc2Key string) string {
+	normalizedType := strings.TrimSpace(movieType)
+	switch normalizedType {
+	case moviedomain.SehuatangThreadMovieTypeJAV:
+		return moviedomain.SehuatangThreadMovieTypeJAV
+	case moviedomain.SehuatangThreadMovieTypeFC2PPV:
+		return moviedomain.SehuatangThreadMovieTypeFC2PPV
+	}
+	if normalizedType != "" {
+		return normalizedType
+	}
+	if strings.TrimSpace(fc2Key) != "" {
+		return moviedomain.SehuatangThreadMovieTypeFC2PPV
+	}
+	if strings.TrimSpace(movieJavID) != "" {
+		return moviedomain.SehuatangThreadMovieTypeJAV
+	}
+	return ""
 }
 
 func scMediaMoveScopeText(mode, scName string) string {

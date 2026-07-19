@@ -35,7 +35,7 @@ func (h *WMediaAggAPI) Birth(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	size := clampPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultAggPageSize)), defaultAggPageSize))
+	size := clampMovieAggCardPageSize(atoiDef(c.DefaultQuery("ps", strconv.Itoa(defaultMovieAggCardPageSize)), defaultMovieAggCardPageSize))
 	curOD := normalizeOrderBy(c.Query("od"), consts.OrderByMediaBirthTime)
 	sq := buildSortQuery(c, curOD)
 

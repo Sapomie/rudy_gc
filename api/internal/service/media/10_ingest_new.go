@@ -29,6 +29,12 @@ const (
 	ingestItemStatusFail = "fail"
 )
 
+const (
+	ingestActionInsert  = "insert"
+	ingestActionRestore = "restore"
+	ingestActionReplace = "replace"
+)
+
 type IngestNewResult struct {
 	Roots    int                `json:"roots"`
 	Total    int                `json:"total"`
@@ -46,9 +52,13 @@ type IngestPrecheckStat struct {
 
 type IngestFileItem struct {
 	Status            string `json:"status"`
+	Action            string `json:"action"`
+	Notice            string `json:"notice"`
 	RootDir           string `json:"root_dir"`
 	SourcePath        string `json:"source_path"`
 	MovieName         string `json:"movie_name"`
+	ExistingPath      string `json:"existing_path"`
+	RemovedPath       string `json:"removed_path"`
 	TargetFileName    string `json:"target_file_name"`
 	TargetDir         string `json:"target_dir"`
 	Alias             string `json:"alias"`
@@ -129,7 +139,7 @@ func (s *Service) IngestCommit(ctx context.Context) (result *IngestNewResult, er
 
 		taskctx.ReportProgress(ctx, taskctx.Progress{
 			Stage:   "media_commit_root_begin",
-			Message: "开始执行第二段插入 root: " + root,
+			Message: "开始执行第二段入库 root: " + root,
 		})
 
 		rootResult, err := s.ingestCommitOneRoot(ctx, root, time.Now())
@@ -141,7 +151,7 @@ func (s *Service) IngestCommit(ctx context.Context) (result *IngestNewResult, er
 
 	taskctx.ReportProgress(ctx, taskctx.Progress{
 		Stage:        "media_commit_done",
-		Message:      "第二段插入处理完成",
+		Message:      "第二段入库处理完成",
 		HandledCount: result.Total,
 		SuccessCount: result.Success,
 		FailedCount:  result.Failed,
@@ -175,8 +185,8 @@ func buildPrecheckDoneMessage(total, passed, failed int) string {
 	case total == 0:
 		return "预处理完成：没有可处理文件"
 	case failed == 0:
-		return "预处理完成：全部通过，可以执行第二段插入操作"
+		return "预处理完成：全部通过，可以执行第二段入库操作"
 	default:
-		return "预处理完成：部分失败，可返回修正后重跑预处理，或执行第二段仅插入通过项"
+		return "预处理完成：部分失败，可返回修正后重跑预处理，或执行第二段仅处理通过项"
 	}
 }

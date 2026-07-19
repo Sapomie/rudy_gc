@@ -140,6 +140,42 @@ func TestSHListTopicShouldSkip(t *testing.T) {
 	}
 }
 
+func TestResolveSehuatangThreadMovieNameAppliesKnownThreadOverride(t *testing.T) {
+	tests := []struct {
+		name      string
+		threadTID string
+		titles    []string
+		want      string
+	}{
+		{
+			name:      "known incorrect list title",
+			threadTID: "3270076",
+			titles:    []string{"FC2PPV-3377076 [自译征用] 标题"},
+			want:      "FC2PPV-4821506",
+		},
+		{
+			name:      "known incorrect detail title",
+			threadTID: " 3270076 ",
+			titles:    []string{"FC2PPV-3377076 详情标题", "FC2PPV-3377076 列表标题"},
+			want:      "FC2PPV-4821506",
+		},
+		{
+			name:      "another thread keeps parsed code",
+			threadTID: "3267951",
+			titles:    []string{"FC2PPV-3377076 [自译征用] 另一个帖子"},
+			want:      "FC2PPV-3377076",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := resolveSehuatangThreadMovieName(test.threadTID, test.titles...); got != test.want {
+				t.Fatalf("resolveSehuatangThreadMovieName(%q) = %q, want %q", test.threadTID, got, test.want)
+			}
+		})
+	}
+}
+
 func TestReportSHDetailProgressKeepsListStats(t *testing.T) {
 	var reported taskctx.Progress
 	ctx := taskctx.WithProgressReporter(context.Background(), func(progress taskctx.Progress) {

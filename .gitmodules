@@ -1,0 +1,8 @@
+[submodule "api"]
+	path = api
+	url = /Users/gaojinwei/src/my/rudy_gc-local-git/api.git
+	branch = main
+[submodule "web"]
+	path = web
+	url = /Users/gaojinwei/src/my/rudy_gc-local-git/web.git
+	branch = main

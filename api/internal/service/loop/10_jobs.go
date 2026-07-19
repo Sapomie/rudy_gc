@@ -46,50 +46,51 @@ const (
 )
 
 type StartTaskRequest struct {
-	TaskType        string               `json:"task_type"`
-	TriggerSource   string               `json:"trigger_source"`
-	Name            string               `json:"name"`
-	ActorName       string               `json:"actor_name"`
-	AutoFetchSite   string               `json:"auto_fetch_site"`
-	Keyword         string               `json:"keyword"`
-	FetchMode       string               `json:"fetch_mode"`
-	ExistingPolicy  string               `json:"existing_policy"`
-	TargetForumIDs  []string             `json:"target_forum_ids"`
-	ThreadTIDs      []string             `json:"thread_tids"`
-	Sort            string               `json:"sort"`
-	Status          string               `json:"status"`
-	DetailStatus    string               `json:"detail_status"`
-	DetailStatuses  []string             `json:"detail_statuses"`
-	MovieType       string               `json:"movie_type"`
-	MovieTypes      []string             `json:"movie_types"`
-	Statuses        []string             `json:"statuses"`
-	TriggerSort     string               `json:"trigger_sort"`
-	TriggerOrder    string               `json:"trigger_order"`
-	LastFetchFrom   string               `json:"last_fetch_from"`
-	LastFetchTo     string               `json:"last_fetch_to"`
-	PostTimeFrom    string               `json:"post_time_from"`
-	PostTimeTo      string               `json:"post_time_to"`
-	ReleaseDateFrom string               `json:"release_date_from"`
-	ReleaseDateTo   string               `json:"release_date_to"`
-	MediaBirthFrom  string               `json:"media_birth_from"`
-	MediaBirthTo    string               `json:"media_birth_to"`
-	StartPage       int64                `json:"start_page"`
-	EndPage         int64                `json:"end_page"`
-	Number          int64                `json:"number"`
-	Limit           int64                `json:"limit"`
-	MovieJavID      string               `json:"movie_jav_id"`
-	MovieName       string               `json:"movie_name"`
-	Dir             string               `json:"dir"`
-	ComeMovieType   string               `json:"come_movie_type"`
-	ComeMovieJavID  string               `json:"come_movie_jav_id"`
-	ComeFC2MovieID  int64                `json:"come_fc2_movie_id"`
-	MovieCast       string               `json:"movie_cast"`
-	Kind            string               `json:"kind"`
-	DurationMinutes int64                `json:"duration"`
-	Fg              string               `json:"fg"`
-	Vessel          string               `json:"vessel"`
-	Remarks         string               `json:"remarks"`
-	Movies          []sc.AddScInputMovie `json:"movies"`
+	TaskType         string               `json:"task_type"`
+	FetchSiteTargets []FetchSiteTarget    `json:"fetch_site_targets"`
+	TriggerSource    string               `json:"trigger_source"`
+	Name             string               `json:"name"`
+	ActorName        string               `json:"actor_name"`
+	AutoFetchSite    string               `json:"auto_fetch_site"`
+	Keyword          string               `json:"keyword"`
+	FetchMode        string               `json:"fetch_mode"`
+	ExistingPolicy   string               `json:"existing_policy"`
+	TargetForumIDs   []string             `json:"target_forum_ids"`
+	ThreadTIDs       []string             `json:"thread_tids"`
+	Sort             string               `json:"sort"`
+	Status           string               `json:"status"`
+	DetailStatus     string               `json:"detail_status"`
+	DetailStatuses   []string             `json:"detail_statuses"`
+	MovieType        string               `json:"movie_type"`
+	MovieTypes       []string             `json:"movie_types"`
+	Statuses         []string             `json:"statuses"`
+	TriggerSort      string               `json:"trigger_sort"`
+	TriggerOrder     string               `json:"trigger_order"`
+	LastFetchFrom    string               `json:"last_fetch_from"`
+	LastFetchTo      string               `json:"last_fetch_to"`
+	PostTimeFrom     string               `json:"post_time_from"`
+	PostTimeTo       string               `json:"post_time_to"`
+	ReleaseDateFrom  string               `json:"release_date_from"`
+	ReleaseDateTo    string               `json:"release_date_to"`
+	MediaBirthFrom   string               `json:"media_birth_from"`
+	MediaBirthTo     string               `json:"media_birth_to"`
+	StartPage        int64                `json:"start_page"`
+	EndPage          int64                `json:"end_page"`
+	Number           int64                `json:"number"`
+	Limit            int64                `json:"limit"`
+	MovieJavID       string               `json:"movie_jav_id"`
+	MovieName        string               `json:"movie_name"`
+	Dir              string               `json:"dir"`
+	ComeMovieType    string               `json:"come_movie_type"`
+	ComeMovieJavID   string               `json:"come_movie_jav_id"`
+	ComeFC2MovieID   int64                `json:"come_fc2_movie_id"`
+	MovieCast        string               `json:"movie_cast"`
+	Kind             string               `json:"kind"`
+	DurationMinutes  int64                `json:"duration"`
+	Fg               string               `json:"fg"`
+	Vessel           string               `json:"vessel"`
+	Remarks          string               `json:"remarks"`
+	Movies           []sc.AddScInputMovie `json:"movies"`
 
 	CastNames               string `json:"cn"`
 	PersonIds               string `json:"pid"`
@@ -128,6 +129,13 @@ type StartTaskRequest struct {
 	Order                   string `json:"order"`
 	LastFetchDurationDays   string `json:"last_fetch_duration_days"`
 	LastSuccessDurationDays string `json:"last_success_duration_days"`
+}
+
+type FetchSiteTarget struct {
+	Sequence   int64  `json:"sequence"`
+	Source     string `json:"source"`
+	MovieJavID string `json:"movie_jav_id"`
+	MovieName  string `json:"movie_name"`
 }
 
 type DetailLoopSnapshot struct {
@@ -576,113 +584,55 @@ func (l *FetchLoopService) StartBackfillFetchSite() (string, error) {
 }
 
 func (l *FetchLoopService) StartFetchJavbusResources(req StartTaskRequest) (string, error) {
+	if len(req.FetchSiteTargets) > 0 {
+		return l.startFetchSiteTargets(req)
+	}
+	if strings.TrimSpace(req.MovieJavID) == "" {
+		return "", fmt.Errorf("fetch_site_targets is required")
+	}
 	return l.startManagedTask(TaskSpiderFetchJavbus, taskRuntimePolicy{}, func(ctx context.Context) error {
 		movieJavID := strings.TrimSpace(req.MovieJavID)
 		movieName := strings.TrimSpace(req.MovieName)
-		msg := "开始抓取 JavBus 资源"
-		if movieJavID != "" {
-			msg = fmt.Sprintf("开始抓取 JavBus 资源：%s", movieName)
-			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-			_, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieName)
-			return err
-		}
-		movieReq, err := buildFetchSiteMovieRequest(req)
-		if err != nil {
-			return err
-		}
-		durationFilter, err := buildFetchSiteDurationFilter(req)
-		if err != nil {
-			return err
-		}
-		targetCount := normalizeFetchSiteNumber(req.Number)
-		msg = fmt.Sprintf("开始抓取 JavBus 资源，目标数量=%d，排序=%s", targetCount, movieReq.OrderBy)
+		msg := fmt.Sprintf("开始抓取 JavBus 资源：%s", movieName)
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-		_, err = l.runJavbusFetchTasksWithFilterTarget(
-			ctx,
-			movieReq,
-			targetCount,
-			durationFilter.LastFetchDurationDays,
-			durationFilter.LastSuccessDurationDays,
-		)
+		_, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieName)
 		return err
 	})
 }
 
 func (l *FetchLoopService) StartFetchSukebeiResources(req StartTaskRequest) (string, error) {
+	if len(req.FetchSiteTargets) > 0 {
+		return l.startFetchSiteTargets(req)
+	}
+	if strings.TrimSpace(req.MovieJavID) == "" {
+		return "", fmt.Errorf("fetch_site_targets is required")
+	}
 	return l.startManagedTask(TaskSpiderFetchSukebei, taskRuntimePolicy{}, func(ctx context.Context) error {
 		movieJavID := strings.TrimSpace(req.MovieJavID)
 		movieName := strings.TrimSpace(req.MovieName)
-		msg := "开始抓取 Sukebei 资源"
-		if movieJavID != "" {
-			msg = fmt.Sprintf("开始抓取 Sukebei 资源：%s", movieName)
-			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieName)
-			return err
-		}
-		movieReq, err := buildFetchSiteMovieRequest(req)
-		if err != nil {
-			return err
-		}
-		durationFilter, err := buildFetchSiteDurationFilter(req)
-		if err != nil {
-			return err
-		}
-		targetCount := normalizeFetchSiteNumber(req.Number)
-		msg = fmt.Sprintf("开始抓取 Sukebei 资源，目标数量=%d，排序=%s", targetCount, movieReq.OrderBy)
+		msg := fmt.Sprintf("开始抓取 Sukebei 资源：%s", movieName)
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-		_, err = l.runSukebeiFetchTasksWithFilterTarget(
-			ctx,
-			movieReq,
-			targetCount,
-			durationFilter.LastFetchDurationDays,
-			durationFilter.LastSuccessDurationDays,
-		)
+		_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieName)
 		return err
 	})
 }
 
 func (l *FetchLoopService) StartFetchSiteBothResources(req StartTaskRequest) (string, error) {
+	if len(req.FetchSiteTargets) > 0 {
+		return l.startFetchSiteTargets(req)
+	}
+	if strings.TrimSpace(req.MovieJavID) == "" {
+		return "", fmt.Errorf("fetch_site_targets is required")
+	}
 	return l.startManagedTask(TaskSpiderFetchSiteBoth, taskRuntimePolicy{}, func(ctx context.Context) error {
 		movieJavID := strings.TrimSpace(req.MovieJavID)
 		movieName := strings.TrimSpace(req.MovieName)
-		msg := "开始同时抓取 JavBus + Sukebei 资源"
-		if movieJavID != "" {
-			msg = fmt.Sprintf("开始同时抓取 JavBus + Sukebei 资源：%s", movieName)
-			taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-			if _, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieName); err != nil {
-				return err
-			}
-			_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieName)
-			return err
-		}
-
-		movieReq, err := buildFetchSiteMovieRequest(req)
-		if err != nil {
-			return err
-		}
-		durationFilter, err := buildFetchSiteDurationFilter(req)
-		if err != nil {
-			return err
-		}
-		targetCount := normalizeFetchSiteNumber(req.Number)
-		msg = fmt.Sprintf("开始同时抓取 JavBus + Sukebei 资源，目标数量=%d，排序=%s", targetCount, movieReq.OrderBy)
+		msg := fmt.Sprintf("开始同时抓取 JavBus + Sukebei 资源：%s", movieName)
 		taskctx.ReportProgress(ctx, taskctx.Progress{Stage: "pipeline_pre", Message: msg})
-		if _, err = l.runJavbusFetchTasksWithFilterTarget(
-			ctx,
-			movieReq,
-			targetCount,
-			durationFilter.LastFetchDurationDays,
-			durationFilter.LastSuccessDurationDays,
-		); err != nil {
+		if _, err := l.fetchQueue.RunSingleJavbusFetchTask(ctx, movieJavID, movieName); err != nil {
 			return err
 		}
-		_, err = l.runSukebeiFetchTasksWithFilterTarget(
-			ctx,
-			movieReq,
-			targetCount,
-			durationFilter.LastFetchDurationDays,
-			durationFilter.LastSuccessDurationDays,
-		)
+		_, err := l.fetchQueue.RunSingleSukebeiFetchTask(ctx, movieJavID, movieName)
 		return err
 	})
 }

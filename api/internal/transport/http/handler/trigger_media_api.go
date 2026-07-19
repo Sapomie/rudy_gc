@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -22,8 +23,13 @@ func NewMediaTriggerAPI(deps *dep.Dep) *MediaTriggerAPI {
 
 type mediaIngestItemRow struct {
 	Status            string `json:"status"`
+	Action            string `json:"action"`
+	ActionLabel       string `json:"action_label"`
+	Notice            string `json:"notice"`
 	MovieName         string `json:"movie_name"`
 	SourcePath        string `json:"source_path"`
+	ExistingPath      string `json:"existing_path"`
+	RemovedPath       string `json:"removed_path"`
 	TargetFileName    string `json:"target_file_name"`
 	TargetDir         string `json:"target_dir"`
 	Alias             string `json:"alias"`
@@ -43,6 +49,7 @@ type mediaIngestResponse struct {
 	Total           int                      `json:"total"`
 	Success         int                      `json:"success"`
 	Failed          int                      `json:"failed"`
+	Replace         int                      `json:"replace"`
 	Precheck        media.IngestPrecheckStat `json:"precheck"`
 	CanCommit       bool                     `json:"can_commit"`
 	PartialFailed   bool                     `json:"partial_failed"`
@@ -129,6 +136,9 @@ func (h *MediaTriggerAPI) Plan(c *gin.Context) {
 		if strings.TrimSpace(row.Error) == "" {
 			resp.PrecheckPass = append(resp.PrecheckPass, row)
 			resp.PrecheckPreview = append(resp.PrecheckPreview, row)
+			if row.Action == "replace" {
+				resp.Replace++
+			}
 		} else {
 			resp.PrecheckFail = append(resp.PrecheckFail, row)
 		}
@@ -139,8 +149,12 @@ func (h *MediaTriggerAPI) Plan(c *gin.Context) {
 		resp.Message = "暂无预处理结果，请先执行第一段预处理"
 	case snapshot.Total == 0:
 		resp.Message = "预处理已完成：当前没有可处理文件"
+	case snapshot.Failed == 0 && resp.Replace > 0:
+		resp.Message = "预处理已全部通过，其中 " + strconv.Itoa(resp.Replace) + " 项将替换活动旧版本"
 	case snapshot.Failed == 0:
 		resp.Message = "预处理已全部通过，可执行第二段插入"
+	case resp.Replace > 0:
+		resp.Message = "预处理存在失败，通过项中有 " + strconv.Itoa(resp.Replace) + " 项将替换活动旧版本"
 	default:
 		resp.Message = "预处理存在失败，可选择仅插入通过项或返回"
 	}
@@ -225,22 +239,28 @@ func buildMediaPrecheckResponse(phase string, result *media.IngestNewResult) med
 	resp.Failed = result.Precheck.Failed
 	resp.CanCommit = result.Precheck.Passed > 0
 	resp.PartialFailed = result.Precheck.Failed > 0
-	if result.Precheck.Total == 0 {
-		resp.Message = "预处理完成：没有可处理文件"
-	} else if result.Precheck.Failed == 0 {
-		resp.Message = "预处理完成：全部通过，可执行第二段插入"
-	} else {
-		resp.Message = "预处理完成：部分失败，可仅插入通过项或返回"
-	}
-
 	for _, item := range result.Items {
 		row := buildMediaIngestRow(item)
 		if strings.TrimSpace(row.Error) == "" {
 			resp.PrecheckPass = append(resp.PrecheckPass, row)
 			resp.PrecheckPreview = append(resp.PrecheckPreview, row)
+			if row.Action == "replace" {
+				resp.Replace++
+			}
 		} else {
 			resp.PrecheckFail = append(resp.PrecheckFail, row)
 		}
+	}
+	if result.Precheck.Total == 0 {
+		resp.Message = "预处理完成：没有可处理文件"
+	} else if result.Precheck.Failed == 0 && resp.Replace > 0 {
+		resp.Message = "预处理完成：全部通过，其中 " + strconv.Itoa(resp.Replace) + " 项将替换活动旧版本"
+	} else if result.Precheck.Failed == 0 {
+		resp.Message = "预处理完成：全部通过，可执行第二段插入"
+	} else if resp.Replace > 0 {
+		resp.Message = "预处理完成：部分失败，通过项中有 " + strconv.Itoa(resp.Replace) + " 项将替换活动旧版本"
+	} else {
+		resp.Message = "预处理完成：部分失败，可仅插入通过项或返回"
 	}
 	return resp
 }
@@ -267,22 +287,26 @@ func buildMediaCommitResponse(phase string, result *media.IngestNewResult) media
 	resp.Total = result.Total
 	resp.Success = result.Success
 	resp.Failed = result.Failed
-	if result.Total == 0 {
-		resp.Message = "第二段未执行任何插入项"
-	} else if result.Failed == 0 {
-		resp.Message = "第二段执行完成，全部插入成功"
-	} else {
-		resp.Message = "第二段执行完成，部分插入失败"
-	}
-
 	for _, item := range result.Items {
 		row := buildMediaIngestRow(item)
 		if strings.TrimSpace(row.Error) == "" {
 			resp.CommitSuccess = append(resp.CommitSuccess, row)
 			resp.CommitPreview = append(resp.CommitPreview, row)
+			if row.Action == "replace" {
+				resp.Replace++
+			}
 		} else {
 			resp.CommitFail = append(resp.CommitFail, row)
 		}
+	}
+	if result.Total == 0 {
+		resp.Message = "第二段未执行任何插入或替换项"
+	} else if result.Failed == 0 && resp.Replace > 0 {
+		resp.Message = "第二段执行完成，全部成功，其中 " + strconv.Itoa(resp.Replace) + " 项已替换活动旧版本"
+	} else if result.Failed == 0 {
+		resp.Message = "第二段执行完成，全部插入成功"
+	} else {
+		resp.Message = "第二段执行完成，部分插入或替换失败"
 	}
 	return resp
 }
@@ -329,8 +353,13 @@ func buildMediaIngestRow(item *media.IngestFileItem) mediaIngestItemRow {
 	}
 	return mediaIngestItemRow{
 		Status:            strings.TrimSpace(item.Status),
+		Action:            strings.TrimSpace(item.Action),
+		ActionLabel:       mediaIngestActionLabel(item.Action),
+		Notice:            strings.TrimSpace(item.Notice),
 		MovieName:         strings.TrimSpace(item.MovieName),
 		SourcePath:        strings.TrimSpace(item.SourcePath),
+		ExistingPath:      strings.TrimSpace(item.ExistingPath),
+		RemovedPath:       strings.TrimSpace(item.RemovedPath),
 		TargetFileName:    strings.TrimSpace(item.TargetFileName),
 		TargetDir:         strings.TrimSpace(item.TargetDir),
 		Alias:             strings.TrimSpace(item.Alias),
@@ -340,5 +369,18 @@ func buildMediaIngestRow(item *media.IngestFileItem) mediaIngestItemRow {
 		TargetPath:        strings.TrimSpace(item.TargetPath),
 		FailedPath:        strings.TrimSpace(item.FailedPath),
 		Error:             strings.TrimSpace(item.Error),
+	}
+}
+
+func mediaIngestActionLabel(action string) string {
+	switch strings.TrimSpace(action) {
+	case "replace":
+		return "替换活动旧版本"
+	case "restore":
+		return "恢复已移除影片"
+	case "insert":
+		return "新增入库"
+	default:
+		return ""
 	}
 }

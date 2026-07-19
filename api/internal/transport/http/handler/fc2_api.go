@@ -33,6 +33,11 @@ type addFC2MovieToAlbumReq struct {
 	AlbumName string `json:"album_name"`
 }
 
+type updateFC2ResourceAlbumReq struct {
+	SourceRowID int64  `json:"source_row_id"`
+	AlbumName   string `json:"album_name"`
+}
+
 type fc2ListQuery struct {
 	Page     int64  `form:"p"`
 	PageSize int64  `form:"ps"`
@@ -303,6 +308,11 @@ func (h *FC2API) Detail(c *gin.Context) {
 			MagnetText: thread.MagnetText, InfoHashText: thread.InfoHashText, Meta: meta,
 		})
 	}
+	magnetResources, err := h.movieSvc.ListFC2SHMagnetResources(c.Request.Context(), fc2Key)
+	if err != nil {
+		jsonServerError(c, "FC2影片磁力资源加载失败", err)
+		return
+	}
 	movieAlbums, err := h.movieSvc.ListMovieAlbumsByFC2Key(c.Request.Context(), fc2Key)
 	if err != nil {
 		jsonServerError(c, "FC2影片相册状态加载失败", err)
@@ -319,10 +329,77 @@ func (h *FC2API) Detail(c *gin.Context) {
 		"DetailCoverImage":      detailCoverImage,
 		"ScStat":                stat,
 		"SC":                    scEvents,
+		"MagnetResources":       magnetResources,
+		"MagnetResourceCount":   len(magnetResources),
 		"Resources":             resources,
 		"Total":                 len(resources),
 		"ResourceCountText":     strconv.Itoa(len(resources)),
 		"MovieAlbums":           movieAlbums,
+	})
+}
+
+func (h *FC2API) AddResourceToAlbum(c *gin.Context) {
+	h.updateResourceAlbum(c, true)
+}
+
+func (h *FC2API) RemoveResourceFromAlbum(c *gin.Context) {
+	h.updateResourceAlbum(c, false)
+}
+
+func (h *FC2API) updateResourceAlbum(c *gin.Context, add bool) {
+	fc2Key, _, _, _, ok := fc2domain.NormalizeKey(c.Param("fc2_key"))
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "FC2影片标识格式无效"})
+		return
+	}
+	var req updateFC2ResourceAlbumReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "请求参数无效"})
+		return
+	}
+
+	var (
+		changed   bool
+		albumName string
+		err       error
+	)
+	if add {
+		changed, albumName, err = h.movieSvc.AddFC2SHMagnetToAlbum(c.Request.Context(), fc2Key, req.AlbumName, req.SourceRowID)
+	} else {
+		changed, albumName, err = h.movieSvc.RemoveFC2SHMagnetFromAlbum(c.Request.Context(), fc2Key, req.AlbumName, req.SourceRowID)
+	}
+	if err != nil {
+		switch {
+		case errors.Is(err, movieservice.ErrInvalidFC2Key),
+			errors.Is(err, movieservice.ErrInvalidFC2Album),
+			errors.Is(err, movieservice.ErrInvalidSourceRow),
+			errors.Is(err, movieservice.ErrSourceNotFound),
+			errors.Is(err, movieservice.ErrSourceMovieMiss):
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		default:
+			jsonServerError(c, "FC2磁力相册状态更新失败", err)
+		}
+		return
+	}
+
+	favorited := add
+	message := "已加入" + albumName
+	if add && !changed {
+		message = "该磁力已在" + albumName
+	}
+	if !add {
+		message = "已移出" + albumName
+		if !changed {
+			message = "该磁力未在" + albumName
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"ok":            true,
+		"changed":       changed,
+		"favorited":     favorited,
+		"album_name":    albumName,
+		"source_row_id": req.SourceRowID,
+		"message":       message,
 	})
 }
 

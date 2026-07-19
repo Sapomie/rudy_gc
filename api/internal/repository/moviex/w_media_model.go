@@ -94,6 +94,7 @@ type (
 		CountByDirectoryID(ctx context.Context, directoryID int64) (int64, error)
 		ListByDirectoryIDs(ctx context.Context, dirIDs []int64, page, size int, orderBy string) (all, paged []*WMedia, total int64, err error)
 		ListDistinctBirthDays(ctx context.Context) ([]int64, error)
+		ListNativeMediaAll(ctx context.Context) ([]*WMedia, error)
 		ListByFullDirPrefixes(ctx context.Context, prefixes []string) ([]*WMedia, error)
 		TableName() string
 		QueryRowsNoCacheCtx(ctx context.Context, dest any, query string, args ...any) error
@@ -942,6 +943,27 @@ func (m *customWMediaModel) ListByFullDirPrefixes(ctx context.Context, prefixes 
 		From(m.table + " AS wm").
 		Where(squirrel.Eq{"wm.source_type": consts.WMediaSourceNative}).
 		Where(conditions).
+		OrderBy("wm.id ASC").
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []*WMedia
+	if err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sqlx.ErrNotFound) {
+			return []*WMedia{}, nil
+		}
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (m *customWMediaModel) ListNativeMediaAll(ctx context.Context) ([]*WMedia, error) {
+	query, args, err := squirrel.
+		Select(wMediaRows).
+		From(m.table + " AS wm").
+		Where(squirrel.Eq{"wm.source_type": consts.WMediaSourceNative}).
 		OrderBy("wm.id ASC").
 		ToSql()
 	if err != nil {

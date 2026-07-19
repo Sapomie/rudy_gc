@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ingestPrecheckPlanVersion  = 3
+	ingestPrecheckPlanVersion  = 4
 	ingestPrecheckPlanFileName = "media_ingest_precheck_plan.json"
 )
 
@@ -31,26 +31,33 @@ type ingestPrecheckPlan struct {
 }
 
 type ingestPrecheckPlanEntry struct {
-	SourcePath          string `json:"source_path"`
-	MovieName           string `json:"movie_name"`
-	Ext                 string `json:"ext"`
-	HasSub              int64  `json:"has_sub"`
-	SelfMake            int64  `json:"self_make"`
-	HasMask             int64  `json:"has_mask"`
-	MovieJavID          string `json:"movie_jav_id"`
-	ReleasingDay        int64  `json:"releasing_day"`
-	FavoriteAlbumID     int64  `json:"favorite_album_id"`
-	FavoriteItemID      int64  `json:"favorite_item_id"`
-	FavoriteSourceType  string `json:"favorite_source_type"`
-	FavoriteSourceRowID int64  `json:"favorite_source_row_id"`
-	FavoriteInfoHash    string `json:"favorite_info_hash"`
+	SourcePath          string                       `json:"source_path"`
+	MovieName           string                       `json:"movie_name"`
+	Ext                 string                       `json:"ext"`
+	HasSub              int64                        `json:"has_sub"`
+	SelfMake            int64                        `json:"self_make"`
+	HasMask             int64                        `json:"has_mask"`
+	MovieJavID          string                       `json:"movie_jav_id"`
+	ReleasingDay        int64                        `json:"releasing_day"`
+	FavoriteAlbumID     int64                        `json:"favorite_album_id"`
+	FavoriteItemID      int64                        `json:"favorite_item_id"`
+	FavoriteSourceType  string                       `json:"favorite_source_type"`
+	FavoriteSourceRowID int64                        `json:"favorite_source_row_id"`
+	FavoriteInfoHash    string                       `json:"favorite_info_hash"`
+	Action              string                       `json:"action"`
+	Notice              string                       `json:"notice"`
+	Existing            *ingestExistingMediaSnapshot `json:"existing,omitempty"`
 }
 
 type ingestPrecheckPlanCheck struct {
 	Status            string `json:"status"`
+	Action            string `json:"action"`
+	Notice            string `json:"notice"`
 	RootDir           string `json:"root_dir"`
 	SourcePath        string `json:"source_path"`
 	MovieName         string `json:"movie_name"`
+	ExistingPath      string `json:"existing_path"`
+	RemovedPath       string `json:"removed_path"`
 	TargetFileName    string `json:"target_file_name"`
 	TargetDir         string `json:"target_dir"`
 	Alias             string `json:"alias"`
@@ -90,6 +97,9 @@ func buildIngestPrecheckPlan(layout rootLayout, passPrepared []*ingestPreparedIt
 			FavoriteSourceType:  sourceItem.SourceType,
 			FavoriteSourceRowID: sourceItem.SourceRowId,
 			FavoriteInfoHash:    prepared.favoriteSource.infoHash,
+			Action:              prepared.action,
+			Notice:              prepared.notice,
+			Existing:            prepared.existing,
 		})
 	}
 
@@ -114,9 +124,13 @@ func buildIngestPrecheckPlan(layout rootLayout, passPrepared []*ingestPreparedIt
 
 		plan.Checks = append(plan.Checks, &ingestPrecheckPlanCheck{
 			Status:            status,
+			Action:            strings.TrimSpace(item.Action),
+			Notice:            strings.TrimSpace(item.Notice),
 			RootDir:           strings.TrimSpace(item.RootDir),
 			SourcePath:        strings.TrimSpace(item.SourcePath),
 			MovieName:         strings.TrimSpace(item.MovieName),
+			ExistingPath:      strings.TrimSpace(item.ExistingPath),
+			RemovedPath:       strings.TrimSpace(item.RemovedPath),
 			TargetFileName:    strings.TrimSpace(item.TargetFileName),
 			TargetDir:         strings.TrimSpace(item.TargetDir),
 			Alias:             strings.TrimSpace(item.Alias),
@@ -254,6 +268,19 @@ func buildPreparedFromPlanEntry(entry *ingestPrecheckPlanEntry) (*ingestPrepared
 	if entry.FavoriteItemID <= 0 {
 		return nil, fmt.Errorf("invalid favorite item_id in precheck plan: %s", sourcePath)
 	}
+	action := strings.TrimSpace(entry.Action)
+	switch action {
+	case ingestActionInsert:
+		if entry.Existing != nil {
+			return nil, fmt.Errorf("insert plan contains existing media snapshot: %s", sourcePath)
+		}
+	case ingestActionRestore, ingestActionReplace:
+		if entry.Existing == nil || entry.Existing.ID <= 0 {
+			return nil, fmt.Errorf("%s plan missing existing media snapshot: %s", action, sourcePath)
+		}
+	default:
+		return nil, fmt.Errorf("invalid ingest action %q in precheck plan: %s", action, sourcePath)
+	}
 
 	meta := rawMovieMeta{
 		movieName: movieName,
@@ -281,6 +308,9 @@ func buildPreparedFromPlanEntry(entry *ingestPrecheckPlanEntry) (*ingestPrepared
 				MovieName:   movieName,
 			},
 		},
+		action:   action,
+		notice:   strings.TrimSpace(entry.Notice),
+		existing: entry.Existing,
 	}, nil
 }
 

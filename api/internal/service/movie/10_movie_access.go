@@ -94,6 +94,23 @@ func (s *Service) ListMovieFullAll(ctx context.Context, r *types.ListMovieFullRe
 	return &types.ListMovieResponse{List: out, Total: int64(len(javIDs)), JavIds: javIDs}, nil
 }
 
+func (s *Service) ListMovieFullAllOrdered(ctx context.Context, r *types.ListMovieFullRequest) (*types.ListMovieResponse, error) {
+	request := &types.ListMovieFullRequest{}
+	if r != nil {
+		*request = *r
+	}
+	javIDs, err := s.movieListQuery().ListFullIDs(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if len(javIDs) == 0 {
+		return &types.ListMovieResponse{List: []*types.MovieType{}, Total: 0, JavIds: []string{}}, nil
+	}
+	request.Page = 1
+	request.PageSize = int64(len(javIDs))
+	return s.ListMovieFull(ctx, request)
+}
+
 func (s *Service) ListMovieFullRandom(ctx context.Context, r *types.ListMovieFullRequest, n int64) (*types.ListMovieResponse, error) {
 	candidateIDs, err := s.movieListQuery().ListFullIDs(ctx, r)
 	if err != nil {

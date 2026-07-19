@@ -415,7 +415,7 @@ func (h *ScPagesAPI) MediaPage(c *gin.Context) {
 		"Title":        "媒体入库",
 		"ViewType":     "media-ingest",
 		"PageTitle":    "媒体入库（两段执行）",
-		"PageNote":     "第一段只做预处理校验与插入前预览；第二段仅插入通过项。",
+		"PageNote":     "第一段执行预处理校验并提醒活动影片替换；第二段新增或替换通过项，活动旧文件自动移入 001_process/005_removed。",
 		"RootDirs":     h.deps.Config.Media.RootDirs,
 		"FavoriteRows": favoriteRows,
 	})
@@ -436,14 +436,14 @@ func (h *ScPagesAPI) FC2MediaPage(c *gin.Context) {
 func (h *ScPagesAPI) MediaRescanPage(c *gin.Context) {
 	rootOptions, err := h.mediaSvc.ListLibraryRescanRootOptions(c.Request.Context())
 	if err != nil {
-		jsonServerError(c, "加载媒体重扫页面失败", err)
+		jsonServerError(c, "加载媒体一致性检查页面失败", err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"Title":       "媒体重扫",
+		"Title":       "媒体一致性检查",
 		"ViewType":    "media-rescan",
-		"PageTitle":   "媒体重扫（位置与删除状态同步）",
-		"PageNote":    "同一个 root 下可分别勾选 media 与 watched；若勾选二级目录，则只扫描该子树。未挂载或不存在的范围会直接跳过，并保持现有 w_media 不变。",
+		"PageTitle":   "媒体一致性检查",
+		"PageNote":    "同时只读核对 JAV 的 w_media、FC2 的 fc2_media 与各自 media、watched 中的实际文件，检查缺失、未关联、大小不一致和重复活动记录；不会修改数据库或移动文件。",
 		"RootOptions": rootOptions,
 	})
 }
@@ -468,14 +468,27 @@ func (h *ScPagesAPI) ScMediaMovePage(c *gin.Context) {
 	if mode == "single" && scName != "" {
 		scDetailHref = "/scevent/" + url.PathEscape(scName)
 	}
+	rootDirs := make([]string, 0, len(h.deps.Config.Media.RootDirs)+len(h.deps.Config.FC2Media.RootDirs))
+	seenRootDirs := make(map[string]struct{}, cap(rootDirs))
+	for _, configured := range append(append([]string{}, h.deps.Config.Media.RootDirs...), h.deps.Config.FC2Media.RootDirs...) {
+		rootDir := strings.TrimSpace(configured)
+		if rootDir == "" {
+			continue
+		}
+		if _, ok := seenRootDirs[rootDir]; ok {
+			continue
+		}
+		seenRootDirs[rootDir] = struct{}{}
+		rootDirs = append(rootDirs, rootDir)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"Title":        "SC Media 移动",
 		"ViewType":     "sc-media-move",
 		"PageTitle":    "SC Media 移动（两段执行）",
-		"PageNote":     "可按单个 SC 或全部符合条件执行；第一段只做预处理预览，第二段仅移动预处理通过的 WMedia 到 watched 目录。",
+		"PageNote":     "可按单个 SC 或全部符合条件执行；第一段预览 JAV 与 FC2 Media，第二段仅移动预处理通过项到 watched 目录。",
 		"Mode":         mode,
-		"RootDirs":     h.deps.Config.Media.RootDirs,
+		"RootDirs":     rootDirs,
 		"ScName":       scName,
 		"ScDetailHref": scDetailHref,
 	})
