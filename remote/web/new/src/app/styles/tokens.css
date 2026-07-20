@@ -1,0 +1,46 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  color: #4b2939;
+  background: #fff8fb;
+  font-synthesis: none;
+  --side-bg: #4b2939;
+  --side-bg-2: #573144;
+  --side-text: #fff4f8;
+  --side-muted: #e7bfd1;
+  --paper: #ffffff;
+  --paper-soft: #fffafd;
+  --paper-blue: #fff5fa;
+  --line: #eed5e1;
+  --line-soft: #f1dce6;
+  --text: #4b2939;
+  --muted: #8b6577;
+  --primary: #d94f8a;
+  --primary-dark: #9f2f63;
+  --primary-soft: #fff0f6;
+  --good: #22a06b;
+  --good-soft: #eaf8f2;
+  --warn: #d98a13;
+  --warn-soft: #fff7e8;
+  --danger: #ec536c;
+  --danger-soft: #fff0f3;
+  --info: #3c79c2;
+  --info-soft: #edf5ff;
+  --shadow: 0 10px 24px rgba(132, 52, 88, 0.055);
+}
+
+:root .app-shell {
+  --nav-side-width: 220px;
+  --nav-top-height: 64px;
+  --nav-primary: #d94f8a;
+  --nav-primary-dark: #9f2f63;
+  --nav-primary-soft: #fff0f6;
+  --nav-secondary: #ef8fba;
+  --nav-side-start: #4b2939;
+  --nav-side-end: #351f2a;
+  --nav-top-bg: #fffafd;
+  --nav-line: #eed5e1;
+  --nav-line-soft: #f1dce6;
+  --nav-text: #fff4f8;
+  --nav-muted: #8b6577;
+}

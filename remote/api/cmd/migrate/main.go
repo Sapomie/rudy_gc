@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"strings"
+	"time"
 
-	dailybestmigration "rudy_gc/remote/api/internal/migration/dailybest"
-	"rudy_gc/remote/api/internal/platform/config"
-	"rudy_gc/remote/api/internal/platform/database"
+	"rudy_gc/remote/api/internal/config"
+	"rudy_gc/remote/api/internal/model/modelg"
+	dailybestremotex "rudy_gc/remote/api/internal/model/modelx/dailybest"
+	dailybestservice "rudy_gc/remote/api/internal/service/dailybest"
 )
 
 var (
@@ -21,7 +24,7 @@ func main() {
 	if value := strings.TrimSpace(*dataSource); value != "" {
 		cfg.DataSource = value
 	}
-	db, err := database.NewGormDBEngine(&database.Config{
+	db, err := modelg.NewGormDBEngine(&modelg.Config{
 		DSN:      strings.TrimSpace(cfg.DataSource),
 		LogLevel: strings.TrimSpace(cfg.LogursLevel),
 	})
@@ -33,8 +36,16 @@ func main() {
 		log.Fatalf("DailyBest 远端数据库连接获取失败: %v", err)
 	}
 	defer sqlDB.Close()
-	if err := dailybestmigration.Run(db); err != nil {
+	if err := modelg.AutoMigrate(db); err != nil {
 		log.Fatalf("DailyBest 远端数据库迁移失败: %v", err)
+	}
+	loc, err := time.LoadLocation(strings.TrimSpace(cfg.Timezone))
+	if err != nil {
+		log.Fatalf("DailyBest 远端时区加载失败: %v", err)
+	}
+	service := dailybestservice.New(context.Background(), dailybestremotex.New(db), nil, loc)
+	if err := service.EnsureRankProjection(context.Background()); err != nil {
+		log.Fatalf("DailyBest 远端排名派生数据重建失败: %v", err)
 	}
 	log.Println("DailyBest 远端数据库迁移完成")
 }

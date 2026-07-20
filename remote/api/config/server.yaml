@@ -1,7 +1,5 @@
-DataSource: root:12345678@tcp(127.0.0.1:5306)/zero_gc_v2?charset=utf8mb4&parseTime=true&loc=Local
-ListenAddr: "0.0.0.0:8891"
-ReadToken: "2e3241d5064098e70bca33c90f65849f6ae1902fc7c721395e48be339b22451b"
-AdminToken: "9d765bb69472b29478ba029b8b084d262419166567dc275e71f509e75c1c7a0e"
+DataSource: root:4521822123@tcp(127.0.0.1:3306)/rudy_gc_collector?charset=utf8mb4&parseTime=true&loc=Local
+ListenAddr: "0.0.0.0:5031"
 DailyFetchTime: "08:30"
 Timezone: "Asia/Shanghai"
 FetchOnStart: true

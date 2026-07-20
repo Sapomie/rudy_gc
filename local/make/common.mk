@@ -9,7 +9,7 @@ API_DIR ?= $(ROOT_DIR)/api
 WEB_DIR ?= $(ROOT_DIR)/web
 
 API_CONFIG_FILE ?= $(API_DIR)/config/config.yaml
-API_PORT ?= 5013
+API_PORT ?= 5021
 WEB_PORT ?= 5022
 API_ORIGIN ?= http://127.0.0.1:$(API_PORT)
 

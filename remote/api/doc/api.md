@@ -1,78 +1,56 @@
 # DailyBest 远端 API
 
-## 服务职责
+远端服务长期抓取当前月榜，将影片名称、番号、标题和封面写入 `d_dailybest_movie`，将结构化排名写入 `c_rank`，同步重建每日统计与周期排行。原始页面只在一次抓取执行期间保留在内存中。
 
-`dailybest-remote` 长期运行并抓取当前 DailyBest 月榜。服务完整抓取所有页面、解析结构化排名、校验内容并发布不可变快照。本地 `rudy_gc` 只通过本 API 同步快照。
+健康检查使用 `GET /healthz`，数据库就绪检查使用 `GET /readyz`。业务接口统一位于 `/api/v1/dailybest`。
 
-## 认证
-
-- `/api/v1/dailybest/*` 使用只读 Bearer Token。
-- `/api/v1/admin/dailybest/*` 使用管理 Bearer Token。
-- `/healthz` 和 `/readyz` 用于服务检查。
-
-## 同步接口
-
-### 获取增量快照
+## 本地同步
 
 ```http
-GET /api/v1/dailybest/snapshots?after_revision=0
-Authorization: Bearer <read-token>
+GET /api/v1/dailybest/rank-sync-manifests
+GET /api/v1/dailybest/ranks?day_number=1297&category=1
 ```
 
-响应按 `revision` 升序返回所有已发布快照。首次同步使用 `after_revision=0`。
+清单按业务日期和分类返回当前有效批次，字段包含 `fetch_run_id`、`business_date`、`day_number`、页面数、排名数、checksum 和完成时间。本地按清单获取排名，并校验日期序号、分类、数量与 checksum。
 
-### 获取完整快照
+## 数据查询
 
 ```http
-GET /api/v1/dailybest/snapshots/{revision}
-Authorization: Bearer <read-token>
+GET /api/v1/dailybest/ranks?business_date=2026-07-20&category=1&rank_pos=1&movie_jav_id=example&p=1&ps=24
+GET /api/v1/dailybest/rank-day-stats?rank_date=2026-07-20&p=1&ps=24
+GET /api/v1/dailybest/rank-periods?period_type=2&period_key=2026-07&category=1&p=1&ps=24
+GET /api/v1/dailybest/rank-period-items?period_id=1&movie_jav_id=example&p=1&ps=24
+GET /api/v1/dailybest/rank-period-stats?period_id=1&p=1&ps=24
 ```
 
-响应包含快照元数据、原始页面和结构化排名条目。本地会校验页面 checksum、页面数量、条目数量和快照 checksum。
+筛选参数均可省略。设置 `p` 或 `ps` 时响应包含统一的 `page_info`；未设置时返回全部匹配结果。
 
-### 获取指定日期最新快照
+排名明细和周期明细中的 `movie` 返回影片名称、番号、标题和封面；周期统计中的 `rank_one_movie` 返回第一名影片的相同信息。
 
-```http
-GET /api/v1/dailybest/dates/{business_date}?category=1
-Authorization: Bearer <read-token>
-```
-
-### 获取原始页面
+## 抓取任务
 
 ```http
-GET /api/v1/dailybest/snapshots/{revision}/pages
-Authorization: Bearer <read-token>
-```
-
-## 运维接口
-
-### 触发当前榜单抓取
-
-```http
-POST /api/v1/admin/dailybest/fetch
-Authorization: Bearer <admin-token>
+POST /api/v1/dailybest/fetch
 Content-Type: application/json
 
 {
-  "business_date": "2026-07-19",
+  "business_date": "2026-07-20",
   "category": 1
 }
 ```
 
-源站当前接口只提供当前榜单，服务会校验 `business_date`。请求成功返回 `202` 和抓取运行 ID。
-
-### 查询运行记录
+源站只提供当前榜单，服务会校验业务日期。请求成功返回 `202` 和抓取运行 ID。
 
 ```http
-GET /api/v1/admin/dailybest/fetch-runs
-GET /api/v1/admin/dailybest/fetch-runs/{run_id}
-Authorization: Bearer <admin-token>
+GET /api/v1/dailybest/fetch-runs?p=1&ps=24
+GET /api/v1/dailybest/fetch-runs/{run_id}
 ```
 
-## 快照语义
+抓取记录保存页面数、排名数、checksum、状态和错误信息。状态包括 `queued`、`running`、`succeeded`、`no_change` 和 `failed`。
 
-- 快照在完整抓取、解析和校验成功后通过事务发布。
-- `dailybest_snapshot.id` 是对外 revision。
-- 同一日期远端内容发生变化时会发布新 revision。
-- checksum 相同的重复抓取记录为 `no_change`。
-- 本地处理完成后才推进同步游标；中断后会重新拉取并幂等处理未完成 revision。
+## 写入语义
+
+- 完整抓取、解析和 checksum 计算成功后才进入发布。
+- checksum 与当前日期、分类的排名一致时，更新影片基本信息，并将抓取记录标记为 `no_change`。
+- 内容变化时，在同一事务中更新影片基本信息、替换对应 `c_rank`、重建每日统计与周期排行，并将抓取记录标记为 `succeeded`。
+- 发布失败时事务回滚，随后独立记录抓取失败信息。

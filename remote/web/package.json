@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=${PORT:-8892} npm --prefix new run dev",
+    "dev": "PORT=${PORT:-5032} npm --prefix new run dev",
     "check": "npm --prefix new run check",
     "test": "npm --prefix new test",
     "build": "npm --prefix new run build"

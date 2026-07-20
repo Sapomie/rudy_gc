@@ -2,8 +2,8 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
-const apiOrigin = process.env.API_ORIGIN || "http://127.0.0.1:8891";
-const devPort = Number(process.env.PORT || 8892);
+const apiOrigin = process.env.API_ORIGIN || "http://127.0.0.1:5031";
+const devPort = Number(process.env.PORT || 5032);
 
 export default defineConfig({
   plugins: [vue()],

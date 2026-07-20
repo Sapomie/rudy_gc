@@ -1,0 +1,592 @@
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  display: grid;
+  min-height: 132px;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  background: linear-gradient(145deg, #fff 0%, #fff8fb 100%);
+}
+
+.stat-card strong {
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.stat-label,
+.stat-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stat-card .status-badge {
+  justify-self: start;
+}
+
+.overview-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.key-value-list,
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 8px 16px 16px;
+}
+
+.key-value-list > div,
+.detail-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 11px 8px;
+}
+
+.key-value-list > div > span,
+.detail-grid > div > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.key-value-list .wide-row,
+.detail-grid .wide-row {
+  grid-column: 1 / -1;
+}
+
+.key-value-list > .button-primary {
+  justify-self: start;
+  margin: 14px 8px 0;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--line-soft);
+  box-shadow: var(--shadow);
+}
+
+.summary-strip article {
+  display: grid;
+  min-height: 82px;
+  align-content: center;
+  gap: 7px;
+  padding: 13px 16px;
+  background: var(--paper);
+}
+
+.summary-strip article > span:first-child {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.status-badge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #f5eff2;
+  color: #735665;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.status-badge[data-tone="good"] {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.status-badge[data-tone="warn"] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.status-badge[data-tone="danger"] {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.status-badge[data-tone="info"] {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.fetch-runs-table {
+  min-width: 1880px;
+}
+
+.ranks-table {
+  min-width: 1320px;
+}
+
+.rank-day-stats-table {
+  min-width: 1900px;
+}
+
+.rank-periods-table {
+  min-width: 1660px;
+}
+
+.rank-period-items-table {
+  min-width: 2300px;
+}
+
+.rank-period-stats-table {
+  min-width: 3100px;
+}
+
+.rank-change-rise {
+  color: var(--good) !important;
+  font-weight: 900 !important;
+}
+
+.rank-change-fall {
+  color: var(--danger) !important;
+  font-weight: 900 !important;
+}
+
+.rank-cell {
+  color: var(--primary-dark);
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.error-value {
+  color: var(--danger) !important;
+}
+
+.fetch-form-panel {
+  max-width: 900px;
+}
+
+.accepted-panel {
+  max-width: 900px;
+  border-color: #c9eadb;
+}
+
+.remote-list-page {
+  --remote-list-ink: #4b2939;
+  --remote-list-muted: #8b6577;
+  --remote-list-line: rgba(224, 184, 203, 0.82);
+  --remote-list-line-soft: rgba(239, 211, 224, 0.88);
+  --remote-list-row: #fffafd;
+  --remote-list-row-alt: #fff4f8;
+  --remote-list-hover: #fde8f2;
+  --remote-list-primary: #d94f8a;
+  --remote-list-primary-soft: #fff0f6;
+  color: var(--remote-list-ink);
+}
+
+.remote-list-page .remote-list-card {
+  overflow: hidden;
+  border-color: var(--remote-list-line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fff 0%, #fffafd 100%);
+  box-shadow:
+    0 16px 34px rgba(132, 52, 88, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  animation: remoteListSectionOpen 440ms 80ms cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+.remote-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  border-bottom: 1px solid var(--remote-list-line-soft);
+  padding: 12px 18px;
+}
+
+.remote-list-filter {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-right: auto;
+}
+
+.remote-list-filter-wide {
+  flex: 1 1 auto;
+}
+
+.remote-list-filter-field {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--remote-list-muted);
+  font-size: 10px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.remote-list-filter-field input,
+.remote-list-filter-field select {
+  width: 124px;
+  height: 30px;
+  border: 1px solid var(--remote-list-line);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: #fffafd;
+  color: var(--remote-list-ink);
+  font-size: 11px;
+  font-weight: 780;
+  outline: 0;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.remote-list-date-field input {
+  width: 138px;
+}
+
+.remote-list-number-field input {
+  width: 86px;
+}
+
+.remote-list-rank-field input,
+.remote-list-page-size-field input {
+  width: 66px;
+}
+
+.remote-list-filter-field input:focus,
+.remote-list-filter-field select:focus {
+  border-color: var(--remote-list-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(217, 79, 138, 0.12);
+}
+
+.remote-list-filter-submit,
+.remote-list-filter-clear {
+  display: inline-flex;
+  height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--remote-list-primary);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.remote-list-filter-submit {
+  background: var(--remote-list-primary);
+  color: #fff;
+}
+
+.remote-list-filter-clear {
+  background: var(--remote-list-primary-soft);
+  color: #9f2f63;
+}
+
+.remote-list-filter-submit:hover,
+.remote-list-filter-clear:hover {
+  border-color: #bf386f;
+  background: #bf386f;
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(217, 79, 138, 0.16);
+}
+
+.remote-list-metrics {
+  display: inline-flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.remote-list-metrics span {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(217, 79, 138, 0.2);
+  border-radius: 999px;
+  padding: 0 9px;
+  background: var(--remote-list-primary-soft);
+  color: var(--remote-list-muted);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.remote-list-metrics strong {
+  color: #9f2f63;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.remote-list-table-wrap {
+  max-width: calc(100% - 36px);
+  overflow: auto;
+  border: 1px solid var(--remote-list-line);
+  border-radius: 8px;
+  margin: 18px;
+  background: #fff;
+  box-shadow:
+    0 12px 28px rgba(132, 52, 88, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.remote-list-page .remote-list-table {
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  color: var(--remote-list-ink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.remote-list-page .remote-list-table th,
+.remote-list-page .remote-list-table td {
+  height: 28px;
+  max-width: 360px;
+  overflow: hidden;
+  border-right: 1px solid var(--remote-list-line-soft);
+  border-bottom: 1px solid var(--remote-list-line-soft);
+  padding: 1px 10px 2px;
+  color: var(--remote-list-ink);
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.remote-list-page .remote-list-table th:last-child,
+.remote-list-page .remote-list-table td:last-child {
+  border-right: 0;
+}
+
+.remote-list-page .remote-list-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.remote-list-page .remote-list-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 30px;
+  background: #fcecf4;
+  color: #6d3b53;
+  font-size: 13px;
+  font-weight: 850;
+  box-shadow: 0 1px 0 var(--remote-list-line-soft);
+}
+
+.remote-list-page .remote-list-table thead th:first-child {
+  box-shadow:
+    inset 3px 0 var(--remote-list-primary),
+    0 1px 0 var(--remote-list-line-soft);
+}
+
+.remote-list-page .remote-list-table tbody td {
+  background: var(--remote-list-row);
+  font-weight: 680;
+}
+
+.remote-list-page .remote-list-table tbody tr:nth-child(even) td {
+  background: var(--remote-list-row-alt);
+}
+
+.remote-list-page .remote-list-table tbody tr:hover td {
+  background: var(--remote-list-hover);
+}
+
+.remote-list-page .remote-list-table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 var(--remote-list-primary);
+}
+
+.remote-list-page .remote-list-primary-link {
+  color: #9f2f63;
+  font-weight: 850;
+}
+
+.remote-list-page .rank-cell {
+  font-size: 14px;
+}
+
+.remote-list-page .dailybest-movie-table-cell {
+  min-width: 360px;
+  padding: 5px 10px;
+  text-align: left;
+  white-space: normal;
+}
+
+.dailybest-movie-cell {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.dailybest-movie-cover {
+  display: flex;
+  width: 40px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(217, 79, 138, 0.2);
+  border-radius: 5px;
+  background: #fff7fb;
+  color: #a26a85;
+  font-size: 7px;
+  font-weight: 850;
+  line-height: 1.1;
+  text-align: center;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.dailybest-movie-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dailybest-movie-cover:hover,
+.dailybest-movie-cover:focus-visible {
+  border-color: #bf386f;
+  box-shadow: 0 5px 12px rgba(217, 79, 138, 0.18);
+  transform: translateY(-1px);
+}
+
+.dailybest-movie-cover-empty {
+  padding: 4px;
+}
+
+.dailybest-movie-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.dailybest-movie-copy strong,
+.dailybest-movie-copy span,
+.dailybest-movie-copy small {
+  display: block;
+  max-width: 290px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dailybest-movie-copy strong {
+  color: #9f2f63;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dailybest-movie-copy span {
+  color: var(--remote-list-ink);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.dailybest-movie-copy small {
+  color: var(--remote-list-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.remote-list-inline-error {
+  display: block;
+  padding: 10px 18px 0;
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.remote-list-card > .empty-state {
+  margin: 18px;
+}
+
+@keyframes remoteListSectionOpen {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1400px) {
+  .remote-list-toolbar,
+  .remote-list-filter {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remote-list-page .remote-list-card,
+  .remote-list-page .remote-list-table th,
+  .remote-list-page .remote-list-table td,
+  .remote-list-filter-submit,
+  .remote-list-filter-clear {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .dailybest-movie-cover {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .overview-grid,
+  .summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

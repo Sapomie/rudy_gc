@@ -1,5 +1,5 @@
 # 共享模块
 
-`go/` 是本地 API 与远端 API 共用的独立 Go module，目前只保存 DailyBest HTTP 协议 DTO、响应结构与快照校验算法。
+`go/` 是本地 API 与远端 API 共用的独立 Go module，目前只保存 DailyBest HTTP 协议 DTO、响应结构、日期序号约定与排名 checksum 算法。
 
 共享模块不承载数据库模型、数据访问、配置、日志、抓取逻辑或本地同步业务，避免两个服务在实现层面耦合。

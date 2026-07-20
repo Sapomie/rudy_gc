@@ -1,6 +1,6 @@
 # 本地项目
 
-本地项目承载现有业务 API 和前端。DailyBest 同步通过远端 HTTP API 获取快照，本地服务不直接访问远端数据库。
+本地项目承载现有业务 API 和前端。DailyBest 同步通过远端 HTTP API 获取排名批次，本地服务不直接访问远端数据库。
 
 ## 目录
 
@@ -10,7 +10,7 @@
 
 ## 配置
 
-本地 API 配置位于 `api/config/config.yaml`。`DailyBestRemote` 保存远端 API 地址和只读 Token；远端数据库连接只存在于远端项目配置中。
+本地 API 配置位于 `api/config/config.yaml`。`DailyBestRemote` 保存远端 API 地址；远端数据库连接只存在于远端项目配置中。
 
 ## 常用命令
 
@@ -23,4 +23,4 @@ make verify
 make stop-all
 ```
 
-本地 API 与前端分别监听 `0.0.0.0:5013` 和 `0.0.0.0:5022`。
+本地 API 与前端分别监听 `0.0.0.0:5021` 和 `0.0.0.0:5022`。

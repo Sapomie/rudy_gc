@@ -11,7 +11,7 @@ include $(REMOTE_APPS_MAKE_DIR)common.mk
 	run-dev stop-dev stop-all
 
 run-api: stop-api
-	@cd "$(API_DIR)" && go run ./cmd/server -f "$(API_CONFIG_FILE)"
+	@cd "$(API_DIR)" && go run ./cmd/api -f "$(API_CONFIG_FILE)"
 
 stop-api:
 	@pids="$$(lsof -tiTCP:$(API_PORT) -sTCP:LISTEN)"; \
@@ -56,7 +56,7 @@ build-web:
 
 run-dev: stop-dev
 	@set -e; \
-	(cd "$(API_DIR)" && go run ./cmd/server -f "$(API_CONFIG_FILE)") & api_pid=$$!; \
+	(cd "$(API_DIR)" && go run ./cmd/api -f "$(API_CONFIG_FILE)") & api_pid=$$!; \
 	(cd "$(WEB_DIR)" && PORT="$(WEB_PORT)" API_ORIGIN="$(API_ORIGIN)" npm run dev) & web_pid=$$!; \
 	trap 'kill -9 $$api_pid $$web_pid 2>/dev/null || true' INT TERM EXIT; \
 	wait $$api_pid $$web_pid

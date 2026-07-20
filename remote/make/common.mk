@@ -8,8 +8,8 @@ ROOT_DIR ?= $(abspath $(REMOTE_MAKE_DIR)/..)
 API_DIR ?= $(ROOT_DIR)/api
 WEB_DIR ?= $(ROOT_DIR)/web
 API_CONFIG_FILE ?= $(API_DIR)/config/server.yaml
-API_PORT ?= 8891
-WEB_PORT ?= 8892
+API_PORT ?= 5031
+WEB_PORT ?= 5032
 API_ORIGIN ?= http://127.0.0.1:$(API_PORT)
 
 .PHONY: paths

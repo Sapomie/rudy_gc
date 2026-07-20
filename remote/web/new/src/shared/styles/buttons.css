@@ -1,0 +1,102 @@
+.icon-button,
+.button-primary,
+.button-secondary,
+.button-danger,
+.table-action {
+  display: inline-flex;
+  min-height: 31px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 5px 10px;
+  background: var(--paper);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  flex: 0 0 34px;
+  border-radius: 9px;
+  padding: 0;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  box-shadow: 0 5px 14px rgba(217, 79, 138, 0.09);
+}
+
+.button-primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.button-secondary,
+.table-action {
+  background: var(--paper-soft);
+}
+
+.button-danger {
+  border-color: #ffd6df;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.button-primary:hover,
+.button-primary:focus-visible {
+  border-color: var(--primary-dark);
+  background: var(--primary-dark);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(217, 79, 138, 0.2);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.button-secondary:hover,
+.button-secondary:focus-visible,
+.table-action:hover,
+.table-action:focus-visible,
+.icon-button:hover,
+.icon-button:focus-visible {
+  border-color: rgba(217, 79, 138, 0.46);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  box-shadow: 0 5px 12px rgba(217, 79, 138, 0.1);
+  text-decoration: none;
+}
+
+.button-danger:hover,
+.button-danger:focus-visible {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+  text-decoration: none;
+}
+
+.button-primary:active,
+.button-secondary:active,
+.button-danger:active,
+.table-action:active,
+.icon-button:active {
+  transform: translateY(0);
+}
+
+.button-primary:disabled,
+.button-secondary:disabled,
+.button-danger:disabled,
+.icon-button:disabled {
+  pointer-events: none;
+  opacity: 0.58;
+}
