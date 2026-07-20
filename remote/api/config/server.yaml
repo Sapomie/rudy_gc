@@ -1,0 +1,14 @@
+DataSource: root:12345678@tcp(127.0.0.1:5306)/zero_gc_v2?charset=utf8mb4&parseTime=true&loc=Local
+ListenAddr: "0.0.0.0:8891"
+ReadToken: "2e3241d5064098e70bca33c90f65849f6ae1902fc7c721395e48be339b22451b"
+AdminToken: "9d765bb69472b29478ba029b8b084d262419166567dc275e71f509e75c1c7a0e"
+DailyFetchTime: "08:30"
+Timezone: "Asia/Shanghai"
+FetchOnStart: true
+LogursLevel: "error"
+
+Source:
+  UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+  Cookie: "timezone=-480; dm=z93j; UGVyc2lzdFN0b3JhZ2U=%7B%7D; __PPU_puid=16775292821052140170; over18=18; cf_clearance=gqp_3r35eP7tPZvuGqT7orRFdvrjnjakLusUQGxj4BY-1770385844-1.2.1.1-F_TcplYJQ2Hc1vFGvkGlHr2iIrgfwXjVcrdNg9a8_ToFT_lcFiRkS3OMh4djV.XYb3pbyUaASqHczVj_zIME1KM6rHOQUtVojz8RCf9D4dWlOutnzRdRFBUmjNcLuvIB1knnuXWg41LeP28XhOCujPDaGgNcFbmXk0YqkQxVjPO9gjx1WamgqIoHP6zZ7tWQ_VlEYGnmIXxk217sm9BC5..MmmqZH8WcFRsjqLDGsCs"
+  Timeout: 60
+  JavAddress: "www.c97k.com"

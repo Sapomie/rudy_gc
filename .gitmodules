@@ -1,8 +1,8 @@
 [submodule "api"]
-	path = api
+	path = local/api
 	url = /Users/gaojinwei/src/my/rudy_gc-local-git/api.git
 	branch = main
 [submodule "web"]
-	path = web
+	path = local/web
 	url = /Users/gaojinwei/src/my/rudy_gc-local-git/web.git
 	branch = main

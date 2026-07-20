@@ -1,0 +1,9 @@
+.DS_Store
+.idea/
+.vscode/
+new/node_modules/
+new/dist/
+new/.vite/
+new/coverage/
+*.log
+*.tsbuildinfo

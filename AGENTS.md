@@ -128,11 +128,12 @@
 
 ## 项目现状
 - 当前维护范围为仓库根目录。
-- 后端项目位于 `api/`。
-- 当前前端项目位于 `web/`。
-- 用户要求修改前端代码时，默认且固定修改 `web/`。
+- 本地项目位于 `local/`，后端和前端分别位于 `local/api/`、`local/web/`。
+- 远端项目位于 `remote/`，后端和前端分别位于 `remote/api/`、`remote/web/`。
+- 跨项目共享的稳定 Go 协议代码位于 `shared/go/`，业务实现不得放入共享模块。
+- 用户要求修改前端代码且未指定项目时，默认修改 `local/web/`；明确要求远端前端时修改 `remote/web/`。
 - 历史前端目录已归档，不参与当前代码修改。
-- 项目说明和运行方式以 `README.md`、`Makefile` 及 `make/*.mk` 的实际内容为准。
+- 根目录只负责工作区聚合；两个项目的说明和运行方式分别以 `local/README.md`、`remote/README.md` 及各自的 `Makefile`、`make/*.mk` 为准。
 
 ## 工作原则
 - 以用户最新一条明确指令为当前任务范围。
@@ -144,8 +145,7 @@
 - 不主动扩大任务范围，不顺手修改无关模块。
 
 ## 前端开发
-- 前端规范文档位置：`docs/development-guide.md`。
-- 前端改动默认只写入 `web/`。
+- 前端改动按任务所属项目写入 `local/web/` 或 `remote/web/`；未指定时写入 `local/web/`。
 - 保持现有路由、接口调用和页面功能可用。
 - 前端路由改名后必须删除旧路由，严禁保留重定向、别名或任何兼容入口。
 - 复用项目现有组件、样式变量和交互模式，避免重复实现。
@@ -166,14 +166,26 @@
 - 交付前必须验证其他设备能够通过服务器实际 IP 和对应端口访问服务。
 
 ## 后端开发
-- 后端改动只写入 `api/`，任务明确要求修改其他目录时除外。
+- 后端改动按任务所属项目写入 `local/api/` 或 `remote/api/`；稳定的跨项目协议改动写入 `shared/go/`。
 - 修改前核对相关 router、handler、service、model、SQL 和调用链。
 - 保持错误处理、参数校验和返回结构清晰一致。
 - 数据库结构、数据写入和批量操作必须明确影响范围。
 
+### 本地 API 目录规则
+- `internal/config/` 只放配置结构与加载逻辑。
+- `internal/dep/` 负责组装运行依赖，业务逻辑不得写入依赖容器。
+- `internal/model/modelg/` 放 GORM 表结构、数据库连接和迁移；`internal/model/modelx/` 放模型读写实现。
+- `internal/repo/` 只放数据库模型之外的外部数据源访问，例如远端 HTTP API。
+- `internal/router/` 只负责创建 Gin 引擎和注册路由；Handler 按业务放在 `internal/router/handler/<business>/`。
+- `internal/service/<business>/` 承载业务编排；`00_service.go` 只放 `Service` 与构造函数，`10_*` 放公开入口，`20_*` 及更高编号放内部步骤与辅助逻辑。
+- 请求主链固定为 `router -> handler -> service -> modelx/repo -> 数据库、缓存或远端 API`，禁止重新引入 `modules/`、`transport/`、`platform/`、`repository/`、`schema/`、`svc/` 等平行层级。
+- 数据写入通过 `modelx` 的 `Update`、`Delete` 或明确的领域写模型完成；自定义查询可以使用 `sqlx`。
+- `*_gen.go` 为生成代码，禁止手工修改。
+- 不同业务语义使用独立 DTO，禁止仅因字段接近而共用请求或响应结构。
+
 ## Make 与脚本
-- `Makefile` 负责入口汇总和 help 展示。
-- 具体 Make 目标优先放在 `make/*.mk` 中并由 `Makefile` 引入。
+- 根目录 `Makefile` 只负责本地、远端两个项目的入口聚合和 help 展示。
+- `local/Makefile`、`remote/Makefile` 负责各自项目的入口汇总，具体目标放在各自的 `make/*.mk` 中。
 - 脚本优先放在 `scripts/`，临时验证产物放在系统临时目录或忽略跟踪的 `tmp/`。
 - 新增或修改命令后同步检查 help、路径和实际执行结果。
 
