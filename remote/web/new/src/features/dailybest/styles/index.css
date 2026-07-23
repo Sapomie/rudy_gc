@@ -143,26 +143,16 @@
   min-width: 1900px;
 }
 
-.rank-periods-table {
-  min-width: 1660px;
+.target-probes-table {
+  min-width: 2200px;
 }
 
-.rank-period-items-table {
-  min-width: 2300px;
+.runtime-events-table {
+  min-width: 1280px;
 }
 
-.rank-period-stats-table {
-  min-width: 3100px;
-}
-
-.rank-change-rise {
-  color: var(--good) !important;
-  font-weight: 900 !important;
-}
-
-.rank-change-fall {
-  color: var(--danger) !important;
-  font-weight: 900 !important;
+.runtime-events-card {
+  margin-top: 16px;
 }
 
 .rank-cell {

@@ -1,7 +1,8 @@
 import { requestJSON } from "@/shared/api/request";
 import type {
   FetchAcceptedResponse,
-  FetchRequest,
+  FetchLogFilters,
+  FetchLogListResponse,
   FetchRun,
   FetchRunListResponse,
   HealthState,
@@ -10,13 +11,11 @@ import type {
   RankDayStatListResponse,
   RankFilters,
   RankListResponse,
-  RankPeriodFilters,
-  RankPeriodItemFilters,
-  RankPeriodItemListResponse,
-  RankPeriodListResponse,
-  RankPeriodStatFilters,
-  RankPeriodStatListResponse,
-  RankSyncManifestListResponse
+  RuntimeEventFilters,
+  RuntimeEventListResponse,
+  RuntimeStatus,
+  TargetProbeFilters,
+  TargetProbeListResponse
 } from "@/features/dailybest/types";
 
 export type { HealthState } from "@/features/dailybest/types";
@@ -31,36 +30,34 @@ export async function loadHealthState(): Promise<HealthState> {
   return health.ok && ready.ok ? "ready" : "unavailable";
 }
 
-export function listRankSyncManifests(): Promise<RankSyncManifestListResponse> {
-  return requestJSON("/api/v1/dailybest/rank-sync-manifests");
-}
 export function listRanks(filters: RankFilters = defaultPageQuery()): Promise<RankListResponse> {
   return requestJSON(withQuery("/api/v1/dailybest/ranks", filters));
 }
 export function listRankDayStats(filters: RankDayStatFilters = defaultPageQuery()): Promise<RankDayStatListResponse> {
   return requestJSON(withQuery("/api/v1/dailybest/rank-day-stats", filters));
 }
-export function listRankPeriods(filters: RankPeriodFilters = defaultPageQuery()): Promise<RankPeriodListResponse> {
-  return requestJSON(withQuery("/api/v1/dailybest/rank-periods", filters));
-}
-export function listRankPeriodItems(
-  filters: RankPeriodItemFilters = defaultPageQuery()
-): Promise<RankPeriodItemListResponse> {
-  return requestJSON(withQuery("/api/v1/dailybest/rank-period-items", filters));
-}
-export function listRankPeriodStats(
-  filters: RankPeriodStatFilters = defaultPageQuery()
-): Promise<RankPeriodStatListResponse> {
-  return requestJSON(withQuery("/api/v1/dailybest/rank-period-stats", filters));
-}
 export function listFetchRuns(page: PageQuery = defaultPageQuery()): Promise<FetchRunListResponse> {
   return requestJSON(withQuery("/api/v1/dailybest/fetch-runs", page));
+}
+export function listFetchLogs(filters: FetchLogFilters = defaultPageQuery()): Promise<FetchLogListResponse> {
+  return requestJSON(withQuery("/api/v1/dailybest/fetch-logs", filters));
+}
+export function loadRuntimeStatus(): Promise<RuntimeStatus> {
+  return requestJSON("/api/v1/dailybest/runtime-status");
+}
+export function listRuntimeEvents(
+  filters: RuntimeEventFilters = defaultPageQuery()
+): Promise<RuntimeEventListResponse> {
+  return requestJSON(withQuery("/api/v1/dailybest/runtime-events", filters));
+}
+export function listTargetProbes(filters: TargetProbeFilters = defaultPageQuery()): Promise<TargetProbeListResponse> {
+  return requestJSON(withQuery("/api/v1/dailybest/target-probes", filters));
 }
 export function getFetchRun(runID: number): Promise<FetchRun> {
   return requestJSON(`/api/v1/dailybest/fetch-runs/${encodeURIComponent(runID)}`);
 }
-export function startFetch(request: FetchRequest): Promise<FetchAcceptedResponse> {
-  return requestJSON("/api/v1/dailybest/fetch", { method: "POST", body: request });
+export function startFetch(): Promise<FetchAcceptedResponse> {
+  return requestJSON("/api/v1/dailybest/fetch", { method: "POST" });
 }
 
 function withQuery(path: string, filters: object): string {

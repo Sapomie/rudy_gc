@@ -16,10 +16,7 @@ export const sidebarGroups: NavGroup[] = [
     links: [
       { href: "/dailybestoverview", label: "运行概览" },
       { href: "/ranklist", label: "排名明细" },
-      { href: "/rankdaystats", label: "每日统计" },
-      { href: "/rankperiodlist", label: "周期排行" },
-      { href: "/rankperioditemlist", label: "周期明细" },
-      { href: "/rankperiodstats", label: "周期统计" }
+      { href: "/rankdaystats", label: "每日统计" }
     ]
   },
   {
@@ -27,6 +24,9 @@ export const sidebarGroups: NavGroup[] = [
     icon: "CL",
     links: [
       { href: "/dailybestfetchrunlist", label: "抓取任务" },
+      { href: "/dailybestfetchloglist", label: "请求日志" },
+      { href: "/dailybestruntimestatus", label: "运行状态" },
+      { href: "/dailybesttargetprobelist", label: "目标站探测" },
       { href: "/dailybestfetch", label: "手动抓取" }
     ]
   }
@@ -39,10 +39,7 @@ export const topNavGroups: NavGroup[] = [
     links: [
       { href: "/dailybestoverview", label: "运行概览" },
       { href: "/ranklist", label: "排名明细" },
-      { href: "/rankdaystats", label: "每日统计" },
-      { href: "/rankperiodlist", label: "周期排行" },
-      { href: "/rankperioditemlist", label: "周期明细" },
-      { href: "/rankperiodstats", label: "周期统计" }
+      { href: "/rankdaystats", label: "每日统计" }
     ]
   },
   {
@@ -50,6 +47,9 @@ export const topNavGroups: NavGroup[] = [
     icon: "CL",
     links: [
       { href: "/dailybestfetchrunlist", label: "抓取任务" },
+      { href: "/dailybestfetchloglist", label: "请求日志" },
+      { href: "/dailybestruntimestatus", label: "运行状态" },
+      { href: "/dailybesttargetprobelist", label: "目标站探测" },
       { href: "/dailybestfetch", label: "手动抓取" }
     ]
   }

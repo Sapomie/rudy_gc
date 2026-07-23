@@ -12,7 +12,7 @@ func (h *DailyBestAPI) Health(c *gin.Context) {
 
 func (h *DailyBestAPI) Ready(c *gin.Context) {
 	if err := h.service.Ready(c.Request.Context()); err != nil {
-		writeError(c, http.StatusServiceUnavailable, "database_unavailable", err.Error())
+		writeError(c, http.StatusServiceUnavailable, "service_unavailable", err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "ready"})

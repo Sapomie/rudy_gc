@@ -2,6 +2,9 @@
   <PageShell eyebrow="FETCH RUN" :title="`抓取任务 #${runIDLabel}`" note="查看一次抓取任务从创建到完成的完整执行信息。">
     <template #actions>
       <RouterLink class="button-secondary" to="/dailybestfetchrunlist">返回任务列表</RouterLink>
+      <RouterLink class="button-secondary" :to="`/dailybestfetchloglist?fetch_run_id=${runID}`"
+        >查看请求日志</RouterLink
+      >
       <button class="button-secondary" type="button" :disabled="loading" @click="loadRun">刷新</button>
     </template>
 
@@ -9,6 +12,7 @@
     <ErrorPanel v-else-if="error" :message="error">
       <button class="button-secondary" type="button" @click="loadRun">重新加载</button>
     </ErrorPanel>
+    <EmptyState v-else-if="!queried" title="尚未查询" message="点击刷新读取该抓取任务。" />
     <template v-else-if="run">
       <section class="summary-strip" aria-label="任务摘要">
         <article>
@@ -73,11 +77,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { getFetchRun } from "@/features/dailybest/api";
 import StatusBadge from "@/features/dailybest/components/StatusBadge.vue";
 import type { FetchRun } from "@/features/dailybest/types";
+import EmptyState from "@/shared/components/EmptyState.vue";
 import ErrorPanel from "@/shared/components/ErrorPanel.vue";
 import LoadingState from "@/shared/components/LoadingState.vue";
 import PageShell from "@/shared/components/PageShell.vue";
@@ -92,12 +97,14 @@ import {
 
 const route = useRoute();
 const run = ref<FetchRun | null>(null);
+const queried = ref(false);
 const loading = ref(false);
 const error = ref("");
 const runID = computed(() => Number(route.params.id));
 const runIDLabel = computed(() => (Number.isInteger(runID.value) && runID.value > 0 ? runID.value : "无效"));
 
 async function loadRun(): Promise<void> {
+  queried.value = true;
   if (!Number.isInteger(runID.value) || runID.value <= 0) {
     error.value = "任务 ID 必须为正整数";
     return;
@@ -113,6 +120,12 @@ async function loadRun(): Promise<void> {
   }
 }
 
-watch(() => route.params.id, loadRun);
-onMounted(loadRun);
+watch(
+  () => route.params.id,
+  () => {
+    queried.value = false;
+    run.value = null;
+    error.value = "";
+  }
+);
 </script>

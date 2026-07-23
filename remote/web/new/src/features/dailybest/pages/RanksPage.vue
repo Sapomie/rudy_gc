@@ -40,7 +40,8 @@
         </div>
         <PaginationBar :page-info="pageInfo" />
       </header>
-      <EmptyState v-if="!rows.length" title="没有匹配的排名记录" message="调整查询条件后重新查看。" />
+      <EmptyState v-if="!queried" title="尚未查询" message="设置筛选条件后点击筛选，或点击刷新加载排名。" />
+      <EmptyState v-else-if="!rows.length" title="没有匹配的排名记录" message="调整查询条件后重新查看。" />
       <div v-else class="data-table-wrap remote-list-table-wrap">
         <table class="data-table remote-list-table ranks-table">
           <thead>
@@ -100,6 +101,7 @@ const businessDate = ref(""),
   rankPos = ref(""),
   movieJavID = ref(""),
   pageSizeInput = ref(String(DEFAULT_LIST_PAGE_SIZE)),
+  queried = ref(false),
   loading = ref(false),
   error = ref("");
 const q = (name: string) => {
@@ -134,17 +136,21 @@ function current(): RankFilters {
 async function applyFilters() {
   const size = pos(pageSizeInput.value) || DEFAULT_LIST_PAGE_SIZE,
     currentPath = route.fullPath;
+  queried.value = true;
   await router.replace({ path: route.path, query: compactPageQuery(filters(), 1, size) });
   if (route.fullPath === currentPath) await loadRows();
 }
 async function clearFilters() {
-  const size = pageQueryFromRoute(route.query).ps,
-    currentPath = route.fullPath;
+  const size = pageQueryFromRoute(route.query).ps;
+  queried.value = false;
+  rows.value = [];
+  pageInfo.value = { total: 0, page: 1, page_size: size, page_total: 1 };
+  error.value = "";
   await router.replace({ path: route.path, query: compactPageQuery({}, 1, size) });
-  if (route.fullPath === currentPath) await loadRows();
 }
 async function loadRows() {
   const page = pageQueryFromRoute(route.query);
+  queried.value = true;
   loading.value = true;
   error.value = "";
   try {
@@ -157,12 +163,12 @@ async function loadRows() {
     loading.value = false;
   }
 }
+sync();
 watch(
   () => route.fullPath,
   () => {
     sync();
-    void loadRows();
-  },
-  { immediate: true }
+    if (queried.value) void loadRows();
+  }
 );
 </script>

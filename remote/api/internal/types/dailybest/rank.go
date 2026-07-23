@@ -32,19 +32,6 @@ type RankDraft struct {
 	Checksum     string
 }
 
-type RankProjection struct {
-	DayStats []contracts.DailyBestRankDayStat
-	Periods  []PeriodProjection
-}
-
-type PeriodProjection struct {
-	Key     string
-	PrevKey string
-	Period  contracts.DailyBestRankPeriod
-	Items   []contracts.DailyBestRankPeriodItem
-	Stat    contracts.DailyBestRankPeriodStat
-}
-
 type RankFilter struct {
 	PageQuery
 	DayNumber  int64
@@ -53,26 +40,15 @@ type RankFilter struct {
 	MovieJavID string
 }
 
+type RankDayFilter struct {
+	PageQuery
+	DayNumber      int64
+	StartDayNumber int64
+	EndDayNumber   int64
+}
+
 type RankDayStatFilter struct {
 	PageQuery
 	DayNumber int64
 	RankDate  string
-}
-
-type RankPeriodFilter struct {
-	PageQuery
-	PeriodType int64
-	PeriodKey  string
-	Category   int64
-}
-
-type RankPeriodItemFilter struct {
-	PageQuery
-	PeriodID   int64
-	MovieJavID string
-}
-
-type RankPeriodStatFilter struct {
-	PageQuery
-	PeriodID int64
 }

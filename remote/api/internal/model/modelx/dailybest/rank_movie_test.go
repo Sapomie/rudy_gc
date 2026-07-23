@@ -20,14 +20,4 @@ func TestRankMappingsIncludeMovieBasic(t *testing.T) {
 	if len(ranks) != 1 || ranks[0].Movie.Title != movie.Title || ranks[0].Movie.CoverURL != movie.CoverURL {
 		t.Fatalf("rank movie mismatch: %+v", ranks)
 	}
-
-	periodItem := mapRankPeriodItem(modelg.RankPeriodItem{Id: 2, MovieJavID: movie.MovieJavID}, movie)
-	if periodItem.Movie.MovieCode != movie.MovieCode {
-		t.Fatalf("period item movie mismatch: %+v", periodItem.Movie)
-	}
-
-	periodStat := mapRankPeriodStat(modelg.RankPeriodStat{Id: 3, RankOneMovieJavID: movie.MovieJavID}, movie)
-	if periodStat.RankOneMovie.MovieName != movie.MovieName {
-		t.Fatalf("period stat movie mismatch: %+v", periodStat.RankOneMovie)
-	}
 }

@@ -12,16 +12,113 @@ func AutoMigrate(db *gorm.DB) error {
 	}
 	if err := db.AutoMigrate(
 		new(DailyBestFetchRun),
+		new(DailyBestFetchLog),
+		new(DailyBestRuntimeEvent),
+		new(DailyBestTargetProbe),
 		new(DailyBestMovie),
 		new(Rank),
 		new(RankDayStat),
-		new(RankPeriod),
-		new(RankPeriodItem),
-		new(RankPeriodStat),
 	); err != nil {
 		return err
 	}
-	return migrateDailyBestSnapshots(db)
+	if err := ensureDailyBestActiveRunConstraint(db); err != nil {
+		return err
+	}
+	if err := dropRankDayStatRedundantColumns(db); err != nil {
+		return err
+	}
+	if err := migrateDailyBestSnapshots(db); err != nil {
+		return err
+	}
+	if err := backfillRankDayStatTiming(db); err != nil {
+		return err
+	}
+	return dropDailyBestPeriodTables(db)
+}
+
+func ensureDailyBestActiveRunConstraint(db *gorm.DB) error {
+	const tableName = "d_dailybest_fetch_run"
+	const columnName = "active_key"
+	const indexName = "uidx_dailybest_active_run"
+	if !db.Migrator().HasColumn(tableName, columnName) {
+		if err := db.Exec(`
+ALTER TABLE d_dailybest_fetch_run
+ADD COLUMN active_key VARCHAR(32)
+GENERATED ALWAYS AS (
+	CASE
+		WHEN status IN ('queued', 'running') THEN CONCAT(business_date, ':', category)
+		ELSE NULL
+	END
+) STORED`).Error; err != nil {
+			return fmt.Errorf("增加DailyBest活动任务约束字段失败: %w", err)
+		}
+	}
+	if !db.Migrator().HasIndex(tableName, indexName) {
+		if err := db.Exec(`CREATE UNIQUE INDEX uidx_dailybest_active_run ON d_dailybest_fetch_run (active_key)`).Error; err != nil {
+			return fmt.Errorf("增加DailyBest活动任务唯一约束失败: %w", err)
+		}
+	}
+	return nil
+}
+
+func dropRankDayStatRedundantColumns(db *gorm.DB) error {
+	for _, column := range []string{"rise_movie_count", "fall_movie_count", "unchanged_movie_count"} {
+		if err := dropColumnIfExists(db, RankDayStatTableName, column); err != nil {
+			return fmt.Errorf("清理每日排行统计冗余字段失败: %w", err)
+		}
+	}
+	return nil
+}
+
+func backfillRankDayStatTiming(db *gorm.DB) error {
+	if !db.Migrator().HasTable(RankDayStatTableName) {
+		return nil
+	}
+
+	if err := db.Exec(`
+UPDATE c_rank_day_stat AS stat
+LEFT JOIN (
+	SELECT
+		business_date,
+		MIN(NULLIF(finished_at, 0)) AS fetched_on
+	FROM d_dailybest_fetch_run
+	WHERE status = 'succeeded'
+	GROUP BY business_date
+) AS run_source ON run_source.business_date = stat.rank_date
+LEFT JOIN (
+	SELECT
+		day_number,
+		MIN(NULLIF(created_on, 0)) AS fetched_on
+	FROM c_rank
+	GROUP BY day_number
+) AS rank_source ON rank_source.day_number = stat.day_number
+SET
+	stat.fetched_on = CASE
+		WHEN stat.fetched_on = 0
+			THEN COALESCE(run_source.fetched_on, rank_source.fetched_on, stat.created_on, 0)
+		ELSE stat.fetched_on
+	END,
+	stat.synced_on = CASE
+		WHEN stat.synced_on = 0
+			THEN COALESCE(NULLIF(stat.created_on, 0), run_source.fetched_on, rank_source.fetched_on, 0)
+		ELSE stat.synced_on
+	END
+WHERE stat.fetched_on = 0 OR stat.synced_on = 0`).Error; err != nil {
+		return fmt.Errorf("回填 %s 抓取和同步时间失败: %w", RankDayStatTableName, err)
+	}
+	return nil
+}
+
+func dropDailyBestPeriodTables(db *gorm.DB) error {
+	for _, table := range []string{"c_rank_period_stat", "c_rank_period_item", "c_rank_period"} {
+		if !db.Migrator().HasTable(table) {
+			continue
+		}
+		if err := db.Migrator().DropTable(table); err != nil {
+			return fmt.Errorf("删除已停用的数据表 %s 失败: %w", table, err)
+		}
+	}
+	return nil
 }
 
 func migrateDailyBestTableNames(db *gorm.DB) error {
@@ -105,12 +202,12 @@ JOIN (
 	FROM d_dailybest_snapshot
 	GROUP BY business_date, category
 ) AS latest ON latest.snapshot_id = snapshot.id
-ON DUPLICATE KEY UPDATE
-	movie_jav_id = VALUES(movie_jav_id),
-	day_number = VALUES(day_number),
-	rank_pos = VALUES(rank_pos),
-	category = VALUES(category),
-	updated_on = VALUES(updated_on)`).Error; err != nil {
+WHERE NOT EXISTS (
+	SELECT 1
+	FROM c_rank AS existing
+	WHERE existing.day_number = DATEDIFF(snapshot.business_date, '2023-01-01') + 1
+	  AND existing.category = snapshot.category
+)`).Error; err != nil {
 		return fmt.Errorf("迁移旧快照排名失败: %w", err)
 	}
 
@@ -127,12 +224,18 @@ JOIN (
 	}
 	if err := db.Raw(`
 SELECT COUNT(*)
-FROM c_rank AS rank_row
+FROM d_dailybest_snapshot_item AS item
+JOIN d_dailybest_snapshot AS snapshot ON snapshot.id = item.snapshot_id
 JOIN (
-	SELECT DATEDIFF(business_date, '2023-01-01') + 1 AS day_number, category
+	SELECT business_date, category, MAX(id) AS snapshot_id
 	FROM d_dailybest_snapshot
 	GROUP BY business_date, category
-) AS source_day ON source_day.day_number = rank_row.day_number AND source_day.category = rank_row.category`).Scan(&actual).Error; err != nil {
+) AS latest ON latest.snapshot_id = snapshot.id
+JOIN c_rank AS rank_row
+  ON rank_row.day_number = DATEDIFF(snapshot.business_date, '2023-01-01') + 1
+ AND rank_row.category = snapshot.category
+ AND rank_row.rank_pos = item.rank_pos
+ AND rank_row.movie_jav_id = item.jav_id`).Scan(&actual).Error; err != nil {
 		return err
 	}
 	if actual != expected {

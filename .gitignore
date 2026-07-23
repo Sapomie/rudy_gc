@@ -34,6 +34,7 @@ v2/deploy/conf
 v2/deploy/*.config.yaml
 
 # Remote project generated files
+tmp/
 remote/web/new/node_modules/
 remote/web/new/dist/
 remote/web/new/.vite/

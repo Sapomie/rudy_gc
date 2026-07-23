@@ -1,0 +1,72 @@
+version: "2.4"
+
+services:
+  remote-solver:
+    container_name: rudy_gc_remote_solver
+    image: ghcr.io/flaresolverr/flaresolverr@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: Asia/Shanghai
+      HOST: 172.30.0.1
+      PORT: 8191
+      LOG_LEVEL: info
+      LOG_HTML: "false"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  remote-api:
+    container_name: rudy_gc_remote_api
+    build:
+      context: ../../..
+      dockerfile: remote/deploy/docker/api.Dockerfile
+    restart: unless-stopped
+    command: ["-f", "/app/config/server.yaml"]
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "5031:5031"
+    volumes:
+      - /home/lighthouse/data/rudy_gc/remote/config/server.yaml:/app/config/server.yaml:ro
+    networks:
+      - remote-internal
+      - mysql-infra
+    depends_on:
+      - remote-solver
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  remote-web:
+    container_name: rudy_gc_remote_web
+    build:
+      context: ../../..
+      dockerfile: remote/deploy/docker/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5032:5032"
+    networks:
+      - remote-internal
+    depends_on:
+      - remote-api
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+networks:
+  remote-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+  mysql-infra:
+    external: true
+    name: rudy_remote_infra

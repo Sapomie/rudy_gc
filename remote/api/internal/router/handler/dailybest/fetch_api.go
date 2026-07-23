@@ -1,22 +1,23 @@
 package dailybest
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	dailybestservice "rudy_gc/remote/api/internal/service/dailybest"
 	dailybesttypes "rudy_gc/remote/api/internal/types/dailybest"
 	contracts "rudy_gc/shared/dailybest"
 )
 
 func (h *DailyBestAPI) StartFetch(c *gin.Context) {
-	var request contracts.DailyBestFetchRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_request", "请求内容错误")
-		return
-	}
-	run, err := h.service.Enqueue(c.Request.Context(), request, dailybesttypes.TriggerManual)
+	run, err := h.service.Enqueue(c.Request.Context(), dailybesttypes.TriggerManual)
 	if err != nil {
+		if errors.Is(err, dailybestservice.ErrActiveFetchRun) {
+			writeError(c, http.StatusConflict, "active_fetch_run_exists", "当前业务日期已经存在抓取任务")
+			return
+		}
 		writeError(c, http.StatusBadRequest, "fetch_rejected", err.Error())
 		return
 	}

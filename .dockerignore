@@ -1,0 +1,14 @@
+.git
+.gitignore
+local
+tmp
+remote/web/new/node_modules
+remote/web/new/dist
+remote/web/new/.vite
+remote/web/new/coverage
+remote/web/new/*.tsbuildinfo
+remote/api/api
+remote/api/migrate
+remote/api/browser-agent
+remote/api/config/server.yaml
+remote/doc

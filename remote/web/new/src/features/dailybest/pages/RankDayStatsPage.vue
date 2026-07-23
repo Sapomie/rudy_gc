@@ -3,7 +3,7 @@
     class="remote-list-page"
     eyebrow="DATA"
     title="每日统计"
-    note="查询 c_rank_day_stat 中按排行日重建的变化统计。"
+    note="查询 c_rank_day_stat 中按排行日首次生成的变化统计。"
   >
     <template #actions
       ><button class="button-secondary" type="button" :disabled="loading" @click="loadRows">刷新</button></template
@@ -30,7 +30,8 @@
         </div>
         <PaginationBar :page-info="pageInfo" />
       </header>
-      <EmptyState v-if="!rows.length" title="没有匹配的每日统计" message="完成排名抓取后会自动生成。" />
+      <EmptyState v-if="!queried" title="尚未查询" message="设置筛选条件后点击筛选，或点击刷新加载每日统计。" />
+      <EmptyState v-else-if="!rows.length" title="没有匹配的每日统计" message="完成排名抓取后会自动生成。" />
       <div v-else class="data-table-wrap remote-list-table-wrap">
         <table class="data-table remote-list-table rank-day-stats-table">
           <thead>
@@ -45,10 +46,9 @@
               <th>首次</th>
               <th>回归</th>
               <th>掉榜</th>
-              <th>上升</th>
-              <th>下降</th>
-              <th>不变</th>
               <th>Checksum</th>
+              <th>抓取时间</th>
+              <th>同步时间</th>
               <th>计算时间</th>
               <th>创建时间</th>
               <th>更新时间</th>
@@ -66,10 +66,9 @@
               <td>{{ row.first_seen_movie_count }}</td>
               <td>{{ row.returning_movie_count }}</td>
               <td>{{ row.dropped_movie_count }}</td>
-              <td>{{ row.rise_movie_count }}</td>
-              <td>{{ row.fall_movie_count }}</td>
-              <td>{{ row.unchanged_movie_count }}</td>
               <td class="checksum-cell" :title="row.source_checksum">{{ row.source_checksum }}</td>
+              <td>{{ formatDateTime(row.fetched_at) }}</td>
+              <td>{{ formatDateTime(row.synced_at) }}</td>
               <td>{{ formatDateTime(row.calculated_on) }}</td>
               <td>{{ formatDateTime(row.created_on) }}</td>
               <td>{{ formatDateTime(row.updated_on) }}</td>
@@ -99,6 +98,7 @@ const route = useRoute(),
   rankDateFilter = ref(""),
   dayNumber = ref(""),
   pageSizeInput = ref(String(DEFAULT_LIST_PAGE_SIZE)),
+  queried = ref(false),
   loading = ref(false),
   error = ref("");
 const q = (n: string) => {
@@ -119,17 +119,21 @@ function current(): RankDayStatFilters {
 async function applyFilters() {
   const size = pos(pageSizeInput.value) || DEFAULT_LIST_PAGE_SIZE,
     path = route.fullPath;
+  queried.value = true;
   await router.replace({ path: route.path, query: compactPageQuery(filters(), 1, size) });
   if (path === route.fullPath) await loadRows();
 }
 async function clearFilters() {
-  const size = pageQueryFromRoute(route.query).ps,
-    path = route.fullPath;
+  const size = pageQueryFromRoute(route.query).ps;
+  queried.value = false;
+  rows.value = [];
+  pageInfo.value = { total: 0, page: 1, page_size: size, page_total: 1 };
+  error.value = "";
   await router.replace({ path: route.path, query: compactPageQuery({}, 1, size) });
-  if (path === route.fullPath) await loadRows();
 }
 async function loadRows() {
   const p = pageQueryFromRoute(route.query);
+  queried.value = true;
   loading.value = true;
   error.value = "";
   try {
@@ -142,14 +146,17 @@ async function loadRows() {
     loading.value = false;
   }
 }
+function syncFiltersFromRoute() {
+  rankDateFilter.value = q("rank_date");
+  dayNumber.value = q("day_number");
+  pageSizeInput.value = String(pageQueryFromRoute(route.query).ps);
+}
+syncFiltersFromRoute();
 watch(
   () => route.fullPath,
   () => {
-    rankDateFilter.value = q("rank_date");
-    dayNumber.value = q("day_number");
-    pageSizeInput.value = String(pageQueryFromRoute(route.query).ps);
-    void loadRows();
-  },
-  { immediate: true }
+    syncFiltersFromRoute();
+    if (queried.value) void loadRows();
+  }
 );
 </script>

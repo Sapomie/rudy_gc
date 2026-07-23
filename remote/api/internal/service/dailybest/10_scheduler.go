@@ -11,13 +11,10 @@ import (
 	contracts "rudy_gc/shared/dailybest"
 )
 
-func (s *Service) StartScheduler(ctx context.Context, dailyFetchTime string, fetchOnStart bool) error {
+func (s *Service) StartScheduler(ctx context.Context, dailyFetchTime string) error {
 	hour, minute, err := parseDailyFetchTime(dailyFetchTime)
 	if err != nil {
 		return err
-	}
-	if fetchOnStart {
-		_, _ = s.Enqueue(ctx, contracts.DailyBestFetchRequest{}, dailybesttypes.TriggerScheduled)
 	}
 	go func() {
 		for {
@@ -34,11 +31,87 @@ func (s *Service) StartScheduler(ctx context.Context, dailyFetchTime string, fet
 				}
 				return
 			case <-timer.C:
-				_, _ = s.Enqueue(ctx, contracts.DailyBestFetchRequest{}, dailybesttypes.TriggerScheduled)
+				_, _ = s.enqueueAutomatic(ctx, dailybesttypes.TriggerScheduled)
+				s.signalRecovery()
 			}
 		}
 	}()
 	return nil
+}
+
+func (s *Service) StartFailureRecovery(ctx context.Context, retryDelay time.Duration) error {
+	if retryDelay <= 0 {
+		return fmt.Errorf("DailyBest 失败恢复时间必须为正数")
+	}
+	if s.schedulerRepository == nil {
+		return fmt.Errorf("DailyBest 调度仓库为空")
+	}
+	s.retryDelay = retryDelay
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		s.runFailureRecovery(ctx)
+	}()
+	s.signalRecovery()
+	return nil
+}
+
+func (s *Service) runFailureRecovery(ctx context.Context) {
+	for {
+		date := s.CurrentBusinessDate(time.Now())
+		state, err := s.schedulerRepository.FindAutomaticFetchState(ctx, date, contracts.DailyBestCategoryMonth)
+		if err != nil {
+			if !s.waitForRecovery(ctx, s.retryDelay) {
+				return
+			}
+			continue
+		}
+		if state.Successful != nil || state.Active != nil || state.Failed == nil {
+			if !s.waitForRecovery(ctx, 0) {
+				return
+			}
+			continue
+		}
+		retryAt := time.Unix(state.Failed.FinishedAt, 0).Add(s.retryDelay)
+		if wait := time.Until(retryAt); wait > 0 {
+			if !s.waitForRecovery(ctx, wait) {
+				return
+			}
+			continue
+		}
+		_, _ = s.enqueueAutomatic(ctx, dailybesttypes.TriggerRecovery)
+		if !s.waitForRecovery(ctx, 0) {
+			return
+		}
+	}
+}
+
+func (s *Service) waitForRecovery(ctx context.Context, wait time.Duration) bool {
+	if wait <= 0 {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-s.retryWake:
+			return true
+		}
+	}
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-s.retryWake:
+		return true
+	case <-timer.C:
+		return true
+	}
+}
+
+func (s *Service) signalRecovery() {
+	select {
+	case s.retryWake <- struct{}{}:
+	default:
+	}
 }
 
 func parseDailyFetchTime(value string) (int, int, error) {

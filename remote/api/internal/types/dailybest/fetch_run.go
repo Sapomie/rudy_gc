@@ -8,5 +8,6 @@ const (
 	RunStatusNoChange  = "no_change"
 
 	TriggerScheduled = "scheduled"
+	TriggerRecovery  = "recovery"
 	TriggerManual    = "manual"
 )

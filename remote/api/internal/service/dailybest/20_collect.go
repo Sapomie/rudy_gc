@@ -14,7 +14,7 @@ func (s *Service) collectAndPublish(ctx context.Context, runID int64, businessDa
 	pages := make([]dailybesttypes.SourcePage, 0)
 	seenPageChecksums := make(map[string]struct{})
 	for pageNumber := int64(1); ; pageNumber++ {
-		page, err := s.source.FetchPage(ctx, pageNumber)
+		page, err := s.source.FetchPage(ctx, runID, pageNumber)
 		if errors.Is(err, dailybesttypes.ErrBlankPage) {
 			if pageNumber == 1 {
 				return fmt.Errorf("DailyBest 第一页为空")

@@ -25,13 +25,13 @@ func NewSource(client *Client, javAddress string) *Source {
 	return &Source{client: client, javAddress: strings.TrimSpace(javAddress)}
 }
 
-func (s *Source) FetchPage(ctx context.Context, page int64) (dailybesttypes.SourcePage, error) {
+func (s *Source) FetchPage(ctx context.Context, fetchRunID, page int64) (dailybesttypes.SourcePage, error) {
 	if s.client == nil {
 		return dailybesttypes.SourcePage{}, fmt.Errorf("DailyBest SourceClient 为空")
 	}
 	query := fmt.Sprintf("/%s&page=%d", bestRatedMonthPath, page)
 	targetURL := fmt.Sprintf("https://%s/cn%s", s.javAddress, query)
-	response, err := s.client.Get(ctx, targetURL)
+	response, err := s.client.Get(ctx, fetchRunID, page, targetURL)
 	if err != nil {
 		return dailybesttypes.SourcePage{}, fmt.Errorf("请求 DailyBest 第 %d 页失败: %w", page, err)
 	}

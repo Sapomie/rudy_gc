@@ -27,7 +27,8 @@
         <PaginationBar :page-info="pageInfo" />
       </header>
 
-      <EmptyState v-if="!runs.length" title="暂无抓取任务" message="创建任务后会在这里显示运行记录。">
+      <EmptyState v-if="!queried" title="尚未查询" message="点击刷新加载抓取任务。" />
+      <EmptyState v-else-if="!runs.length" title="暂无抓取任务" message="创建任务后会在这里显示运行记录。">
         <RouterLink class="button-primary" to="/dailybestfetch">新建抓取</RouterLink>
       </EmptyState>
       <div v-else class="data-table-wrap remote-list-table-wrap">
@@ -104,6 +105,7 @@ const router = useRouter();
 const runs = ref<FetchRun[]>([]);
 const pageInfo = ref<PageInfo>({ total: 0, page: 1, page_size: DEFAULT_LIST_PAGE_SIZE, page_total: 1 });
 const pageSizeInput = ref(String(DEFAULT_LIST_PAGE_SIZE));
+const queried = ref(false);
 const loading = ref(false);
 const error = ref("");
 
@@ -111,12 +113,14 @@ async function applyPageSize(): Promise<void> {
   const parsed = Number(pageSizeInput.value);
   const pageSize = Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_LIST_PAGE_SIZE;
   const currentPath = route.fullPath;
+  queried.value = true;
   await router.replace({ path: route.path, query: compactPageQuery(route.query, 1, pageSize) });
   if (route.fullPath === currentPath) await loadRuns();
 }
 
 async function loadRuns(): Promise<void> {
   const page = pageQueryFromRoute(route.query);
+  queried.value = true;
   pageSizeInput.value = String(page.ps);
   loading.value = true;
   error.value = "";
@@ -131,5 +135,12 @@ async function loadRuns(): Promise<void> {
   }
 }
 
-watch(() => route.fullPath, loadRuns, { immediate: true });
+pageSizeInput.value = String(pageQueryFromRoute(route.query).ps);
+watch(
+  () => route.fullPath,
+  () => {
+    pageSizeInput.value = String(pageQueryFromRoute(route.query).ps);
+    if (queried.value) void loadRuns();
+  }
+);
 </script>

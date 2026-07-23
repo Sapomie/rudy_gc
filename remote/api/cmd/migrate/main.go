@@ -25,8 +25,10 @@ func main() {
 		cfg.DataSource = value
 	}
 	db, err := modelg.NewGormDBEngine(&modelg.Config{
-		DSN:      strings.TrimSpace(cfg.DataSource),
-		LogLevel: strings.TrimSpace(cfg.LogursLevel),
+		DSN:                  strings.TrimSpace(cfg.DataSource),
+		LogLevel:             strings.TrimSpace(cfg.LogursLevel),
+		IgnoreRecordNotFound: true,
+		DisableColor:         true,
 	})
 	if err != nil {
 		log.Fatalf("DailyBest 远端数据库连接失败: %v", err)
@@ -44,7 +46,7 @@ func main() {
 		log.Fatalf("DailyBest 远端时区加载失败: %v", err)
 	}
 	service := dailybestservice.New(context.Background(), dailybestremotex.New(db), nil, loc)
-	if err := service.EnsureRankProjection(context.Background()); err != nil {
+	if err := service.EnsureRankDayStats(context.Background()); err != nil {
 		log.Fatalf("DailyBest 远端排名派生数据重建失败: %v", err)
 	}
 	log.Println("DailyBest 远端数据库迁移完成")

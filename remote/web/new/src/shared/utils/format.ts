@@ -23,30 +23,6 @@ export function rankDate(dayNumber: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function formatPeriodType(periodType: number): string {
-  return ({ 1: "周", 2: "月", 3: "季度", 4: "年" } as Record<number, string>)[periodType] || String(periodType);
-}
-
-export function formatPeriodStatus(status: number): string {
-  return ({ 1: "计算中", 2: "已就绪" } as Record<number, string>)[status] || String(status);
-}
-
-export function formatDecimal(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(4) : "—";
-}
-
-export function formatRankChange(value: number): string {
-  if (value > 0) return `+${value}`;
-  if (value < 0) return String(value);
-  return "—";
-}
-
-export function rankChangeClass(value: number): string {
-  if (value > 0) return "rank-change-rise";
-  if (value < 0) return "rank-change-fall";
-  return "";
-}
-
 export function formatRunStatus(status: string): string {
   return (
     {
@@ -59,15 +35,54 @@ export function formatRunStatus(status: string): string {
   );
 }
 
+export function formatFetchLogStatus(status: string): string {
+  return { requesting: "请求中", succeeded: "成功", failed: "失败" }[status] || status;
+}
+
 export function formatTriggerType(triggerType: string): string {
-  return { scheduled: "定时任务", manual: "手动触发" }[triggerType] || triggerType;
+  return { scheduled: "定时任务", recovery: "失败恢复", manual: "手动触发" }[triggerType] || triggerType;
+}
+
+export function formatRuntimeState(status: string): string {
+  return (
+    {
+      starting: "启动中",
+      ready: "就绪",
+      fetching: "请求中",
+      disconnected: "连接断开",
+      recovering: "恢复中",
+      fatal: "严重故障",
+      available: "可访问",
+      unavailable: "不可访问",
+      unknown: "尚未探测",
+      interrupted: "已中断"
+    }[status] ||
+    status ||
+    "—"
+  );
+}
+
+export function formatProbeStatus(status: string): string {
+  return (
+    {
+      running: "探测中",
+      succeeded: "成功",
+      failed: "失败",
+      interrupted: "已中断"
+    }[status] || status
+  );
 }
 
 export function statusTone(status: string): string {
   if (status === "succeeded") return "good";
   if (status === "failed") return "danger";
   if (status === "running") return "info";
+  if (status === "requesting") return "info";
   if (status === "queued") return "warn";
+  if (status === "ready" || status === "available") return "good";
+  if (status === "unavailable" || status === "fatal" || status === "interrupted") return "danger";
+  if (status === "starting" || status === "fetching") return "info";
+  if (status === "disconnected" || status === "recovering" || status === "unknown") return "warn";
   return "neutral";
 }
 

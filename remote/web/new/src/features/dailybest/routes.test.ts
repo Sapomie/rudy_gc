@@ -8,12 +8,12 @@ describe("dailybest routes", () => {
       "/dailybestoverview",
       "/ranklist",
       "/rankdaystats",
-      "/rankperiodlist",
-      "/rankperioditemlist",
-      "/rankperiodstats",
       "/dailybestfetchrunlist",
       "/dailybestfetchrundetail/:id",
-      "/dailybestfetch"
+      "/dailybestfetchloglist",
+      "/dailybestfetch",
+      "/dailybestruntimestatus",
+      "/dailybesttargetprobelist"
     ]);
   });
 
@@ -22,12 +22,12 @@ describe("dailybest routes", () => {
       "dailybest-overview",
       "dailybest-rank-list",
       "dailybest-rank-day-stats",
-      "dailybest-rank-period-list",
-      "dailybest-rank-period-item-list",
-      "dailybest-rank-period-stats",
       "dailybest-fetch-run-list",
       "dailybest-fetch-run-detail",
-      "dailybest-fetch"
+      "dailybest-fetch-log-list",
+      "dailybest-fetch",
+      "dailybest-runtime-status",
+      "dailybest-target-probe-list"
     ]);
   });
 

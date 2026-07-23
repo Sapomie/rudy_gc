@@ -30,14 +30,109 @@ export interface FetchRunListResponse {
   runs: FetchRun[];
   page_info?: PageInfo;
 }
-export interface FetchRequest {
-  business_date: string;
-  category: number;
-}
 export interface FetchAcceptedResponse {
   run_id: number;
   status: string;
   message: string;
+}
+
+export interface FetchLog {
+  id: number;
+  fetch_run_id: number;
+  page_number: number;
+  attempt_number: number;
+  request_url: string;
+  status: string;
+  http_status: number;
+  duration_ms: number;
+  error_message: string;
+  created_on: number;
+  updated_on: number;
+}
+export interface FetchLogFilters {
+  p?: number;
+  ps?: number;
+  fetch_run_id?: number;
+  page_number?: number;
+  status?: string;
+}
+export interface FetchLogListResponse {
+  logs: FetchLog[];
+  page_info?: PageInfo;
+}
+
+export interface BrowserRuntimeStatus {
+  state: string;
+  last_heartbeat_at: number;
+  last_error: string;
+  version: string;
+  user_agent: string;
+}
+
+export interface TargetProbe {
+  id: number;
+  request_id: string;
+  status: string;
+  target_url: string;
+  final_url: string;
+  http_status: number;
+  duration_ms: number;
+  browser_status: string;
+  error_type: string;
+  error_message: string;
+  started_at: number;
+  finished_at: number;
+  created_on: number;
+  updated_on: number;
+}
+
+export interface TargetProbeFilters {
+  p?: number;
+  ps?: number;
+  status?: string;
+  started_from?: number;
+  started_to?: number;
+}
+
+export interface TargetProbeListResponse {
+  probes: TargetProbe[];
+  page_info?: PageInfo;
+}
+
+export interface RuntimeEvent {
+  id: number;
+  component: string;
+  event_type: string;
+  level: string;
+  message: string;
+  fetch_run_id: number;
+  target_probe_id: number;
+  occurred_at: number;
+  created_on: number;
+}
+
+export interface RuntimeEventFilters {
+  p?: number;
+  ps?: number;
+  component?: string;
+  level?: string;
+}
+
+export interface RuntimeEventListResponse {
+  events: RuntimeEvent[];
+  page_info?: PageInfo;
+}
+
+export interface RuntimeStatus {
+  api_status: string;
+  database_status: string;
+  browser_status: BrowserRuntimeStatus;
+  browser_error: string;
+  target_status: string;
+  latest_probe?: TargetProbe;
+  next_probe_at: number;
+  last_probe_success: number;
+  last_probe_failure: number;
 }
 
 export interface MovieBasic {
@@ -83,10 +178,9 @@ export interface RankDayStat {
   first_seen_movie_count: number;
   returning_movie_count: number;
   dropped_movie_count: number;
-  rise_movie_count: number;
-  fall_movie_count: number;
-  unchanged_movie_count: number;
   source_checksum: string;
+  fetched_at: number;
+  synced_at: number;
   calculated_on: number;
   created_on: number;
   updated_on: number;
@@ -100,111 +194,4 @@ export interface RankDayStatFilters {
 export interface RankDayStatListResponse {
   stats: RankDayStat[];
   page_info?: PageInfo;
-}
-
-export interface RankPeriod {
-  id: number;
-  period_type: number;
-  period_key: string;
-  category: number;
-  start_day_number: number;
-  end_day_number: number;
-  pick_days: number;
-  top_n: number;
-  status: number;
-  created_on: number;
-  updated_on: number;
-}
-export interface RankPeriodFilters {
-  p?: number;
-  ps?: number;
-  period_type?: number;
-  period_key?: string;
-  category?: number;
-}
-export interface RankPeriodListResponse {
-  periods: RankPeriod[];
-  page_info?: PageInfo;
-}
-
-export interface RankPeriodItem {
-  id: number;
-  period_id: number;
-  movie_jav_id: string;
-  movie?: MovieBasic;
-  rank_pos: number;
-  score: number;
-  days_in_rank: number;
-  used_pick_days: number;
-  first_rank_day_number: number;
-  last_rank_day_number: number;
-  best_rank: number;
-  worst_picked_rank: number;
-  prev_rank: number;
-  rank_change: number;
-  peak_rank: number;
-  created_on: number;
-  updated_on: number;
-}
-export interface RankPeriodItemFilters {
-  p?: number;
-  ps?: number;
-  period_id?: number;
-  movie_jav_id?: string;
-}
-export interface RankPeriodItemListResponse {
-  items: RankPeriodItem[];
-  page_info?: PageInfo;
-}
-
-export interface RankPeriodStat {
-  id: number;
-  period_id: number;
-  prev_period_id: number;
-  source_rank_row_count: number;
-  source_rank_day_count: number;
-  source_movie_count: number;
-  missing_rank_day_count: number;
-  period_movie_count: number;
-  continued_movie_count: number;
-  first_seen_movie_count: number;
-  returning_movie_count: number;
-  dropped_movie_count: number;
-  rise_movie_count: number;
-  fall_movie_count: number;
-  unchanged_movie_count: number;
-  peak_movie_count: number;
-  rank_one_movie_jav_id: string;
-  rank_one_movie?: MovieBasic;
-  average_score: number;
-  average_days_in_rank: number;
-  source_fetched_start_on: number;
-  source_fetched_end_on: number;
-  source_checksum: string;
-  calculated_on: number;
-  created_on: number;
-  updated_on: number;
-}
-export interface RankPeriodStatFilters {
-  p?: number;
-  ps?: number;
-  period_id?: number;
-}
-export interface RankPeriodStatListResponse {
-  stats: RankPeriodStat[];
-  page_info?: PageInfo;
-}
-
-export interface RankSyncManifest {
-  fetch_run_id: number;
-  business_date: string;
-  day_number: number;
-  category: number;
-  page_count: number;
-  item_count: number;
-  checksum: string;
-  finished_at: number;
-}
-export interface RankSyncManifestListResponse {
-  manifests: RankSyncManifest[];
 }

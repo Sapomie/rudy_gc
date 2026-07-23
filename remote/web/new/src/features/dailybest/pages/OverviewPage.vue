@@ -33,6 +33,7 @@
           <RouterLink class="button-secondary" to="/rankdaystats">查看全部</RouterLink>
         </header>
         <ErrorPanel v-if="rankError" :message="rankError" />
+        <EmptyState v-else-if="!queried" title="尚未查询" message="点击刷新读取最新每日统计。" />
         <div v-else-if="latestDay" class="key-value-list">
           <div>
             <span>排行日期</span><strong>{{ latestDay.rank_date }}</strong>
@@ -67,6 +68,7 @@
           <RouterLink class="button-secondary" to="/dailybestfetchrunlist">查看全部</RouterLink>
         </header>
         <ErrorPanel v-if="runError" :message="runError" />
+        <EmptyState v-else-if="!queried" title="尚未查询" message="点击刷新读取最新抓取任务。" />
         <div v-else-if="latestRun" class="key-value-list">
           <div>
             <span>任务 ID</span
@@ -104,7 +106,7 @@
   </PageShell>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { listFetchRuns, listRankDayStats, loadHealthState } from "@/features/dailybest/api";
 import StatusBadge from "@/features/dailybest/components/StatusBadge.vue";
 import type { FetchRun, HealthState, RankDayStat } from "@/features/dailybest/types";
@@ -118,9 +120,13 @@ const health = ref<HealthState>("loading"),
   latestRun = ref<FetchRun | null>(null),
   rankError = ref(""),
   runError = ref(""),
-  loading = ref(true);
-const healthLabel = computed(() => ({ loading: "检查中", ready: "运行正常", unavailable: "服务不可用" })[health.value]);
+  queried = ref(false),
+  loading = ref(false);
+const healthLabel = computed(() =>
+  queried.value ? { loading: "检查中", ready: "运行正常", unavailable: "服务不可用" }[health.value] : "尚未查询"
+);
 async function loadOverview() {
+  queried.value = true;
   loading.value = true;
   rankError.value = "";
   runError.value = "";
@@ -137,5 +143,4 @@ async function loadOverview() {
   ]);
   loading.value = false;
 }
-onMounted(loadOverview);
 </script>

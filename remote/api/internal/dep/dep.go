@@ -16,14 +16,17 @@ type Dep struct {
 	Config              config.Config
 	DB                  *gorm.DB
 	DailyBestRepository *dailybestremotex.Repository
+	DailyBestBrowser    *dailybestrepo.FlareSolverrClient
 	DailyBestSource     *dailybestrepo.Source
 	Location            *time.Location
 }
 
 func BuildDep(cfg config.Config) (*Dep, error) {
 	db, err := modelg.NewGormDBEngine(&modelg.Config{
-		DSN:      strings.TrimSpace(cfg.DataSource),
-		LogLevel: strings.TrimSpace(cfg.LogursLevel),
+		DSN:                  strings.TrimSpace(cfg.DataSource),
+		LogLevel:             strings.TrimSpace(cfg.LogursLevel),
+		IgnoreRecordNotFound: true,
+		DisableColor:         true,
 	})
 	if err != nil {
 		return nil, err
@@ -34,15 +37,22 @@ func BuildDep(cfg config.Config) (*Dep, error) {
 		closeDB(db)
 		return nil, err
 	}
-	client := dailybestrepo.NewClient(dailybestrepo.Config{
-		UserAgent: cfg.Source.UserAgent,
-		Cookie:    cfg.Source.Cookie,
-		Timeout:   time.Duration(cfg.Source.Timeout) * time.Second,
+	repository := dailybestremotex.New(db)
+	browser, err := dailybestrepo.NewFlareSolverrClient(dailybestrepo.FlareSolverrClientConfig{
+		BaseURL: cfg.Source.Browser.BaseURL,
+		Session: cfg.Source.Browser.Session,
+		Timeout: time.Duration(cfg.Source.Timeout) * time.Second,
 	})
+	if err != nil {
+		closeDB(db)
+		return nil, err
+	}
+	client := dailybestrepo.NewClient(browser, repository)
 	return &Dep{
 		Config:              cfg,
 		DB:                  db,
-		DailyBestRepository: dailybestremotex.New(db),
+		DailyBestRepository: repository,
+		DailyBestBrowser:    browser,
 		DailyBestSource:     dailybestrepo.NewSource(client, cfg.Source.JavAddress),
 		Location:            loc,
 	}, nil

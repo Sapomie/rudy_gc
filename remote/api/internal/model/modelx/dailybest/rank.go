@@ -2,7 +2,9 @@ package dailybestremotex
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -42,13 +44,30 @@ func (r *Repository) MarkFetchRunNoChange(
 	})
 }
 
-func (r *Repository) PublishRanks(ctx context.Context, runID int64, draft dailybesttypes.RankDraft, projection dailybesttypes.RankProjection, finishedAt int64) error {
+func (r *Repository) PublishRanks(
+	ctx context.Context,
+	runID int64,
+	draft dailybesttypes.RankDraft,
+	stat contracts.DailyBestRankDayStat,
+	finishedAt int64,
+) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := upsertMovies(tx, draft.Movies, finishedAt); err != nil {
 			return err
 		}
-		if err := tx.Where("day_number = ? AND category = ?", draft.DayNumber, draft.Category).Delete(&modelg.Rank{}).Error; err != nil {
-			return err
+		var existing modelg.Rank
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("day_number = ? AND category = ?", draft.DayNumber, draft.Category).
+			Take(&existing).Error
+		if err == nil {
+			return fmt.Errorf(
+				"DailyBest date=%s category=%d 排名已经存在，禁止覆盖",
+				draft.BusinessDate,
+				draft.Category,
+			)
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("检查已有排行失败: %w", err)
 		}
 		rows := make([]modelg.Rank, 0, len(draft.Ranks))
 		for _, rank := range draft.Ranks {
@@ -63,8 +82,9 @@ func (r *Repository) PublishRanks(ctx context.Context, runID int64, draft dailyb
 			}
 		}
 
-		if err := replaceRankProjection(tx, projection); err != nil {
-			return err
+		statRow := rankDayStatModel(stat)
+		if err := tx.Create(&statRow).Error; err != nil {
+			return fmt.Errorf("保存当日排行统计失败: %w", err)
 		}
 
 		return tx.Model(&modelg.DailyBestFetchRun{}).Where("id = ?", runID).Updates(map[string]any{
@@ -111,86 +131,81 @@ func upsertMovies(tx *gorm.DB, movies []dailybesttypes.MovieDraft, updatedOn int
 	return nil
 }
 
-func (r *Repository) RankProjectionComplete(ctx context.Context) (bool, error) {
-	type counts struct {
-		RankCount        int64 `gorm:"column:rank_count"`
-		RankDayCount     int64 `gorm:"column:rank_day_count"`
-		DayStatCount     int64 `gorm:"column:day_stat_count"`
-		PeriodCount      int64 `gorm:"column:period_count"`
-		PeriodStatCount  int64 `gorm:"column:period_stat_count"`
-		EmptyPeriodCount int64 `gorm:"column:empty_period_count"`
+func (r *Repository) ListRankDayStatDayNumbers(ctx context.Context) ([]int64, error) {
+	var dayNumbers []int64
+	if err := r.db.WithContext(ctx).
+		Model(&modelg.RankDayStat{}).
+		Order("day_number ASC").
+		Pluck("day_number", &dayNumbers).Error; err != nil {
+		return nil, err
 	}
-	var result counts
-	if err := r.db.WithContext(ctx).Raw(`
-SELECT
-	(SELECT COUNT(*) FROM c_rank) AS rank_count,
-	(SELECT COUNT(DISTINCT day_number) FROM c_rank) AS rank_day_count,
-	(SELECT COUNT(*) FROM c_rank_day_stat) AS day_stat_count,
-	(SELECT COUNT(*) FROM c_rank_period) AS period_count,
-	(SELECT COUNT(*) FROM c_rank_period_stat) AS period_stat_count,
-	(SELECT COUNT(*) FROM c_rank_period AS period
-		LEFT JOIN c_rank_period_item AS item ON item.period_id = period.id
-		WHERE item.id IS NULL) AS empty_period_count`).Scan(&result).Error; err != nil {
-		return false, err
-	}
-	if result.RankCount == 0 {
-		return true, nil
-	}
-	return result.RankDayCount == result.DayStatCount && result.PeriodCount > 0 &&
-		result.PeriodCount == result.PeriodStatCount && result.EmptyPeriodCount == 0, nil
+	return dayNumbers, nil
 }
 
-func (r *Repository) SyncRankProjection(ctx context.Context, projection dailybesttypes.RankProjection) error {
+func (r *Repository) InsertRankDayStatsIfMissing(
+	ctx context.Context,
+	stats []contracts.DailyBestRankDayStat,
+) error {
+	if len(stats) == 0 {
+		return nil
+	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return replaceRankProjection(tx, projection)
+		for _, stat := range stats {
+			row := rankDayStatModel(stat)
+			result := tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "day_number"}},
+				DoNothing: true,
+			}).Create(&row)
+			if result.Error != nil {
+				return fmt.Errorf("补充 day_number=%d 每日排行统计失败: %w", stat.DayNumber, result.Error)
+			}
+		}
+		return nil
 	})
 }
 
-func replaceRankProjection(tx *gorm.DB, projection dailybesttypes.RankProjection) error {
-	for _, model := range []any{&modelg.RankPeriodStat{}, &modelg.RankPeriodItem{}, &modelg.RankPeriod{}, &modelg.RankDayStat{}} {
-		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(model).Error; err != nil {
-			return fmt.Errorf("清理排行派生数据失败: %w", err)
-		}
+func (r *Repository) ListRankDays(ctx context.Context, filter dailybesttypes.RankDayFilter) ([]contracts.DailyBestRankDay, int64, error) {
+	dayQuery := r.db.WithContext(ctx).Model(&modelg.Rank{}).Distinct("day_number")
+	if filter.DayNumber > 0 {
+		dayQuery = dayQuery.Where("day_number = ?", filter.DayNumber)
 	}
-	dayStats := make([]modelg.RankDayStat, 0, len(projection.DayStats))
-	for _, stat := range projection.DayStats {
-		dayStats = append(dayStats, rankDayStatModel(stat))
+	if filter.StartDayNumber > 0 {
+		dayQuery = dayQuery.Where("day_number >= ?", filter.StartDayNumber)
 	}
-	if len(dayStats) > 0 {
-		if err := tx.Create(&dayStats).Error; err != nil {
-			return fmt.Errorf("保存每日排行统计失败: %w", err)
-		}
+	if filter.EndDayNumber > 0 {
+		dayQuery = dayQuery.Where("day_number <= ?", filter.EndDayNumber)
 	}
-	periodIDs := make(map[string]int64, len(projection.Periods))
-	for _, item := range projection.Periods {
-		period := rankPeriodModel(item.Period)
-		if err := tx.Create(&period).Error; err != nil {
-			return fmt.Errorf("保存周期排行 %s 失败: %w", item.Key, err)
-		}
-		periodIDs[item.Key] = period.Id
-		periodItems := make([]modelg.RankPeriodItem, 0, len(item.Items))
-		for _, source := range item.Items {
-			row := rankPeriodItemModel(source)
-			row.PeriodID = period.Id
-			periodItems = append(periodItems, row)
-		}
-		if len(periodItems) > 0 {
-			if err := tx.Create(&periodItems).Error; err != nil {
-				return fmt.Errorf("保存周期排行条目 %s 失败: %w", item.Key, err)
-			}
-		}
-		stat := rankPeriodStatModel(item.Stat)
-		stat.PeriodID = period.Id
-		stat.PrevPeriodID = periodIDs[item.PrevKey]
-		if err := tx.Create(&stat).Error; err != nil {
-			return fmt.Errorf("保存周期排行统计 %s 失败: %w", item.Key, err)
-		}
+	var total int64
+	if err := dayQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return nil
-}
+	var dayNumbers []int64
+	if err := paginate(dayQuery, filter.PageQuery).Order("day_number DESC").Pluck("day_number", &dayNumbers).Error; err != nil {
+		return nil, 0, err
+	}
+	if len(dayNumbers) == 0 {
+		return []contracts.DailyBestRankDay{}, total, nil
+	}
 
-func (r *Repository) ListRankSyncManifests(ctx context.Context) ([]contracts.DailyBestRankSyncManifest, error) {
-	type row struct {
+	type rankCountRow struct {
+		DayNumber int64 `gorm:"column:day_number"`
+		Category  int64 `gorm:"column:category"`
+		RankCount int64 `gorm:"column:rank_count"`
+	}
+	var rankCounts []rankCountRow
+	if err := r.db.WithContext(ctx).Model(&modelg.Rank{}).
+		Select("day_number, category, COUNT(*) AS rank_count").
+		Where("day_number IN ?", dayNumbers).
+		Group("day_number, category").
+		Scan(&rankCounts).Error; err != nil {
+		return nil, 0, err
+	}
+
+	businessDates := make([]string, 0, len(dayNumbers))
+	for _, dayNumber := range dayNumbers {
+		businessDates = append(businessDates, contracts.RankDate(dayNumber))
+	}
+	type fetchRunRow struct {
 		FetchRunID   int64  `gorm:"column:fetch_run_id"`
 		BusinessDate string `gorm:"column:business_date"`
 		Category     int64  `gorm:"column:category"`
@@ -199,33 +214,63 @@ func (r *Repository) ListRankSyncManifests(ctx context.Context) ([]contracts.Dai
 		Checksum     string `gorm:"column:checksum"`
 		FinishedAt   int64  `gorm:"column:finished_at"`
 	}
-	var rows []row
-	if err := r.db.WithContext(ctx).Raw(`
-SELECT run.id AS fetch_run_id, run.business_date, run.category, run.page_count,
-	run.item_count, run.checksum, run.finished_at
-FROM d_dailybest_fetch_run AS run
-JOIN (
-	SELECT business_date, category, MAX(id) AS fetch_run_id
-	FROM d_dailybest_fetch_run
-	WHERE status IN (?, ?) AND TRIM(checksum) <> ''
-	GROUP BY business_date, category
-) AS latest ON latest.fetch_run_id = run.id
-ORDER BY run.business_date ASC, run.category ASC`, dailybesttypes.RunStatusSucceeded, dailybesttypes.RunStatusNoChange).Scan(&rows).Error; err != nil {
-		return nil, err
+	latestRuns := r.db.WithContext(ctx).Model(&modelg.DailyBestFetchRun{}).
+		Select("business_date, category, MAX(id) AS fetch_run_id").
+		Where("status IN ? AND TRIM(checksum) <> ''", []string{dailybesttypes.RunStatusSucceeded, dailybesttypes.RunStatusNoChange}).
+		Where("business_date IN ?", businessDates).
+		Group("business_date, category")
+	var fetchRuns []fetchRunRow
+	if err := r.db.WithContext(ctx).Table("d_dailybest_fetch_run AS run").
+		Select("run.id AS fetch_run_id, run.business_date, run.category, run.page_count, run.item_count, run.checksum, run.finished_at").
+		Joins("JOIN (?) AS latest ON latest.fetch_run_id = run.id", latestRuns).
+		Scan(&fetchRuns).Error; err != nil {
+		return nil, 0, err
 	}
-	out := make([]contracts.DailyBestRankSyncManifest, 0, len(rows))
-	for _, source := range rows {
-		dayNumber, err := contracts.RankDayNumber(source.BusinessDate)
+
+	type dayCategoryKey struct {
+		DayNumber int64
+		Category  int64
+	}
+	fetchRunByKey := make(map[dayCategoryKey]fetchRunRow, len(fetchRuns))
+	for _, run := range fetchRuns {
+		dayNumber, err := contracts.RankDayNumber(run.BusinessDate)
 		if err != nil {
-			return nil, fmt.Errorf("抓取记录 %d 的业务日期无效: %w", source.FetchRunID, err)
+			return nil, 0, fmt.Errorf("抓取记录 %d 的业务日期无效: %w", run.FetchRunID, err)
 		}
-		out = append(out, contracts.DailyBestRankSyncManifest{
-			FetchRunID: source.FetchRunID, BusinessDate: source.BusinessDate, DayNumber: dayNumber,
-			Category: source.Category, PageCount: source.PageCount, ItemCount: source.ItemCount,
-			Checksum: source.Checksum, FinishedAt: source.FinishedAt,
-		})
+		fetchRunByKey[dayCategoryKey{DayNumber: dayNumber, Category: run.Category}] = run
 	}
-	return out, nil
+	countsByDay := make(map[int64][]rankCountRow, len(dayNumbers))
+	for _, count := range rankCounts {
+		countsByDay[count.DayNumber] = append(countsByDay[count.DayNumber], count)
+	}
+
+	out := make([]contracts.DailyBestRankDay, 0, len(dayNumbers))
+	for _, dayNumber := range dayNumbers {
+		counts := countsByDay[dayNumber]
+		sort.Slice(counts, func(i, j int) bool { return counts[i].Category < counts[j].Category })
+		day := contracts.DailyBestRankDay{
+			BusinessDate: contracts.RankDate(dayNumber),
+			DayNumber:    dayNumber,
+			Categories:   make([]contracts.DailyBestRankDayCategory, 0, len(counts)),
+		}
+		for _, count := range counts {
+			run := fetchRunByKey[dayCategoryKey{DayNumber: dayNumber, Category: count.Category}]
+			category := contracts.DailyBestRankDayCategory{
+				FetchRunID: run.FetchRunID, Category: count.Category, PageCount: run.PageCount,
+				ItemCount: run.ItemCount, RankCount: count.RankCount, Checksum: run.Checksum,
+				FinishedAt: run.FinishedAt,
+			}
+			day.PageCount += category.PageCount
+			day.ItemCount += category.ItemCount
+			day.RankCount += category.RankCount
+			if category.FinishedAt > day.FinishedAt {
+				day.FinishedAt = category.FinishedAt
+			}
+			day.Categories = append(day.Categories, category)
+		}
+		out = append(out, day)
+	}
+	return out, total, nil
 }
 
 func (r *Repository) ListRanks(ctx context.Context, filter dailybesttypes.RankFilter) ([]contracts.DailyBestRank, int64, error) {
@@ -259,105 +304,29 @@ func (r *Repository) ListRanks(ctx context.Context, filter dailybesttypes.RankFi
 }
 
 func (r *Repository) ListRankDayStats(ctx context.Context, filter dailybesttypes.RankDayStatFilter) ([]contracts.DailyBestRankDayStat, int64, error) {
-	query := r.db.WithContext(ctx).Model(&modelg.RankDayStat{})
-	if filter.DayNumber > 0 {
-		query = query.Where("day_number = ?", filter.DayNumber)
-	}
-	if filter.RankDate != "" {
-		query = query.Where("rank_date = ?", filter.RankDate)
+	applyFilter := func(query *gorm.DB) *gorm.DB {
+		if filter.DayNumber > 0 {
+			query = query.Where("stat.day_number = ?", filter.DayNumber)
+		}
+		if filter.RankDate != "" {
+			query = query.Where("stat.rank_date = ?", filter.RankDate)
+		}
+		return query
 	}
 	var total int64
-	if err := query.Count(&total).Error; err != nil {
+	countQuery := applyFilter(r.db.WithContext(ctx).Table("c_rank_day_stat AS stat"))
+	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
+	query := applyFilter(r.db.WithContext(ctx).Table("c_rank_day_stat AS stat")).Select("stat.*")
 	query = paginate(query, filter.PageQuery)
 	var rows []modelg.RankDayStat
-	if err := query.Order("day_number DESC").Find(&rows).Error; err != nil {
+	if err := query.Order("stat.day_number DESC").Scan(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 	out := make([]contracts.DailyBestRankDayStat, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, mapRankDayStat(row))
-	}
-	return out, total, nil
-}
-
-func (r *Repository) ListRankPeriods(ctx context.Context, filter dailybesttypes.RankPeriodFilter) ([]contracts.DailyBestRankPeriod, int64, error) {
-	query := r.db.WithContext(ctx).Model(&modelg.RankPeriod{})
-	if filter.PeriodType > 0 {
-		query = query.Where("period_type = ?", filter.PeriodType)
-	}
-	if filter.PeriodKey != "" {
-		query = query.Where("period_key = ?", filter.PeriodKey)
-	}
-	if filter.Category > 0 {
-		query = query.Where("category = ?", filter.Category)
-	}
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	query = paginate(query, filter.PageQuery)
-	var rows []modelg.RankPeriod
-	if err := query.Order("end_day_number DESC, period_type ASC, category ASC").Find(&rows).Error; err != nil {
-		return nil, 0, err
-	}
-	out := make([]contracts.DailyBestRankPeriod, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, mapRankPeriod(row))
-	}
-	return out, total, nil
-}
-
-func (r *Repository) ListRankPeriodItems(ctx context.Context, filter dailybesttypes.RankPeriodItemFilter) ([]contracts.DailyBestRankPeriodItem, int64, error) {
-	query := r.db.WithContext(ctx).Model(&modelg.RankPeriodItem{})
-	if filter.PeriodID > 0 {
-		query = query.Where("period_id = ?", filter.PeriodID)
-	}
-	if filter.MovieJavID != "" {
-		query = query.Where("movie_jav_id LIKE ?", "%"+filter.MovieJavID+"%")
-	}
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	query = paginate(query, filter.PageQuery)
-	var rows []modelg.RankPeriodItem
-	if err := query.Order("period_id DESC, rank_pos ASC").Find(&rows).Error; err != nil {
-		return nil, 0, err
-	}
-	movies, err := r.findMovies(ctx, periodItemMovieJavIDs(rows))
-	if err != nil {
-		return nil, 0, err
-	}
-	out := make([]contracts.DailyBestRankPeriodItem, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, mapRankPeriodItem(row, movies[row.MovieJavID]))
-	}
-	return out, total, nil
-}
-
-func (r *Repository) ListRankPeriodStats(ctx context.Context, filter dailybesttypes.RankPeriodStatFilter) ([]contracts.DailyBestRankPeriodStat, int64, error) {
-	query := r.db.WithContext(ctx).Model(&modelg.RankPeriodStat{})
-	if filter.PeriodID > 0 {
-		query = query.Where("period_id = ?", filter.PeriodID)
-	}
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	query = paginate(query, filter.PageQuery)
-	var rows []modelg.RankPeriodStat
-	if err := query.Order("period_id DESC").Find(&rows).Error; err != nil {
-		return nil, 0, err
-	}
-	movies, err := r.findMovies(ctx, periodStatMovieJavIDs(rows))
-	if err != nil {
-		return nil, 0, err
-	}
-	out := make([]contracts.DailyBestRankPeriodStat, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, mapRankPeriodStat(row, movies[row.RankOneMovieJavID]))
 	}
 	return out, total, nil
 }
@@ -392,24 +361,6 @@ func rankMovieJavIDs(rows []modelg.Rank) []string {
 	return ids
 }
 
-func periodItemMovieJavIDs(rows []modelg.RankPeriodItem) []string {
-	ids := make([]string, 0, len(rows))
-	for _, row := range rows {
-		ids = append(ids, row.MovieJavID)
-	}
-	return ids
-}
-
-func periodStatMovieJavIDs(rows []modelg.RankPeriodStat) []string {
-	ids := make([]string, 0, len(rows))
-	for _, row := range rows {
-		if row.RankOneMovieJavID != "" {
-			ids = append(ids, row.RankOneMovieJavID)
-		}
-	}
-	return ids
-}
-
 func movieBasic(row modelg.DailyBestMovie) contracts.DailyBestMovieBasic {
 	return contracts.DailyBestMovieBasic{
 		MovieName: row.MovieName,
@@ -437,8 +388,7 @@ func rankDayStatModel(source contracts.DailyBestRankDayStat) modelg.RankDayStat 
 		RankRowCount: source.RankRowCount, MovieCount: source.MovieCount,
 		ContinuedMovieCount: source.ContinuedMovieCount, FirstSeenMovieCount: source.FirstSeenMovieCount,
 		ReturningMovieCount: source.ReturningMovieCount, DroppedMovieCount: source.DroppedMovieCount,
-		RiseMovieCount: source.RiseMovieCount, FallMovieCount: source.FallMovieCount,
-		UnchangedMovieCount: source.UnchangedMovieCount, SourceChecksum: source.SourceChecksum,
+		SourceChecksum: source.SourceChecksum, FetchedOn: source.FetchedAt, SyncedOn: source.SyncedAt,
 		CalculatedOn: source.CalculatedOn, CreatedOn: source.CreatedOn, UpdatedOn: source.UpdatedOn,
 	}
 }
@@ -449,82 +399,7 @@ func mapRankDayStat(row modelg.RankDayStat) contracts.DailyBestRankDayStat {
 		RankRowCount: row.RankRowCount, MovieCount: row.MovieCount,
 		ContinuedMovieCount: row.ContinuedMovieCount, FirstSeenMovieCount: row.FirstSeenMovieCount,
 		ReturningMovieCount: row.ReturningMovieCount, DroppedMovieCount: row.DroppedMovieCount,
-		RiseMovieCount: row.RiseMovieCount, FallMovieCount: row.FallMovieCount,
-		UnchangedMovieCount: row.UnchangedMovieCount, SourceChecksum: row.SourceChecksum,
+		SourceChecksum: row.SourceChecksum, FetchedAt: row.FetchedOn, SyncedAt: row.SyncedOn,
 		CalculatedOn: row.CalculatedOn, CreatedOn: row.CreatedOn, UpdatedOn: row.UpdatedOn,
-	}
-}
-
-func rankPeriodModel(source contracts.DailyBestRankPeriod) modelg.RankPeriod {
-	return modelg.RankPeriod{
-		PeriodType: source.PeriodType, PeriodKey: source.PeriodKey, Category: source.Category,
-		StartDayNumber: source.StartDayNumber, EndDayNumber: source.EndDayNumber,
-		PickDays: source.PickDays, TopN: source.TopN, Status: source.Status,
-		CreatedOn: source.CreatedOn, UpdatedOn: source.UpdatedOn,
-	}
-}
-
-func mapRankPeriod(row modelg.RankPeriod) contracts.DailyBestRankPeriod {
-	return contracts.DailyBestRankPeriod{
-		ID: row.Id, PeriodType: row.PeriodType, PeriodKey: row.PeriodKey, Category: row.Category,
-		StartDayNumber: row.StartDayNumber, EndDayNumber: row.EndDayNumber,
-		PickDays: row.PickDays, TopN: row.TopN, Status: row.Status,
-		CreatedOn: row.CreatedOn, UpdatedOn: row.UpdatedOn,
-	}
-}
-
-func rankPeriodItemModel(source contracts.DailyBestRankPeriodItem) modelg.RankPeriodItem {
-	return modelg.RankPeriodItem{
-		MovieJavID: source.MovieJavID, RankPos: source.RankPos, Score: source.Score,
-		DaysInRank: source.DaysInRank, UsedPickDays: source.UsedPickDays,
-		FirstRankDayNumber: source.FirstRankDayNumber, LastRankDayNumber: source.LastRankDayNumber,
-		BestRank: source.BestRank, WorstPickedRank: source.WorstPickedRank,
-		PrevRank: source.PrevRank, RankChange: source.RankChange, PeakRank: source.PeakRank,
-		CreatedOn: source.CreatedOn, UpdatedOn: source.UpdatedOn,
-	}
-}
-
-func mapRankPeriodItem(row modelg.RankPeriodItem, movie modelg.DailyBestMovie) contracts.DailyBestRankPeriodItem {
-	return contracts.DailyBestRankPeriodItem{
-		ID: row.Id, PeriodID: row.PeriodID, MovieJavID: row.MovieJavID, Movie: movieBasic(movie),
-		RankPos: row.RankPos, Score: row.Score, DaysInRank: row.DaysInRank, UsedPickDays: row.UsedPickDays,
-		FirstRankDayNumber: row.FirstRankDayNumber, LastRankDayNumber: row.LastRankDayNumber,
-		BestRank: row.BestRank, WorstPickedRank: row.WorstPickedRank,
-		PrevRank: row.PrevRank, RankChange: row.RankChange, PeakRank: row.PeakRank,
-		CreatedOn: row.CreatedOn, UpdatedOn: row.UpdatedOn,
-	}
-}
-
-func rankPeriodStatModel(source contracts.DailyBestRankPeriodStat) modelg.RankPeriodStat {
-	return modelg.RankPeriodStat{
-		SourceRankRowCount: source.SourceRankRowCount, SourceRankDayCount: source.SourceRankDayCount,
-		SourceMovieCount: source.SourceMovieCount, MissingRankDayCount: source.MissingRankDayCount,
-		PeriodMovieCount: source.PeriodMovieCount, ContinuedMovieCount: source.ContinuedMovieCount,
-		FirstSeenMovieCount: source.FirstSeenMovieCount, ReturningMovieCount: source.ReturningMovieCount,
-		DroppedMovieCount: source.DroppedMovieCount, RiseMovieCount: source.RiseMovieCount,
-		FallMovieCount: source.FallMovieCount, UnchangedMovieCount: source.UnchangedMovieCount,
-		PeakMovieCount: source.PeakMovieCount, RankOneMovieJavID: source.RankOneMovieJavID,
-		AverageScore: source.AverageScore, AverageDaysInRank: source.AverageDaysInRank,
-		SourceFetchedStartOn: source.SourceFetchedStartOn, SourceFetchedEndOn: source.SourceFetchedEndOn,
-		SourceChecksum: source.SourceChecksum, CalculatedOn: source.CalculatedOn,
-		CreatedOn: source.CreatedOn, UpdatedOn: source.UpdatedOn,
-	}
-}
-
-func mapRankPeriodStat(row modelg.RankPeriodStat, rankOneMovie modelg.DailyBestMovie) contracts.DailyBestRankPeriodStat {
-	return contracts.DailyBestRankPeriodStat{
-		ID: row.Id, PeriodID: row.PeriodID, PrevPeriodID: row.PrevPeriodID,
-		SourceRankRowCount: row.SourceRankRowCount, SourceRankDayCount: row.SourceRankDayCount,
-		SourceMovieCount: row.SourceMovieCount, MissingRankDayCount: row.MissingRankDayCount,
-		PeriodMovieCount: row.PeriodMovieCount, ContinuedMovieCount: row.ContinuedMovieCount,
-		FirstSeenMovieCount: row.FirstSeenMovieCount, ReturningMovieCount: row.ReturningMovieCount,
-		DroppedMovieCount: row.DroppedMovieCount, RiseMovieCount: row.RiseMovieCount,
-		FallMovieCount: row.FallMovieCount, UnchangedMovieCount: row.UnchangedMovieCount,
-		PeakMovieCount: row.PeakMovieCount, RankOneMovieJavID: row.RankOneMovieJavID,
-		RankOneMovie: movieBasic(rankOneMovie),
-		AverageScore: row.AverageScore, AverageDaysInRank: row.AverageDaysInRank,
-		SourceFetchedStartOn: row.SourceFetchedStartOn, SourceFetchedEndOn: row.SourceFetchedEndOn,
-		SourceChecksum: row.SourceChecksum, CalculatedOn: row.CalculatedOn,
-		CreatedOn: row.CreatedOn, UpdatedOn: row.UpdatedOn,
 	}
 }

@@ -20,24 +20,6 @@ export const dailyBestRoutes: RouteRecordRaw[] = [
     meta: { title: "每日统计" }
   },
   {
-    path: "/rankperiodlist",
-    name: "dailybest-rank-period-list",
-    component: () => import("@/features/dailybest/pages/RankPeriodsPage.vue"),
-    meta: { title: "周期排行" }
-  },
-  {
-    path: "/rankperioditemlist",
-    name: "dailybest-rank-period-item-list",
-    component: () => import("@/features/dailybest/pages/RankPeriodItemsPage.vue"),
-    meta: { title: "周期明细" }
-  },
-  {
-    path: "/rankperiodstats",
-    name: "dailybest-rank-period-stats",
-    component: () => import("@/features/dailybest/pages/RankPeriodStatsPage.vue"),
-    meta: { title: "周期统计" }
-  },
-  {
     path: "/dailybestfetchrunlist",
     name: "dailybest-fetch-run-list",
     component: () => import("@/features/dailybest/pages/FetchRunsPage.vue"),
@@ -50,9 +32,27 @@ export const dailyBestRoutes: RouteRecordRaw[] = [
     meta: { title: "任务详情" }
   },
   {
+    path: "/dailybestfetchloglist",
+    name: "dailybest-fetch-log-list",
+    component: () => import("@/features/dailybest/pages/FetchLogsPage.vue"),
+    meta: { title: "请求日志" }
+  },
+  {
     path: "/dailybestfetch",
     name: "dailybest-fetch",
     component: () => import("@/features/dailybest/pages/FetchPage.vue"),
     meta: { title: "手动抓取" }
+  },
+  {
+    path: "/dailybestruntimestatus",
+    name: "dailybest-runtime-status",
+    component: () => import("@/features/dailybest/pages/RuntimeStatusPage.vue"),
+    meta: { title: "运行状态" }
+  },
+  {
+    path: "/dailybesttargetprobelist",
+    name: "dailybest-target-probe-list",
+    component: () => import("@/features/dailybest/pages/TargetProbesPage.vue"),
+    meta: { title: "目标站探测" }
   }
 ];

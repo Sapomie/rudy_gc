@@ -6,11 +6,12 @@
 
 - `api/`：远端 Go API、抓取任务、排名存储、同步接口和数据库迁移。
 - `web/`：远端 Vue/Vite 管理前端。
+- `deploy/docker/`：API、Browser Solver和Web的Docker部署配置。
 - `make/`：远端项目的运行与验证目标。
 
 ## 配置
 
-远端 API 配置位于 `api/config/server.yaml`，包含远端数据库、抓取时间和源站访问配置。部署前必须核对该文件中的实际连接信息和源站访问配置。
+远端API配置位于`api/config/server.yaml`，包含数据库、抓取和恢复时间、`180m`目标站探测以及FlareSolverr内部地址和会话配置。生产配置由服务器`/home/lighthouse/data/rudy_gc/remote/config/server.yaml`只读挂载。源站Cookie由服务器内Solver会话自动管理。
 
 ## 常用命令
 
@@ -21,6 +22,11 @@ make run-dev
 make migrate-api
 make verify
 make stop-all
+make docker-config
+make docker-build
+make docker-migrate
+make docker-up
+make docker-status
 ```
 
-远端 API 与前端分别监听 `0.0.0.0:5031` 和 `0.0.0.0:5032`。
+远端API与前端分别监听`0.0.0.0:5031`和`0.0.0.0:5032`。FlareSolverr只监听Docker内部网关`172.30.0.1:8191`。

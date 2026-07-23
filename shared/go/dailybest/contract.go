@@ -21,11 +21,6 @@ type DailyBestPageInfo struct {
 	PageTotal int64 `json:"page_total"`
 }
 
-type DailyBestFetchRequest struct {
-	BusinessDate string `json:"business_date"`
-	Category     int64  `json:"category"`
-}
-
 type DailyBestFetchAcceptedResponse struct {
 	RunID   int64  `json:"run_id"`
 	Status  string `json:"status"`
@@ -88,10 +83,9 @@ type DailyBestRankDayStat struct {
 	FirstSeenMovieCount int64  `json:"first_seen_movie_count"`
 	ReturningMovieCount int64  `json:"returning_movie_count"`
 	DroppedMovieCount   int64  `json:"dropped_movie_count"`
-	RiseMovieCount      int64  `json:"rise_movie_count"`
-	FallMovieCount      int64  `json:"fall_movie_count"`
-	UnchangedMovieCount int64  `json:"unchanged_movie_count"`
 	SourceChecksum      string `json:"source_checksum"`
+	FetchedAt           int64  `json:"fetched_at"`
+	SyncedAt            int64  `json:"synced_at"`
 	CalculatedOn        int64  `json:"calculated_on"`
 	CreatedOn           int64  `json:"created_on"`
 	UpdatedOn           int64  `json:"updated_on"`
@@ -102,97 +96,29 @@ type DailyBestRankDayStatListResponse struct {
 	PageInfo *DailyBestPageInfo     `json:"page_info,omitempty"`
 }
 
-type DailyBestRankPeriod struct {
-	ID             int64  `json:"id"`
-	PeriodType     int64  `json:"period_type"`
-	PeriodKey      string `json:"period_key"`
-	Category       int64  `json:"category"`
-	StartDayNumber int64  `json:"start_day_number"`
-	EndDayNumber   int64  `json:"end_day_number"`
-	PickDays       int64  `json:"pick_days"`
-	TopN           int64  `json:"top_n"`
-	Status         int64  `json:"status"`
-	CreatedOn      int64  `json:"created_on"`
-	UpdatedOn      int64  `json:"updated_on"`
+type DailyBestRankDayCategory struct {
+	FetchRunID int64  `json:"fetch_run_id"`
+	Category   int64  `json:"category"`
+	PageCount  int64  `json:"page_count"`
+	ItemCount  int64  `json:"item_count"`
+	RankCount  int64  `json:"rank_count"`
+	Checksum   string `json:"checksum"`
+	FinishedAt int64  `json:"finished_at"`
 }
 
-type DailyBestRankPeriodListResponse struct {
-	Periods  []DailyBestRankPeriod `json:"periods"`
-	PageInfo *DailyBestPageInfo    `json:"page_info,omitempty"`
+type DailyBestRankDay struct {
+	BusinessDate string                     `json:"business_date"`
+	DayNumber    int64                      `json:"day_number"`
+	PageCount    int64                      `json:"page_count"`
+	ItemCount    int64                      `json:"item_count"`
+	RankCount    int64                      `json:"rank_count"`
+	FinishedAt   int64                      `json:"finished_at"`
+	Categories   []DailyBestRankDayCategory `json:"categories"`
 }
 
-type DailyBestRankPeriodItem struct {
-	ID                 int64               `json:"id"`
-	PeriodID           int64               `json:"period_id"`
-	MovieJavID         string              `json:"movie_jav_id"`
-	Movie              DailyBestMovieBasic `json:"movie"`
-	RankPos            int64               `json:"rank_pos"`
-	Score              float64             `json:"score"`
-	DaysInRank         int64               `json:"days_in_rank"`
-	UsedPickDays       int64               `json:"used_pick_days"`
-	FirstRankDayNumber int64               `json:"first_rank_day_number"`
-	LastRankDayNumber  int64               `json:"last_rank_day_number"`
-	BestRank           int64               `json:"best_rank"`
-	WorstPickedRank    int64               `json:"worst_picked_rank"`
-	PrevRank           int64               `json:"prev_rank"`
-	RankChange         int64               `json:"rank_change"`
-	PeakRank           int64               `json:"peak_rank"`
-	CreatedOn          int64               `json:"created_on"`
-	UpdatedOn          int64               `json:"updated_on"`
-}
-
-type DailyBestRankPeriodItemListResponse struct {
-	Items    []DailyBestRankPeriodItem `json:"items"`
-	PageInfo *DailyBestPageInfo        `json:"page_info,omitempty"`
-}
-
-type DailyBestRankPeriodStat struct {
-	ID                   int64               `json:"id"`
-	PeriodID             int64               `json:"period_id"`
-	PrevPeriodID         int64               `json:"prev_period_id"`
-	SourceRankRowCount   int64               `json:"source_rank_row_count"`
-	SourceRankDayCount   int64               `json:"source_rank_day_count"`
-	SourceMovieCount     int64               `json:"source_movie_count"`
-	MissingRankDayCount  int64               `json:"missing_rank_day_count"`
-	PeriodMovieCount     int64               `json:"period_movie_count"`
-	ContinuedMovieCount  int64               `json:"continued_movie_count"`
-	FirstSeenMovieCount  int64               `json:"first_seen_movie_count"`
-	ReturningMovieCount  int64               `json:"returning_movie_count"`
-	DroppedMovieCount    int64               `json:"dropped_movie_count"`
-	RiseMovieCount       int64               `json:"rise_movie_count"`
-	FallMovieCount       int64               `json:"fall_movie_count"`
-	UnchangedMovieCount  int64               `json:"unchanged_movie_count"`
-	PeakMovieCount       int64               `json:"peak_movie_count"`
-	RankOneMovieJavID    string              `json:"rank_one_movie_jav_id"`
-	RankOneMovie         DailyBestMovieBasic `json:"rank_one_movie"`
-	AverageScore         float64             `json:"average_score"`
-	AverageDaysInRank    float64             `json:"average_days_in_rank"`
-	SourceFetchedStartOn int64               `json:"source_fetched_start_on"`
-	SourceFetchedEndOn   int64               `json:"source_fetched_end_on"`
-	SourceChecksum       string              `json:"source_checksum"`
-	CalculatedOn         int64               `json:"calculated_on"`
-	CreatedOn            int64               `json:"created_on"`
-	UpdatedOn            int64               `json:"updated_on"`
-}
-
-type DailyBestRankPeriodStatListResponse struct {
-	Stats    []DailyBestRankPeriodStat `json:"stats"`
-	PageInfo *DailyBestPageInfo        `json:"page_info,omitempty"`
-}
-
-type DailyBestRankSyncManifest struct {
-	FetchRunID   int64  `json:"fetch_run_id"`
-	BusinessDate string `json:"business_date"`
-	DayNumber    int64  `json:"day_number"`
-	Category     int64  `json:"category"`
-	PageCount    int64  `json:"page_count"`
-	ItemCount    int64  `json:"item_count"`
-	Checksum     string `json:"checksum"`
-	FinishedAt   int64  `json:"finished_at"`
-}
-
-type DailyBestRankSyncManifestListResponse struct {
-	Manifests []DailyBestRankSyncManifest `json:"manifests"`
+type DailyBestRankDayListResponse struct {
+	Days     []DailyBestRankDay `json:"days"`
+	PageInfo *DailyBestPageInfo `json:"page_info,omitempty"`
 }
 
 type DailyBestAPIError struct {

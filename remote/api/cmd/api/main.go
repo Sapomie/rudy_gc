@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -37,7 +38,7 @@ func main() {
 	}
 	defer func() {
 		if err := deps.Close(); err != nil {
-			log.Printf("DailyBest 远端服务关闭数据库失败: %v", err)
+			log.Printf("DailyBest 远端服务关闭依赖失败: %v", err)
 		}
 	}()
 	if err := modelg.AutoMigrate(deps.DB); err != nil {
@@ -46,12 +47,24 @@ func main() {
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	dailyBestSvc := dailybestservice.New(rootCtx, deps.DailyBestRepository, deps.DailyBestSource, deps.Location)
-	if err := dailyBestSvc.EnsureRankProjection(rootCtx); err != nil {
+	dailyBestSvc := dailybestservice.New(rootCtx, deps.DailyBestRepository, deps.DailyBestSource, deps.Location, deps.DailyBestBrowser)
+	if err := dailyBestSvc.PrepareRuntime(rootCtx); err != nil {
+		log.Fatalf("DailyBest 远端服务准备运行状态失败: %v", err)
+	}
+	if err := dailyBestSvc.EnsureRankDayStats(rootCtx); err != nil {
 		log.Fatalf("DailyBest 远端服务重建排名派生数据失败: %v", err)
 	}
-	if err := dailyBestSvc.StartScheduler(rootCtx, cfg.DailyFetchTime, cfg.FetchOnStart); err != nil {
+	if err := dailyBestSvc.StartScheduler(rootCtx, cfg.DailyFetchTime); err != nil {
 		log.Fatalf("DailyBest 远端服务启动定时任务失败: %v", err)
+	}
+	if err := dailyBestSvc.StartFailureRecovery(rootCtx, cfg.FailureRetryDuration()); err != nil {
+		log.Fatalf("DailyBest 远端服务启动失败恢复任务失败: %v", err)
+	}
+	if err := dailyBestSvc.StartTargetProbeScheduler(rootCtx, cfg.TargetProbeDuration(), cfg.TargetProbe.URL); err != nil {
+		log.Fatalf("DailyBest 远端服务启动目标站探测失败: %v", err)
+	}
+	if err := dailyBestSvc.StartBrowserMonitor(rootCtx, parseDuration(cfg.BrowserMonitorInterval)); err != nil {
+		log.Fatalf("DailyBest 远端服务启动浏览器监控失败: %v", err)
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -74,4 +87,9 @@ func main() {
 		log.Printf("DailyBest 远端服务关闭 HTTP 失败: %v", err)
 	}
 	dailyBestSvc.Wait()
+}
+
+func parseDuration(value string) time.Duration {
+	duration, _ := time.ParseDuration(strings.TrimSpace(value))
+	return duration
 }
