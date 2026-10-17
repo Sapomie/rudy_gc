@@ -580,3 +580,26 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.source-config-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.source-config-field input {
+  width: 100%;
+  height: 34px;
+  font-size: 13px;
+}
+
+.source-config-field input:hover,
+.source-config-field input:active {
+  border-color: var(--remote-list-primary);
+}
+
+.source-config-field input:disabled {
+  background: var(--paper-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}

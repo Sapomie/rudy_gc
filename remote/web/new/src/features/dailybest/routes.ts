@@ -2,6 +2,12 @@ import type { RouteRecordRaw } from "vue-router";
 
 export const dailyBestRoutes: RouteRecordRaw[] = [
   {
+    path: "/dailybestsourceconfig",
+    name: "dailybest-source-config",
+    component: () => import("@/features/dailybest/pages/SourceConfigPage.vue"),
+    meta: { title: "站点配置" }
+  },
+  {
     path: "/dailybestoverview",
     name: "dailybest-overview",
     component: () => import("@/features/dailybest/pages/OverviewPage.vue"),

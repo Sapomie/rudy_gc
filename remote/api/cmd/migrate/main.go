@@ -46,6 +46,9 @@ func main() {
 		log.Fatalf("DailyBest 远端时区加载失败: %v", err)
 	}
 	service := dailybestservice.New(context.Background(), dailybestremotex.New(db), nil, loc)
+	if err := service.PrepareSourceConfig(context.Background(), cfg.Source.JavAddress); err != nil {
+		log.Fatalf("DailyBest 远端站点配置迁移失败: %v", err)
+	}
 	if err := service.EnsureRankDayStats(context.Background()); err != nil {
 		log.Fatalf("DailyBest 远端排名派生数据重建失败: %v", err)
 	}

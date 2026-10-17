@@ -4,6 +4,22 @@
 
 进程检查使用`GET /healthz`，数据库和Browser Solver就绪检查使用`GET /readyz`。这些接口供人工排查和运行状态页面使用。业务接口统一位于`/api/v1/dailybest`。
 
+## 站点配置
+
+```http
+GET /api/v1/dailybest/source-config
+PUT /api/v1/dailybest/source-config
+Content-Type: application/json
+
+{"jav_address":"www.c97k.com"}
+```
+
+查询和保存均返回 `jav_address`、`target_probe_url`、`created_on`、`updated_on`。域名填写时省略协议、端口和路径；无效输入返回 HTTP 400，错误码为 `invalid_source_config`。配置尚未创建时查询返回空域名和零时间，页面可直接完成首次保存。
+
+域名保存在远端 `d_dailybest_source_config` 表中，探测地址由同一域名生成。API 启动或迁移时，仅在数据库配置缺失且旧 YAML 的 `Source.JavAddress` 非空时首次导入；后续重启保留数据库中的修改。每轮抓取开始时读取域名并用于该轮全部分页，每次探测读取当前域名；保存后下一轮生效，无需重启。
+
+Remote 页面入口为 `/dailybestsourceconfig`，Local 页面入口为 `/remotedailybestsourceconfig`。Local 通过现有 `/remote-api` 转发通道调用同一远端接口。
+
 ## 本地同步
 
 ```http

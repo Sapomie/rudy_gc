@@ -16,7 +16,12 @@ const probeTargetURL = "https://www.c97k.com/cn/vl_bestrated.php?&mode=&page=1"
 type targetProbeRepository struct {
 	Repository
 	RuntimeRepository
+	SourceConfigRepository
 	completed chan dailybesttypes.TargetProbeResult
+}
+
+func (r *targetProbeRepository) FindSourceConfig(context.Context) (dailybesttypes.SourceConfig, error) {
+	return dailybesttypes.SourceConfig{JavAddress: "www.c97k.com"}, nil
 }
 
 func (r *targetProbeRepository) CreateTargetProbe(context.Context, dailybesttypes.TargetProbeDraft) (dailybesttypes.TargetProbe, error) {
@@ -48,11 +53,11 @@ func (targetProbeAgent) Status(context.Context) (browseragenttypes.Status, error
 
 func TestTargetProbeSchedulerRunsImmediately(t *testing.T) {
 	repository := &targetProbeRepository{completed: make(chan dailybesttypes.TargetProbeResult, 1)}
-	service := New(context.Background(), repository, nil, time.UTC, targetProbeAgent{})
+	service := New(context.Background(), repository, nil, time.UTC, WithAgent(targetProbeAgent{}))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := service.StartTargetProbeScheduler(ctx, time.Hour, probeTargetURL); err != nil {
+	if err := service.StartTargetProbeScheduler(ctx, time.Hour); err != nil {
 		t.Fatal(err)
 	}
 	select {

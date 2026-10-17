@@ -47,7 +47,17 @@ func main() {
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	dailyBestSvc := dailybestservice.New(rootCtx, deps.DailyBestRepository, deps.DailyBestSource, deps.Location, deps.DailyBestBrowser)
+	dailyBestSvc := dailybestservice.New(
+		rootCtx, deps.DailyBestRepository, deps.DailyBestSource, deps.Location,
+		dailybestservice.WithAgent(deps.DailyBestBrowser),
+		dailybestservice.WithNotifier(deps.Notifier, cfg.Mail.DetailBaseURL),
+		dailybestservice.WithSourceFactory(func(address string) dailybestservice.PageSource {
+			return deps.DailyBestSource.WithAddress(address)
+		}),
+	)
+	if err := dailyBestSvc.PrepareSourceConfig(rootCtx, cfg.Source.JavAddress); err != nil {
+		log.Fatalf("DailyBest 远端服务初始化站点配置失败: %v", err)
+	}
 	if err := dailyBestSvc.PrepareRuntime(rootCtx); err != nil {
 		log.Fatalf("DailyBest 远端服务准备运行状态失败: %v", err)
 	}
@@ -60,7 +70,7 @@ func main() {
 	if err := dailyBestSvc.StartFailureRecovery(rootCtx, cfg.FailureRetryDuration()); err != nil {
 		log.Fatalf("DailyBest 远端服务启动失败恢复任务失败: %v", err)
 	}
-	if err := dailyBestSvc.StartTargetProbeScheduler(rootCtx, cfg.TargetProbeDuration(), cfg.TargetProbe.URL); err != nil {
+	if err := dailyBestSvc.StartTargetProbeScheduler(rootCtx, cfg.TargetProbeDuration()); err != nil {
 		log.Fatalf("DailyBest 远端服务启动目标站探测失败: %v", err)
 	}
 	if err := dailyBestSvc.StartBrowserMonitor(rootCtx, parseDuration(cfg.BrowserMonitorInterval)); err != nil {

@@ -9,6 +9,7 @@ import (
 	"rudy_gc/remote/api/internal/config"
 	"rudy_gc/remote/api/internal/model/modelg"
 	dailybestremotex "rudy_gc/remote/api/internal/model/modelx/dailybest"
+	"rudy_gc/remote/api/internal/notify"
 	dailybestrepo "rudy_gc/remote/api/internal/repo/dailybest"
 )
 
@@ -18,10 +19,18 @@ type Dep struct {
 	DailyBestRepository *dailybestremotex.Repository
 	DailyBestBrowser    *dailybestrepo.FlareSolverrClient
 	DailyBestSource     *dailybestrepo.Source
+	Notifier            notify.Notifier
 	Location            *time.Location
 }
 
 func BuildDep(cfg config.Config) (*Dep, error) {
+	if err := cfg.Mail.Validate(); err != nil {
+		return nil, err
+	}
+	mailNotifier, err := notify.NewSMTP(cfg.Mail)
+	if err != nil {
+		return nil, err
+	}
 	db, err := modelg.NewGormDBEngine(&modelg.Config{
 		DSN:                  strings.TrimSpace(cfg.DataSource),
 		LogLevel:             strings.TrimSpace(cfg.LogursLevel),
@@ -53,7 +62,8 @@ func BuildDep(cfg config.Config) (*Dep, error) {
 		DB:                  db,
 		DailyBestRepository: repository,
 		DailyBestBrowser:    browser,
-		DailyBestSource:     dailybestrepo.NewSource(client, cfg.Source.JavAddress),
+		DailyBestSource:     dailybestrepo.NewSource(client, ""),
+		Notifier:            mailNotifier,
 		Location:            loc,
 	}, nil
 }

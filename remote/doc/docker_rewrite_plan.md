@@ -1429,3 +1429,30 @@ API启动和clearance核查：
 ```
 
 部署上传时第一次`rsync`把共享模块放到了新发布目录根部`go/`；构建开始前已经移动到要求的`shared/go/`并核对`go.mod`和Compose文件，错误目录未进入镜像、未参与迁移，也未影响运行中的旧版本。
+
+## 2026-07-28 每日抓取邮件通知生产部署
+
+### 部署结果
+
+- `remote/api`增加通用`Notifier`与SMTP STARTTLS实现；每日`08:30`自动抓取首次失败时发送告警，同一业务日期和榜单分类的恢复任务连续失败不重复发送，恢复成功后发送一次恢复邮件，手动抓取不触发通知。
+- 生产配置保留服务器既有数据库、抓取和浏览器配置，只合并完整`Mail`配置；配置权限为`600`，详情页公网地址为`http://43.134.226.247:5032`。
+- 发布源码排除`remote/api/config/server.yaml`，SMTP凭证只保存在生产配置文件及权限为`600`的部署前配置备份中。
+- 新API镜像完成构建和幂等数据库迁移，仅重建`rudy_gc_remote_api`；Web、Solver和数据库运行状态保持不变。
+
+### 验证与回滚记录
+
+```text
+阶段：每日抓取邮件通知生产部署
+执行时间：2026-07-28 13:02-13:20 Asia/Shanghai
+执行人：Codex
+目标主机：43.134.226.247
+发布版本：docker-20260728-130427
+API镜像：f1ce1c30f0c8d254a71592b0263819850bafa75541e6a4866323b13d0f028d61
+执行命令：上传独立发布目录；备份生产配置和旧API镜像；合并Mail配置；Compose校验；API镜像构建；生产迁移；仅重建remote-api；内外网健康检查；服务器内Go SMTP精确发信验证
+结果：current已切换到docker-20260728-130427；API容器运行且重启次数为0；API与Web的healthz、readyz均为200；抓取任务API和任务详情页公网访问均为200；SMTP服务器接受服务器内同一Go实现提交的测试邮件
+验证说明：容器内curl的SMTP认证协商返回Login denied；随后使用生产代码的Go SMTP实现、同一生产配置和API Docker网络精确验证成功，该curl结果未影响应用邮件链路
+回滚配置：/home/lighthouse/data/rudy_gc/remote/backups/pre-mail-notify-docker-20260728-130427/server.yaml
+回滚镜像：docker_remote-api:rollback-docker-20260728-130427
+新镜像标签：docker_remote-api:docker-20260728-130427
+遗留项：等待下一次真实08:30任务失败或恢复事件触发业务通知；不主动制造生产抓取失败
+```

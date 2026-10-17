@@ -2,7 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/mail"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,11 +20,12 @@ type Config struct {
 	BrowserMonitorInterval string
 	Source                 SourceConfig
 	TargetProbe            TargetProbeConfig
+	Mail                   MailConfig
 }
 
 type SourceConfig struct {
 	Timeout    int
-	JavAddress string
+	JavAddress string `json:",optional"` // 仅用于首次导入数据库中的站点配置。
 	Browser    BrowserClientConfig
 }
 
@@ -31,8 +35,60 @@ type BrowserClientConfig struct {
 }
 
 type TargetProbeConfig struct {
-	URL      string
 	Interval string
+}
+
+type MailConfig struct {
+	UserName      string
+	AuthCode      string
+	Host          string
+	PortStr       string
+	MailTo        string
+	SenderName    string
+	DetailBaseURL string
+}
+
+func (c MailConfig) Validate() error {
+	if err := c.ValidateSMTP(); err != nil {
+		return err
+	}
+	if err := validateHTTPURL(c.DetailBaseURL, "邮件配置 DetailBaseURL"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c MailConfig) ValidateSMTP() error {
+	if strings.TrimSpace(c.UserName) == "" {
+		return fmt.Errorf("邮件配置 UserName 不能为空")
+	}
+	if _, err := mail.ParseAddress(strings.TrimSpace(c.UserName)); err != nil {
+		return fmt.Errorf("邮件配置 UserName 必须为有效邮箱地址")
+	}
+	if strings.TrimSpace(c.AuthCode) == "" {
+		return fmt.Errorf("邮件配置 AuthCode 不能为空")
+	}
+	if strings.TrimSpace(c.Host) == "" {
+		return fmt.Errorf("邮件配置 Host 不能为空")
+	}
+	port, err := strconv.ParseUint(strings.TrimSpace(c.PortStr), 10, 16)
+	if err != nil || port == 0 {
+		return fmt.Errorf("邮件配置 PortStr 必须为有效端口")
+	}
+	if strings.TrimSpace(c.MailTo) == "" {
+		return fmt.Errorf("邮件配置 MailTo 不能为空")
+	}
+	if _, err := mail.ParseAddressList(strings.TrimSpace(c.MailTo)); err != nil {
+		return fmt.Errorf("邮件配置 MailTo 必须为有效邮箱地址")
+	}
+	if strings.TrimSpace(c.SenderName) == "" {
+		return fmt.Errorf("邮件配置 SenderName 不能为空")
+	}
+	return nil
+}
+
+func (c MailConfig) Address() string {
+	return net.JoinHostPort(strings.TrimSpace(c.Host), strings.TrimSpace(c.PortStr))
 }
 
 func (c Config) Validate() error {
@@ -57,9 +113,6 @@ func (c Config) Validate() error {
 	if _, err := positiveDuration(c.BrowserMonitorInterval, "远端服务 BrowserMonitorInterval"); err != nil {
 		return err
 	}
-	if strings.TrimSpace(c.Source.JavAddress) == "" {
-		return fmt.Errorf("远端服务 Source.JavAddress 不能为空")
-	}
 	if c.Source.Timeout <= 0 {
 		return fmt.Errorf("远端服务 Source.Timeout 必须为正整数")
 	}
@@ -69,10 +122,10 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.Source.Browser.Session) == "" {
 		return fmt.Errorf("远端服务 Source.Browser.Session 不能为空")
 	}
-	if err := validateHTTPURL(c.TargetProbe.URL, "远端服务 TargetProbe.URL"); err != nil {
+	if _, err := positiveDuration(c.TargetProbe.Interval, "远端服务 TargetProbe.Interval"); err != nil {
 		return err
 	}
-	if _, err := positiveDuration(c.TargetProbe.Interval, "远端服务 TargetProbe.Interval"); err != nil {
+	if err := c.Mail.Validate(); err != nil {
 		return err
 	}
 	return nil

@@ -14,6 +14,7 @@ import type {
   RuntimeEventFilters,
   RuntimeEventListResponse,
   RuntimeStatus,
+  SourceConfig,
   TargetProbeFilters,
   TargetProbeListResponse
 } from "@/features/dailybest/types";
@@ -58,6 +59,14 @@ export function getFetchRun(runID: number): Promise<FetchRun> {
 }
 export function startFetch(): Promise<FetchAcceptedResponse> {
   return requestJSON("/api/v1/dailybest/fetch", { method: "POST" });
+}
+
+export function getSourceConfig(): Promise<SourceConfig> {
+  return requestJSON("/api/v1/dailybest/source-config");
+}
+
+export function updateSourceConfig(javAddress: string): Promise<SourceConfig> {
+  return requestJSON("/api/v1/dailybest/source-config", { method: "PUT", body: { jav_address: javAddress } });
 }
 
 function withQuery(path: string, filters: object): string {

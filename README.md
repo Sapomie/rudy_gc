@@ -22,6 +22,29 @@ make run-remote
 make stop-local
 make stop-remote
 make verify
+make shared-mysql-bundle RELEASE_TAG=<发布版本>
 ```
 
 `make verify` 只执行测试、检查和构建，不启动服务。
+
+生产Remote使用离线镜像交付。共享MySQL单独生成和部署离线包，Remote API、Web和Solver使用独立离线包；服务器仅加载镜像并以禁止拉取、禁止构建模式启动。
+
+## 本机快捷命令
+
+本机 zsh 提供以下快捷命令：
+
+```bash
+start_rgc
+bg_rgc
+stop_rgc
+kill_rgc
+```
+
+- `start_rgc`：在前台启动本地 API 和前端。
+- `bg_rgc`：在后台启动本地 API 和前端，并将日志写入 `$HOME/tmp/rudy_gc_run_all.log`。
+- `stop_rgc`：正常终止后台进程并停止本地 API 和前端。
+- `kill_rgc`：强制终止后台进程并停止本地 API 和前端。
+
+这些快捷命令固定通过工作区根目录的公开目标 `make run-local` 和 `make stop-local` 运行。`make/workspace.mk` 负责将公开目标转发到 `local/` 内部目标；以后调整 `local/` 内部启动目标时，应同步更新该转发关系，避免本机快捷命令直接依赖内部目标。
+
+`bg_rgc` 在创建后台进程和 PID 文件前会通过 dry-run 检查 `make run-local`；公开目标缺失时直接返回错误，避免输出错误的启动成功提示。

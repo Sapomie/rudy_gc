@@ -195,3 +195,9 @@ export interface RankDayStatListResponse {
   stats: RankDayStat[];
   page_info?: PageInfo;
 }
+export interface SourceConfig {
+  jav_address: string;
+  target_probe_url: string;
+  created_on: number;
+  updated_on: number;
+}

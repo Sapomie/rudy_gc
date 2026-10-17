@@ -1,9 +1,8 @@
-version: "2.4"
-
 services:
   remote-solver:
     container_name: rudy_gc_remote_solver
-    image: ghcr.io/flaresolverr/flaresolverr@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47
+    image: ${REMOTE_SOLVER_IMAGE:?REMOTE_SOLVER_IMAGE is required}
+    pull_policy: never
     restart: unless-stopped
     network_mode: host
     environment:
@@ -20,9 +19,8 @@ services:
 
   remote-api:
     container_name: rudy_gc_remote_api
-    build:
-      context: ../../..
-      dockerfile: remote/deploy/docker/api.Dockerfile
+    image: ${REMOTE_API_IMAGE:?REMOTE_API_IMAGE is required}
+    pull_policy: never
     restart: unless-stopped
     command: ["-f", "/app/config/server.yaml"]
     environment:
@@ -30,7 +28,7 @@ services:
     ports:
       - "5031:5031"
     volumes:
-      - /home/lighthouse/data/rudy_gc/remote/config/server.yaml:/app/config/server.yaml:ro
+      - ${REMOTE_CONFIG_FILE:?REMOTE_CONFIG_FILE is required}:/app/config/server.yaml:ro
     networks:
       - remote-internal
       - mysql-infra
@@ -44,12 +42,13 @@ services:
 
   remote-web:
     container_name: rudy_gc_remote_web
-    build:
-      context: ../../..
-      dockerfile: remote/deploy/docker/web.Dockerfile
+    image: ${REMOTE_WEB_IMAGE:?REMOTE_WEB_IMAGE is required}
+    pull_policy: never
     restart: unless-stopped
     ports:
       - "5032:5032"
+    volumes:
+      - ${REMOTE_NGINX_CONFIG_FILE:?REMOTE_NGINX_CONFIG_FILE is required}:/etc/nginx/conf.d/default.conf:ro
     networks:
       - remote-internal
     depends_on:
@@ -69,4 +68,4 @@ networks:
           gateway: 172.30.0.1
   mysql-infra:
     external: true
-    name: rudy_remote_infra
+    name: rudy_shared_infra

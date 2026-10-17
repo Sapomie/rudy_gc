@@ -16,11 +16,14 @@ func (s *Service) execute(ctx context.Context, runID int64, businessDate string,
 		log.Printf("DailyBest 抓取任务 %d 标记运行失败: %v", runID, err)
 		return
 	}
-	if err := s.collectAndPublish(ctx, runID, businessDate, category); err != nil {
-		if markErr := s.repository.MarkFetchRunFailed(context.WithoutCancel(ctx), runID, time.Now().Unix(), err.Error()); markErr != nil {
-			log.Printf("DailyBest 抓取任务 %d 标记失败异常: %v；原始错误: %v", runID, markErr, err)
+	collectErr := s.collectAndPublish(ctx, runID, businessDate, category)
+	finishedAt := time.Now().Unix()
+	if collectErr != nil {
+		if markErr := s.repository.MarkFetchRunFailed(context.WithoutCancel(ctx), runID, finishedAt, collectErr.Error()); markErr != nil {
+			log.Printf("DailyBest 抓取任务 %d 标记失败异常: %v；原始错误: %v", runID, markErr, collectErr)
 		}
 	}
+	s.notifyFetchResult(context.WithoutCancel(ctx), runID, businessDate, category, triggerType, finishedAt, collectErr)
 	if triggerType == dailybesttypes.TriggerScheduled || triggerType == dailybesttypes.TriggerRecovery {
 		s.signalRecovery()
 	}

@@ -19,6 +19,8 @@ func registerRoutes(router *gin.Engine, dailyBestSvc *dailybestservice.Service) 
 	router.GET("/readyz", dailyBestAPI.Ready)
 
 	dailyBest := router.Group("/api/v1/dailybest")
+	dailyBest.GET("/source-config", dailyBestAPI.GetSourceConfig)
+	dailyBest.PUT("/source-config", dailyBestAPI.UpdateSourceConfig)
 	dailyBest.GET("/rank-days", dailyBestAPI.ListRankDays)
 	dailyBest.GET("/ranks", dailyBestAPI.ListRanks)
 	dailyBest.GET("/rank-day-stats", dailyBestAPI.ListRankDayStats)

@@ -17,3 +17,4 @@ help:
 	@echo "  make verify-remote  Verify remote project"
 	@echo "  make verify-shared  Verify shared Go modules"
 	@echo "  make verify         Verify both projects"
+	@echo "  make shared-mysql-bundle RELEASE_TAG=<tag>  Build the shared MySQL offline bundle"

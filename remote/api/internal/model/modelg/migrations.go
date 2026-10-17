@@ -11,6 +11,7 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 	if err := db.AutoMigrate(
+		new(DailyBestSourceConfig),
 		new(DailyBestFetchRun),
 		new(DailyBestFetchLog),
 		new(DailyBestRuntimeEvent),

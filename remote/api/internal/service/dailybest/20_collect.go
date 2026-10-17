@@ -11,10 +11,25 @@ import (
 )
 
 func (s *Service) collectAndPublish(ctx context.Context, runID int64, businessDate string, category int64) error {
+	source := s.source
+	if s.sourceFactory != nil {
+		config, err := s.GetSourceConfig(ctx)
+		if err != nil {
+			return fmt.Errorf("读取 DailyBest 站点配置失败: %w", err)
+		}
+		address, err := normalizeJavAddress(config.JavAddress)
+		if err != nil {
+			return err
+		}
+		source = s.sourceFactory(address)
+	}
+	if source == nil {
+		return fmt.Errorf("DailyBest 抓取来源为空")
+	}
 	pages := make([]dailybesttypes.SourcePage, 0)
 	seenPageChecksums := make(map[string]struct{})
 	for pageNumber := int64(1); ; pageNumber++ {
-		page, err := s.source.FetchPage(ctx, runID, pageNumber)
+		page, err := source.FetchPage(ctx, runID, pageNumber)
 		if errors.Is(err, dailybesttypes.ErrBlankPage) {
 			if pageNumber == 1 {
 				return fmt.Errorf("DailyBest 第一页为空")
@@ -25,7 +40,7 @@ func (s *Service) collectAndPublish(ctx context.Context, runID int64, businessDa
 			return err
 		}
 		if _, exists := seenPageChecksums[page.Checksum]; exists {
-			return fmt.Errorf("DailyBest 第 %d 页与已有页面内容重复，停止发布", pageNumber)
+			break
 		}
 		seenPageChecksums[page.Checksum] = struct{}{}
 		pages = append(pages, page)

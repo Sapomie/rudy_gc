@@ -40,3 +40,4 @@ remote/web/new/dist/
 remote/web/new/.vite/
 remote/web/new/coverage/
 remote/web/new/*.tsbuildinfo
+remote/deploy/docker/remote-release.env

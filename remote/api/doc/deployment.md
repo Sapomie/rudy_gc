@@ -7,6 +7,7 @@
 - 远端数据库实际连接信息。
 - `0.0.0.0:5031` 服务监听地址。
 - `Asia/Shanghai` 时区、每日 `08:30` 抓取和 `1h`失败恢复。
+- SMTP 地址、端口、发件邮箱、授权码、收件邮箱、发件人名称和远端详情页公网地址。
 - API启动后立即执行一次目标站探测，完成后按`180m`周期继续探测。
 - FlareSolverr内部地址、持久会话名和页面请求超时。
 
@@ -28,6 +29,7 @@ make migrate-api
 - `d_dailybest_runtime_event`
 - `d_dailybest_target_probe`
 - `d_dailybest_movie`
+- `d_dailybest_source_config`
 - `c_rank`
 - `c_rank_day_stat`
 
@@ -39,18 +41,23 @@ make migrate-api
 
 ## 生产目录
 
-Docker版远端服务使用以下目录：
+Docker版远端服务与共享MySQL使用以下目录：
 
 ```text
-/home/lighthouse/data/rudy_gc/remote/
-├── releases/<Docker版本>/remote/
-├── releases/<Docker版本>/shared/go/
+/var/snap/docker/common/rudy_gc/remote/
+├── releases/<Docker版本>/
 ├── config/server.yaml
+└── backups/
+
+/var/snap/docker/common/rudy_infra/mysql/
+├── data/
+├── config/mysql.env
 └── backups/
 ```
 
 - `remote-solver`使用固定摘要的FlareSolverr镜像，容器使用host网络且只绑定`172.30.0.1:8191`。
-- `remote-api`监听`0.0.0.0:5031`，通过外部网络`rudy_remote_infra`连接现有MySQL容器别名`mysql`。
+- `rudy_mysql_shared`作为服务器共享基础设施独立运行，通过外部网络`rudy_shared_infra`向各Docker服务提供`mysql`网络别名。
+- `remote-api`监听`0.0.0.0:5031`，通过外部网络`rudy_shared_infra`连接共享MySQL。
 - `remote-web`监听`0.0.0.0:5032`，容器内Nginx代理`/api/`和`/readyz`到`remote-api:5031`；`/healthz`只检查Web进程。
 - 三个容器使用`restart: unless-stopped`，进程异常后由Docker重新拉起。
 - Docker不配置健康检查；`/healthz`和`/readyz`保留给人工检查和运行状态页面。
@@ -62,12 +69,45 @@ Docker版远端服务使用以下目录：
 make docker-migrate
 ```
 
+## 离线镜像交付
+
+共享MySQL和Remote应用分别生成离线包。构建机可以访问镜像仓库，生产服务器只接收归档并执行`docker load`。
+
+本机构建共享MySQL包：
+
+```bash
+make shared-mysql-bundle RELEASE_TAG=<发布版本>
+```
+
+本机构建Remote包：
+
+```bash
+cd remote
+make docker-build RELEASE_TAG=<发布版本>
+```
+
+服务器先安装共享MySQL并恢复生产数据库，再安装Remote：
+
+```bash
+scripts/install-shared-mysql.sh <MySQL离线包目录> \
+  /var/snap/docker/common/rudy_infra/mysql/config/mysql.env \
+  /var/snap/docker/common/rudy_infra/mysql/data
+
+scripts/install-remote-offline.sh \
+  <Remote离线包目录> \
+  /var/snap/docker/common/rudy_gc/remote/config/server.yaml
+```
+
+生产`server.yaml`设置为`root:1001`、权限`640`，供 API 镜像内 UID/GID `1001` 的`lighthouse`用户只读访问。安装脚本依次等待 Solver 和 API 就绪后再启动下游容器。
+
+安装脚本逐项校验SHA-256、镜像存在性和AMD64架构。Compose镜像使用`localhost/`名称和`pull_policy: never`；所有启动命令附带`--pull never --no-build`，生产服务器不访问Docker Hub或GHCR。
+
 ## 运行和检查
 
 ```bash
 cd remote
-make docker-config
-make docker-up
+make docker-config REMOTE_ENV_FILE=<发布目录>/remote-release.env
+make docker-up REMOTE_ENV_FILE=<发布目录>/remote-release.env
 ```
 
 服务启动后检查：
@@ -98,11 +138,17 @@ Source:
     Session: "rudy_gc_dailybest"
 ```
 
+每日`08:30`自动抓取首次失败时发送邮件，后续同一业务日期和榜单分类的恢复任务连续失败不重复发送；恢复任务成功后发送一次恢复邮件。手动抓取不触发邮件通知。邮件发送异常只写入服务日志，不改变抓取任务状态和失败恢复流程。
+
 ## 构建和测试
 
 ```bash
 cd remote
 make build-api
 make test-api
-make docker-build
+make docker-build RELEASE_TAG=<发布版本>
 ```
+
+## 独立运行验收
+
+部署完成后，API、Web、Solver、共享MySQL、生产配置和持久数据全部位于新服务器。生效配置和发布文件不得包含旧服务器地址；新服务器不使用旧服务器的数据库、代理、Cookie、文件、端口、SSH隧道或常驻进程。本地项目只访问`8.134.149.91`。

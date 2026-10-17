@@ -18,20 +18,17 @@ import (
 	dailybesttypes "rudy_gc/remote/api/internal/types/dailybest"
 )
 
-func (s *Service) StartTargetProbeScheduler(ctx context.Context, interval time.Duration, targetURL string) error {
+func (s *Service) StartTargetProbeScheduler(ctx context.Context, interval time.Duration) error {
 	if s.runtimeRepository == nil {
 		return fmt.Errorf("DailyBest 运行状态仓库为空")
 	}
 	if interval <= 0 {
 		return fmt.Errorf("DailyBest 目标站探测间隔必须为正数")
 	}
-	if _, err := url.ParseRequestURI(targetURL); err != nil {
-		return fmt.Errorf("DailyBest 目标站探测地址无效: %w", err)
-	}
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		s.executeTargetProbe(ctx, targetURL)
+		s.executeTargetProbe(ctx)
 		for {
 			next := time.Now().Add(interval)
 			s.runtimeMu.Lock()
@@ -45,18 +42,29 @@ func (s *Service) StartTargetProbeScheduler(ctx context.Context, interval time.D
 				}
 				return
 			case <-timer.C:
-				s.executeTargetProbe(ctx, targetURL)
+				s.executeTargetProbe(ctx)
 			}
 		}
 	}()
 	return nil
 }
 
-func (s *Service) executeTargetProbe(ctx context.Context, targetURL string) {
+func (s *Service) executeTargetProbe(ctx context.Context) {
 	if s.agent == nil {
 		log.Printf("DailyBest 目标站探测未执行: FlareSolverr 客户端为空")
 		return
 	}
+	config, err := s.GetSourceConfig(ctx)
+	if err != nil {
+		log.Printf("DailyBest 目标站探测读取站点配置失败: %v", err)
+		return
+	}
+	address, err := normalizeJavAddress(config.JavAddress)
+	if err != nil {
+		log.Printf("DailyBest 目标站探测读取域名失败: %v", err)
+		return
+	}
+	targetURL := dailybesttypes.SourcePageURL(address, 1)
 	requestID, err := targetProbeRequestID()
 	if err != nil {
 		log.Printf("DailyBest 目标站探测生成请求 ID 失败: %v", err)

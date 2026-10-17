@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"rudy_gc/remote/api/internal/notify"
 	browseragenttypes "rudy_gc/remote/api/internal/types/browseragent"
 	dailybesttypes "rudy_gc/remote/api/internal/types/dailybest"
 	contracts "rudy_gc/shared/dailybest"
@@ -62,12 +63,36 @@ type AgentClient interface {
 	Status(ctx context.Context) (browseragenttypes.Status, error)
 }
 
+type Option func(*Service)
+
+func WithSourceFactory(factory func(string) PageSource) Option {
+	return func(service *Service) {
+		service.sourceFactory = factory
+	}
+}
+
+func WithAgent(agent AgentClient) Option {
+	return func(service *Service) {
+		service.agent = agent
+	}
+}
+
+func WithNotifier(notifier notify.Notifier, detailBaseURL string) Option {
+	return func(service *Service) {
+		service.notifier = notifier
+		service.detailBaseURL = detailBaseURL
+	}
+}
+
 type Service struct {
 	repository          Repository
 	runtimeRepository   RuntimeRepository
 	schedulerRepository SchedulerRepository
 	source              PageSource
+	sourceFactory       func(string) PageSource
 	agent               AgentClient
+	notifier            notify.Notifier
+	detailBaseURL       string
 	root                context.Context
 	loc                 *time.Location
 
@@ -86,7 +111,7 @@ type Service struct {
 	browserMonitorState string
 }
 
-func New(root context.Context, repository Repository, source PageSource, loc *time.Location, agent ...AgentClient) *Service {
+func New(root context.Context, repository Repository, source PageSource, loc *time.Location, options ...Option) *Service {
 	if root == nil {
 		root = context.Background()
 	}
@@ -99,8 +124,10 @@ func New(root context.Context, repository Repository, source PageSource, loc *ti
 	}
 	service.runtimeRepository, _ = repository.(RuntimeRepository)
 	service.schedulerRepository, _ = repository.(SchedulerRepository)
-	if len(agent) > 0 {
-		service.agent = agent[0]
+	for _, option := range options {
+		if option != nil {
+			option(service)
+		}
 	}
 	return service
 }

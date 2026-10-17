@@ -8,11 +8,19 @@ BrowserMonitorInterval: "10s"
 
 Source:
   Timeout: 60
-  JavAddress: "www.c97k.com"
+  JavAddress: "www.c97k.com" # 仅在数据库配置缺失时首次导入，日常修改通过站点配置页面保存。
   Browser:
     BaseURL: "http://172.30.0.1:8191"
     Session: "rudy_gc_dailybest"
 
 TargetProbe:
-  URL: "https://www.c97k.com/cn/vl_bestrated.php?&mode=&page=1"
   Interval: "180m"
+
+Mail:
+  UserName: vavavvvaaa@qq.com
+  AuthCode: zybyncalofpibheh
+  Host: smtp.qq.com
+  PortStr: "587"
+  MailTo: vavavvvaaa@126.com
+  SenderName: Zero-GC
+  DetailBaseURL: "http://8.134.149.91:5032"

@@ -27,7 +27,8 @@ export const sidebarGroups: NavGroup[] = [
       { href: "/dailybestfetchloglist", label: "请求日志" },
       { href: "/dailybestruntimestatus", label: "运行状态" },
       { href: "/dailybesttargetprobelist", label: "目标站探测" },
-      { href: "/dailybestfetch", label: "手动抓取" }
+      { href: "/dailybestfetch", label: "手动抓取" },
+      { href: "/dailybestsourceconfig", label: "站点配置" }
     ]
   }
 ];
@@ -50,7 +51,8 @@ export const topNavGroups: NavGroup[] = [
       { href: "/dailybestfetchloglist", label: "请求日志" },
       { href: "/dailybestruntimestatus", label: "运行状态" },
       { href: "/dailybesttargetprobelist", label: "目标站探测" },
-      { href: "/dailybestfetch", label: "手动抓取" }
+      { href: "/dailybestfetch", label: "手动抓取" },
+      { href: "/dailybestsourceconfig", label: "站点配置" }
     ]
   }
 ];

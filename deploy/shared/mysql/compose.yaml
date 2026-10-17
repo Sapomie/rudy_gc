@@ -1,0 +1,24 @@
+services:
+  mysql:
+    container_name: rudy_mysql_shared
+    image: ${MYSQL_IMAGE:?MYSQL_IMAGE is required}
+    pull_policy: never
+    restart: unless-stopped
+    env_file:
+      - ${MYSQL_ENV_FILE:?MYSQL_ENV_FILE is required}
+    environment:
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - ${MYSQL_DATA_DIR:?MYSQL_DATA_DIR is required}:/var/lib/mysql
+    networks:
+      shared-infra:
+        aliases:
+          - mysql
+
+networks:
+  shared-infra:
+    external: true
+    name: rudy_shared_infra

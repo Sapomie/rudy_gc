@@ -5,6 +5,7 @@ import { dailyBestRoutes } from "./routes";
 describe("dailybest routes", () => {
   it("covers every remote data view", () => {
     expect(dailyBestRoutes.map((route) => route.path)).toEqual([
+      "/dailybestsourceconfig",
       "/dailybestoverview",
       "/ranklist",
       "/rankdaystats",
@@ -19,6 +20,7 @@ describe("dailybest routes", () => {
 
   it("uses local-style semantic route names", () => {
     expect(dailyBestRoutes.map((route) => route.name)).toEqual([
+      "dailybest-source-config",
       "dailybest-overview",
       "dailybest-rank-list",
       "dailybest-rank-day-stats",
