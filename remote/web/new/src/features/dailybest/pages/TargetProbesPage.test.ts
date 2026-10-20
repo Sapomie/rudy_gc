@@ -23,6 +23,7 @@ test("目标站探测页面首次进入只展示筛选结构且不请求接口",
   app.use(router);
   const html = await renderToString(app);
   assert.match(html, /目标站探测/);
+  assert.match(html, /立即探测/);
   assert.match(html, /尚未查询/);
   assert.match(html, /value="failed" selected/);
   assert.equal(fetchMock.mock.calls.length, 0);

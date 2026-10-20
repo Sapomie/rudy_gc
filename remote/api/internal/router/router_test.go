@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	dailybestservice "rudy_gc/remote/api/internal/service/dailybest"
+	browseragenttypes "rudy_gc/remote/api/internal/types/browseragent"
 	dailybesttypes "rudy_gc/remote/api/internal/types/dailybest"
 	contracts "rudy_gc/shared/dailybest"
 )
@@ -81,6 +82,58 @@ func (fakeRepository) FindFetchRun(context.Context, int64) (contracts.DailyBestF
 	return contracts.DailyBestFetchRun{}, nil
 }
 func (fakeRepository) Ping(context.Context) error { return nil }
+func (fakeRepository) FindSourceConfig(context.Context) (dailybesttypes.SourceConfig, error) {
+	return dailybesttypes.SourceConfig{JavAddress: "www.g102q.com"}, nil
+}
+func (fakeRepository) InsertSourceConfigIfMissing(context.Context, string) error { return nil }
+func (fakeRepository) SaveSourceConfig(_ context.Context, address string) (dailybesttypes.SourceConfig, error) {
+	return dailybesttypes.SourceConfig{JavAddress: address}, nil
+}
+func (fakeRepository) CreateTargetProbe(context.Context, dailybesttypes.TargetProbeDraft) (dailybesttypes.TargetProbe, error) {
+	return dailybesttypes.TargetProbe{ID: 41, CreatedOn: 10}, nil
+}
+func (fakeRepository) CompleteTargetProbe(context.Context, int64, dailybesttypes.TargetProbeResult) error {
+	return nil
+}
+func (fakeRepository) InterruptRunningTargetProbes(context.Context, int64, string) (int64, error) {
+	return 0, nil
+}
+func (fakeRepository) ListTargetProbes(context.Context, dailybesttypes.TargetProbeFilter) ([]dailybesttypes.TargetProbe, int64, error) {
+	return nil, 0, nil
+}
+func (fakeRepository) FindLatestTargetProbe(context.Context) (dailybesttypes.TargetProbe, error) {
+	return dailybesttypes.TargetProbe{}, dailybesttypes.ErrNotFound
+}
+func (fakeRepository) CreateRuntimeEvent(context.Context, dailybesttypes.RuntimeEventDraft) (dailybesttypes.RuntimeEvent, error) {
+	return dailybesttypes.RuntimeEvent{}, nil
+}
+func (fakeRepository) ListRuntimeEvents(context.Context, dailybesttypes.RuntimeEventFilter) ([]dailybesttypes.RuntimeEvent, int64, error) {
+	return nil, 0, nil
+}
+
+type fakeTargetProbeAgent struct {
+	started chan struct{}
+	release chan struct{}
+	result  *browseragenttypes.FetchResult
+}
+
+func (a *fakeTargetProbeAgent) Request(_ context.Context, _, target, _ string) (browseragenttypes.FetchResult, int, error) {
+	if a.started != nil {
+		close(a.started)
+		<-a.release
+	}
+	if a.result != nil {
+		return *a.result, http.StatusOK, nil
+	}
+	return browseragenttypes.FetchResult{
+		StatusCode: 200, FinalURL: target, BrowserState: browseragenttypes.StateReady,
+		Body: `<div id="rightcolumn"><div class="videothumblist"></div></div>`, StartedAt: 11, FinishedAt: 12,
+	}, http.StatusOK, nil
+}
+
+func (*fakeTargetProbeAgent) Status(context.Context) (browseragenttypes.Status, error) {
+	return browseragenttypes.Status{}, nil
+}
 
 func TestRankDayAPIIsAvailableWithoutCredentials(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -147,6 +200,74 @@ func TestManualFetchRejectsSecondActiveRun(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), `"code":"active_fetch_run_exists"`) {
 		t.Fatalf("body=%s", response.Body.String())
+	}
+}
+
+func TestManualTargetProbeReturnsCompletedRecord(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := dailybestservice.New(
+		context.Background(), fakeRepository{}, nil, time.UTC,
+		dailybestservice.WithAgent(&fakeTargetProbeAgent{}),
+	)
+	response := httptest.NewRecorder()
+	New(service).ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/v1/dailybest/target-probes", nil))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"id":41`) || !strings.Contains(response.Body.String(), `"status":"succeeded"`) {
+		t.Fatalf("body=%s", response.Body.String())
+	}
+}
+
+func TestManualTargetProbeReturnsFailedProbeAsCompletedRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := dailybestservice.New(
+		context.Background(), fakeRepository{}, nil, time.UTC,
+		dailybestservice.WithAgent(&fakeTargetProbeAgent{result: &browseragenttypes.FetchResult{
+			StatusCode: 200, FinalURL: "http://www.javlib.com/maintenance.html", BrowserState: browseragenttypes.StateReady,
+			StartedAt: 11, FinishedAt: 12,
+		}}),
+	)
+	response := httptest.NewRecorder()
+	New(service).ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/v1/dailybest/target-probes", nil))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"status":"failed"`) || !strings.Contains(response.Body.String(), `"error_type":"unexpected_final_url"`) {
+		t.Fatalf("body=%s", response.Body.String())
+	}
+}
+
+func TestManualTargetProbeRejectsConcurrentRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	agent := &fakeTargetProbeAgent{started: make(chan struct{}), release: make(chan struct{})}
+	service := dailybestservice.New(
+		context.Background(), fakeRepository{}, nil, time.UTC,
+		dailybestservice.WithAgent(agent),
+	)
+	engine := New(service)
+	firstDone := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		response := httptest.NewRecorder()
+		engine.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/v1/dailybest/target-probes", nil))
+		firstDone <- response
+	}()
+	select {
+	case <-agent.started:
+	case <-time.After(time.Second):
+		t.Fatal("首次探测未开始")
+	}
+	response := httptest.NewRecorder()
+	engine.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/v1/dailybest/target-probes", nil))
+	if response.Code != http.StatusConflict {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"code":"active_target_probe_exists"`) {
+		t.Fatalf("body=%s", response.Body.String())
+	}
+	close(agent.release)
+	if first := <-firstDone; first.Code != http.StatusCreated {
+		t.Fatalf("first status=%d body=%s", first.Code, first.Body.String())
 	}
 }
 

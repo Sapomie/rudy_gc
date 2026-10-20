@@ -29,6 +29,7 @@ func registerRoutes(router *gin.Engine, dailyBestSvc *dailybestservice.Service) 
 	dailyBest.GET("/fetch-runs/:id", dailyBestAPI.GetFetchRun)
 	dailyBest.GET("/fetch-logs", dailyBestAPI.ListFetchLogs)
 	dailyBest.GET("/target-probes", dailyBestAPI.ListTargetProbes)
+	dailyBest.POST("/target-probes", dailyBestAPI.StartTargetProbe)
 	dailyBest.GET("/runtime-status", dailyBestAPI.RuntimeStatus)
 	dailyBest.GET("/runtime-events", dailyBestAPI.ListRuntimeEvents)
 }

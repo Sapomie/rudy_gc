@@ -9,7 +9,8 @@ import {
   listTargetProbes,
   loadHealthState,
   loadRuntimeStatus,
-  startFetch
+  startFetch,
+  startTargetProbe
 } from "./api";
 
 describe("dailybest api", () => {
@@ -68,6 +69,16 @@ describe("dailybest api", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/v1/dailybest/fetch-runs/12", expect.any(Object));
     expect(fetchMock).toHaveBeenNthCalledWith(4, "/api/v1/dailybest/fetch", {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: undefined
+    });
+  });
+
+  it("starts a target probe through the target probe collection", async () => {
+    const fetchMock = responseFetch("{}");
+    await startTargetProbe();
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/dailybest/target-probes", {
       method: "POST",
       headers: { Accept: "application/json" },
       body: undefined

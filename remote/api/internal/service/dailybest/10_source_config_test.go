@@ -219,7 +219,13 @@ func TestTargetProbeReadsSavedDomainOnEveryExecution(t *testing.T) {
 		if _, err := service.UpdateSourceConfig(ctx, dailybesttypes.UpdateSourceConfigRequest{JavAddress: address}); err != nil {
 			t.Fatal(err)
 		}
-		service.executeTargetProbe(ctx)
+		probe, err := service.TriggerTargetProbe(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if probe.Status != dailybesttypes.TargetProbeStatusSucceeded {
+			t.Fatalf("probe=%+v", probe)
+		}
 		select {
 		case result := <-repository.completed:
 			if result.Status != dailybesttypes.TargetProbeStatusSucceeded {

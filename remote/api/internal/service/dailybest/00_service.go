@@ -2,6 +2,7 @@ package dailybest
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -12,8 +13,9 @@ import (
 )
 
 var (
-	ErrNotFound       = dailybesttypes.ErrNotFound
-	ErrActiveFetchRun = dailybesttypes.ErrActiveFetchRun
+	ErrNotFound          = dailybesttypes.ErrNotFound
+	ErrActiveFetchRun    = dailybesttypes.ErrActiveFetchRun
+	ErrActiveTargetProbe = errors.New("DailyBest target probe is already running")
 )
 
 type Repository interface {
@@ -98,6 +100,7 @@ type Service struct {
 
 	runMu      sync.Mutex
 	scheduleMu sync.Mutex
+	probeMu    sync.Mutex
 	runtimeMu  sync.Mutex
 	wg         sync.WaitGroup
 

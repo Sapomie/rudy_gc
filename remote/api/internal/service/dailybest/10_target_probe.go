@@ -28,7 +28,7 @@ func (s *Service) StartTargetProbeScheduler(ctx context.Context, interval time.D
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		s.executeTargetProbe(ctx)
+		s.executeScheduledTargetProbe(ctx)
 		for {
 			next := time.Now().Add(interval)
 			s.runtimeMu.Lock()
@@ -42,44 +42,55 @@ func (s *Service) StartTargetProbeScheduler(ctx context.Context, interval time.D
 				}
 				return
 			case <-timer.C:
-				s.executeTargetProbe(ctx)
+				s.executeScheduledTargetProbe(ctx)
 			}
 		}
 	}()
 	return nil
 }
 
-func (s *Service) executeTargetProbe(ctx context.Context) {
+func (s *Service) executeScheduledTargetProbe(ctx context.Context) {
+	if _, err := s.TriggerTargetProbe(ctx); err != nil {
+		log.Printf("DailyBest 目标站探测执行失败: %v", err)
+	}
+}
+
+func (s *Service) TriggerTargetProbe(ctx context.Context) (dailybesttypes.TargetProbe, error) {
+	if !s.probeMu.TryLock() {
+		return dailybesttypes.TargetProbe{}, ErrActiveTargetProbe
+	}
+	defer s.probeMu.Unlock()
+	return s.executeTargetProbe(ctx)
+}
+
+func (s *Service) executeTargetProbe(ctx context.Context) (dailybesttypes.TargetProbe, error) {
 	if s.agent == nil {
-		log.Printf("DailyBest 目标站探测未执行: FlareSolverr 客户端为空")
-		return
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 目标站探测未执行: FlareSolverr 客户端为空")
+	}
+	if s.runtimeRepository == nil {
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 运行状态仓库为空")
 	}
 	config, err := s.GetSourceConfig(ctx)
 	if err != nil {
-		log.Printf("DailyBest 目标站探测读取站点配置失败: %v", err)
-		return
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 目标站探测读取站点配置失败: %w", err)
 	}
 	address, err := normalizeJavAddress(config.JavAddress)
 	if err != nil {
-		log.Printf("DailyBest 目标站探测读取域名失败: %v", err)
-		return
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 目标站探测读取域名失败: %w", err)
 	}
 	targetURL := dailybesttypes.SourcePageURL(address, 1)
 	requestID, err := targetProbeRequestID()
 	if err != nil {
-		log.Printf("DailyBest 目标站探测生成请求 ID 失败: %v", err)
-		return
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 目标站探测生成请求 ID 失败: %w", err)
 	}
 	probe, err := s.runtimeRepository.CreateTargetProbe(ctx, dailybesttypes.TargetProbeDraft{RequestID: requestID, TargetURL: targetURL})
 	if err != nil {
-		log.Printf("DailyBest 目标站探测创建数据库记录失败，已阻止目标站请求: %v", err)
-		return
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 目标站探测创建数据库记录失败，已阻止目标站请求: %w", err)
 	}
 	result, agentHTTPStatus, requestErr := s.agent.Request(ctx, requestID, targetURL, browseragenttypes.PurposeProbe)
 	probeResult := evaluateTargetProbe(targetURL, agentHTTPStatus, result, requestErr)
 	if err := s.runtimeRepository.CompleteTargetProbe(context.WithoutCancel(ctx), probe.ID, probeResult); err != nil {
-		log.Printf("DailyBest 目标站探测 %d 更新结果失败: %v", probe.ID, err)
-		return
+		return dailybesttypes.TargetProbe{}, fmt.Errorf("DailyBest 目标站探测 %d 更新结果失败: %w", probe.ID, err)
 	}
 	completed := dailybesttypes.TargetProbe{
 		ID: probe.ID, RequestID: requestID, Status: probeResult.Status, TargetURL: targetURL,
@@ -88,6 +99,7 @@ func (s *Service) executeTargetProbe(ctx context.Context) {
 		StartedAt: probeResult.StartedAt, FinishedAt: probeResult.FinishedAt, CreatedOn: probe.CreatedOn, UpdatedOn: time.Now().Unix(),
 	}
 	s.updateTargetState(context.WithoutCancel(ctx), completed)
+	return completed, nil
 }
 
 func evaluateTargetProbe(targetURL string, agentHTTPStatus int, result browseragenttypes.FetchResult, requestErr error) dailybesttypes.TargetProbeResult {

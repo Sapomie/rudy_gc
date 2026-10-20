@@ -3,11 +3,14 @@
     class="remote-list-page"
     eyebrow="MONITOR"
     title="目标站探测"
-    note="查看真实 Chromium 对 DailyBest 目标页面的定时可访问性检查。"
+    note="查看真实 Chromium 对 DailyBest 目标页面的定时及手动可访问性检查。"
   >
     <template #actions>
+      <button class="button-primary" type="button" :disabled="probing || loading" @click="triggerTargetProbe">
+        {{ probing ? "探测中…" : "立即探测" }}
+      </button>
       <RouterLink class="button-secondary" to="/dailybestruntimestatus">查看运行状态</RouterLink>
-      <button class="button-secondary" type="button" :disabled="loading" @click="loadProbes">刷新</button>
+      <button class="button-secondary" type="button" :disabled="loading || probing" @click="loadProbes">刷新</button>
     </template>
 
     <LoadingState v-if="loading" />
@@ -105,7 +108,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useRoute, useRouter, type LocationQueryRaw } from "vue-router";
-import { DEFAULT_LIST_PAGE_SIZE, listTargetProbes } from "@/features/dailybest/api";
+import { DEFAULT_LIST_PAGE_SIZE, listTargetProbes, startTargetProbe } from "@/features/dailybest/api";
 import StatusBadge from "@/features/dailybest/components/StatusBadge.vue";
 import type { PageInfo, TargetProbe, TargetProbeFilters } from "@/features/dailybest/types";
 import EmptyState from "@/shared/components/EmptyState.vue";
@@ -126,6 +129,7 @@ const startedTo = ref("");
 const pageSizeInput = ref(String(DEFAULT_LIST_PAGE_SIZE));
 const queried = ref(false);
 const loading = ref(false);
+const probing = ref(false);
 const error = ref("");
 
 function queryValue(name: string): string {
@@ -202,6 +206,19 @@ async function loadProbes(): Promise<void> {
     error.value = errorMessage(reason);
   } finally {
     loading.value = false;
+  }
+}
+
+async function triggerTargetProbe(): Promise<void> {
+  probing.value = true;
+  error.value = "";
+  try {
+    await startTargetProbe();
+    await loadProbes();
+  } catch (reason) {
+    error.value = errorMessage(reason);
+  } finally {
+    probing.value = false;
   }
 }
 

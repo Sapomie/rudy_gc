@@ -51,6 +51,25 @@ func (targetProbeAgent) Status(context.Context) (browseragenttypes.Status, error
 	return browseragenttypes.Status{}, nil
 }
 
+type blockingTargetProbeAgent struct {
+	started chan struct{}
+	release chan struct{}
+}
+
+func (a *blockingTargetProbeAgent) Request(context.Context, string, string, string) (browseragenttypes.FetchResult, int, error) {
+	close(a.started)
+	<-a.release
+	return browseragenttypes.FetchResult{
+		StatusCode: 200, FinalURL: probeTargetURL, BrowserState: browseragenttypes.StateFetching,
+		Body:      `<html><body><div id="rightcolumn"><div class="videothumblist"></div></div></body></html>`,
+		StartedAt: 10, FinishedAt: 11,
+	}, http.StatusOK, nil
+}
+
+func (*blockingTargetProbeAgent) Status(context.Context) (browseragenttypes.Status, error) {
+	return browseragenttypes.Status{}, nil
+}
+
 func TestTargetProbeSchedulerRunsImmediately(t *testing.T) {
 	repository := &targetProbeRepository{completed: make(chan dailybesttypes.TargetProbeResult, 1)}
 	service := New(context.Background(), repository, nil, time.UTC, WithAgent(targetProbeAgent{}))
@@ -70,6 +89,29 @@ func TestTargetProbeSchedulerRunsImmediately(t *testing.T) {
 	}
 	cancel()
 	service.Wait()
+}
+
+func TestManualTargetProbeRejectsConcurrentExecution(t *testing.T) {
+	repository := &targetProbeRepository{completed: make(chan dailybesttypes.TargetProbeResult, 1)}
+	agent := &blockingTargetProbeAgent{started: make(chan struct{}), release: make(chan struct{})}
+	service := New(context.Background(), repository, nil, time.UTC, WithAgent(agent))
+	firstDone := make(chan error, 1)
+	go func() {
+		_, err := service.TriggerTargetProbe(context.Background())
+		firstDone <- err
+	}()
+	select {
+	case <-agent.started:
+	case <-time.After(time.Second):
+		t.Fatal("首次探测未开始")
+	}
+	if _, err := service.TriggerTargetProbe(context.Background()); !errors.Is(err, ErrActiveTargetProbe) {
+		t.Fatalf("err=%v", err)
+	}
+	close(agent.release)
+	if err := <-firstDone; err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestEvaluateTargetProbeSuccess(t *testing.T) {

@@ -75,9 +75,12 @@ GET /api/v1/dailybest/fetch-logs?fetch_run_id=12&page_number=3&status=failed&p=1
 GET /api/v1/dailybest/runtime-status
 GET /api/v1/dailybest/runtime-events?p=1&ps=24
 GET /api/v1/dailybest/target-probes?p=1&ps=24
+POST /api/v1/dailybest/target-probes
 ```
 
 API启动后立即通过FlareSolverr真实浏览器探测目标站一次，完成后每`180m`继续探测。每次探测写入`d_dailybest_target_probe`；API、Browser Solver和目标站状态变化写入`d_dailybest_runtime_event`。页面查询只读取运行状态和数据库记录，不会触发目标网站请求。
+
+`POST /api/v1/dailybest/target-probes`立即执行一次手动探测，完成后以HTTP 201返回完整探测记录。目标页面不可用属于已完成的探测结果，由响应中的`status`、`error_type`和`error_message`表达；已有探测正在执行时返回HTTP 409和错误码`active_target_probe_exists`。
 
 ## 写入语义
 

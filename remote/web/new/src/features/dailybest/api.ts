@@ -15,6 +15,7 @@ import type {
   RuntimeEventListResponse,
   RuntimeStatus,
   SourceConfig,
+  TargetProbe,
   TargetProbeFilters,
   TargetProbeListResponse
 } from "@/features/dailybest/types";
@@ -53,6 +54,9 @@ export function listRuntimeEvents(
 }
 export function listTargetProbes(filters: TargetProbeFilters = defaultPageQuery()): Promise<TargetProbeListResponse> {
   return requestJSON(withQuery("/api/v1/dailybest/target-probes", filters));
+}
+export function startTargetProbe(): Promise<TargetProbe> {
+  return requestJSON("/api/v1/dailybest/target-probes", { method: "POST" });
 }
 export function getFetchRun(runID: number): Promise<FetchRun> {
   return requestJSON(`/api/v1/dailybest/fetch-runs/${encodeURIComponent(runID)}`);

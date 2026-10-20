@@ -1,12 +1,14 @@
 package dailybest
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	dailybestservice "rudy_gc/remote/api/internal/service/dailybest"
 	dailybesttypes "rudy_gc/remote/api/internal/types/dailybest"
 	contracts "rudy_gc/shared/dailybest"
 )
@@ -23,6 +25,19 @@ type runtimeEventListResponse struct {
 
 func (h *DailyBestAPI) RuntimeStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, h.service.RuntimeStatus(c.Request.Context()))
+}
+
+func (h *DailyBestAPI) StartTargetProbe(c *gin.Context) {
+	probe, err := h.service.TriggerTargetProbe(c.Request.Context())
+	if err != nil {
+		if errors.Is(err, dailybestservice.ErrActiveTargetProbe) {
+			writeError(c, http.StatusConflict, "active_target_probe_exists", "当前已经存在目标站探测")
+			return
+		}
+		writeError(c, http.StatusServiceUnavailable, "target_probe_failed", err.Error())
+		return
+	}
+	c.JSON(http.StatusCreated, probe)
 }
 
 func (h *DailyBestAPI) ListTargetProbes(c *gin.Context) {
