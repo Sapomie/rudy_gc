@@ -16,6 +16,9 @@
 
 # Dependencies
 vendor/
+node_modules/
+dist/
+coverage/
 
 z_text/*
 cmd/own_tst/*
