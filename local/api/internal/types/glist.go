@@ -1,0 +1,37 @@
+// internal/types/glist.go
+package types
+
+type GList struct {
+	Id         int64
+	Name       string
+	ScName     string
+	MovieType  string
+	MovieJavId string
+	FC2MovieId int64
+	IsCome     int64
+	IsSc       int64
+	CreatedOn  int64
+	UpdatedOn  int64
+}
+
+type GSc struct {
+	Id                int64
+	Name              string
+	MovieNumber       int64
+	ScTime            int64
+	Kind              string
+	ComeMovieName     string
+	Cooldown          int64
+	DurationMinutes   int64 // 分钟
+	Fg                string
+	Vessel            string
+	MovieCast         string
+	MovieCastPersonID int64
+	Remarks           string
+	ImagePath         string
+	KindOptionID      int64
+	FGOptionID        int64
+	VesselOptionID    int64
+	CreatedOn         int64
+	UpdatedOn         int64
+}

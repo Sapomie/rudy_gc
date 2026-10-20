@@ -1,0 +1,256 @@
+package media
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"time"
+
+	"rudy_gc/local/api/internal/consts"
+	"rudy_gc/local/api/internal/model/modelx/moviex"
+	"rudy_gc/local/api/pkg/filetool"
+)
+
+type MoveWMediaResult struct {
+	MovieJavId string `json:"movie_jav_id"`
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+	Ok         bool   `json:"ok"`
+	Error      string `json:"error"`
+}
+
+type MoveFC2MediaResult struct {
+	FC2Key     string `json:"fc2_key"`
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+	Ok         bool   `json:"ok"`
+	Error      string `json:"error"`
+}
+
+func (s *Service) MoveWMediaToRemovedDeferRefresh(ctx context.Context, javId string) (*MoveWMediaResult, error) {
+	result, _, _, err := s.moveWMediaToRemoved(ctx, javId)
+	return result, err
+}
+
+func (s *Service) moveWMediaToRemoved(ctx context.Context, javId string) (*MoveWMediaResult, *moviex.WMedia, *moviex.WMedia, error) {
+	javId = strings.TrimSpace(javId)
+	if javId == "" {
+		return nil, nil, nil, fmt.Errorf("movie_jav_id 为空")
+	}
+
+	row, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil, nil, nil
+		}
+		return nil, nil, nil, err
+	}
+	if row == nil {
+		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "w_media 不存在"}, nil, nil, nil
+	}
+
+	rootDir := filepath.Clean(strings.TrimSpace(row.RootDir))
+	if rootDir == "" {
+		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "root_dir 为空"}, row, nil, nil
+	}
+
+	srcPath := joinMediaPath(row.FullDir, row.FileName)
+	if strings.TrimSpace(srcPath) == "" {
+		return &MoveWMediaResult{MovieJavId: javId, Ok: false, Error: "源路径为空"}, row, nil, nil
+	}
+
+	removedDir := buildRemovedDir(rootDir)
+	if err := os.MkdirAll(removedDir, 0o755); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, Ok: false, Error: "创建 removed 目录失败: " + err.Error()}, row, nil, nil
+	}
+
+	targetPath, err := nextAvailableTargetPath(removedDir, filepath.Base(srcPath))
+	if err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, Ok: false, Error: err.Error()}, row, nil, nil
+	}
+
+	if err := moveFileWithFallback(ctx, srcPath, targetPath); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, nil, nil
+	}
+
+	now := time.Now().Unix()
+	updated := cloneWMedia(row)
+	updated.IsRemoved = consts.FilmIsRemoved
+	updated.RemoveTime = now
+	updated.UpdatedOn = now
+
+	if err := s.deps.WMediaModel.Update(ctx, updated); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
+	if err := s.refreshSHMagnetDownloadStates(ctx, updated.SourceTorrentHash); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
+	if err := s.syncPersonStatsByMovieJavIDs(ctx, updated.UpdatedOn, updated.MovieJavId); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
+	if err := s.syncJAVScMediaSnapshot(ctx, updated.MovieJavId); err != nil {
+		return &MoveWMediaResult{MovieJavId: javId, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, row, updated, nil
+	}
+
+	return &MoveWMediaResult{
+		MovieJavId: javId,
+		SourcePath: srcPath,
+		TargetPath: targetPath,
+		Ok:         true,
+	}, row, updated, nil
+}
+
+func (s *Service) MoveFC2MediaToRemoved(ctx context.Context, fc2Key string) (*MoveFC2MediaResult, error) {
+	fc2Key = strings.TrimSpace(fc2Key)
+	if fc2Key == "" {
+		return nil, fmt.Errorf("fc2_key 为空")
+	}
+
+	row, err := s.deps.FC2MediaModel.FindOneByKey(ctx, fc2Key)
+	if err != nil {
+		if errors.Is(err, moviex.ErrNotFound) {
+			return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "fc2_media 不存在"}, nil
+		}
+		return nil, err
+	}
+	if row == nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "fc2_media 不存在"}, nil
+	}
+	if row.IsRemoved == int64(consts.FilmIsRemoved) {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "fc2_media 已删除"}, nil
+	}
+
+	rootDir := strings.TrimSpace(row.RootDir)
+	if rootDir == "" {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "root_dir 为空"}, nil
+	}
+	rootDir = filepath.Clean(rootDir)
+
+	srcPath := joinMediaPath(row.FullDir, row.FileName)
+	if strings.TrimSpace(srcPath) == "" {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, Ok: false, Error: "源路径为空"}, nil
+	}
+
+	removedDir := buildRemovedDir(rootDir)
+	if err := os.MkdirAll(removedDir, 0o755); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, Ok: false, Error: "创建 removed 目录失败: " + err.Error()}, nil
+	}
+
+	targetPath, err := nextAvailableTargetPath(removedDir, filepath.Base(srcPath))
+	if err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, Ok: false, Error: err.Error()}, nil
+	}
+	if err := moveFileWithFallback(ctx, srcPath, targetPath); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+
+	now := time.Now().Unix()
+	updated := *row
+	updated.IsRemoved = int64(consts.FilmIsRemoved)
+	updated.RemoveTime = now
+	updated.UpdatedOn = now
+	if err := s.deps.FC2MediaModel.Update(ctx, &updated); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+	if err := s.refreshSHMagnetDownloadStates(ctx, updated.SourceTorrentHash); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+	if err := s.syncFC2MediaSnapshots(ctx, updated.FC2MovieID); err != nil {
+		return &MoveFC2MediaResult{FC2Key: fc2Key, SourcePath: srcPath, TargetPath: targetPath, Ok: false, Error: err.Error()}, nil
+	}
+
+	return &MoveFC2MediaResult{
+		FC2Key:     fc2Key,
+		SourcePath: srcPath,
+		TargetPath: targetPath,
+		Ok:         true,
+	}, nil
+}
+
+func (s *Service) FinalizeMoveRemovedBatch(ctx context.Context, javIds ...string) error {
+	seen := make(map[string]struct{}, len(javIds))
+	dirtyJavIDs := make([]string, 0, len(javIds))
+	for _, javId := range javIds {
+		javId = strings.TrimSpace(javId)
+		if javId == "" {
+			continue
+		}
+		if _, ok := seen[javId]; ok {
+			continue
+		}
+		seen[javId] = struct{}{}
+		dirtyJavIDs = append(dirtyJavIDs, javId)
+
+		_, err := s.deps.WMediaModel.FindOneByMovieJavIdSourceType(ctx, javId, consts.WMediaSourceNative)
+		if err != nil {
+			if errors.Is(err, moviex.ErrNotFound) {
+				continue
+			}
+			return err
+		}
+	}
+
+	if len(dirtyJavIDs) > 0 {
+		s.movieSvc.EnqueueAggRebuildByMovieJavIDs("move_removed_batch", dirtyJavIDs...)
+		s.invalidateMovieTypeCaches(ctx, dirtyJavIDs...)
+	}
+	if len(dirtyJavIDs) == 0 {
+		return nil
+	}
+	return nil
+}
+
+func buildRemovedDir(rootDir string) string {
+	rootDir = filepath.Clean(strings.TrimSpace(rootDir))
+	if rootDir == "" {
+		return ""
+	}
+	return filepath.Join(rootDir, processDirName, removedDirName)
+}
+
+func nextAvailableTargetPath(destDir, fileName string) (string, error) {
+	destDir = filepath.Clean(strings.TrimSpace(destDir))
+	fileName = strings.TrimSpace(fileName)
+	if destDir == "" {
+		return "", fmt.Errorf("目标目录为空")
+	}
+	if fileName == "" {
+		return "", fmt.Errorf("目标文件名为空")
+	}
+
+	base := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	ext := filepath.Ext(fileName)
+	for i := 1; i <= 10000; i++ {
+		candidate := fileName
+		if i > 1 {
+			candidate = fmt.Sprintf("%s_%d%s", base, i, ext)
+		}
+		path := filepath.Join(destDir, candidate)
+		_, err := os.Stat(path)
+		if err == nil {
+			continue
+		}
+		if os.IsNotExist(err) {
+			return path, nil
+		}
+		return "", fmt.Errorf("检查目标文件失败: %w", err)
+	}
+	return "", fmt.Errorf("目标文件名冲突过多: %s", fileName)
+}
+
+func moveFileWithFallback(ctx context.Context, srcPath, targetPath string) error {
+	if err := os.Rename(srcPath, targetPath); err == nil {
+		return nil
+	} else if errors.Is(err, syscall.EXDEV) {
+		if copyErr := filetool.CopyFileWithProgressCtx(ctx, srcPath, targetPath); copyErr != nil {
+			return copyErr
+		}
+		return os.Remove(srcPath)
+	} else {
+		return err
+	}
+}

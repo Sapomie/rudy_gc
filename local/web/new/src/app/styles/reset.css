@@ -1,0 +1,77 @@
+/* 由现有页面实际引用拆分，保持原规则顺序。 */
+
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #fff8fb;
+}
+
+.crawl-record-list-page .row.g-3 > * {
+  padding-top: 16px;
+}
+
+.w-agg-event-list-page .row.g-3 > * {
+  padding-top: 16px;
+}
+
+.torrent-albums-page .row.g-3 > * {
+  padding-top: 16px;
+}
+
+.d-seeds-page .row.g-2 > * {
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.casts-page-root .row.g-3 > * {
+  padding-top: 16px;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.casts-page-root .row.g-2 > * {
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.release-bucket-page-root .row.g-2 > *,
+.movie-agg-page-root .row.g-2 > *,
+.movie-agg-page-root .row.g-3 > *,
+.wdir-page-root .row.g-2 > *,
+.wdir-page-root .row.g-3 > * {
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.medias-page-root .row.g-3 > * {
+  padding-top: 16px;
+}
+
+.medias-page-root .row.g-2 > * {
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.route-movie-detail .movie-detail-page *,
+.route-movie-detail .movie-detail-page *::before,
+.route-movie-detail .movie-detail-page *::after {
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-movie-detail .movie-detail-original-page *,
+  .route-movie-detail .movie-detail-original-page *::before,
+  .route-movie-detail .movie-detail-original-page *::after {
+    transition-duration: 1ms !important;
+  }
+}

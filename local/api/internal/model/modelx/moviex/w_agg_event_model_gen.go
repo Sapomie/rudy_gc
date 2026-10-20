@@ -1,0 +1,154 @@
+package moviex
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"strings"
+
+	"github.com/zeromicro/go-zero/core/stores/builder"
+	"github.com/zeromicro/go-zero/core/stores/cache"
+	"github.com/zeromicro/go-zero/core/stores/sqlc"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/core/stringx"
+)
+
+var (
+	wAggEventFieldNames          = builder.RawFieldNames(&WAggEvent{})
+	wAggEventRows                = strings.Join(wAggEventFieldNames, ",")
+	wAggEventRowsExpectAutoSet   = strings.Join(stringx.Remove(wAggEventFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
+	wAggEventRowsWithPlaceHolder = strings.Join(stringx.Remove(wAggEventFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
+
+	cacheRudyGcWAggEventIdPrefix = "cache:rudyGc:wAggEvent:id:"
+)
+
+type (
+	wAggEventModel interface {
+		Insert(ctx context.Context, data *WAggEvent) (sql.Result, error)
+		FindOne(ctx context.Context, id int64) (*WAggEvent, error)
+		Update(ctx context.Context, data *WAggEvent) error
+		Delete(ctx context.Context, id int64) error
+	}
+
+	defaultWAggEventModel struct {
+		sqlc.CachedConn
+		table string
+	}
+
+	WAggEvent struct {
+		Id           int64  `db:"id"`
+		AggKey       string `db:"agg_key"`
+		FlowKey      string `db:"flow_key"`
+		Status       string `db:"status"`
+		ScopeCount   int64  `db:"scope_count"`
+		BucketCount  int64  `db:"bucket_count"`
+		TopCount     int64  `db:"top_count"`
+		StartedTime  int64  `db:"started_time"`
+		FinishedTime int64  `db:"finished_time"`
+		DurationMs   int64  `db:"duration_ms"`
+		ErrorMessage string `db:"error_message"`
+		CreatedTime  int64  `db:"created_time"`
+		UpdatedTime  int64  `db:"updated_time"`
+	}
+)
+
+func newWAggEventModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) *defaultWAggEventModel {
+	return &defaultWAggEventModel{
+		CachedConn: sqlc.NewConn(conn, c, opts...),
+		table:      "`w_agg_event`",
+	}
+}
+
+func (m *defaultWAggEventModel) Delete(ctx context.Context, id int64) error {
+	data, err := m.FindOne(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	wAggEventIdKey := fmt.Sprintf("%s%v", cacheRudyGcWAggEventIdPrefix, data.Id)
+	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
+		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
+		return conn.ExecCtx(ctx, query, id)
+	}, wAggEventIdKey)
+	return err
+}
+
+func (m *defaultWAggEventModel) FindOne(ctx context.Context, id int64) (*WAggEvent, error) {
+	wAggEventIdKey := fmt.Sprintf("%s%v", cacheRudyGcWAggEventIdPrefix, id)
+	var resp WAggEvent
+	err := m.QueryRowCtx(ctx, &resp, wAggEventIdKey, func(ctx context.Context, conn sqlx.SqlConn, v any) error {
+		query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", wAggEventRows, m.table)
+		return conn.QueryRowCtx(ctx, v, query, id)
+	})
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlc.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *defaultWAggEventModel) Insert(ctx context.Context, data *WAggEvent) (sql.Result, error) {
+	wAggEventIdKey := fmt.Sprintf("%s%v", cacheRudyGcWAggEventIdPrefix, data.Id)
+	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, wAggEventRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query,
+			data.AggKey,
+			data.FlowKey,
+			data.Status,
+			data.ScopeCount,
+			data.BucketCount,
+			data.TopCount,
+			data.StartedTime,
+			data.FinishedTime,
+			data.DurationMs,
+			data.ErrorMessage,
+			data.CreatedTime,
+			data.UpdatedTime,
+		)
+	}, wAggEventIdKey)
+	return ret, err
+}
+
+func (m *defaultWAggEventModel) Update(ctx context.Context, newData *WAggEvent) error {
+	data, err := m.FindOne(ctx, newData.Id)
+	if err != nil {
+		return err
+	}
+
+	wAggEventIdKey := fmt.Sprintf("%s%v", cacheRudyGcWAggEventIdPrefix, data.Id)
+	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (sql.Result, error) {
+		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, wAggEventRowsWithPlaceHolder)
+		return conn.ExecCtx(ctx, query,
+			newData.AggKey,
+			newData.FlowKey,
+			newData.Status,
+			newData.ScopeCount,
+			newData.BucketCount,
+			newData.TopCount,
+			newData.StartedTime,
+			newData.FinishedTime,
+			newData.DurationMs,
+			newData.ErrorMessage,
+			newData.CreatedTime,
+			newData.UpdatedTime,
+			newData.Id,
+		)
+	}, wAggEventIdKey)
+	return err
+}
+
+func (m *defaultWAggEventModel) formatPrimary(primary any) string {
+	return fmt.Sprintf("%s%v", cacheRudyGcWAggEventIdPrefix, primary)
+}
+
+func (m *defaultWAggEventModel) queryPrimary(ctx context.Context, conn sqlx.SqlConn, v, primary any) error {
+	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", wAggEventRows, m.table)
+	return conn.QueryRowCtx(ctx, v, query, primary)
+}
+
+func (m *defaultWAggEventModel) tableName() string {
+	return m.table
+}

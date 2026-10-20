@@ -1,8 +1,0 @@
-[submodule "api"]
-	path = local/api
-	url = /Users/gaojinwei/src/my/rudy_gc-local-git/api.git
-	branch = main
-[submodule "web"]
-	path = local/web
-	url = /Users/gaojinwei/src/my/rudy_gc-local-git/web.git
-	branch = main
