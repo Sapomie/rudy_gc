@@ -585,13 +585,17 @@
                 <ul
                   class="nav nav-tabs nav-tabs-custom mb-3 movie-resource-tabs movie-resource-tabs-compact"
                   role="tablist"
+                  aria-label="资源来源"
                 >
                   <li class="nav-item" role="presentation">
                     <button
-                      class="nav-link"
+                      class="nav-link movie-detail-tab"
                       :class="{ active: activeResourceTab === 'javbus' }"
                       id="tab-javbus-magnets"
                       type="button"
+                      role="tab"
+                      :aria-selected="activeResourceTab === 'javbus'"
+                      aria-controls="pane-javbus-magnets"
                       @click="activeResourceTab = 'javbus'"
                     >
                       <span class="movie-resource-tab-text">JavBus 磁力</span>
@@ -600,10 +604,13 @@
                   </li>
                   <li class="nav-item" role="presentation">
                     <button
-                      class="nav-link"
+                      class="nav-link movie-detail-tab"
                       :class="{ active: activeResourceTab === 'sukebei' }"
                       id="tab-sukebei-torrents"
                       type="button"
+                      role="tab"
+                      :aria-selected="activeResourceTab === 'sukebei'"
+                      aria-controls="pane-sukebei-torrents"
                       @click="activeResourceTab = 'sukebei'"
                     >
                       <span class="movie-resource-tab-text">Sukebei 种子</span>
@@ -612,10 +619,13 @@
                   </li>
                   <li class="nav-item" role="presentation">
                     <button
-                      class="nav-link"
+                      class="nav-link movie-detail-tab"
                       :class="{ active: activeResourceTab === 'sehuatang' }"
                       id="tab-sehuatang-magnets"
                       type="button"
+                      role="tab"
+                      :aria-selected="activeResourceTab === 'sehuatang'"
+                      aria-controls="pane-sehuatang-magnets"
                       @click="activeResourceTab = 'sehuatang'"
                     >
                       <span class="movie-resource-tab-text">色花堂磁力</span>
@@ -629,6 +639,7 @@
                     :class="{ 'show active': activeResourceTab === 'javbus' }"
                     id="pane-javbus-magnets"
                     role="tabpanel"
+                    aria-labelledby="tab-javbus-magnets"
                   >
                     <div v-if="!javbusRows.length" class="text-muted">暂无 JavBus 磁力数据</div>
                     <ResourceTable v-else type="javbus_magnet" :rows="javbusRows" :media-hash="mediaTorrentHash" />
@@ -638,6 +649,7 @@
                     :class="{ 'show active': activeResourceTab === 'sukebei' }"
                     id="pane-sukebei-torrents"
                     role="tabpanel"
+                    aria-labelledby="tab-sukebei-torrents"
                   >
                     <div v-if="!sukebeiRows.length" class="text-muted">暂无 Sukebei 种子数据</div>
                     <ResourceTable v-else type="sukebei_torrent" :rows="sukebeiRows" :media-hash="mediaTorrentHash" />
@@ -647,6 +659,7 @@
                     :class="{ 'show active': activeResourceTab === 'sehuatang' }"
                     id="pane-sehuatang-magnets"
                     role="tabpanel"
+                    aria-labelledby="tab-sehuatang-magnets"
                   >
                     <div v-if="!sehuatangRows.length" class="text-muted">暂无色花堂磁力数据</div>
                     <ResourceTable v-else type="sh_magnet" :rows="sehuatangRows" :media-hash="mediaTorrentHash" />

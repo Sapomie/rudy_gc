@@ -6761,6 +6761,59 @@
   margin-bottom: 0;
 }
 
+/* 资源切换沿用详情页标签，选中背景与底部标记同步显示。 */
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  margin: 0;
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+  transition: color var(--motion-fast), background-color var(--motion-fast), border-color var(--motion-fast);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab::after {
+  display: none;
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab:hover:not(:disabled) {
+  border-bottom-color: transparent;
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab:is(.active, :active):not(:disabled) {
+  border-bottom-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab.active .movie-resource-count {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-movie-detail .movie-detail-original-page .movie-resource-tabs-compact .movie-detail-tab {
+    transition: none;
+  }
+}
+
 .next02-pink-cards-page .rank-toolbar-line {
   margin: 0;
 }
