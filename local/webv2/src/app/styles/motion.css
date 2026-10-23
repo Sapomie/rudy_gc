@@ -1,0 +1,63 @@
+/* Interaction motion: short, interruptible, and disabled by the system preference. */
+:root { --ease-out: cubic-bezier(.22, 1, .36, 1); --motion-fast: 160ms; --motion-normal: 240ms; }
+.app { transition: grid-template-columns 220ms var(--ease-out); }
+.app-sidebar { transition: padding 220ms var(--ease-out); }
+.sidebar-head { transition: gap 180ms var(--ease-out), padding 220ms var(--ease-out); }
+.sidebar-collapse-button { transition: color 160ms, background 160ms, border-color 160ms, transform 220ms var(--ease-out); }
+.sidebar-collapse-button:active { transform: scale(.94); }
+.brand-wordmark, .sidenav-group-heading > span, .sidenav a > span { transition: max-width 180ms var(--ease-out), opacity 120ms, visibility 120ms; }
+.library-signature { transition: max-height 180ms var(--ease-out), padding 180ms var(--ease-out), opacity 120ms, visibility 120ms, border-color 120ms; }
+.sidenav a { transition: color 180ms, background 180ms, box-shadow 180ms; }
+.sidenav a svg { transition: transform 220ms var(--ease-out); }
+.sidenav a:hover svg { transform: translateX(2px); }
+.sidenav-group-toggle { transition: color 180ms, background 180ms; }
+.sidenav-group-chevron { transition: transform 180ms var(--ease-out); }
+.sidenav-group { transition: background 180ms, border-color 180ms; }
+.sidenav-group-panel { transition: grid-template-rows 220ms var(--ease-out), opacity 140ms, transform 180ms var(--ease-out); }
+.brand-mark { transition: box-shadow 220ms, transform 220ms var(--ease-out); }
+.brand:hover .brand-mark { transform: rotate(-6deg); box-shadow: 0 3px 9px color-mix(in srgb, var(--primary) 11%, transparent); }
+.page-enter-active { transition: opacity 200ms ease-out, transform 240ms var(--ease-out); }
+.page-leave-active { transition: opacity 80ms ease-in; pointer-events: none; }
+.page-enter-from { opacity: 0; transform: translateY(5px); }
+.page-leave-to { opacity: 0; }
+.btn { transition: background var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast) var(--ease-out); }
+.btn:active:not(:disabled) { transform: translateY(1px) scale(.97); box-shadow: none; }
+.btn.primary:hover:not(:disabled) { box-shadow: 0 3px 8px color-mix(in srgb, var(--primary) 15%, transparent); }
+.btn.active { box-shadow: inset 0 1px 0 #ffffffa6; }
+input[type=checkbox] { appearance: none; display: inline-grid; place-content: center; border: 1px solid var(--line-strong); border-radius: 4px; background: #fff; transition: background 140ms, border-color 140ms, box-shadow 140ms; }
+input[type=checkbox]::before { content: ''; width: 7px; height: 4px; border-left: 1.6px solid white; border-bottom: 1.6px solid white; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform 160ms var(--ease-out); }
+input[type=checkbox]:checked { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 7%, transparent); }
+input[type=checkbox]:checked::before { transform: translateY(-1px) rotate(-45deg) scale(1); }
+.image-card { transition: background 180ms, border-color 180ms, box-shadow 180ms; }
+.image-card:is(:hover,:focus-within) { border-color: var(--primary-border); box-shadow: 0 4px 16px color-mix(in srgb, var(--text) 5%, transparent); }
+.image-card-media img { transition: opacity 260ms ease-out, transform 420ms var(--ease-out), filter 260ms; }
+.image-card:is(:hover,:focus-within) .image-card-media img { transform: scale(1.025); }
+img[data-image-state=ready] { animation: image-reveal 280ms ease-out both; }
+@keyframes image-reveal { from { opacity: 0; } to { opacity: 1; } }
+.loading-state { position: relative; }
+.loading-state > .state-line { justify-content: flex-start; min-height: 28px; border: 0; padding: 0; margin: 0 0 12px; font-size: 11px; }
+.loading-spinner { width: 12px; height: 12px; border: 1.5px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: loading-spin 800ms linear infinite; }
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+.loading-placeholders { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px 14px; }
+.loading-placeholder { display: grid; gap: 8px; padding-bottom: 12px; }
+.loading-placeholder i, .loading-placeholder span { display: block; border-radius: 5px; background: linear-gradient(110deg, var(--soft) 20%, var(--panel-soft) 40%, var(--soft) 60%); background-size: 240% 100%; animation: skeleton-shimmer 1.6s ease-in-out infinite; }
+.loading-placeholder i { width: 100%; aspect-ratio: 3 / 2; }
+:is(.image-list-page, .album-detail-page, .people-detail-page, .category-detail-page) .loading-cards .loading-placeholder i { aspect-ratio: 2 / 3; }
+.loading-placeholder span { width: 65%; height: 10px; margin-left: 7px; }
+.loading-placeholder span:last-child { width: 40%; height: 7px; }
+.loading-rows .loading-placeholders { display: flex; flex-direction: column; gap: 0; }
+.loading-rows .loading-placeholder { display: grid; grid-template-columns: 36px 1fr 1fr; align-items: center; gap: 20px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.loading-rows .loading-placeholder i { height: 26px; aspect-ratio: auto; }
+.loading-detail .loading-placeholders { grid-template-columns: 1.5fr 1fr; }
+.loading-detail .loading-placeholder i { aspect-ratio: 4 / 3; }
+.loading-summary .loading-placeholders { display: block; }
+.loading-summary .loading-placeholder { grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: 28px 28px; align-items: center; gap: 10px 16px; padding: 14px; border: 1px solid var(--line); border-radius: 7px; }
+.loading-summary .loading-placeholder i { grid-row: 1 / 3; aspect-ratio: 1; }
+.loading-summary .loading-placeholder span { width: 200px; margin: 0; }
+.loading-summary .loading-placeholder span:last-child { width: 320px; }
+@keyframes skeleton-shimmer { to { background-position: -140% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .page-enter-from, .page-leave-to { opacity: 1; transform: none; }
+  .image-card:is(:hover,:focus-within) .image-card-media img { transform: none; }
+}

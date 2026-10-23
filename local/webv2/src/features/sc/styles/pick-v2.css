@@ -1,0 +1,41 @@
+/* 业务布局与交互状态，颜色统一引用 Rudy GC 主题变量。 */
+@layer business {
+.next02-smart-pick-page-rewrite .scpickv2-results-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.next02-smart-pick-page-rewrite .scpickv2-preview-meta {
+  overflow: hidden;
+  color: var(--sc-movie-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.next02-smart-pick-page-rewrite .scpickv2-copy-failures {
+  margin-top: 7px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 11px;
+  border-color: var(--danger-border);
+}
+
+.next02-smart-pick-page-rewrite .scpickv2-copy-failures ul {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.next02-smart-pick-page-rewrite .scpickv2-copy-failures li span {
+  display: block;
+}
+
+}

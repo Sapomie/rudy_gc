@@ -1,0 +1,53 @@
+/* Desktop composition. Every page has its own geometry; controls never grow to fill a screen. */
+.app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+.app-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; min-width: 0; height: 100vh; padding: 18px 12px 12px; border-right: 1px solid var(--line); background: var(--sidebar-bg); box-shadow: 1px 0 8px color-mix(in srgb, var(--text) 1.6%, transparent); }
+.sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; padding: 0 4px 12px; }
+.brand { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 0 4px; }
+.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--primary); border-radius: 8px; color: var(--on-primary); background: var(--primary); }
+.brand-mark svg { width: 18px; height: 18px; }
+.brand-wordmark { max-width: 120px; color: var(--text); font-size: 18px; font-weight: 650; letter-spacing: 1px; white-space: nowrap; overflow: hidden; }
+.brand-subtitle { display: block; margin-top: -2px; color: var(--muted); font-size: 8px; font-weight: 500; letter-spacing: 1.4px; }
+.sidebar-collapse-button { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--muted); }
+.sidebar-collapse-button:hover { border-color: var(--primary-border); background: var(--primary-soft); color: var(--primary-hover); }
+.sidebar-collapse-button span { font-size: 20px; line-height: 1; transform: translateY(-1px); }
+.sidenav { display: grid; align-content: start; flex: 1; min-height: 0; gap: 4px; padding: 8px 4px 16px; overflow-y: auto; scrollbar-width: thin; }
+.sidenav-group { display: grid; border: 1px solid transparent; border-radius: 7px; }
+.sidenav-group-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; padding: 6px 9px; border: 0; border-radius: 6px; background: var(--nav-group); color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; }
+.sidenav-group-toggle:hover { color: var(--primary-hover); background: var(--nav-group-active); }
+.sidenav-group-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sidenav-group-heading > span, .sidenav a > span { display: block; max-width: 150px; overflow: hidden; }
+.sidenav-group-heading svg { width: 14px; height: 14px; }
+.sidenav-group-chevron { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; font-size: 16px; line-height: 1; transform: rotate(90deg); }
+.sidenav-group-toggle[aria-expanded=false] .sidenav-group-chevron { transform: rotate(0); }
+.sidenav-group-panel { display: grid; grid-template-rows: 0fr; min-height: 0; opacity: 0; transform: translateY(-3px); }
+.sidenav-group-panel.expanded { grid-template-rows: 1fr; opacity: 1; transform: none; }
+.sidenav-group-links { display: grid; min-height: 0; gap: 2px; padding: 4px 4px 6px; overflow: hidden; }
+.sidenav a { position: relative; display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.sidenav a:hover { color: var(--primary); background: var(--primary-soft); }
+.sidenav .nav-current { color: var(--primary-hover); background: var(--primary-soft); font-weight: 600; box-shadow: inset 3px 0 0 var(--primary); }
+.sidenav svg { width: 16px; height: 16px; }
+.library-signature { flex-shrink: 0; padding: 10px 12px 2px; border-top: 1px solid var(--soft); color: var(--muted); font-size: 11px; white-space: nowrap; }
+.app.sidebar-collapsed { grid-template-columns: 68px minmax(0, 1fr); }
+.app.sidebar-collapsed .app-sidebar { padding-inline: 8px; }
+.app.sidebar-collapsed .sidebar-head { flex-direction: column; gap: 8px; padding-inline: 0; }
+.app.sidebar-collapsed .brand { justify-content: center; padding-inline: 0; }
+.app.sidebar-collapsed .brand-wordmark,
+.app.sidebar-collapsed .sidenav-group-heading > span,
+.app.sidebar-collapsed .sidenav a > span { max-width: 0; opacity: 0; visibility: hidden; }
+.app.sidebar-collapsed .sidenav { padding-inline: 0; }
+.app.sidebar-collapsed .sidenav-group-toggle,
+.app.sidebar-collapsed .sidenav a { justify-content: center; gap: 0; padding-inline: 6px; }
+.app.sidebar-collapsed .sidenav-group-heading { justify-content: center; gap: 0; }
+.app.sidebar-collapsed .sidenav-group-chevron { width: 0; opacity: 0; visibility: hidden; overflow: hidden; }
+.app.sidebar-collapsed .sidenav-group-links { padding-inline: 3px; }
+.app.sidebar-collapsed .library-signature { max-height: 0; padding-block: 0; border-color: transparent; opacity: 0; visibility: hidden; overflow: hidden; }
+.app-workspace { min-width: 0; }
+#main-content { padding: 0 28px; }
+.page-shell { min-width: 0; padding-bottom: 32px; }
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 66px; padding: 14px 0; }
+.page-head h1 { margin: 0; font-size: 21px; line-height: 1.4; font-weight: 650; letter-spacing: -.5px; }
+.page-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.heading-meta { display: flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 11px; }
+.heading-meta strong { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text); }
+/* 筛选区采用参考图库的细分隔线。 */
+.photo-filter-panel { padding: 0 0 12px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }

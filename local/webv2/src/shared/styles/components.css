@@ -1,0 +1,92 @@
+/* 可跨页面复用的控件、数据展示和反馈样式。 */
+label, .textarea-label, .form-field { display: grid; gap: 6px; color: var(--muted); font-size: 11px; }
+textarea { height: auto; resize: vertical; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-shrink: 0; min-height: 32px; padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--control-radius); background: var(--panel); color: var(--text); font-size: 12px; font-weight: 500; line-height: 20px; white-space: nowrap; transition: background .15s, border-color .15s, box-shadow .15s; }
+.btn:hover:not(:disabled) { background: var(--soft); border-color: var(--primary-border); }
+.btn:disabled { opacity: .42; }
+.btn.primary { border-color: var(--primary); color: var(--on-primary); background: var(--primary); box-shadow: 0 1px 2px color-mix(in srgb, var(--primary) 8%, transparent); }
+.btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn.danger { color: var(--danger); background: transparent; border-color: transparent; }
+.btn.danger:hover:not(:disabled) { background: var(--danger-soft); border-color: #e7c6bf; }
+.btn.success { color: var(--success); border-color: var(--line); }
+.btn.info { color: var(--info); }
+.btn.warning { background: var(--warn-soft); color: var(--warn); }
+.btn.compact { min-height: 28px; padding: 3px 8px; font-size: 12px; }
+.btn.active { color: var(--primary); background: var(--primary-soft); border-color: var(--primary-border); opacity: 1; }
+.badge-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.badge, .status-badge { background: var(--soft); color: var(--muted); }
+.soft-badge, .status-pill { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-size: 11px; line-height: 18px; color: var(--muted); background: var(--soft); overflow-wrap: anywhere; }
+.soft-badge.primary { color: var(--primary-hover); background: var(--primary-soft); }
+.soft-badge.info, .status-pill.info { color: var(--info); background: var(--info-soft); }
+.status-pill.success { color: var(--success); background: var(--success-soft); }
+.soft-badge.warning, .status-pill.pending { color: var(--warn); background: var(--warn-soft); }
+.status-pill.warning { color: var(--warn); background: var(--warn-soft); }
+.mono { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }
+.filters, .sort-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.sort-controls .btn { border-color: transparent; background: transparent; }
+.sort-controls .btn.active { background: var(--primary-soft); border-color: var(--primary-border); }
+.pagination-total { color: var(--muted); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pagination-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; flex-shrink: 0; }
+.pagination-controls { display: flex; justify-content: flex-end; gap: 3px; }
+.pagination-controls .btn { min-height: 28px; border-color: transparent; background: transparent; }
+.pagination-controls .btn.active { background: var(--panel); border-color: var(--primary-border); color: var(--primary); box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 4.3%, transparent); }
+.page-number { min-width: 28px; font-variant-numeric: tabular-nums; }
+.page-number.ellipsis { border: 0; }
+.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); align-items: stretch; gap: 18px 14px; margin-bottom: 20px; }
+.image-card { display: flex; flex-direction: column; position: relative; min-width: 0; border: 1px solid transparent; border-radius: var(--card-radius); background: transparent; transition: border-color .15s, background .15s; }
+.image-card:hover { background: var(--panel); border-color: var(--line); }
+.image-card-media { display: block; position: relative; width: 100%; aspect-ratio: 2 / 3; background: radial-gradient(ellipse at center, var(--panel-soft), var(--media)); border-radius: 6px; overflow: hidden; }
+.image-card-media img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.image-card-empty { display: grid; place-items: center; height: 100%; min-height: 90px; color: var(--muted); font-size: 12px; }
+.image-card-body { border-radius: 0 0 6px 6px; display: flex; flex-direction: column; flex: 1; padding: 8px 7px 6px; }
+.photo-list-card-name { display: block; overflow-wrap: anywhere; font-size: 12px; font-weight: 500; line-height: 1.6; }
+.photo-list-card-name-link:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.table-link { color: var(--primary-hover); }
+.table-link:hover, .table-link:focus-visible { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.table-link:focus-visible { border-radius: 2px; outline: 2px solid color-mix(in srgb, var(--primary) 28%, transparent); outline-offset: 2px; }
+.table-scroll, .stats-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.data-table th, .data-table td { height: 30px; padding: 0 8px; border-bottom: 1px solid var(--soft); text-align: left; vertical-align: middle; line-height: 18px; white-space: nowrap; }
+.data-table th { color: var(--muted); background: var(--soft); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr:hover { background: var(--primary-soft); }
+.sort-header { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; }
+.sort-header span { color: var(--primary); }
+.data-table .prompt-select-cell { width: 38px; text-align: center; }
+.tool-panel, .prompt-section { display: grid; align-content: start; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+.tool-panel h2, .prompt-section h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.state-line { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 100px; padding: 20px; margin: 12px 0; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.state-line.error { min-height: auto; justify-content: flex-start; padding: 10px 14px; border-style: solid; border-color: #edd3ca; color: var(--danger); background: var(--danger-soft); }
+.state-line.success { min-height: auto; justify-content: flex-start; padding: 10px 14px; border-style: solid; color: var(--success); background: var(--success-soft); }
+.feedback-toast-root { position: fixed; z-index: 900; right: 16px; bottom: 16px; display: grid; justify-items: end; gap: 8px; width: min(420px, calc(100vw - 32px)); pointer-events: none; }
+.floating-feedback { display: flex; align-items: flex-start; gap: 12px; width: fit-content; max-width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 7px; background: var(--panel); color: var(--text); box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 15%, transparent); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; pointer-events: auto; }
+.floating-feedback.success { border-left-color: var(--success); }
+.floating-feedback.error { border-left-color: var(--danger); }
+.floating-feedback > span { min-width: 0; }
+.floating-feedback > button { flex: 0 0 auto; border: 0; padding: 0 2px; background: transparent; color: var(--muted); font: inherit; font-size: 17px; line-height: 1; cursor: pointer; }
+.floating-feedback > button:hover { color: var(--text); }
+.console-output, .action-output, .console-pre, .output { margin: 0; padding: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 5px; background: var(--soft); color: var(--text); white-space: pre-wrap; font: 11px/1.6 "SFMono-Regular", Consolas, monospace; }
+.error-box { padding: 10px 14px; border: 1px solid #edd3ca; border-radius: 5px; background: var(--danger-soft); color: var(--danger); }
+.confirm-dialog-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--text) 60%, transparent); backdrop-filter: blur(6px); }
+.confirm-dialog-panel { display: grid; grid-template-columns: 42px minmax(0, 1fr); width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 22px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 22px 60px color-mix(in srgb, var(--text) 22%, transparent); }
+.confirm-dialog-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--primary); background: var(--primary-soft); }
+.confirm-dialog-icon svg { width: 17px; height: 17px; }
+.confirm-dialog-danger .confirm-dialog-icon { color: var(--danger); background: var(--danger-soft); }
+.confirm-dialog-content { min-width: 0; }
+.confirm-dialog-content h2 { margin: 3px 0 10px; color: var(--text); font-size: 17px; font-weight: 650; line-height: 1.35; }
+.confirm-dialog-description { display: grid; gap: 6px; color: var(--text); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.confirm-dialog-description p { margin: 0; }
+.confirm-dialog-description .confirm-dialog-detail { color: var(--muted); font-size: 12px; }
+.confirm-dialog-description .confirm-dialog-impact { display: flex; align-items: flex-start; gap: 7px; margin-top: 8px; padding: 9px 10px; border: 1px solid #e7c6bf; border-radius: 6px; color: var(--danger); background: var(--danger-soft); font-size: 12px; font-weight: 600; line-height: 1.55; }
+.confirm-dialog-impact svg { flex: 0 0 15px; width: 15px; height: 15px; margin-top: 2px; }
+.confirm-dialog-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.confirm-dialog-actions .btn { min-width: 76px; }
+.confirm-dialog-confirm.default { border-color: var(--primary); color: var(--on-primary); background: var(--primary); }
+.confirm-dialog-confirm.default:hover:not(:disabled) { background: var(--primary-hover); }
+.confirm-dialog-confirm.danger { border-color: var(--danger); color: #fff; background: var(--danger); }
+.confirm-dialog-confirm.danger:hover:not(:disabled) { border-color: #a84435; color: #fff; background: #a84435; }
+.confirm-dialog-enter-active, .confirm-dialog-leave-active { transition: opacity .16s ease; }
+.confirm-dialog-enter-active .confirm-dialog-panel, .confirm-dialog-leave-active .confirm-dialog-panel { transition: transform .16s ease, opacity .16s ease; }
+.confirm-dialog-enter-from, .confirm-dialog-leave-to { opacity: 0; }
+.confirm-dialog-enter-from .confirm-dialog-panel, .confirm-dialog-leave-to .confirm-dialog-panel { opacity: 0; transform: translateY(8px) scale(.985); }

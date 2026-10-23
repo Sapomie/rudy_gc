@@ -1,0 +1,115 @@
+@layer business {
+
+/* Preserve the original final cascade after feature styles are split. */
+.app-shell .smart-pick-date-input.smart-pick-date-input {
+  height: 26px;
+  min-height: 26px;
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: var(--panel);
+  color: var(--sc-movie-ink, var(--text));
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.app-shell:is(
+    .route-triggers-dailybest,
+    .route-triggers-seeds,
+    .route-triggers-post-process,
+    .route-triggers-backfill,
+    .route-triggers-fetch-site
+  )
+  .next02-pink-trigger-page-root {
+  overflow-y: clip;
+}
+
+.app-shell:is(
+    .route-triggers-fetch-sehuatang-sh,
+    .route-triggers-fetch-sehuatang-sh-thread-list,
+    .route-triggers-fetch-sehuatang-sh-thread-detail
+  )
+  .crawler-jobs-page-shell {
+  overflow-y: clip;
+}
+
+.app-shell:is(.route-records, .route-w-agg-events) .main-content {
+  padding-top: 94px;
+}
+
+.app-shell.route-aggbackfill .agg-triggers-page-shell {
+  overflow-y: clip;
+}
+
+.app-shell.route-triggers-fetch-site #fetchSiteFilterPanel .filter-panel {
+  padding: 7px;
+}
+
+.app-shell.route-triggers-fetch-site #fetchSiteFilterPanel .filter-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.app-shell.route-triggers-fetch-site #fetchSiteFilterPanel .filter-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.app-shell.route-triggers-fetch-site #fetchSiteFilterPanel .filter-field.wide {
+  grid-column: span 2;
+}
+
+.app-shell.route-triggers-fetch-site #fetchSiteFilterPanel .filter-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+/* Restore the original SH pool cascade after shared styles. */
+.app-shell.route-shpool {
+  background: var(--panel);
+}
+
+.app-shell.route-shpool .main-content {
+  background:
+    var(--panel-soft);
+}
+
+.app-shell.route-shpool .fetch-site-list-page-root {
+  color: var(--sc-movie-ink, var(--text));
+}
+
+.app-shell.route-shpool .next02-sh-filter-choice {
+  gap: 4px;
+}
+
+.app-shell.route-shpool .next02-sh-filter-choice-all {
+  margin-left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+/* Restore the original SH magnet list cascade after shared styles. */
+.app-shell.route-sh-magnets {
+  background: var(--panel);
+}
+
+.app-shell.route-sh-magnets .main-content {
+  background:
+    var(--panel-soft);
+}
+
+.app-shell.route-sh-magnets .next02-sh-filter-choice {
+  gap: 4px;
+}
+
+.app-shell.route-sh-magnets .next02-sh-filter-choice-all {
+  margin-left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+}

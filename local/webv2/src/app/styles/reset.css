@@ -1,0 +1,20 @@
+/* 页面基础与原生控件。可复用组件样式统一维护在 components.css。 */
+* { box-sizing: border-box; }
+html { background: var(--bg); scrollbar-gutter: stable; }
+body { margin: 0; color: var(--text); background: var(--bg); font: 13px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+input:not([type=checkbox]), select, textarea { min-width: 0; width: 100%; height: 32px; padding: 5px 9px; border: 1px solid var(--line); border-radius: var(--control-radius); background: var(--panel); transition: border-color .15s, box-shadow .15s; }
+input::placeholder, textarea::placeholder { color: var(--placeholder); }
+input:hover, select:hover { border-color: var(--primary-border); }
+input[type=checkbox] { width: 14px; height: 14px; margin: 0; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+input:focus-visible, select:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+::selection { background: var(--primary-border); }
+h1, h2, h3, p { overflow-wrap: anywhere; }
+h1, h2, h3 { color: var(--text); }
+svg { width: 18px; height: 18px; flex-shrink: 0; }
+.skip-link { position: fixed; top: 8px; left: 8px; z-index: 200; padding: 10px; background: var(--panel); transform: translateY(-160%); }
+.skip-link:focus { transform: none; }

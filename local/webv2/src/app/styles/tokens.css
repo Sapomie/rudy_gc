@@ -1,0 +1,56 @@
+/* 全站设计变量。新增视觉值时先在此定义，再由组件和业务页面引用。 */
+:root {
+  color-scheme: light;
+  --bg: #faf7f9;
+  --panel: #fff;
+  --panel-soft: #fcfafb;
+  --soft: #f4eef1;
+  --media: #eee8ec;
+  --text: #342d32;
+  --muted: #75636e;
+  --placeholder: #a08d98;
+  --line: #eadde4;
+  --line-strong: #ceb8c3;
+  --primary: #be4b78;
+  --primary-hover: #a53b65;
+  --primary-soft: #fbeaf1;
+  --primary-border: #e6b7ca;
+  --sidebar-bg: #f6edf2;
+  --nav-group: #eee3e9;
+  --nav-group-active: #efdae4;
+  --on-primary: #fff;
+  --danger: #b42338;
+  --danger-soft: #fde8ec;
+  --danger-border: #edb2bf;
+  --like: #e60023;
+  --like-soft: #ffe0e6;
+  --card-come-bg: #ec536c;
+  --card-times-bg: #f5b225;
+  --success: #356a4c;
+  --success-soft: #e2f3e8;
+  --success-border: #a8d0b6;
+  --info: #1d4ed8;
+  --info-soft: #eaf2ff;
+  --info-border: #b9cff8;
+  --play-no-sub: #2563eb;
+  --play-no-sub-hover: #1d4ed8;
+  --play-no-sub-soft: #eff6ff;
+  --play-no-sub-hover-soft: #dbeafe;
+  --play-no-sub-border: #bfdbfe;
+  --warn: #89632b;
+  --warn-soft: #fff0cc;
+  --warn-border: #e1bd6b;
+  --control-radius: 5px;
+  --card-radius: 7px;
+}
+
+/* 业务组件使用同一设计变量。 */
+:root {
+  --paper: var(--panel);
+  --paper-soft: var(--panel-soft);
+  --paper-blue: var(--primary-soft);
+  --line-soft: var(--soft);
+  --good: var(--success);
+  --good-soft: var(--success-soft);
+  --shadow: 0 1px 3px color-mix(in srgb, var(--text) 4.3%, transparent);
+}

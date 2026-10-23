@@ -1,0 +1,570 @@
+/* 业务布局与交互状态，颜色统一引用 Rudy GC 主题变量。 */
+@layer business {
+/* 由现有页面实际引用拆分，保持原规则顺序。 */
+
+
+button,
+input {
+  font: inherit;
+}
+
+.form-label {
+  display: inline-block;
+  color: var(--muted);
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.cast-detail-page .input-group {
+  display: flex;
+  width: 100%;
+}
+
+.cast-detail-page .input-group .btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.movie-detail-shell .form-label {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.crawl-record-list-page .form-label {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.crawl-record-list-page .form-select {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 32px 6px 12px;
+  background: var(--paper);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 20px;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+.crawl-record-list-page .form-select:focus {
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+  outline: 0;
+  box-shadow: var(--shadow);
+}
+
+.w-agg-event-list-page .form-label {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.w-agg-event-list-page .form-select {
+  padding: 6px 32px 6px 12px;
+}
+
+.torrent-albums-page .form-label {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.torrent-albums-page .form-select {
+  padding: 6px 32px 6px 12px;
+}
+
+.torrent-albums-page .form-check-input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.torrent-albums-page .form-check-input:checked {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.crawler-jobs-page-root .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crawler-jobs-page-root .form-group label {
+  display: block;
+  margin-bottom: .25rem;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.crawler-jobs-page-root .status-check-grid .form-check {
+  min-width: 150px;
+}
+
+.next02-fetch-sites-rewrite #fetchSiteEditModal .form-label {
+  color: var(--next02-fetch-sites-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-shell.route-e-items .e-items-filter-field.is-jav-id input {
+  width: 126px;
+}
+
+.app-shell.route-e-items .e-items-filter-field.is-name input {
+  width: 108px;
+}
+
+.app-shell.route-e-items .e-items-filter-field select {
+  width: 108px;
+}
+
+.app-shell.route-e-items .e-items-filter-field.is-cover select {
+  width: 126px;
+}
+
+.app-shell.route-e-items .e-items-filter-field.is-chinese select,
+.app-shell.route-e-items .e-items-filter-field.is-scan select {
+  width: 116px;
+}
+
+.app-shell.route-e-items .e-items-col-select { width: 4%; }
+
+.medias-page-root .form-label {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.medias-page-root .form-select {
+  padding-right: 32px;
+}
+
+.route-movie-detail .movie-detail-original-page .form-select {
+  border-color: var(--movie-polish-line);
+  border-radius: 7px;
+  color: var(--movie-polish-ink);
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.route-movie-detail .movie-detail-original-page :is(a, button, select, input):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  outline-offset: 2px;
+  box-shadow: var(--shadow);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-actions-cell .movie-resource-album-downloading.is-selected {
+  border-color: var(--warn);
+  background: linear-gradient(180deg, var(--warn) 0%, var(--warn) 100%);
+  color: var(--panel);
+  box-shadow:
+    0 5px 12px rgba(137, 99, 43, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-actions-cell .movie-resource-album-pending.is-selected {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: var(--on-primary);
+  box-shadow:
+    0 5px 12px color-mix(in srgb, var(--primary) 27%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-actions-cell .movie-resource-album-state.is-selected::before {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-actions-cell .movie-resource-album-downloading.is-selected:hover:not(:disabled) {
+  border-color: var(--warn);
+  background: linear-gradient(180deg, var(--warn) 0%, var(--warn) 100%);
+  color: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.route-movie-detail .movie-detail-original-page .movie-resource-actions-cell .movie-resource-album-pending.is-selected:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background: color-mix(in srgb, var(--primary-hover) 86%, var(--text));
+  color: var(--on-primary);
+  box-shadow: var(--shadow);
+}
+
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field input {
+  width: 100%;
+  min-width: 0;
+}
+
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-date-range .sehuatang-filter-field input {
+  width: 102px;
+}
+
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-cluster .sehuatang-filter-field input {
+  min-height: 30px;
+}
+
+.next02-sh-command-page .compact-field > label,
+.next02-sh-command-page .form-label {
+  margin-bottom: 6px;
+  color: var(--rewrite-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.next02-sh-command-page .status-check-grid .form-check {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 68%, transparent);
+  border-radius: 7px;
+  padding: 8px 10px 8px 36px;
+  background: var(--panel-soft);
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.next02-sh-command-page .status-check-grid .form-check:hover {
+  border-color: rgba(53, 106, 76, 0.48);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.next02-sh-command-page .form-check-input {
+  margin-top: 0;
+  margin-left: -24px;
+  border-color: color-mix(in srgb, var(--primary) 54%, transparent);
+}
+
+.next02-sh-command-page .form-check-label {
+  color: var(--rewrite-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.next02-fetch-site-command-page .compact-field > label,
+.next02-fetch-site-command-page .form-label {
+  margin-bottom: 6px;
+  color: var(--rewrite-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.next02-sh-filter-panel .form-label {
+  margin-bottom: 6px;
+  color: var(--rewrite-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-input:checked + .next02-sh-filter-choice-button,
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-all.active {
+  border-color: var(--sc-movie-primary);
+  background: var(--sc-movie-primary);
+  color: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-input:checked + .next02-sh-filter-choice-button:hover,
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-all.active:hover {
+  border-color: var(--sc-movie-primary-dark);
+  background: var(--sc-movie-primary-dark);
+  color: var(--panel);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-input:focus-visible + .next02-sh-filter-choice-button,
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-all:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow);
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-dates .next02-sh-filter-field input {
+  width: 112px;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list :is(.next02-sh-filter-choice-button, .next02-sh-filter-choice-all):hover,
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-input:checked + .next02-sh-filter-choice-button:hover,
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-choice-all.active:hover {
+  z-index: 1;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-filter-dates .next02-sh-filter-field input {
+  width: 108px;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-detail-selection-count {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-col-select { width: 3%; }
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-select-cell {
+  text-align: center;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-select-cell .form-check-input {
+  float: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  cursor: pointer;
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-select-cell .form-check-input:checked {
+  border-color: var(--sc-movie-primary);
+  background-color: var(--sc-movie-primary);
+}
+
+.app-shell.route-fetch-site-sehuatang-sh-list .next02-sh-select-cell .form-check-input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.wdir-page-shell #movieCardFilterCollapse .form-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.next02-smart-pick-rewrite .form-label {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.route-movie-detail .movie-detail-original-page :is(a, button, select, input):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+  box-shadow: var(--shadow);
+}
+
+.bucket-list-standard .bucket-filter-field .form-select {
+  padding-right: 24px;
+}
+
+.d-seeds-list-standard .d-seeds-filter-field .form-select {
+  padding-right: 24px;
+}
+
+.albums-list-standard .albums-filter-field .form-select {
+  padding-right: 24px;
+}
+
+.albums-list-standard .form-check-input {
+  width: 14px;
+  height: 14px;
+  border-color: color-mix(in srgb, var(--primary) 44%, transparent);
+  accent-color: var(--albums-pink);
+}
+
+.albums-list-standard .form-check-input:focus {
+  border-color: var(--albums-pink);
+  box-shadow: var(--shadow);
+}
+
+.next02-smart-pick-page-rewrite .smart-pick-field .form-label {
+  display: block;
+  min-height: 14px;
+  overflow: hidden;
+  margin: 0 0 2px;
+  color: var(--sc-movie-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.next02-pink-cards-page .next02-wdir-filter .form-label {
+  color: var(--pink-cards-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.app-shell:is(.route-fetch-site-javbus-list, .route-fetch-site-sukebei-list) .sehuatang-filter-query .sehuatang-filter-field.is-fetch-pool-sort select {
+  width: 100%;
+  height: 30px;
+  min-width: 0;
+  min-height: 30px;
+}
+
+.app-shell.route-records .crawl-record-type-switch .btn:focus-visible,
+.app-shell.route-records .crawl-record-filter-actions :is(.sc-event-filter-submit, .sc-event-filter-clear):focus-visible,
+.app-shell.route-records .crawl-record-page-size-field input:focus-visible,
+.app-shell.route-records .crawl-record-sort-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.app-shell.route-records .crawl-record-page-size-field input {
+  width: 66px;
+  height: 30px;
+  min-height: 30px;
+  border: 1px solid var(--sc-movie-line);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background-color: var(--panel);
+  color: var(--sc-movie-ink);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.app-shell.route-records .crawl-record-page-size-field input:focus {
+  border-color: var(--sc-movie-primary);
+  background-color: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.app-shell.route-w-agg-events .w-agg-event-filter-query .w-agg-event-filter-field input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  min-height: 30px;
+  border: 1px solid var(--sc-movie-line);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: var(--panel);
+  color: var(--sc-movie-ink);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.app-shell.route-w-agg-events .w-agg-event-filter-query .w-agg-event-filter-field input:focus {
+  border-color: var(--sc-movie-primary);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.app-shell.route-w-agg-events .w-agg-event-page-size-field input {
+  width: 66px;
+  height: 30px;
+  min-height: 30px;
+  border: 1px solid var(--sc-movie-line);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background-color: var(--panel);
+  color: var(--sc-movie-ink);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.app-shell.route-w-agg-events .w-agg-event-page-size-field input:focus {
+  border-color: var(--sc-movie-primary);
+  background-color: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.app-shell.route-w-agg-events .w-agg-event-filter-actions :is(.sc-event-filter-submit, .sc-event-filter-clear):focus-visible,
+.app-shell.route-w-agg-events .w-agg-event-filter-field input:focus-visible,
+.app-shell.route-w-agg-events .w-agg-event-page-size-field input:focus-visible,
+.app-shell.route-w-agg-events .w-agg-event-sort-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.sh-bucket-list-page .bucket-filter-field .form-select {
+  padding-right: 21px;
+}
+
+.app-shell.route-sh-magnets .sh-magnet-bucket-col-select { width: 3%; }
+
+.app-shell.route-sh-magnets .sh-magnet-selection-bar {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--primary-border) 72%, transparent);
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.app-shell.route-sh-magnets .sh-magnet-selection-count {
+  color: var(--next02-polish-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-shell .smart-pick-date-field > :is(.form-label, span):first-child {
+  display: block;
+  min-height: 14px;
+  overflow: hidden;
+  margin: 0 0 2px;
+  color: var(--sc-movie-muted, var(--primary));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .smart-pick-date-input.smart-pick-date-input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  min-height: 26px;
+  flex: 1 1 0;
+  border: 1px solid var(--sc-movie-line, var(--line));
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: var(--panel);
+  color: var(--sc-movie-ink, var(--text));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  box-shadow: none;
+  outline: 0;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.app-shell .smart-pick-date-input.smart-pick-date-input:focus {
+  border-color: var(--sc-movie-primary, var(--primary));
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.route-fc2-detail .fc2-detail-movie-layout :is(a, button, select, input):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
+  box-shadow: var(--shadow);
+}
+
+}
