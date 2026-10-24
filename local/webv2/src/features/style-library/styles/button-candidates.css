@@ -1,0 +1,452 @@
+.style-button-candidates .candidate-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.style-button-candidates .candidate-panel {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+  padding: 18px;
+}
+.style-button-candidates .candidate-panel + .candidate-panel {
+  border-left: 1px solid var(--line);
+}
+.style-button-candidates .candidate-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.style-button-candidates .candidate-letter {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  height: 30px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--control-radius);
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  font-size: 13px;
+  font-weight: 600;
+}
+.style-button-candidates :is(.candidate-panel-heading h3, .candidate-sample-group h3) {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.style-button-candidates .candidate-panel-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 18px;
+}
+.style-button-candidates .candidate-sample-group {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+.style-button-candidates .candidate-sample-group h4 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.style-button-candidates .style-library-actions {
+  gap: 6px;
+}
+.style-button-candidates .candidate-button {
+  --candidate-fill: var(--panel);
+  --candidate-ink: var(--text);
+  --candidate-border: var(--line-strong);
+  --candidate-hover-fill: var(--primary-soft);
+  --candidate-hover-ink: var(--primary-hover);
+  --candidate-hover-border: var(--primary-border);
+  --candidate-pressed-fill: var(--nav-group-active);
+  --candidate-focus: var(--primary);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 5px;
+  height: 28px;
+  min-height: 0;
+  padding: 3px 9px;
+  border: 1px solid var(--candidate-border);
+  border-radius: var(--control-radius);
+  background: var(--candidate-fill);
+  color: var(--candidate-ink);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+.style-button-candidates .candidate-button[data-tone="primary"] {
+  --candidate-fill: var(--primary);
+  --candidate-ink: var(--on-primary);
+  --candidate-border: var(--primary);
+  --candidate-hover-fill: var(--primary-hover);
+  --candidate-hover-ink: var(--on-primary);
+  --candidate-hover-border: var(--primary-hover);
+  --candidate-pressed-fill: color-mix(in srgb, var(--primary-hover) 85%, var(--text));
+}
+.style-button-candidates .candidate-button[data-tone="danger"] {
+  --candidate-ink: var(--danger);
+  --candidate-border: var(--danger-border);
+  --candidate-hover-fill: var(--danger-soft);
+  --candidate-hover-ink: var(--danger);
+  --candidate-hover-border: var(--danger);
+  --candidate-pressed-fill: var(--danger-border);
+  --candidate-focus: var(--danger);
+}
+.style-button-candidates .candidate-button[data-candidate="b"][data-tone="neutral"] {
+  --candidate-fill: var(--soft);
+  --candidate-border: var(--soft);
+}
+.style-button-candidates .candidate-button[data-candidate="b"][data-tone="danger"] {
+  --candidate-fill: var(--danger-soft);
+  --candidate-border: var(--danger-soft);
+}
+.style-button-candidates .candidate-button[data-candidate="c"][data-tone="primary"] {
+  --candidate-fill: var(--panel);
+  --candidate-ink: var(--primary-hover);
+  --candidate-border: var(--primary);
+  --candidate-hover-fill: var(--primary-soft);
+  --candidate-hover-ink: var(--primary-hover);
+  --candidate-hover-border: var(--primary-hover);
+  --candidate-pressed-fill: var(--nav-group-active);
+}
+.style-button-candidates .candidate-button:is(:hover, [data-preview="hover"]):not(:disabled) {
+  border-color: var(--candidate-hover-border);
+  background: var(--candidate-hover-fill);
+  color: var(--candidate-hover-ink);
+}
+.style-button-candidates .candidate-button:is(:active, [data-preview="pressed"]):not(:disabled) {
+  transform: none;
+  border-color: var(--candidate-hover-border);
+  background: var(--candidate-pressed-fill);
+  color: var(--candidate-hover-ink);
+}
+.style-button-candidates .candidate-button:is(:focus-visible, [data-preview="focus"]) {
+  outline: 2px solid var(--candidate-focus);
+  outline-offset: 2px;
+}
+.style-button-candidates .candidate-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.style-button-candidates .candidate-button[aria-busy="true"] {
+  opacity: 0.75;
+  cursor: progress;
+}
+.style-button-candidates .candidate-button svg {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+}
+.style-button-candidates .candidate-button-icon-only {
+  width: 28px;
+  padding: 0;
+}
+.style-button-candidates .candidate-button-spinner {
+  box-sizing: border-box;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: candidate-button-spin 750ms linear infinite;
+}
+@keyframes candidate-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.style-button-candidates .candidate-state-previews {
+  display: flex;
+  gap: 14px;
+  padding: 3px 0 0;
+}
+.style-button-candidates .candidate-state-previews > div {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.style-button-candidates .candidate-state-previews small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.style-button-candidates .candidate-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.style-button-candidates .candidate-feedback-dot {
+  flex: 0 0 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.style-button-candidates .candidate-switch-list {
+  gap: 0;
+}
+.style-button-candidates .candidate-switch-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  cursor: pointer;
+}
+.style-button-candidates .candidate-switch-setting + .candidate-switch-setting {
+  border-top: 1px solid var(--line);
+}
+.style-button-candidates .candidate-switch-setting:first-child {
+  padding-top: 0;
+}
+.style-button-candidates .candidate-switch-setting:last-child {
+  padding-bottom: 0;
+}
+.style-button-candidates .candidate-setting-copy {
+  display: grid;
+  gap: 3px;
+  margin-right: auto;
+}
+.style-button-candidates .candidate-setting-copy strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+}
+.style-button-candidates .candidate-setting-copy small,
+.style-button-candidates .candidate-switch-value {
+  color: var(--muted);
+  font-size: 11px;
+}
+.style-button-candidates .candidate-switch-value {
+  white-space: nowrap;
+}
+.style-button-candidates .candidate-switch {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 36px;
+  height: 20px;
+}
+.style-button-candidates .candidate-switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.style-button-candidates .candidate-switch-track {
+  display: flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--line-strong);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+.style-button-candidates .candidate-switch-track > span {
+  flex: 0 0 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--on-primary);
+  box-shadow: var(--shadow);
+  transition: transform 140ms ease;
+}
+.style-button-candidates .candidate-switch input:checked + .candidate-switch-track {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.style-button-candidates .candidate-switch input:checked + .candidate-switch-track > span {
+  transform: translateX(16px);
+}
+.style-button-candidates .candidate-switch input:hover:not(:disabled) + .candidate-switch-track {
+  border-color: var(--primary-hover);
+}
+.style-button-candidates .candidate-switch input:checked:hover:not(:disabled) + .candidate-switch-track {
+  background: var(--primary-hover);
+}
+.style-button-candidates .candidate-switch input:active:not(:disabled) + .candidate-switch-track {
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.style-button-candidates .candidate-switch input:focus-visible + .candidate-switch-track {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.style-button-candidates .candidate-switch-setting.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.style-button-candidates .candidate-switch input:disabled {
+  cursor: not-allowed;
+}
+.style-button-candidates .candidate-choice-list {
+  gap: 12px;
+}
+.style-button-candidates .candidate-choice-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.style-button-candidates .candidate-choice-row > span {
+  flex: 0 0 48px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.style-button-candidates .candidate-segments,
+.style-button-candidates .candidate-segments .rank-navigation-group {
+  display: inline-flex;
+  gap: 0;
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 0;
+  margin: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+  transform: none;
+}
+.style-button-candidates
+  .candidate-segments
+  :is(.strip-link, .rank-toolbar-action)
+  + :is(.strip-link, .rank-toolbar-action) {
+  border-left: 0;
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action):first-child {
+  border-radius: var(--control-radius) 0 0 var(--control-radius);
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action):last-child {
+  border-radius: 0 var(--control-radius) var(--control-radius) 0;
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action):hover {
+  background: var(--soft);
+  color: var(--primary-hover);
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action).active {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action):active {
+  background: var(--nav-group-active);
+}
+.style-button-candidates .candidate-segments :is(.strip-link, .rank-toolbar-action):focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.style-button-candidates .selection-candidate-showcase {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.style-button-candidates .selection-candidate-showcase > :last-child {
+  grid-column: 1 / -1;
+}
+.style-button-candidates .candidate-icon-display {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+}
+.style-button-candidates .candidate-static-icon {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.style-button-candidates .candidate-static-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.style-button-candidates .candidate-icon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+}
+.style-button-candidates .candidate-icon-action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.style-button-candidates .candidate-icon-action-group > span {
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.style-button-candidates .candidate-business-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.style-button-candidates .candidate-business-grid > div + div {
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
+}
+.style-button-candidates .candidate-business-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.style-button-candidates .candidate-business-row > span {
+  flex: 0 0 36px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.style-button-candidates .candidate-business-row .btn {
+  box-sizing: border-box;
+  min-height: 0;
+  height: 28px;
+  padding: 3px 10px;
+  border-radius: var(--control-radius);
+  font-size: 12px;
+  line-height: 20px;
+}
+.style-button-candidates .candidate-table .candidate-button {
+  height: 24px;
+  padding: 1px 6px;
+}
+.style-button-candidates .candidate-table .style-library-actions {
+  flex-wrap: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .style-button-candidates :is(.candidate-button, .candidate-switch-track, .candidate-switch-track > span) {
+    transition: none;
+  }
+  .style-button-candidates .candidate-button-spinner {
+    animation: none;
+  }
+}

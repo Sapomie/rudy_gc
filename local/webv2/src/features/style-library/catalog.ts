@@ -8,6 +8,20 @@ export const styleLibraryPages = [
     icon: "palette"
   },
   {
+    path: "/styles/buttons",
+    label: "按钮候选",
+    title: "按钮与控件候选",
+    description: "三组按钮对比、独立开关、选择控件与图标操作。",
+    icon: "requests"
+  },
+  {
+    path: "/styles/shfetchall-layouts",
+    label: "SH 布局",
+    title: "SH 一体抓取布局候选",
+    description: "五十套独立任务配置布局。",
+    icon: "capture"
+  },
+  {
     path: "/styles/gallery",
     label: "图库",
     title: "卡片与相框",

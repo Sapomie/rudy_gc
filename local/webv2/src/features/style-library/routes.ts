@@ -18,6 +18,18 @@ export const styleLibraryRoutes: RouteRecordRaw[] = [
         meta: { title: "样式库 · 基础" }
       },
       {
+        path: "buttons",
+        name: "style-buttons",
+        component: () => import("./pages/ButtonCandidatesPage.vue"),
+        meta: { title: "样式库 · 按钮候选" }
+      },
+      {
+        path: "shfetchall-layouts",
+        name: "style-shfetchall-layouts",
+        component: () => import("./pages/SHFetchAllCandidatesPage.vue"),
+        meta: { title: "样式库 · SH 一体抓取布局候选" }
+      },
+      {
         path: "gallery",
         name: "style-gallery",
         component: () => import("./pages/GalleryPage.vue"),

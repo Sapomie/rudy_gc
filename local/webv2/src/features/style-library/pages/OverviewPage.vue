@@ -9,7 +9,8 @@
       </div>
       <div><span>每行卡片</span><strong>6 / 8 / 10</strong></div>
       <div>
-        <span>页面分类</span><strong>6 <small>类</small></strong>
+        <span>页面分类</span
+        ><strong>{{ styleLibraryPages.filter((page) => page.path !== "/styles").length }} <small>类</small></strong>
       </div>
     </div>
     <section class="style-library-section">
